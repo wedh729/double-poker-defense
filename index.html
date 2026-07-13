@@ -258,7 +258,6 @@
   <div id="pokerPanel">
     <div id="toolbar">
       <div class="tbGroup" title="게임 상점">
-        <button class="shopIcon" data-shop="upg" title="업그레이드">⚔️</button>
         <button class="shopIcon" data-shop="miner" title="광부">⛏️</button>
         <button class="shopIcon" data-shop="book" title="족보">📖</button>
       </div>
@@ -341,8 +340,8 @@ const WEAPONS = [
   // 0 하이카드 — 새총
   {name:'새총', dmg:6, cd:0.8, range:156, splash:0, bounce:0, atk:'shot', proj:'pellet',
    hero:{name:'대왕새총', atk:'shards', shards:5, shardFrac:0.05, proj:'rock', range:190}},
-  // 1 원페어 — 활
-  {name:'활', dmg:12, cd:0.9, range:200, splash:0, bounce:0, atk:'shot', proj:'arrow',
+  // 1 원페어 — 활 (약한 저티어라 소폭 상향: dmg 12→15)
+  {name:'활', dmg:15, cd:0.9, range:200, splash:0, bounce:0, atk:'shot', proj:'arrow',
    hero:{name:'석궁', atk:'pierce', pierce:2, proj:'bolt'}},
   // 2 투페어 — 총
   {name:'총', dmg:22, cd:0.7, range:236, splash:0, bounce:0, atk:'shot', proj:'bullet',
@@ -350,8 +349,8 @@ const WEAPONS = [
   // 3 트리플 — 부메랑
   {name:'부메랑', dmg:16, cd:1.0, range:210, splash:0, bounce:3, atk:'boomerang',
    hero:{name:'대형 표창', bounce:7}}, // 영웅은 부메랑 대신 표창 (모양·투사체 모두)
-  // 4 스트레이트 — 기관총
-  {name:'기관총', dmg:8, cd:0.13, range:280, splash:0, bounce:0, atk:'shot', proj:'mg',
+  // 4 스트레이트 — 기관총 (단일 dps가 압도적이라 공속 반감: cd 0.13→0.26. 넓은 사거리·연사 이점은 유지)
+  {name:'기관총', dmg:8, cd:0.26, range:280, splash:0, bounce:0, atk:'shot', proj:'mg',
    hero:{name:'저격총', atk:'sniper', cd:5, dmgMul:45, range:470, proj:'sniper'}}, // 보스 저격
   // 5 플러쉬 — 화염방사기 (뭉친 몹 전체를 때려 실질 dps가 폭발 → 0.5에서 ×3 하향)
   {name:'화염방사기', dmg:0.17, cd:0.16, range:180, splash:92, bounce:0, atk:'area', vis:'flame',
@@ -1978,9 +1977,9 @@ function drawCastle() {
   ctx.strokeStyle = '#3e2b1c'; ctx.lineWidth = 1;
   for (let i = -4.5; i <= 4.5; i += 4.5) { ctx.beginPath(); ctx.moveTo(x + i, y + 7); ctx.lineTo(x + i, y + 30); ctx.stroke(); }
   ctx.lineWidth = 1;
-  // 라벨
-  ctx.fillStyle = '#666'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('🏰 성', x, y - 52);
+  // 강화 힌트: 성 위에 작은 ⚔️ 아이콘 (클릭하면 강화창)
+  ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('⚔️', x, y - 40);
   ctx.textAlign = 'left';
 }
 // 적 소환 포탈: 소환장 안에 생겨 몹이 우르르 쏟아진다
@@ -2037,32 +2036,66 @@ function drawOreRoom() {
   ctx.fillText(S.hunt.done ? '💎 광석 방 (완료)' : `💎 ${S.hunt.stage}단계: ${ore.name} · ⛏ ${nMine}/${oreCap()}`, R.cx, y0 - 5);
   ctx.textAlign = 'left';
 }
+// 광산 재질 사다리: 겹이 깎일수록 흙 → 돌 → 철 → 동 → 은 → 금 → 보석 (점점 값비싸 보임)
+const MINE_TIERS = [
+  { light:'#a98b63', dark:'#6f5636', cap:'#c9b48a', ore:'#5a4632' },                                 // 1 흙
+  { light:'#aeb4bb', dark:'#71777f', cap:'#d7dde3', ore:'#6f767e' },                                 // 2 돌
+  { light:'#93a0ad', dark:'#565f69', cap:'#c3ccd4', ore:'#7a8791', vein:'#c3ccd4' },                 // 3 철
+  { light:'#cd7f4a', dark:'#8a4e28', cap:'#e3a06a', ore:'#a05a30', vein:'#f0a878' },                 // 4 동
+  { light:'#d2d8e0', dark:'#9aa2ae', cap:'#f2f6fb', ore:'#c0c8d2', vein:'#ffffff', spark:true },     // 5 은
+  { light:'#f2c14e', dark:'#b8860b', cap:'#ffe9ad', ore:'#e0a828', vein:'#fff2c0', spark:true },     // 6 금
+  { light:'#6fa8e8', dark:'#3f6fc0', cap:'#bfe0ff', ore:'#5a8fd8', spark:true, gem:true },           // 7+ 보석
+];
 function drawMine() {
   const p = MINE_POS, x = p.x, y = p.y;
+  const T = MINE_TIERS[Math.min(S.mineLayer - 1, MINE_TIERS.length - 1)];
   // 그림자
   ctx.fillStyle = 'rgba(0,0,0,0.13)';
   ctx.beginPath(); ctx.ellipse(x + 2, y + 30, 48, 9, 0, 0, Math.PI*2); ctx.fill();
-  // 바위산 3봉 (뒤 낮은 봉 → 큰 봉 → 앞 봉, 좌 밝은 면 / 우 어두운 면 + 능선 하이라이트)
+  // 광맥 산 3봉 (뒤 낮은 봉 → 큰 봉 → 앞 봉)
   const peaks = [
-    { bx: x + 36, base: y + 28, top: y - 8,  w: 22, light: '#9a8368', dark: '#5f4d3a' },
-    { bx: x + 14, base: y + 28, top: y - 34, w: 34, light: '#a89078', dark: '#6f5b45' },
-    { bx: x - 16, base: y + 28, top: y - 20, w: 30, light: '#b89e84', dark: '#7d684f' },
+    { bx: x + 36, base: y + 28, top: y - 8,  w: 22 },
+    { bx: x + 14, base: y + 28, top: y - 34, w: 34 },
+    { bx: x - 16, base: y + 28, top: y - 20, w: 30 },
   ];
   for (const pk of peaks) {
-    // 왼쪽(밝은) 면
-    ctx.fillStyle = pk.light;
+    ctx.fillStyle = T.light; // 밝은 면
     ctx.beginPath(); ctx.moveTo(pk.bx, pk.top); ctx.lineTo(pk.bx - pk.w, pk.base); ctx.lineTo(pk.bx, pk.base); ctx.closePath(); ctx.fill();
-    // 오른쪽(어두운) 면
-    ctx.fillStyle = pk.dark;
+    ctx.fillStyle = T.dark;  // 어두운 면
     ctx.beginPath(); ctx.moveTo(pk.bx, pk.top); ctx.lineTo(pk.bx + pk.w, pk.base); ctx.lineTo(pk.bx, pk.base); ctx.closePath(); ctx.fill();
-    // 밝은 면 중간 능선 하이라이트 (면 분할 느낌)
+    // 금속 광맥 줄무늬 (철+)
+    if (T.vein) {
+      ctx.strokeStyle = T.vein; ctx.lineWidth = 1.6; ctx.globalAlpha = 0.75;
+      ctx.beginPath(); ctx.moveTo(pk.bx + pk.w*0.2, pk.top + 6); ctx.lineTo(pk.bx + pk.w*0.7, pk.base - 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pk.bx - pk.w*0.4, pk.base - 10); ctx.lineTo(pk.bx - pk.w*0.1, pk.base - 2); ctx.stroke();
+      ctx.globalAlpha = 1; ctx.lineWidth = 1;
+    }
     ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.4;
     ctx.beginPath(); ctx.moveTo(pk.bx, pk.top + 4); ctx.lineTo(pk.bx - pk.w * 0.55, pk.base - 3); ctx.stroke();
-    // 눈 덮인 정상
-    ctx.fillStyle = '#eef2f5';
+    // 정상 하이라이트 캡
+    ctx.fillStyle = T.cap;
     ctx.beginPath(); ctx.moveTo(pk.bx, pk.top); ctx.lineTo(pk.bx - pk.w*0.28, pk.top + 12); ctx.lineTo(pk.bx, pk.top + 8); ctx.lineTo(pk.bx + pk.w*0.28, pk.top + 12); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(pk.bx, pk.top); ctx.lineTo(pk.bx - pk.w, pk.base); ctx.moveTo(pk.bx, pk.top); ctx.lineTo(pk.bx + pk.w, pk.base); ctx.stroke();
+    // 보석 광산: 봉우리에 박힌 원석
+    if (T.gem) {
+      const gcols = ['#e53935', '#26a269', '#8c5bff', '#4fc9c0'];
+      for (let i = 0; i < 2; i++) {
+        const gx = pk.bx + (i ? pk.w*0.35 : -pk.w*0.35), gy = pk.base - 8 - i*7;
+        ctx.fillStyle = gcols[(pk.w + i) % 4];
+        polyPath(gx, gy, 4, 3.4, 0.4); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(gx - 1, gy - 1, 1, 0, Math.PI*2); ctx.fill();
+      }
+    }
+  }
+  // 반짝임 (은/금/보석)
+  if (T.spark) {
+    for (let i = 0; i < 3; i++) {
+      const a = (0.4 + 0.6*Math.abs(Math.sin(S.time*3 + i*2)));
+      ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`;
+      const sx = x - 20 + i*22, sy = y - 12 - (i%2)*8;
+      ctx.beginPath(); ctx.moveTo(sx, sy-3); ctx.lineTo(sx+1, sy); ctx.lineTo(sx, sy+3); ctx.lineTo(sx-1, sy); ctx.closePath(); ctx.fill();
+    }
   }
   // 갱도 입구 (안쪽으로 깊어지는 그라데이션 + 지지목)
   const dg = ctx.createRadialGradient(x, y + 22, 2, x, y + 22, 14);
@@ -2070,20 +2103,17 @@ function drawMine() {
   ctx.fillStyle = dg;
   ctx.beginPath(); ctx.moveTo(x - 11, y + 28); ctx.lineTo(x - 11, y + 14); ctx.arc(x, y + 14, 11, Math.PI, 0); ctx.lineTo(x + 11, y + 28); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#6b4f34'; ctx.fillRect(x - 13, y + 12, 3, 17); ctx.fillRect(x + 10, y + 12, 3, 17); ctx.fillRect(x - 13, y + 10, 26, 3);
-  // 레일 + 미니 수레 (입구 앞 소품)
+  // 레일 + 미니 수레 (입구 앞 소품 — 실린 광석은 현재 재질색)
   ctx.strokeStyle = '#8a7560'; ctx.lineWidth = 1.4;
   ctx.beginPath(); ctx.moveTo(x - 5, y + 28); ctx.lineTo(x - 12, y + 38); ctx.moveTo(x + 5, y + 28); ctx.lineTo(x + 2, y + 38); ctx.stroke();
   ctx.strokeStyle = 'rgba(90,70,50,0.5)'; ctx.lineWidth = 1;
   for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x - 6 - i*2.2, y + 30 + i*3.2); ctx.lineTo(x + 4 - i*0.8, y + 30 + i*3.2); ctx.stroke(); }
   ctx.fillStyle = '#5d4a36'; ctx.fillRect(x - 24, y + 30, 11, 6);           // 수레 통
-  ctx.fillStyle = '#3e3128'; ctx.fillRect(x - 23, y + 28, 9, 3);            // 광석 더미
+  ctx.fillStyle = T.ore; ctx.fillRect(x - 23, y + 28, 9, 3);               // 실린 광석 (재질색)
   ctx.fillStyle = '#2b2b2b';
   ctx.beginPath(); ctx.arc(x - 21, y + 37, 2, 0, Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.arc(x - 16, y + 37, 2, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#555'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText(`⛰️ 광산 ${S.mineLayer}겹`, x, y + 46);
-  drawBar(x - 30, y + 52, 60, S.mineHp / S.mineMax, '#b8860b');
-  ctx.textAlign = 'left';
+  drawBar(x - 30, y + 46, 60, S.mineHp / S.mineMax, T.dark); // 겹 진행 바 (텍스트 없음)
 }
 function polyPath(x, y, n, r, rot, r2) {
   ctx.beginPath();
@@ -2843,10 +2873,8 @@ const OBJ_INFO = {
     tip: '💡 소문: <b>원페어 하나, 투페어 둘, 트리플 셋</b>… "1·2·3"을 함께 바치면 도박의 신이 강림한다던데…? 🎲' },
   room: { t: '💎 광석 방', d: '유닛을 방 안으로 보내면 광석을 캡니다.<br>채굴 정원 <b>' , d2: '</b>명 — 10라운드마다 +1.<br>단계를 완채할 때마다 확정 보상!',
     tip: '💡 <b>새총(하이카드)</b>은 정원과 무관하게 들어가 캘 수 있는 프리패스. 잡패도 쓸모가 있는 법.' },
-  castle: { t: '🏰 성 (골드 저장고)', d: '몬스터를 잡은 골드가 이곳으로 모이고,<br>광부도 캔 광물을 여기 배달해야 골드가 됩니다.',
-    tip: '💡 광부 왕복 거리가 수입 속도 — 이동속도 업그레이드가 은근히 큽니다.' },
-  mine: { t: '⛰️ 광산', d: '광부가 캐거나, 전투 유닛이 근처에서 놀 때 같이 깎습니다.<br>한 겹 깰 때마다 <b>배달 골드 +1 (영구)</b>.',
-    tip: '💡 전투가 한가할 때 유닛을 광산 옆에 세워두면 공짜로 겹이 깎입니다.' },
+  mine: { t: '⛰️ 광산', d: '광부가 캐서 겹을 벗겨냅니다. 재질이 흙→철→금→보석으로 점점 비싸져요.<br>한 겹 깰 때마다 <b>배달 골드 +1 (영구)</b>.',
+    tip: '💡 광산 채굴은 광부 전담 — 전투 유닛은 광산을 깎지 않습니다.' },
   pen: { t: '👹 소환장', d: '몬스터는 이 울타리 밖으로 나오지 못합니다.<br>시간 내에 못 잡으면 남은 수만큼 목숨이 깎여요.',
     tip: '💡 풀하우스(대검)의 ⚔️돌격 스킬만이 유일하게 소환장 안으로 들어갈 수 있습니다.' },
 };
@@ -2884,9 +2912,10 @@ window.addEventListener('mouseup', e => {
     for (const u of S.units) if (Math.hypot(u.x - drag.x0, u.y - drag.y0) < 22) { hit = u; break; }
     S.units.forEach(u => u.selected = false);
     if (hit) { hit.selected = true; hideObjInfo(); }
-    else { // 빈 곳 클릭: 건물이면 설명 팝업, 아니면 팝업 닫기
+    else { // 빈 곳 클릭: 성이면 강화창, 다른 건물이면 설명 팝업, 아니면 닫기
       const k = objAt(drag.x0, drag.y0);
-      k ? showObjInfo(k) : hideObjInfo();
+      if (k === 'castle') { hideObjInfo(); if (openShop !== 'upg') toggleShop('upg'); }
+      else k ? showObjInfo(k) : hideObjInfo();
     }
   }
   drag = null;
@@ -3005,16 +3034,15 @@ function copyUnit(u) {
 
 // ==================== 상점 ====================
 let openShop = null;
-document.querySelectorAll('.shopIcon[data-shop]').forEach(btn => {
-  btn.onclick = () => {
-    initAudio();
-    openShop = (openShop === btn.dataset.shop) ? null : btn.dataset.shop;
-    document.querySelectorAll('.shopIcon').forEach(b => b.classList.toggle('open', b.dataset.shop === openShop));
-    // 상점/족보를 열면 모든 것이 멈춘다 (닫으면 재개). 게임오버/승리 화면 중엔 유지
-    if (S.phase !== 'gameover' && document.getElementById('winOverlay').style.display !== 'flex') S.paused = !!openShop;
-    renderShop();
-  };
-});
+function toggleShop(id) {
+  initAudio();
+  openShop = (openShop === id) ? null : id;
+  document.querySelectorAll('.shopIcon').forEach(b => b.classList.toggle('open', b.dataset.shop === openShop));
+  // 상점/족보를 열면 모든 것이 멈춘다 (닫으면 재개). 게임오버/승리 화면 중엔 유지
+  if (S.phase !== 'gameover' && document.getElementById('winOverlay').style.display !== 'flex') S.paused = !!openShop;
+  renderShop();
+}
+document.querySelectorAll('.shopIcon[data-shop]').forEach(btn => { btn.onclick = () => toggleShop(btn.dataset.shop); });
 // 족보 도감: 예시 카드 그림 (r, 무늬, 강조=족보 구성 카드)
 const HAND_GUIDE = [
   ['하이카드', [['A','♠',1],['9','♥',0],['7','♦',0],['5','♣',0],['2','♠',0]], '아무 조합도 없음 — 가장 높은 카드로만 승부'],
@@ -3251,8 +3279,8 @@ const EVENTS = [
   { name: '🎁 긴급 보급', desc: '즉시 골드 보너스!', mods: { instantGold: true } },
 ];
 function rollEvent() {
-  // 6라운드부터, 보스 라운드 제외, 45% 확률로 이벤트
-  if (S.round >= 6 && S.round % 10 !== 0 && Math.random() < 0.45) {
+  // 6라운드부터, 보스 라운드 제외, 22% 확률로 이벤트 (너무 잦지 않게)
+  if (S.round >= 6 && S.round % 10 !== 0 && Math.random() < 0.22) {
     S.event = EVENTS[Math.floor(Math.random() * EVENTS.length)];
     S.eventMods = S.event.mods;
     logMsg(`✨ [이벤트] ${S.event.name} — ${S.event.desc}`);
