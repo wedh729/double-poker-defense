@@ -464,7 +464,7 @@ function reset() {
     units: [], monsters: [], effects: [], floats: [], parts: [], projs: [],
     timer: 0, pokerTimer: POKER_TIME, spawnQueue: null,
     mineLayer: 1, mineHp: 0, mineMax: 0, mineBonus: 0,
-    minerMoveLv: 0, minerMoveCost: 2000, minerMineLv: 0, minerMineCost: 2000,
+    minerMoveLv: 0, minerMoveCost: 6000, minerMineLv: 0, minerMineCost: 6000, // 광부 업글은 비싸다 (누진 ×4,×5,×6,×7)
     poker: null, portalA: 0,
     speed: 1, time: 0, paused: false,
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0,
@@ -3303,12 +3303,14 @@ function wireMiner(el) {
   });
   wire('#mvBtn', () => {
     if (S.minerMoveLv >= MINER_MAX_LV || S.gold < S.minerMoveCost) return;
-    S.gold -= S.minerMoveCost; S.minerMoveLv++; S.minerMoveCost = Math.floor(S.minerMoveCost * 1.5);
+    S.gold -= S.minerMoveCost; S.minerMoveLv++;
+    S.minerMoveCost = Math.floor(S.minerMoveCost * (3 + S.minerMoveLv)); // 누진: ×4 → ×5 → ×6 → ×7
     logMsg(`🏃 광부 이동속도 Lv.${S.minerMoveLv}`); renderShop();
   });
   wire('#mnBtn', () => {
     if (S.minerMineLv >= MINER_MAX_LV || S.gold < S.minerMineCost) return;
-    S.gold -= S.minerMineCost; S.minerMineLv++; S.minerMineCost = Math.floor(S.minerMineCost * 1.5);
+    S.gold -= S.minerMineCost; S.minerMineLv++;
+    S.minerMineCost = Math.floor(S.minerMineCost * (3 + S.minerMineLv)); // 누진: ×4 → ×5 → ×6 → ×7
     logMsg(`⛏️ 광부 채굴속도 Lv.${S.minerMineLv}`); renderShop();
   });
 }
