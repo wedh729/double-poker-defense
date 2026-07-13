@@ -436,7 +436,7 @@ const WAVE_TIME = 90, POKER_TIME = 60;
 const FINAL_ROUND = 80; // 이후는 헬모드
 
 const cv = document.getElementById('cv');
-const ctx = cv.getContext('2d');
+let ctx = cv.getContext('2d'); // 스프라이트 캐시 빌드 시 임시 스왑 가능하도록 let
 // 죽음 얼룩 데칼 레이어 (오프스크린 — 매 프레임 drawImage 1회, 서서히 페이드)
 const decalCv = document.createElement('canvas');
 decalCv.width = 940; decalCv.height = 500;
@@ -2267,21 +2267,18 @@ function drawGem(cx, cy, r, col, cut) {
   ctx.beginPath(); ctx.arc(cx - r * 0.3, cy - r * 0.38, Math.max(1.4, r * 0.16), 0, Math.PI * 2); ctx.fill();
   path(); ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.4; ctx.stroke(); ctx.lineWidth = 1;
 }
-// 재질 몹 렌더 (눈 없음 — 오브젝트 자체가 캐릭터). 밴드 진행도 esc만큼 그을림·크기·보강밴드·가시로 험악해진다
-function drawMatMob(m, sz, c) {
-  const x = m.x, y = m.y, mat = m.mat || 0, esc = m.esc || 0, t = S.time;
+// 재질 몹 정적 렌더 (스프라이트 캐시용 — 시간/개체 의존 없음). 몸통+패턴+테두리+하이라이트+보강밴드
+function drawMatStatic(x, y, sz, mat, esc, c) {
   const circle = () => { ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2); };
   const clip = () => { ctx.save(); circle(); ctx.clip(); };
   // 몸통
   ctx.fillStyle = c;
-  if (mat === 0) { // 물풍선: 살짝 출렁 + 매듭
-    const w = 1 + 0.06 * Math.sin(t * 5 + m.phase);
-    ctx.save(); ctx.translate(x, y); ctx.scale(w, 2 - w); ctx.translate(-x, -y);
+  if (mat === 0) { // 물풍선: 매듭 (출렁은 라이브에서 drawImage 스케일로)
     circle(); ctx.fill();
     ctx.fillStyle = shade(c, -30); ctx.beginPath(); ctx.moveTo(x - 2, y + sz - 1); ctx.lineTo(x + 2, y + sz - 1); ctx.lineTo(x, y + sz + 3); ctx.closePath(); ctx.fill();
-    ctx.restore();
+    ctx.fillStyle = c;
   } else { circle(); ctx.fill(); }
-  // 재질 패턴 (원 밖으로 삐져나오는 재질만 clip — 성능)
+  // 재질 패턴 (원 밖으로 삐져나오는 재질만 clip)
   const needClip = mat === 2 || mat === 3 || mat === 4 || mat === 10 || mat === 11 || mat === 13;
   if (needClip) clip();
   if (mat === 1) { // 수정구: 반투명 크리스탈 + 면 분할
@@ -2290,30 +2287,30 @@ function drawMatMob(m, sz, c) {
     for (let i = 0; i < 4; i++) { const a = i * 0.9 + 0.3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a)*sz, y + Math.sin(a)*sz); ctx.stroke(); }
   } else if (mat === 2) { // 축구공: 검은 오각 점
     ctx.fillStyle = shade(c, -180);
-    polyPath(x, y, 5, sz*0.34, m.rot); ctx.fill();
-    for (let i = 0; i < 4; i++) { const a = m.rot + i*1.57; polyPath(x + Math.cos(a)*sz*0.7, y + Math.sin(a)*sz*0.7, 5, sz*0.22, a); ctx.fill(); }
-  } else if (mat === 3) { // 농구공: 곡선 심
-    ctx.strokeStyle = 'rgba(20,10,0,0.6)'; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.moveTo(x - sz, y); ctx.lineTo(x + sz, y); ctx.moveTo(x, y - sz); ctx.lineTo(x, y + sz);
-    ctx.arc(x - sz*0.9, y, sz*1.2, -0.9, 0.9); ctx.moveTo(x + sz*0.9 + sz*1.2, y); ctx.arc(x + sz*0.9, y, sz*1.2, Math.PI-0.9, Math.PI+0.9); ctx.stroke();
+    polyPath(x, y, 5, sz*0.34, 0); ctx.fill();
+    for (let i = 0; i < 4; i++) { const a = i*1.57; polyPath(x + Math.cos(a)*sz*0.7, y + Math.sin(a)*sz*0.7, 5, sz*0.22, a); ctx.fill(); }
+  } else if (mat === 3) { // 농구공: 표준 심 — 십자 + 좌우 대칭 곡선
+    ctx.strokeStyle = 'rgba(30,15,5,0.65)'; ctx.lineWidth = Math.max(1.2, sz * 0.09);
+    ctx.beginPath(); ctx.moveTo(x - sz, y); ctx.lineTo(x + sz, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, y - sz); ctx.lineTo(x, y + sz); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x - sz * 1.45, y, sz * 1.16, -0.62, 0.62); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x + sz * 1.45, y, sz * 1.16, Math.PI - 0.62, Math.PI + 0.62); ctx.stroke();
   } else if (mat === 4) { // 야구공: 빨간 실밥
     ctx.strokeStyle = '#d02a2a'; ctx.lineWidth = 1.4; ctx.setLineDash([2, 2]);
     ctx.beginPath(); ctx.arc(x - sz*0.75, y, sz*1.15, -0.75, 0.75); ctx.stroke();
     ctx.beginPath(); ctx.arc(x + sz*0.75, y, sz*1.15, Math.PI-0.75, Math.PI+0.75); ctx.stroke();
     ctx.setLineDash([]);
-  } else if (mat === 5) { // 당구공: 흰 원 + 숫자
-    const num = 1 + (Math.floor(m.phase * 7) % 15);
+  } else if (mat === 5) { // 당구공: 클래식 8볼
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y - sz*0.05, sz*0.42, 0, 6.28); ctx.fill();
     ctx.fillStyle = '#222'; ctx.font = `bold ${Math.max(6, sz*0.5)|0}px sans-serif`; ctx.textAlign = 'center';
-    ctx.fillText(num, x, y + sz*0.13); ctx.textAlign = 'left';
+    ctx.fillText('8', x, y + sz*0.13); ctx.textAlign = 'left';
   } else if (mat === 6) { // 볼링공: 손가락 구멍 3개
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     for (const [dx, dy] of [[-0.22, -0.28], [0.22, -0.28], [0, -0.05]]) { ctx.beginPath(); ctx.arc(x + dx*sz, y + dy*sz, sz*0.12, 0, 6.28); ctx.fill(); }
-  } else if (mat === 7 || mat === 8) { // 쇠구슬/불타는 쇠구슬: 크롬 하이라이트
+  } else if (mat === 7 || mat === 8) { // 쇠구슬/불타는 쇠구슬: 크롬 하이라이트 (화염 펄스는 라이브)
     const g = ctx.createRadialGradient(x - sz*0.3, y - sz*0.35, 1, x, y, sz);
     g.addColorStop(0, '#ffffff'); g.addColorStop(0.4, c); g.addColorStop(1, shade(c, -50));
     ctx.fillStyle = g; circle(); ctx.fill();
-    if (mat === 8) { ctx.fillStyle = `rgba(255,${100+80*Math.sin(t*8+m.phase)|0},20,0.4)`; ctx.beginPath(); ctx.arc(x, y, sz*0.9, 0, 6.28); ctx.fill(); }
   } else if (mat === 9) { // 달: 크레이터
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     for (const [dx, dy, r] of [[-0.3,-0.2,0.22],[0.3,0.25,0.18],[0.1,-0.35,0.13],[-0.15,0.4,0.14]]) { ctx.beginPath(); ctx.arc(x+dx*sz, y+dy*sz, r*sz, 0, 6.28); ctx.fill(); }
@@ -2328,9 +2325,9 @@ function drawMatMob(m, sz, c) {
   } else if (mat === 12) { // 태양: 밝은 코어
     const g = ctx.createRadialGradient(x, y, 1, x, y, sz); g.addColorStop(0, '#fff6c0'); g.addColorStop(0.5, '#ffcf3a'); g.addColorStop(1, c);
     ctx.fillStyle = g; circle(); ctx.fill();
-  } else if (mat === 13) { // 블랙홀: 소용돌이 강착원반
+  } else if (mat === 13) { // 블랙홀: 소용돌이 강착원반 (회전은 라이브에서 drawImage 회전)
     ctx.strokeStyle = '#ff8a1e'; ctx.lineWidth = 2;
-    ctx.beginPath(); for (let i = 0; i <= 20; i++) { const a = t*2 + i*0.5, r = sz*0.3 + i*sz*0.035; const px = x+Math.cos(a)*r, py = y+Math.sin(a)*r*0.5; i?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.stroke();
+    ctx.beginPath(); for (let i = 0; i <= 20; i++) { const a = i*0.5, r = sz*0.3 + i*sz*0.035; const px = x+Math.cos(a)*r, py = y+Math.sin(a)*r*0.5; i?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.stroke();
     ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x, y, sz*0.5, 0, 6.28); ctx.fill();
   }
   if (needClip) ctx.restore();
@@ -2338,7 +2335,7 @@ function drawMatMob(m, sz, c) {
   // 공통 테두리 + 입체 하이라이트
   ctx.strokeStyle = 'rgba(0,0,0,0.32)'; ctx.lineWidth = 1.4; circle(); ctx.stroke(); ctx.lineWidth = 1;
   if (mat !== 7 && mat !== 8 && mat !== 12) { ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.beginPath(); ctx.arc(x - sz*0.3, y - sz*0.32, sz*0.34, 0, 6.28); ctx.fill(); }
-  // ④ 보강 밴드 (밴드 후반부): 금속 띠 + 리벳 (clip 대신 현(chord) 너비로 — 성능)
+  // 보강 밴드 (밴드 후반부): 금속 띠 + 리벳
   const nBand = Math.floor(esc * 3);
   for (let i = 0; i < nBand; i++) {
     const by = y + (i - (nBand - 1) / 2) * sz * 0.62, dy = by - y;
@@ -2348,26 +2345,50 @@ function drawMatMob(m, sz, c) {
     ctx.fillStyle = 'rgba(200,205,215,0.7)'; ctx.fillRect(x - half, by - sz*0.11, half*2, sz*0.05);
     ctx.fillStyle = '#c8ccd4'; ctx.beginPath(); ctx.arc(x - half*0.7, by, sz*0.06, 0, 6.28); ctx.arc(x + half*0.7, by, sz*0.06, 0, 6.28); ctx.fill();
   }
-  // ⑤ 가시 (밴드 후반부): 뾰족한 뿔이 돋는다
-  const nSpike = Math.floor(esc * 4);
-  if (nSpike > 0) {
-    ctx.fillStyle = shade(c, -60);
-    for (let i = 0; i < nSpike; i++) {
-      const a = m.rot * 0.5 + i * 6.28 / nSpike;
-      const bx = x + Math.cos(a) * sz, by = y + Math.sin(a) * sz;
-      const tx = x + Math.cos(a) * sz * 1.42, ty = y + Math.sin(a) * sz * 1.42;
-      const pa = a + 1.57;
-      ctx.beginPath();
-      ctx.moveTo(bx + Math.cos(pa)*sz*0.16, by + Math.sin(pa)*sz*0.16);
-      ctx.lineTo(tx, ty);
-      ctx.lineTo(bx - Math.cos(pa)*sz*0.16, by - Math.sin(pa)*sz*0.16);
-      ctx.closePath(); ctx.fill();
-    }
+}
+// 재질 스프라이트 캐시: (재질 × esc 8단계 × 황금) 조합당 1회만 렌더 → 이후 drawImage 1번 (400마리 렉 해결)
+const matSprites = {};
+const SPR = 88, SPR_C = 44; // 스프라이트 캔버스 크기/중심
+function matSpriteSz(bucket) { return 19 * (1 + (bucket / 7) * 0.32); }
+function matSprite(mat, bucket, golden) {
+  const key = mat * 20 + bucket * 2 + (golden ? 1 : 0);
+  if (!matSprites[key]) {
+    const cnv = document.createElement('canvas'); cnv.width = cnv.height = SPR;
+    const old = ctx; ctx = cnv.getContext('2d');
+    const escB = bucket / 7;
+    const c = golden ? '#ffcf3a' : shade(MATERIALS[mat].col, -Math.round(escB * 62));
+    drawMatStatic(SPR_C, SPR_C, matSpriteSz(bucket), mat, escB, c);
+    ctx = old;
+    matSprites[key] = cnv;
   }
-  // ✨ 황금 레어: 반짝이는 별
+  return matSprites[key];
+}
+// 재질 몹 렌더: 캐시된 스프라이트 + 라이브 오버레이(출렁/회전/화염 펄스/황금 반짝)만
+function drawMatMob(m, sz, c) {
+  const x = m.x, y = m.y, mat = m.mat || 0, esc = m.esc || 0, t = S.time;
+  const bucket = Math.min(7, Math.floor(esc * 8));
+  const sp = matSprite(mat, bucket, !!m.golden);
+  const k = sz / matSpriteSz(bucket); // 시각 크기 → 스프라이트 스케일
+  if (mat === 0) { // 물풍선: 출렁 (스케일로)
+    const w = 1 + 0.06 * Math.sin(t * 5 + m.phase);
+    ctx.save(); ctx.translate(x, y); ctx.scale(w, 2 - w);
+    ctx.drawImage(sp, -SPR_C * k, -SPR_C * k, SPR * k, SPR * k);
+    ctx.restore();
+  } else if (mat === 13) { // 블랙홀: 강착원반 회전 (스프라이트 회전)
+    ctx.save(); ctx.translate(x, y); ctx.rotate(t * 2 + m.phase);
+    ctx.drawImage(sp, -SPR_C * k, -SPR_C * k, SPR * k, SPR * k);
+    ctx.restore();
+  } else {
+    ctx.drawImage(sp, x - SPR_C * k, y - SPR_C * k, SPR * k, SPR * k);
+  }
+  if (mat === 8) { // 불타는 쇠구슬: 화염 펄스
+    ctx.fillStyle = `rgba(255,${100 + 80 * Math.sin(t * 8 + m.phase) | 0},20,0.4)`;
+    ctx.beginPath(); ctx.arc(x, y, sz * 0.9, 0, 6.28); ctx.fill();
+  }
+  // ✨ 황금 레어: 반짝이는 별 (링은 스프라이트 몸색이 금색이라 별만)
   if (m.golden) {
     ctx.strokeStyle = `rgba(255,215,60,${(0.6 + 0.4*Math.sin(t*6)).toFixed(2)})`; ctx.lineWidth = 2;
-    circle(); ctx.stroke(); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(x, y, sz, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1;
     for (let i = 0; i < 3; i++) {
       const a = t * 2 + i * 2.1, r = sz + 4;
       const sx = x + Math.cos(a) * r, sy = y + Math.sin(a) * r;
@@ -3316,16 +3337,18 @@ function wireMiner(el) {
     logMsg(`⛏️ 광부 고용! (총 ${S.units.filter(u => u.miner).length}명)`);
     renderShop();
   });
+  // 비용 사다리: 6,000 → ×3 → ×2 → ×2 → ×3 = 18k, 36k, 72k, 216k
+  const MINER_COST_MUL = [3, 2, 2, 3];
   wire('#mvBtn', () => {
     if (S.minerMoveLv >= MINER_MAX_LV || S.gold < S.minerMoveCost) return;
     S.gold -= S.minerMoveCost; S.minerMoveLv++;
-    S.minerMoveCost = Math.floor(S.minerMoveCost * (3 + S.minerMoveLv)); // 누진: ×4 → ×5 → ×6 → ×7
+    S.minerMoveCost = Math.floor(S.minerMoveCost * (MINER_COST_MUL[S.minerMoveLv - 1] || 3));
     logMsg(`🏃 광부 이동속도 Lv.${S.minerMoveLv}`); renderShop();
   });
   wire('#mnBtn', () => {
     if (S.minerMineLv >= MINER_MAX_LV || S.gold < S.minerMineCost) return;
     S.gold -= S.minerMineCost; S.minerMineLv++;
-    S.minerMineCost = Math.floor(S.minerMineCost * (3 + S.minerMineLv)); // 누진: ×4 → ×5 → ×6 → ×7
+    S.minerMineCost = Math.floor(S.minerMineCost * (MINER_COST_MUL[S.minerMineLv - 1] || 3));
     logMsg(`⛏️ 광부 채굴속도 Lv.${S.minerMineLv}`); renderShop();
   });
 }
