@@ -782,7 +782,7 @@ function spawnMonster(hp, isBoss, opt) {
     const nextChance = mi.p > 0.6 ? (mi.p - 0.6) / 0.4 * 0.3 : 0; // 밴드 끝으로 갈수록 다음 재질 최대 30%
     if (Math.random() < nextChance) { m.mat = mi.next; m.esc = 0; }   // 다음 재질(갓 나온 느낌 — 작고 깨끗)
     else { m.mat = mi.idx; m.esc = mi.p; }                            // 이번 재질(밴드 진행만큼 험악)
-    if (Math.random() < 0.02) m.golden = true; // ✨ 황금 레어 (2%)
+    if (Math.random() < 0.003) m.golden = true; // ✨ 황금 레어 (0.3% — 희귀할수록 값지다)
   }
   // 난이도 모디파이어 (일반 몹, 자식 아님) — 분열은 40라운드+, 쉴드는 50라운드+
   if (!isBoss && !opt.child) {
@@ -1212,9 +1212,9 @@ function update(dt) {
       // 골드 동전이 튀어나와 좌상단 금고로 빨려간다 (시각 연출 — 골드는 즉시 지급됨)
       const ca = Math.random() * 6.28;
       S.parts.push({ x: m.x, y: m.y, vx: Math.cos(ca) * 90, vy: Math.sin(ca) * 90 - 60, coin: true, t: 1.4, r: 2.6, c: '#ffd54f' });
-      if (m.golden) { // ✨ 황금 레어 처치 보너스
-        const bonus = 50 + S.round * 8; S.gold += bonus;
-        addFloat(m.x, m.y - 26, `✨ 황금! +${bonus}G`, '#ffd54f', 2); sfx('jackpot');
+      if (m.golden) { // ✨ 황금 레어 처치 보너스 (0.3% 희귀 — 보상 3배)
+        const bonus = (50 + S.round * 8) * 3; S.gold += bonus;
+        addFloat(m.x, m.y - 26, `✨✨ 황금!! +${bonus}G`, '#ffd54f', 2.4); sfx('jackpot');
       }
       if (m.boss) {
         S.chips++; // 보스 처치 → 카지노 칩 지급
@@ -1438,11 +1438,13 @@ function burstJuice(e) {
 }
 
 function mineReward() {
-  // 한 겹 벗겨질 때마다 배달 골드 +1 (영구)
-  S.mineBonus += 1;
+  // 겹이 깊어질수록 배달 보너스가 기하급수로 커진다 (+3, +5, +6, +8, +11 … 10겹째 +45)
+  // 광산 HP도 ×1.4씩 커서 깊이 파려면 시간이 필요 → "포커 시간을 벌며 채굴하는 운영"이 수익의 축
+  const inc = Math.ceil(3 * Math.pow(1.35, S.mineLayer - 1));
+  S.mineBonus += inc;
   S.mineLayer++;
-  logMsg(`⛰️💥 광산 ${S.mineLayer - 1}겹 파괴! 이제 배달마다 골드 +${S.mineBonus}`);
-  addFloat(MINE_POS.x, MINE_POS.y - 34, `채굴량 +1! (배달 +${S.mineBonus})`, '#b8860b', 2.2);
+  logMsg(`⛰️💥 광산 ${S.mineLayer - 1}겹 파괴! 채굴량 +${inc} — 이제 배달마다 골드 +${S.mineBonus}`);
+  addFloat(MINE_POS.x, MINE_POS.y - 34, `채굴량 +${inc}! (배달 ${MINER_LOAD + S.mineBonus}G)`, '#b8860b', 2.2);
   sfx('reward');
   S.mineMax = S.mineHp = mineHP(S.mineLayer);
 }
@@ -2409,26 +2411,54 @@ function drawMonster(m) {
     ctx.beginPath(); ctx.arc(m.x + sz * 0.34, m.y + sz * 0.38, sz * 0.5, 0, Math.PI*2); ctx.fill();
     drawBossFace(m, sz);
   }
-  // 데미지 균열: 깎일수록 금이 늘고 길어지다 팡! (몬스터별 고정 시드 — 프레임마다 안 흔들림)
+  // 데미지 표현 (재질별 특성, 몬스터별 고정 시드 — 프레임마다 안 흔들림)
   const dmgR = 1 - Math.max(0, (m.hp + m.shield) / (m.max + (m.shieldMax || 0)));
-  if (dmgR > 0.12) {
-    // 어두운 몸 → 밝은 균열, 밝은 몸 → 어두운 균열
-    const lightCrack = m.boss ? (m.colorIdx >= 4 || m.hell) : (m.mat >= 6 || m.hell || m.golden || (m.esc || 0) > 0.55);
-    ctx.strokeStyle = lightCrack ? `rgba(255,255,255,${(0.3 + dmgR * 0.5).toFixed(2)})` : `rgba(25,28,40,${(0.35 + dmgR * 0.4).toFixed(2)})`;
-    ctx.lineWidth = 1.2;
-    const nCr = 1 + Math.floor(dmgR * 4);
-    for (let i = 0; i < nCr; i++) {
-      const a0 = m.phase + i * 2.4;
-      ctx.beginPath();
-      ctx.moveTo(m.x + Math.cos(a0) * sz * 0.12, m.y + Math.sin(a0) * sz * 0.12);
-      for (let sg = 1; sg <= 3; sg++) {
-        const aa = a0 + Math.sin(i * 7 + sg * 3) * 0.65;
-        const rr = sz * (0.15 + dmgR * 0.75) * sg / 3;
-        ctx.lineTo(m.x + Math.cos(aa) * rr, m.y + Math.sin(aa) * rr);
+  if (dmgR > 0.2) {
+    if (!m.boss && m.mat === 2) {
+      // ⚽ 축구공: 부위가 찢어져 안의 솜이 비져나온다 (1~3군데)
+      const nP = 1 + Math.floor(dmgR * 2.3);
+      for (let i = 0; i < nP; i++) {
+        const a = m.phase * 3 + i * 2.4, r = sz * 0.55;
+        const px = m.x + Math.cos(a) * r, py = m.y + Math.sin(a) * r;
+        ctx.fillStyle = 'rgba(55,55,55,0.55)'; // 찢어진 구멍
+        ctx.beginPath(); ctx.ellipse(px, py, sz * 0.2, sz * 0.13, a, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#fffdf2'; // 솜뭉치
+        ctx.beginPath();
+        ctx.arc(px - sz * 0.05, py, sz * 0.1, 0, 6.28);
+        ctx.arc(px + sz * 0.06, py - sz * 0.05, sz * 0.08, 0, 6.28);
+        ctx.arc(px + sz * 0.03, py + sz * 0.07, sz * 0.07, 0, 6.28);
+        ctx.fill();
       }
-      ctx.stroke();
+    } else if (!m.boss && (m.mat === 5 || m.mat === 6)) {
+      // 🎱🎳 당구공/볼링공: 가장자리가 조그맣게 깨져나간다 (밝은 속살 단면)
+      const nC = 1 + Math.floor(dmgR * 2.3);
+      for (let i = 0; i < nC; i++) {
+        const a = m.phase * 2 + i * 2.1;
+        const px = m.x + Math.cos(a) * sz * 0.92, py = m.y + Math.sin(a) * sz * 0.92;
+        ctx.fillStyle = 'rgba(236,230,218,0.92)';
+        polyPath(px, py, 3, sz * (0.11 + dmgR * 0.09), a + i * 1.3); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 0.8; ctx.stroke(); ctx.lineWidth = 1;
+      }
+    } else {
+      // 기본: 가장자리에서 시작해 안쪽으로 짧게 파고드는 균열 1~3개 → 쩌적, 팡
+      const lightCrack = m.boss ? (m.colorIdx >= 4 || m.hell) : (m.mat >= 6 || m.hell || m.golden || (m.esc || 0) > 0.55);
+      ctx.strokeStyle = lightCrack ? `rgba(255,255,255,${(0.35 + dmgR * 0.45).toFixed(2)})` : `rgba(25,28,40,${(0.4 + dmgR * 0.35).toFixed(2)})`;
+      ctx.lineWidth = 1.1;
+      const nCr = dmgR > 0.8 ? 3 : dmgR > 0.55 ? 2 : 1;
+      for (let i = 0; i < nCr; i++) {
+        const a0 = m.phase + i * 2.7;
+        const len = sz * (0.22 + dmgR * 0.5); // 깎일수록 조금 더 깊게
+        let px = m.x + Math.cos(a0) * sz, py = m.y + Math.sin(a0) * sz;
+        ctx.beginPath(); ctx.moveTo(px, py);
+        for (let sg = 1; sg <= 3; sg++) {
+          const aa = a0 + Math.PI + Math.sin(i * 5 + sg * 7) * 0.5; // 중심 방향 + 지그재그
+          px += Math.cos(aa) * len / 3; py += Math.sin(aa) * len / 3;
+          ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+      ctx.lineWidth = 1;
     }
-    ctx.lineWidth = 1;
   }
   if (squish) ctx.restore(); // 스쿼시 변환 해제
   // 💥 분열 몹: 균열 표시
