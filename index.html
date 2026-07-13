@@ -108,6 +108,55 @@
   #objInfo b { color: #5b48d0; font-size: 13px; }
   #objInfo .tip { display: block; margin-top: 7px; padding: 7px 9px; background: #fff8e6; border: 1px dashed #e0c060; border-radius: 8px; color: #8a6d1f; font-size: 11px; }
 
+  /* ===== 좌측 카지노 스테이션 ===== */
+  #chipBar { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 6; }
+  .chipStation { width: 60px; height: 62px; border-radius: 14px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    background: linear-gradient(160deg, #fff7e6 0%, #f3e2b8 100%); border: 2px solid #c9a75a;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.7), 0 3px 9px rgba(90,60,10,0.25); transition: transform 0.12s, box-shadow 0.12s; position: relative; }
+  .chipStation .ci { font-size: 24px; line-height: 1; }
+  .chipStation .cl { font-size: 10px; font-weight: bold; color: #7a5c1a; }
+  .chipStation:hover:not(:disabled) { transform: translateY(-2px) scale(1.05); box-shadow: inset 0 0 0 2px rgba(255,255,255,0.8), 0 6px 16px rgba(201,167,90,0.45); }
+  .chipStation.ready { animation: chipGlow 1s ease-in-out infinite alternate; }
+  @keyframes chipGlow { from { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.7), 0 0 6px 1px rgba(255,193,7,0.5); } to { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.9), 0 0 16px 4px rgba(255,193,7,0.85); } }
+  .chipStation:disabled { filter: grayscale(0.75) brightness(0.92); opacity: 0.6; cursor: default; }
+  .chipStation .ci.spin { animation: spin360 3.5s linear infinite; }
+  @keyframes spin360 { to { transform: rotate(360deg); } }
+
+  /* ===== 칩 모달 ===== */
+  #chipModal { position: fixed; inset: 0; background: rgba(18,12,34,0.72); display: none; align-items: center; justify-content: center; z-index: 12; }
+  #chipWin { position: relative; width: min(460px, 92vw); background: linear-gradient(180deg, #241a3a, #17102b);
+    border: 3px solid #c9a75a; border-radius: 18px; box-shadow: 0 0 0 3px #7a6335, 0 24px 60px rgba(0,0,0,0.6); padding: 20px 22px 24px; color: #fff; text-align: center; }
+  #chipClose { position: absolute; top: 10px; right: 12px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #c9a75a; background: #241a3a; color: #e8d9a8; cursor: pointer; font-weight: bold; }
+  #chipTitle { font-size: 19px; font-weight: 800; color: #ffd166; letter-spacing: 2px; margin-bottom: 14px; }
+  .chipBtn { padding: 10px 20px; margin: 5px; border-radius: 10px; border: 2px solid #b8860b; cursor: pointer; font-weight: bold; font-size: 14px;
+    background: linear-gradient(180deg, #ffd766, #f0b429); color: #5d4308; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6); }
+  .chipBtn:hover { filter: brightness(1.08); }
+  .chipBtn.sub { background: #3a3350; color: #d9d2f5; border-color: #5a5278; }
+  .chipResult { font-size: 17px; font-weight: bold; margin-top: 14px; min-height: 24px; }
+
+  /* 복권 릴 (가로 스크롤 룰렛) */
+  .reelBox { position: relative; height: 84px; overflow: hidden; border-radius: 12px; background: #0d0820; border: 2px solid #4a3d70; margin: 8px 0; }
+  .reelBox::after { content: '▼'; position: absolute; top: -3px; left: 50%; transform: translateX(-50%); color: #ffd166; font-size: 14px; z-index: 2; }
+  .reelBox::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: rgba(255,209,102,0.55); transform: translateX(-50%); z-index: 2; }
+  .reelStrip { display: flex; position: absolute; top: 0; left: 0; height: 84px; align-items: center; }
+  .reelCell { width: 72px; height: 84px; flex: 0 0 72px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+
+  /* 룰렛 휠 */
+  .wheelWrap { position: relative; width: 220px; height: 220px; margin: 6px auto 4px; }
+  .wheel { width: 100%; height: 100%; border-radius: 50%; border: 6px solid #c9a75a; box-shadow: 0 0 0 3px #2e2444, inset 0 0 22px rgba(0,0,0,0.5);
+    transition: transform 4s cubic-bezier(0.15, 0.6, 0.15, 1); }
+  .wheelWrap::after { content: '▼'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); color: #ffd166; font-size: 22px; text-shadow: 0 1px 2px #000; }
+  .wheelHub { position: absolute; top: 50%; left: 50%; width: 34px; height: 34px; border-radius: 50%; transform: translate(-50%,-50%); background: radial-gradient(#ffe9ad, #c9a75a); border: 2px solid #7a6335; }
+
+  /* 교환 카드 뒤집기 */
+  .flipWrap { perspective: 700px; width: 100px; height: 140px; margin: 10px auto; }
+  .flipCard { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.7s; }
+  .flipCard.flipped { transform: rotateY(180deg); }
+  .flipFace { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 46px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.5); }
+  .flipFront { background: linear-gradient(150deg, #5b48d0, #8c5bff); color: #fff; border: 2px solid #b39ddb; }
+  .flipBack { background: linear-gradient(150deg, #fff, #e6e9f2); transform: rotateY(180deg); border: 2px solid #c3c8d6; }
+
   /* ===== 포커 패널 (브라운 카드 테이블 — 모던 + 아기자기) ===== */
   #pokerPanel { position: relative; margin-top: 10px; overflow: hidden;
     background:
@@ -190,6 +239,7 @@
     <span>❤️ <b id="tLife"></b></span>
     <span>💰 <b id="tGold"></b></span>
     <span>⛏️ <b id="tMiner"></b></span>
+    <span title="보스를 잡으면 얻는 칩 — 좌측 카지노에서 사용">🎰 <b id="tChips" style="color:#c9a227">0</b></span>
     <span>🏳️ 스테이지 <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
     <div id="bigTimer"><div class="p" id="tPhase"></div></div>
   </div>
@@ -198,6 +248,12 @@
     <div id="clock" title="남은 시간"><div id="clockHub"></div></div>
     <div id="unitInfo"></div>
     <div id="objInfo"></div>
+    <!-- 좌측 카지노 스테이션: 보스 칩을 넣어 진행 -->
+    <div id="chipBar">
+      <button class="chipStation" id="stLottery" title="복권"><span class="ci">🎟️</span><span class="cl">복권</span></button>
+      <button class="chipStation" id="stRoulette" title="룰렛"><span class="ci spin">🎰</span><span class="cl">룰렛</span></button>
+      <button class="chipStation" id="stExchange" title="카드 교환권"><span class="ci">🃏</span><span class="cl">교환</span></button>
+    </div>
   </div>
   <div id="pokerPanel">
     <div id="toolbar">
@@ -246,6 +302,12 @@
   <div id="shopTitle"></div>
   <div id="shopGoldRow">💰 <b id="shopGold"></b></div>
   <div id="shopBody"></div>
+</div></div>
+<!-- 칩 카지노 모달 (복권/룰렛/교환 애니메이션) -->
+<div id="chipModal"><div id="chipWin">
+  <button id="chipClose" title="닫기">✕</button>
+  <div id="chipTitle"></div>
+  <div id="chipBody"></div>
 </div></div>
 <div id="overlay">
   <h2>게임 오버</h2>
@@ -365,7 +427,7 @@ let S;
 function reset() {
   S = {
     phase: 'poker', round: 1, life: 20, gold: 120,
-    minerCost: 80,
+    minerCost: 80, chips: 0, event: null, eventMods: null,
     hunt: null, items: { reroll: 0, copier: 0 }, groups: {},
     upg: [0,0,0], upgCost: [50,50,50],
     units: [], monsters: [], effects: [], floats: [], parts: [], projs: [],
@@ -430,6 +492,7 @@ function newDeck() {
 function startPoker() {
   S.phase = 'poker';
   S.pokerTimer = POKER_TIME;
+  rollEvent(); // 다음 전투 이벤트를 포커 시간에 미리 알린다
   const double = (S.round % 5 === 0);
   // 더블 포커: 두 패를 동시에 펼쳐놓고 서로 비교하며 교환
   S.poker = { hands: [] };
@@ -633,7 +696,7 @@ function updateMiner(u, dt) {
   } else { // toHouse
     u.tx = HOUSE.x + 26 + u.jx * 0.3; u.ty = HOUSE.y + 20 + u.jy * 0.3;
     if (Math.hypot(HOUSE.x - u.x, HOUSE.y - u.y) < 60) { // 유닛 분리로 밀려도 배달되도록 여유
-      const dep = (MINER_LOAD + S.mineBonus) * (u.sminer ? 3 : u.hminer ? 3 : 1);
+      const dep = (MINER_LOAD + S.mineBonus) * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1);
       S.gold += dep;
       addFloat(HOUSE.x, HOUSE.y - 34, `+${dep}G`, (u.sminer || u.hminer) ? '#c9a227' : '#b8860b', 1.1);
       sfx('coin');
@@ -654,14 +717,16 @@ function effDmg(u) {
 function startWave() {
   S.phase = 'wave';
   S.timer = WAVE_TIME;
-  const hp = monsterHP(S.round);
-  const count = mobCount(S.round);
+  const em = S.eventMods || {};
+  const hp = Math.max(1, Math.floor(monsterHP(S.round) * (em.hpMul || 1)));
+  const count = Math.max(1, Math.floor(mobCount(S.round) * (em.countMul || 1)));
   const boss = (S.round % 10 === 0);
+  if (em.instantGold) { const g = S.round * 30; S.gold += g; addFloat(HOUSE.x, HOUSE.y - 40, `🎁 +${g}G`, '#ffd54f', 2); }
   // 소환장 포탈에서 우르르 쏟아지듯 (약 2초 안에 전부 등장)
   S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0 };
   renderPoker();
   const info = stageInfo(S.round);
-  logMsg(`🌊 스테이지 ${S.round} [${info.name}] — ${count}마리 (HP ${hp})${boss ? ' + 👹 보스!' : ''}`);
+  logMsg(`🌊 스테이지 ${S.round} [${info.name}] — ${count}마리 (HP ${hp})${boss ? ' + 👹 보스!' : ''}${S.event ? ' · ' + S.event.name : ''}`);
 }
 function spawnMonster(hp, isBoss, opt) {
   opt = opt || {};
@@ -833,7 +898,8 @@ function update(dt) {
   S.floats = S.floats.filter(f => { f.t -= dt; f.y -= 26 * dt; return f.t > 0; });
   S.parts = S.parts.filter(p => {
     p.t -= dt;
-    if (p.coin) { // 동전: 성(골드 저장고)으로 가속 유도
+    if (p.chipFx) { p.vy += 200 * dt; } // 칩 축포: 위로 튀었다 떨어짐 (성으로 안 감)
+    else if (p.coin) { // 동전: 성(골드 저장고)으로 가속 유도
       const dx = HOUSE.x - p.x, dy = (HOUSE.y + 5) - p.y, d = Math.hypot(dx, dy) || 1;
       p.vx += dx / d * 1400 * dt; p.vy += dy / d * 1400 * dt;
       if (d < 26) { addFloat(HOUSE.x, HOUSE.y - 44, '+', '#ffd54f', 0.4); return false; }
@@ -918,21 +984,9 @@ function update(dt) {
     for (const u of S.units) {
       if (u.miner) continue;
       u.cool -= dt;
-      // 광석 방 안이면 광석을 때린다 (정원 내 자격 유닛만)
+      // 광석 방 안이면 광석을 때린다 (정원 내 자격 유닛만). 광산 채굴은 광부 전담 — 전투 유닛은 안 캔다.
       if (!S.hunt.done && S.hunt.hp > 0 && isInRoom(u)) {
         if (u.oreSlot && u.cool <= 0 && !u.moving) { u.cool = u.cd; fireAtOre(u); }
-        continue;
-      }
-      const d = Math.hypot(MINE_POS.x - u.x, MINE_POS.y - u.y);
-      const mineReach = u.range * 0.5 + 25; // 사거리 2배 확장 후에도 광산 자동 채굴 반경은 기존 체감 유지
-      if (u.attackMine) {
-        if (d > mineReach) { u.tx = MINE_POS.x + u.jx; u.ty = MINE_POS.y + 30 + u.jy; }
-        else {
-          u.tx = u.x; u.ty = u.y;
-          if (u.cool <= 0 && !u.moving) { u.cool = u.cd; mineHit(u); }
-        }
-      } else if (d <= mineReach && u.cool <= 0 && !u.moving && S.mineHp > 0) {
-        u.cool = u.cd; mineHit(u); // 명령 없어도 광산 옆이면 때린다
       }
     }
     S.pokerTimer -= dt;
@@ -991,21 +1045,11 @@ function update(dt) {
       continue;
     }
     if (u.forceTarget && (u.forceTarget.dead || u.forceTarget.hp <= 0)) u.forceTarget = null;
-    // A명령: 광산 강제 채굴 (반경 밖이면 접근)
-    if (u.attackMine) {
-      const d = Math.hypot(MINE_POS.x - u.x, MINE_POS.y - u.y);
-      if (d > u.range * 0.5 + 25) { u.tx = MINE_POS.x + u.jx; u.ty = MINE_POS.y + 30 + u.jy; }
-      else {
-        u.tx = u.x; u.ty = u.y;
-        if (u.cool <= 0 && !u.moving) { u.cool = u.cd; mineHit(u); }
-      }
-      continue;
-    }
     // A명령: 대상 집중 공격 (보스 저격용)
     if (u.forceTarget) {
       const ft = u.forceTarget;
       const d = Math.hypot(ft.x - u.x, ft.y - u.y);
-      if (d > u.range) { const t = clampTargetPos(ft.x + u.jx, ft.y + u.jy); u.tx = t.x; u.ty = t.y; }
+      if (d > effRange(u)) { const t = clampTargetPos(ft.x + u.jx, ft.y + u.jy); u.tx = t.x; u.ty = t.y; }
       else {
         u.tx = u.x; u.ty = u.y;
         if (u.cool <= 0 && !u.moving) { u.cool = u.cd; fireAt(u, ft); }
@@ -1014,7 +1058,7 @@ function update(dt) {
     }
     // 자동 타겟: 사거리 내에서 우선순위(가까운/강한/멀리)로 선택. 죽을 예정 몹은 제외 (핫루프 — 제곱거리 비교)
     let best = null, bestScore = Infinity, anyInRange = false;
-    const r2 = u.range * u.range;
+    const r2 = effRange(u) * effRange(u);
     for (const m of S.monsters) {
       if (m.hp + m.shield - m.inc <= 0) continue;
       const ddx = m.x - u.x, ddy = m.y - u.y, d2 = ddx * ddx + ddy * ddy;
@@ -1029,9 +1073,6 @@ function update(dt) {
     if (best) {
       u.cool = u.cd;
       fireAt(u, best);
-    } else if (!u.hold && S.mineHp > 0 && Math.hypot(MINE_POS.x - u.x, MINE_POS.y - u.y) <= u.range * 0.5 + 25) {
-      // 홀드 아니고, 근처에 몹이 없으면 광산을 캔다
-      u.cool = u.cd; mineHit(u);
     }
   }
   // 투사체 이동/명중
@@ -1115,7 +1156,7 @@ function update(dt) {
     return true;
   });
   // 사망 처리 + 폭발 (몹 보상: 기존의 1/10로 축소)
-  const killGold = Math.max(1, Math.round(S.round * 0.05));
+  const killGold = Math.max(1, Math.round(S.round * 0.05)) * ((S.eventMods && S.eventMods.killMul) || 1);
   const newborns = [];
   S.monsters = S.monsters.filter(m => {
     if (m.hp <= 0) {
@@ -1130,7 +1171,12 @@ function update(dt) {
       // 골드 동전이 튀어나와 좌상단 금고로 빨려간다 (시각 연출 — 골드는 즉시 지급됨)
       const ca = Math.random() * 6.28;
       S.parts.push({ x: m.x, y: m.y, vx: Math.cos(ca) * 90, vy: Math.sin(ca) * 90 - 60, coin: true, t: 1.4, r: 2.6, c: '#ffd54f' });
-      if (m.boss) { logMsg(`👹 보스 처치! +${g}G`); addFloat(m.x, m.y, `+${g}G!!`, '#e91e8c', 2); }
+      if (m.boss) {
+        S.chips++; // 보스 처치 → 카지노 칩 지급
+        logMsg(`👹 보스 처치! +${g}G · 🎰 칩 +1 (좌측 카지노에서 사용!)`);
+        addFloat(m.x, m.y - 20, `+${g}G · 🎰 칩+1!`, '#ffd54f', 2.6);
+        for (let i = 0; i < 3; i++) S.parts.push({ x: m.x, y: m.y, vx: (Math.random()-0.5)*120, vy: -80 - Math.random()*80, coin: true, chipFx: true, t: 1.6, r: 3.4, c: '#ffd54f' });
+      }
       // 💥 분열: 처치 시 10마리 (각각 원래 체력의 80%, 자식은 재분열 안 함)
       if (m.split && S.monsters.length + newborns.length < 520) {
         const chp = Math.max(1, Math.floor(m.max * 0.8));
@@ -1308,18 +1354,6 @@ function spawnShards(p) {
     S.effects.push({ type:'boom', x: m.x, y: m.y, r: 6, t: 0.14 });
   }
 }
-function mineHit(u) {
-  // 전투 유닛이 광산을 때림: 레이어만 깎는다 (골드는 광부가 집에 배달할 때만)
-  S.mineHp -= effDmg(u);
-  u.swing = 0.3;
-  for (let i = 0; i < 3; i++) {
-    const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 70;
-    S.parts.push({ x: MINE_POS.x + (Math.random()*26-13), y: MINE_POS.y + (Math.random()*14-2),
-      vx: Math.cos(a)*v, vy: Math.sin(a)*v - 35, t: 0.3, r: 1.5 + Math.random()*1.5, c: '#c9a227' });
-  }
-  if (S.mineHp <= 0) mineReward();
-}
-
 // 코믹 팝 사망: 0.11초 부풀었다가 → 팡! (즙 + 조각 + 바닥 얼룩). 실제 팡은 이펙트 루프에서 burst 시점에
 function deathPop(m) {
   const c = monColor(m);
@@ -2775,12 +2809,6 @@ function issueAttack(px, py) {
     logMsg(`🎯 집중 공격 명령! (${sel.length}기)`);
     return;
   }
-  // 광산 클릭 → 강제 채굴
-  if (Math.hypot(MINE_POS.x - px, MINE_POS.y - py) < 60) {
-    sel.forEach(u => { u.attackMine = true; u.forceTarget = null; u.amove = false; u.hold = false; });
-    logMsg(`⛏️ 광산 채굴 명령! (${sel.length}기)`);
-    return;
-  }
   // 빈 땅 클릭 → 어택땅 (이동하다 적 만나면 교전)
   sel.forEach((u, i) => {
     const cols = Math.ceil(Math.sqrt(sel.length));
@@ -2922,8 +2950,7 @@ function updateInfoPanel() {
   if (u.shards) traits.push(`파편 ${u.shards}개 (${Math.round(u.shardFrac*100)}%)`);
   if (u.atk === 'sniper') traits.push('단일 초강력 (보스용)');
   if (!traits.length) traits.push(u.miner ? '채굴 전용 (전투 불가)' : '단일 공격');
-  if (u.attackMine) traits.push('<b style="color:#b8860b">⛏️ 광산 채굴 중</b>');
-  else if (u.forceTarget) traits.push('<b style="color:#e53935">🎯 집중 공격 중</b>');
+  if (u.forceTarget) traits.push('<b style="color:#e53935">🎯 집중 공격 중</b>');
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
   const sub = u.miner ? '광부' : keyTag + HAND_NAMES[u.tier] + (u.hero ? ' 영웅' : '');
   const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = top2[0] + top2[1];
@@ -3090,6 +3117,149 @@ function renderShop() {
 }
 document.getElementById('shopClose').onclick = closeShop;
 document.getElementById('shopOverlay').onclick = e => { if (e.target.id === 'shopOverlay') closeShop(); };
+
+// ==================== 🎰 칩 카지노 (보스 칩으로 복권/룰렛/교환) ====================
+const CM = document.getElementById('chipModal'), CB = document.getElementById('chipBody'), CT = document.getElementById('chipTitle');
+let chipWasPaused = false;
+function openChip(title) {
+  CT.textContent = title; CB.innerHTML = '';
+  chipWasPaused = S.paused; S.paused = true;
+  CM.style.display = 'flex';
+}
+function closeChip() { CM.style.display = 'none'; if (!chipWasPaused && S.phase !== 'gameover' && !openShop) S.paused = false; }
+document.getElementById('chipClose').onclick = closeChip;
+CM.onclick = e => { if (e.target.id === 'chipModal') closeChip(); };
+
+// 뽑기 유닛: 낮은 족보일수록 잘 나오는 가중 랜덤
+function weightedTier() {
+  const w = [26, 22, 17, 12, 8, 6, 4, 3, 1.5, 0.5]; let s = w.reduce((a, b) => a + b, 0), r = Math.random() * s;
+  for (let i = 0; i < 10; i++) { r -= w[i]; if (r < 0) return i; } return 0;
+}
+// 🎟️ 복권 보상 롤 (아이콘 + 라벨 + 적용)
+function rollLottery() {
+  const r = Math.random() * 1000;
+  if (r < 400) { const g = 100 + Math.floor(Math.random() * 201); return { icon: '💰', label: `골드 +${g}`, apply: () => S.gold += g }; }
+  if (r < 575) { const g = 500 + Math.floor(Math.random() * 301); return { icon: '💰', label: `골드 뭉치 +${g}`, apply: () => S.gold += g }; }
+  if (r < 795) { const t = weightedTier(); return { icon: '⚔️', label: `${HAND_NAMES[t]} 유닛`, apply: () => spawnUnit(t, RACE_OF_RANK[t], false, 2 + Math.floor(Math.random() * 13)) }; }
+  if (r < 895) return { icon: '⛏️', label: '광부 1명', apply: () => spawnMiner() };
+  if (r < 935) return Math.random() < 0.5 ? { icon: '🎟️', label: '재변경권', apply: () => S.items.reroll++ } : { icon: '📑', label: '복사권', apply: () => S.items.copier++ };
+  // 영웅 (희귀) — 낮은 족보 가중
+  const t = weightedTier();
+  return { icon: '⭐', label: `${HAND_NAMES[t]} 영웅!!`, apply: () => spawnHero(t, RACE_OF_RANK[t], PORTAL.x, PORTAL.y + PORTAL.r + 30, 1), rare: true };
+}
+const LOTTO_ICONS = ['💰', '💰', '⚔️', '⛏️', '🎟️', '⭐', '💰', '⚔️'];
+function doLottery() {
+  if (S.chips <= 0) return;
+  S.chips--; sfx('coin');
+  const reward = rollLottery();
+  openChip('🎟️ 복권');
+  // 가로 룰렛 릴: 아이콘이 지나가다 당첨 아이콘에서 멈춘다
+  const WIN = 22, cells = [];
+  for (let i = 0; i < 28; i++) cells.push(i === WIN ? reward.icon : LOTTO_ICONS[Math.floor(Math.random() * LOTTO_ICONS.length)]);
+  CB.innerHTML = `<div class="reelBox"><div class="reelStrip" id="reelStrip">${cells.map(c => `<div class="reelCell">${c}</div>`).join('')}</div></div><div class="chipResult" id="lottoRes">🎲 두구두구…</div><div id="lottoBtns"></div>`;
+  const strip = document.getElementById('reelStrip');
+  const boxW = document.querySelector('.reelBox').clientWidth;
+  strip.style.transition = 'none'; strip.style.transform = 'translateX(0px)';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    strip.style.transition = 'transform 2.7s cubic-bezier(0.12,0.6,0.12,1)';
+    strip.style.transform = `translateX(${-(WIN * 72 + 36 - boxW / 2)}px)`;
+  }));
+  setTimeout(() => {
+    reward.apply(); updateInfoPanel();
+    document.getElementById('lottoRes').innerHTML = (reward.rare ? '🌟🌟 ' : '🎉 ') + `<span style="color:${reward.rare ? '#ff6b9d' : '#ffd166'}">${reward.label}</span> 당첨!`;
+    if (reward.rare) sfx('hero'); else sfx('reward');
+    document.getElementById('lottoBtns').innerHTML =
+      `<button class="chipBtn" onclick="closeChip()">확인</button>` +
+      (S.chips > 0 ? `<button class="chipBtn sub" onclick="doLottery()">한 번 더 (칩 ${S.chips})</button>` : '');
+  }, 2850);
+}
+
+// 🎰 룰렛 (골드 베팅) — 가중 결과 후 휠이 해당 칸에 멈춘다
+const WHEEL = [0, 1.5, 0, 2, 0, 3, 0, 4, 0, 5, 0, 7, 0, 10, 0, 0, 20, 0]; // 18칸
+function rollMult() {
+  const r = Math.random() * 1000; // EV ≈ 0.93 (집 우위 약간 — 진짜 도박)
+  if (r < 666) return 0; if (r < 786) return 1.5; if (r < 876) return 2; if (r < 931) return 3;
+  if (r < 959) return 4; if (r < 977) return 5; if (r < 991) return 7; if (r < 999) return 10; return 20;
+}
+function doRoulette() {
+  if (S.chips <= 0) return;
+  openChip('🎰 카지노 룰렛');
+  const g = Math.floor(S.gold);
+  const bets = [['20%', Math.floor(g * 0.2)], ['50%', Math.floor(g * 0.5)], ['올인', g]];
+  CB.innerHTML =
+    `<div style="font-size:13px;color:#c9b8f0;margin-bottom:6px">보유 골드 <b style="color:#ffd166">${g}G</b> — 얼마를 걸까요?</div>` +
+    `<div class="wheelWrap"><div class="wheel" id="wheel"></div><div class="wheelHub"></div></div>` +
+    `<div id="betRow">${bets.map(([lb, amt], i) => `<button class="chipBtn" ${amt < 10 ? 'disabled' : ''} data-bet="${amt}">${lb} (${amt}G)</button>`).join('')}</div>` +
+    `<div class="chipResult" id="rlRes">칩을 걸면 시작!</div>`;
+  // 휠 색칠
+  const seg = 360 / WHEEL.length, stops = WHEEL.map((v, i) => {
+    const col = v === 0 ? (i % 2 ? '#3a2f52' : '#2c2340') : v >= 10 ? '#e53935' : v >= 4 ? '#ff9100' : '#43a047';
+    return `${col} ${i * seg}deg ${(i + 1) * seg}deg`;
+  });
+  const wheel = document.getElementById('wheel');
+  wheel.style.background = `conic-gradient(${stops.join(',')})`;
+  wheel.innerHTML = WHEEL.map((v, i) => v ? `<div style="position:absolute;top:50%;left:50%;transform:rotate(${(i + 0.5) * seg}deg) translateY(-88px);transform-origin:0 0;font-size:12px;font-weight:800;color:#fff">${v}×</div>` : '').join('');
+  let spun = false;
+  CB.querySelectorAll('[data-bet]').forEach(b => b.onclick = () => {
+    if (spun) return; const bet = +b.dataset.bet; if (bet < 10 || S.chips <= 0) return;
+    spun = true; S.chips--; S.gold -= bet; sfx('coin');
+    document.getElementById('betRow').style.display = 'none';
+    const mult = rollMult();
+    const winners = []; WHEEL.forEach((v, i) => { if (v === mult) winners.push(i); });
+    const slice = winners[Math.floor(Math.random() * winners.length)];
+    const targetDeg = 360 * 6 - (slice + 0.5) * seg; // 여러 바퀴 돌고 해당 칸이 상단(▼)에
+    wheel.style.transform = `rotate(${targetDeg}deg)`;
+    document.getElementById('rlRes').textContent = '🎡 도는 중…';
+    setTimeout(() => {
+      const won = Math.floor(bet * mult); S.gold += won;
+      const res = document.getElementById('rlRes');
+      if (mult === 0) { res.innerHTML = `<span style="color:#e57373">💥 꽝! ${bet}G 잃음</span>`; sfx('leak'); }
+      else { res.innerHTML = `<span style="color:#ffd166">🎉 ${mult}배! +${won}G (순익 ${won - bet >= 0 ? '+' : ''}${won - bet}G)</span>`; sfx(mult >= 10 ? 'jackpot' : 'reward'); }
+      document.getElementById('betRow').insertAdjacentHTML('afterend', `<div style="margin-top:8px"><button class="chipBtn" onclick="closeChip()">확인</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="doRoulette()">다시 (칩 ${S.chips})</button>` : ''}</div>`);
+    }, 4100);
+  });
+}
+
+// 🃏 카드 교환권 (30% 발급 / 40% 칩 환급 / 30% 소멸)
+function doExchange() {
+  if (S.chips <= 0) return;
+  S.chips--; sfx('coin');
+  openChip('🃏 카드 교환권');
+  const r = Math.random();
+  const out = r < 0.30 ? { back: '🎟️', txt: '<span style="color:#43a047">성공! 포커 재변경권 획득!</span>', apply: () => S.items.reroll++, s: 'reward' }
+    : r < 0.70 ? { back: '🔄', txt: '<span style="color:#ffd166">칩 환급! 다시 도전하세요</span>', apply: () => S.chips++, s: 'coin' }
+      : { back: '💨', txt: '<span style="color:#e57373">아쉽게 소멸…</span>', apply: () => { }, s: 'leak' };
+  CB.innerHTML = `<div class="flipWrap"><div class="flipCard" id="flipCard"><div class="flipFace flipFront">🃏</div><div class="flipFace flipBack">${out.back}</div></div></div><div class="chipResult" id="exRes">카드를 뒤집는 중…</div><div id="exBtns"></div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('flipCard').classList.add('flipped')));
+  setTimeout(() => {
+    out.apply(); sfx(out.s); updateInfoPanel();
+    document.getElementById('exRes').innerHTML = out.txt;
+    document.getElementById('exBtns').innerHTML = `<button class="chipBtn" onclick="closeChip()">확인</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="doExchange()">한 번 더 (칩 ${S.chips})</button>` : ''}`;
+  }, 900);
+}
+document.getElementById('stLottery').onclick = () => { initAudio(); doLottery(); };
+document.getElementById('stRoulette').onclick = () => { initAudio(); doRoulette(); };
+document.getElementById('stExchange').onclick = () => { initAudio(); doExchange(); };
+
+// ==================== 라운드 이벤트 (난이도 곡선 사이 변주) ====================
+const EVENTS = [
+  { name: '💰 골드 러시', desc: '이번 전투 킬 골드 2배!', mods: { killMul: 2 } },
+  { name: '🌾 풍년', desc: '광부 배달 골드 2배!', mods: { deliverMul: 2 } },
+  { name: '🩹 약점 노출', desc: '몬스터 체력 30% 감소', mods: { hpMul: 0.7 } },
+  { name: '👑 정예 습격', desc: '수는 절반, 대신 아주 튼튼!', mods: { countMul: 0.5, hpMul: 1.9 } },
+  { name: '🌫️ 짙은 안개', desc: '아군 사거리 25% 감소', mods: { rangeMul: 0.75 } },
+  { name: '🎁 긴급 보급', desc: '즉시 골드 보너스!', mods: { instantGold: true } },
+];
+function rollEvent() {
+  // 6라운드부터, 보스 라운드 제외, 45% 확률로 이벤트
+  if (S.round >= 6 && S.round % 10 !== 0 && Math.random() < 0.45) {
+    S.event = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+    S.eventMods = S.event.mods;
+    logMsg(`✨ [이벤트] ${S.event.name} — ${S.event.desc}`);
+  } else { S.event = null; S.eventMods = null; }
+}
+function effRange(u) { return u.range * ((S.eventMods && S.eventMods.rangeMul) || 1); }
+
 document.getElementById('bSpeed').onclick = () => {
   S.speed = S.speed >= 3 ? 1 : S.speed + 1;
   document.getElementById('bSpeed').textContent = ['⏩', '⏩²', '⏩³'][S.speed - 1];
@@ -3126,6 +3296,7 @@ function renderPoker(spin) {
   } else {
     banner.textContent = `스테이지 ${S.round} 준비 — 카드 클릭으로 교환 (각 1회)`;
   }
+  if (S.event) banner.innerHTML += `<br><span style="color:#ffd166;font-weight:bold">✨ 다음 전투 이벤트: ${S.event.name} — ${S.event.desc}</span>`;
   btn.textContent = double ? '유닛 2기 동시 소환!' : '유닛 소환!';
   cardsEl.innerHTML = '';
   S.poker.hands.forEach((hand, h) => {
@@ -3178,6 +3349,10 @@ function updateHUD() {
   document.getElementById('tLife').textContent = S.life;
   document.getElementById('tGold').textContent = Math.floor(S.gold) + 'G';
   document.getElementById('tMiner').textContent = S.units.filter(u => u.miner).length + '명';
+  document.getElementById('tChips').textContent = S.chips;
+  // 좌측 카지노 스테이션: 칩 있으면 활성 + 빛남
+  const hasChip = S.chips > 0;
+  document.querySelectorAll('.chipStation').forEach(b => { b.disabled = !hasChip; b.classList.toggle('ready', hasChip); });
   document.getElementById('tRound').textContent = S.round;
   document.getElementById('tStage').textContent = stageInfo(S.round).name;
   // 원형 시계: 시간이 흐를수록 빨강(전투)/보라(포커)가 시계방향으로 채워진다
