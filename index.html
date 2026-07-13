@@ -52,12 +52,20 @@
   .shopIcon:hover::after { color: #ffb300; }
   .shopIcon.open { border-color: #5b48d0; background: linear-gradient(160deg, #f3edff, #e2d7fb); box-shadow: inset 0 0 0 2px rgba(255,255,255,0.9), 0 3px 12px rgba(91,72,208,0.3); }
   .shopIcon.open::after { content: '♦'; color: #ffb300; }
+  .shopIcon.off { filter: grayscale(1) brightness(0.8); opacity: 0.55; }
+  .shopIcon.restartBtn { width: auto; padding: 0 12px; font-size: 13px; font-weight: bold; gap: 4px; }
+  .shopIcon.restartBtn::after { content: none; }
   .shopBtn { display: block; width: 100%; text-align: left; background: #f6f6fa; border: 1px solid #e2e2ea; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; font-size: 12.5px; }
   .shopBtn:hover { background: #efeaff; border-color: #5b48d0; }
   .shopBtn:disabled { opacity: 0.4; cursor: default; }
 
   /* ===== 풀스크린 RPG 상점창 ===== */
   #shopOverlay { position: fixed; inset: 0; background: rgba(22,16,42,0.66); display: none; align-items: center; justify-content: center; z-index: 9; }
+  #shopWin.wide { width: min(760px, 96vw); }
+  .castleCols { display: flex; gap: 18px; align-items: flex-start; }
+  .castleCol { flex: 1; min-width: 0; }
+  .castleColT { font-size: 14px; font-weight: 800; color: #6d5416; text-align: center; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 2px solid #dcc98f; }
+  @media (max-width: 560px) { .castleCols { flex-direction: column; } }
   #shopWin { position: relative; width: min(640px, 92vw); max-height: 86vh; overflow-y: auto;
     background: linear-gradient(180deg, #fdf9ee 0%, #f5eeda 100%);
     border: 3px solid #c9a75a; border-radius: 16px;
@@ -251,21 +259,21 @@
     <!-- 좌측 카지노 스테이션: 보스 칩을 넣어 진행 -->
     <div id="chipBar">
       <button class="chipStation" id="stLottery" title="복권"><span class="ci">🎟️</span><span class="cl">복권</span></button>
-      <button class="chipStation" id="stRoulette" title="룰렛"><span class="ci spin">🎰</span><span class="cl">룰렛</span></button>
+      <button class="chipStation" id="stRoulette" title="룰렛"><span class="ci">🎰</span><span class="cl">룰렛</span></button>
       <button class="chipStation" id="stExchange" title="카드 교환권"><span class="ci">🃏</span><span class="cl">교환</span></button>
     </div>
   </div>
   <div id="pokerPanel">
     <div id="toolbar">
       <div class="tbGroup" title="게임 상점">
-        <button class="shopIcon" data-shop="miner" title="광부">⛏️</button>
         <button class="shopIcon" data-shop="book" title="족보">📖</button>
       </div>
       <div class="tbGroup" title="시스템">
-        <button class="shopIcon" id="bSound" title="사운드">🔊</button>
+        <button class="shopIcon" id="bMusic" title="배경음악 켜기/끄기">🎵</button>
+        <button class="shopIcon" id="bSfx" title="타격음 켜기/끄기">🔊</button>
         <button class="shopIcon" id="bSpeed" title="배속">⏩</button>
         <button class="shopIcon" id="btnFull" title="전체화면">⛶</button>
-        <button class="shopIcon" id="btnRestart" title="다시 시작">🔄</button>
+        <button class="shopIcon restartBtn" id="btnRestart" title="처음부터 다시">🔄 다시하기</button>
       </div>
     </div>
     <div id="pokerBanner"></div>
@@ -352,12 +360,12 @@ const WEAPONS = [
   // 4 스트레이트 — 기관총 (단일 dps가 압도적이라 공속 반감: cd 0.13→0.26. 넓은 사거리·연사 이점은 유지)
   {name:'기관총', dmg:8, cd:0.26, range:280, splash:0, bounce:0, atk:'shot', proj:'mg',
    hero:{name:'저격총', atk:'sniper', cd:5, dmgMul:45, range:470, proj:'sniper'}}, // 보스 저격
-  // 5 플러쉬 — 화염방사기 (뭉친 몹 전체를 때려 실질 dps가 폭발 → 0.5에서 ×3 하향)
-  {name:'화염방사기', dmg:0.17, cd:0.16, range:180, splash:92, bounce:0, atk:'area', vis:'flame',
-   hero:{name:'대형 화염방사기', splash:168, range:240}},
-  // 6 풀하우스 — 대검 (2초, 짧은 범위 스플래쉬 = 소환장의 약 1/4)
-  {name:'대검', dmg:14, cd:1.6, range:140, splash:56, bounce:0, atk:'area', vis:'sword',
-   hero:{name:'전기톱', atk:'area', vis:'saw', splash:84, cd:0.24, range:148}},
+  // 5 플러쉬 — 화염방사기 (사거리 반감: 화염 끝이 소환장 정중앙에 닿아 뭉친 공 전체타격 = 카타르시스)
+  {name:'화염방사기', dmg:0.17, cd:0.16, range:90, splash:100, bounce:0, atk:'area', vis:'flame',
+   hero:{name:'대형 화염방사기', splash:150, range:120}},
+  // 6 풀하우스 — 대검 (검사: 사거리 짧게 = 플러쉬의 2/3, 대신 데미지↑ + 돌진 스킬)
+  {name:'대검', dmg:20, cd:1.6, range:60, splash:56, bounce:0, atk:'area', vis:'sword',
+   hero:{name:'전기톱', atk:'area', vis:'saw', splash:80, cd:0.24, range:64}},
   // 7 포카드 — 바주카포 (5초, 스플래쉬)
   {name:'바주카포', dmg:25, cd:5.0, range:330, splash:104, bounce:0, atk:'area', vis:'rocket',
    hero:{name:'탱크', atk:'pen', vis:'tank', cd:2.0}}, // 소환장 전체 타격
@@ -680,8 +688,8 @@ function spawnHero(tier, race, x, y, keyBonus, sup) {
 function spawnMiner() {
   const x = HOUSE.x + 30 + Math.random() * 20, y = HOUSE.y + 40;
   S.units.push({
-    x, y, tx: x, ty: y, race: 2, tier: -1, hidden: false, hero: false, miner: true,
-    jx: (Math.random() - 0.5) * 40, jy: (Math.random() - 0.5) * 40,
+    x, y, tx: x, ty: y, race: null, tier: -1, hidden: false, hero: false, miner: true, // 종족 없음
+    jx: (Math.random() - 0.5) * 64, jy: (Math.random() - 0.5) * 64,  // 넓게 흩어져 겹침 방지
     forceTarget: null, attackMine: false, amove: false,
     mjob: 'toMine', mtimer: 0, carry: false,   // 채굴 사이클 상태
     dmg: 20, cd: 1.0, range: 70, splash: 0, bounce: 0,
@@ -695,7 +703,7 @@ function updateMiner(u, dt) {
   const mineMul = u.sminer ? 3 : 1; // 슈퍼광부는 채굴도 3배 빠름
   u.speed = MINER_SPEED * (1 + 0.25 * S.minerMoveLv) * spdMul;
   if (u.mjob === 'toMine') {
-    u.tx = MINE_POS.x + u.jx; u.ty = MINE_POS.y + 40 + u.jy;
+    u.tx = MINE_POS.x + u.jx; u.ty = MINE_POS.y + 44 + u.jy * 0.7;
     // 도착 판정 74: 개별 오프셋(jy ±20 + 세로 40) 최대 대각 ~63px + 유닛 분리 밀림 여유
     // (58이던 시절 오프셋이 큰 광부는 목표에 서고도 채굴을 시작 못 하고 영영 멈춰 있었다)
     if (Math.hypot(MINE_POS.x - u.x, MINE_POS.y - u.y) < 74) {
@@ -716,8 +724,8 @@ function updateMiner(u, dt) {
     if (S.mineHp <= 0) mineReward();
     u.mtimer -= dt;
     if (u.mtimer <= 0) { u.carry = true; u.mjob = 'toHouse'; }
-  } else { // toHouse
-    u.tx = HOUSE.x + 26 + u.jx * 0.3; u.ty = HOUSE.y + 20 + u.jy * 0.3;
+  } else { // toHouse (넓게 흩어져 배달 — 겹침 방지)
+    u.tx = HOUSE.x + 26 + u.jx * 0.6; u.ty = HOUSE.y + 20 + u.jy * 0.55;
     if (Math.hypot(HOUSE.x - u.x, HOUSE.y - u.y) < 60) { // 유닛 분리로 밀려도 배달되도록 여유
       const dep = (MINER_LOAD + S.mineBonus) * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1);
       S.gold += dep;
@@ -1343,12 +1351,12 @@ function areaHit(u, x, y, dmg) {
     S.effects.push({ type:'slash', x, y, r: u.splash * 1.6, a, t: 0.22, dur: 0.22 });
     for (let i = 0; i < 4; i++) { const v = 60 + Math.random()*90, aa = a + (Math.random()-0.5)*1.2; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.22, r: 1.2 + Math.random()*1.6, c: '#dbe9ff' }); }
   } else if (vis === 'flame') {
-    // 진짜 불꽃: 총구에서 부채꼴로 뿜어지는 화염 파티클
-    const n = u.hidden ? 8 : 6;
+    // 진짜 불꽃: 총구에서 착탄점(사거리 끝)까지 뻗는 화염 스트림 — 끝이 소환장 중앙에 닿아야 카타르시스
+    const n = u.hidden ? 13 : 10, dist = Math.hypot(x - mz.x, y - mz.y);
     for (let i = 0; i < n; i++) {
-      const sp = 150 + Math.random() * 180, aa = a + (Math.random() - 0.5) * 0.6;
+      const reach = dist * (0.55 + Math.random() * 0.55), sp = reach / 0.32, aa = a + (Math.random() - 0.5) * 0.5;
       S.parts.push({ x: mz.x, y: mz.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp,
-        t: 0.28 + Math.random() * 0.24, r: 4 + Math.random() * 5, fire: true, spin: Math.random()*6.28 });
+        t: 0.3 + Math.random() * 0.22, r: 4 + Math.random() * 5.5, fire: true, spin: Math.random()*6.28 });
     }
   } else { // rocket / bomb: 폭발
     S.effects.push({ type:'boom', x, y, r: u.splash, t: 0.28 });
@@ -1528,16 +1536,17 @@ function spawnSuperMiner() {
 function activateSkill(u) {
   if (u.tier !== 6 || (u.skillCd || 0) > 0 || (u.skillT || 0) > 0) return;
   u.skillT = 5;
-  logMsg(`⚔️ ${u.weapon} 돌격! 5초간 소환장 전체를 휩씁니다!`);
+  logMsg(`⚔️ ${u.weapon} 돌격! 5초간 소환장으로 뛰어들어 칼을 휘두릅니다!`);
   addFloat(u.x, u.y - 28, '⚔️ 돌격!', '#c0392b', 1.6);
   sfx('slash');
 }
-// 돌격 중 회오리 타격: 소환장 모든 몹에 데미지
+// 돌격 중 회오리 타격: 칼을 휘두르는 반경(사거리+참격폭) 안의 몹만 타격 (전체타격 아님)
 function whirlwindHit(u) {
   const dmg = effDmg(u);
   u.atkAnim = 1;
-  for (const m of S.monsters) dealDamage(m, dmg, u);
-  S.effects.push({ type:'whirl', x: u.x, y: u.y, r: 156, t: 0.22 });
+  const r = u.range + u.splash, r2 = r * r; // 검을 휘두르는 반경
+  for (const m of S.monsters) { const dx = m.x - u.x, dy = m.y - u.y; if (dx*dx + dy*dy <= r2) dealDamage(m, dmg, u); }
+  S.effects.push({ type:'whirl', x: u.x, y: u.y, r, t: 0.22 });
   if (S.monsters.length) sfx('slash');
 }
 // 바라보는 4방향 (좌/우/상/하) 단위벡터
@@ -3060,7 +3069,7 @@ window.addEventListener('mouseup', e => {
     if (hit) { hit.selected = true; hideObjInfo(); }
     else { // 빈 곳 클릭: 성이면 강화창, 다른 건물이면 설명 팝업, 아니면 닫기
       const k = objAt(drag.x0, drag.y0);
-      if (k === 'castle') { hideObjInfo(); if (openShop !== 'upg') toggleShop('upg'); }
+      if (k === 'castle') { hideObjInfo(); if (openShop !== 'castle') toggleShop('castle'); }
       else k ? showObjInfo(k) : hideObjInfo();
     }
   }
@@ -3117,6 +3126,13 @@ function updateInfoPanel() {
     return;
   }
   const u = sel[0];
+  if (u.miner) { // 광부: 종족 없음, 전투 불가 — 간단 정보만
+    const kind = u.sminer ? '✨ 슈퍼 광부' : u.hminer ? '✨ 히든 광부' : '광부';
+    el.innerHTML = `<b>⛏️ ${kind}</b><br>` +
+      `역할: 광산에서 캐서 <b>성</b>에 배달 (전투 불가)<br>` +
+      `이동속도: ${Math.round(u.speed)} · 💀 배달로 골드 획득`;
+    return;
+  }
   const traits = [];
   if (u.atk === 'pen') traits.push('<b style="color:#d32f2f">소환장 전체 타격</b>');
   else if (u.splash) traits.push(`스플래쉬 반경 ${u.splash}`);
@@ -3149,7 +3165,7 @@ function updateInfoPanel() {
 }
 function skillRow(u) {
   const active = (u.skillT || 0) > 0, cd = u.skillCd || 0;
-  const label = active ? `⚔️ 돌격 중… ${u.skillT.toFixed(0)}초` : (cd > 0 ? `⚔️ 돌격 (재사용 ${cd.toFixed(0)}초)` : '⚔️ 돌격 스킬 (5초 전체타격)');
+  const label = active ? `⚔️ 돌격 중… ${u.skillT.toFixed(0)}초` : (cd > 0 ? `⚔️ 돌격 (재사용 ${cd.toFixed(0)}초)` : '⚔️ 돌격 스킬 (5초 · 휘두르는 반경 타격)');
   const dis = active || cd > 0 ? 'disabled' : '';
   return `<br><button id="skillBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:#c0392b;font-weight:bold">${label}</button>`;
 }
@@ -3208,6 +3224,64 @@ function closeShop() {
   if (S.phase !== 'gameover' && document.getElementById('winOverlay').style.display !== 'flex') S.paused = false;
   renderShop();
 }
+// 공격력 업그레이드 항목 HTML + 배선
+function upgItemsHTML() {
+  return RACES.map((r, i) =>
+    `<div class="rpgItem" style="border-left:5px solid ${r.color}">
+      <div class="rpgIcon" style="color:${r.color}">${r.suit}</div>
+      <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
+        <span class="desc">단일 +${(S.upg[i]*3).toFixed(0)} / 스플래쉬 +${(S.upg[i]*0.6).toFixed(1)} / 전체 +${(S.upg[i]*0.3).toFixed(1)}</span></div>
+      <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
+    </div>`).join('') +
+    '<div class="rpgGuide">레벨당: 단일 <b>+3</b> / 스플래쉬 <b>+0.6</b> / 전체타격 <b>+0.3</b>.<br>♠ 에이스는 상위 2종족 합산.</div>';
+}
+function wireUpg(el) {
+  el.querySelectorAll('[data-upg]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.upg;
+    if (S.gold < S.upgCost[i]) return;
+    S.gold -= S.upgCost[i]; S.upg[i]++;
+    S.upgCost[i] = Math.floor(S.upgCost[i] * 1.6);
+    logMsg(`⚔️ ${RACES[i].name} 공격력 Lv.${S.upg[i]}`);
+    renderShop(); updateInfoPanel();
+  });
+}
+// 광부 업그레이드 항목 HTML + 배선
+function minerItemsHTML() {
+  const n = S.units.filter(u => u.miner).length;
+  const moveSpd = Math.round(MINER_SPEED * (1 + 0.25 * S.minerMoveLv));
+  const mineSec = (MINE_TIME / (1 + 0.25 * S.minerMineLv)).toFixed(1);
+  return `
+    <div class="rpgItem"><div class="rpgIcon">⛏️</div>
+      <div class="rpgInfo"><b>광부 고용</b> <span class="lv">현재 ${n}명</span><br><span class="desc">캐서 성으로 배달해야 골드</span></div>
+      <button class="rpgBuy" id="hireBtn" ${S.gold < S.minerCost ? 'disabled' : ''}>💰 ${S.minerCost}G</button></div>
+    <div class="rpgItem"><div class="rpgIcon">🏃</div>
+      <div class="rpgInfo"><b>이동속도</b> <span class="lv">Lv.${S.minerMoveLv}/${MINER_MAX_LV}</span> (${moveSpd})<br><span class="desc">광부 전원 걸음 ↑</span></div>
+      ${S.minerMoveLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mvBtn" ${S.gold < S.minerMoveCost ? 'disabled' : ''}>💰 ${S.minerMoveCost}G</button>`}</div>
+    <div class="rpgItem"><div class="rpgIcon">⚒️</div>
+      <div class="rpgInfo"><b>채굴속도</b> <span class="lv">Lv.${S.minerMineLv}/${MINER_MAX_LV}</span> (${mineSec}초)<br><span class="desc">한 번 캐는 시간 ↓</span></div>
+      ${S.minerMineLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mnBtn" ${S.gold < S.minerMineCost ? 'disabled' : ''}>💰 ${S.minerMineCost}G</button>`}</div>
+    <div class="rpgGuide">배달 1회 = <b>${MINER_LOAD + S.mineBonus}G</b> (기본 ${MINER_LOAD} + 광산겹 ${S.mineBonus}).</div>`;
+}
+function wireMiner(el) {
+  const wire = (id, fn) => { const b = el.querySelector(id); if (b) b.onclick = fn; };
+  wire('#hireBtn', () => {
+    if (S.gold < S.minerCost) return;
+    S.gold -= S.minerCost; spawnMiner();
+    S.minerCost = Math.floor(S.minerCost * 2.5);
+    logMsg(`⛏️ 광부 고용! (총 ${S.units.filter(u => u.miner).length}명)`);
+    renderShop();
+  });
+  wire('#mvBtn', () => {
+    if (S.minerMoveLv >= MINER_MAX_LV || S.gold < S.minerMoveCost) return;
+    S.gold -= S.minerMoveCost; S.minerMoveLv++; S.minerMoveCost = Math.floor(S.minerMoveCost * 1.5);
+    logMsg(`🏃 광부 이동속도 Lv.${S.minerMoveLv}`); renderShop();
+  });
+  wire('#mnBtn', () => {
+    if (S.minerMineLv >= MINER_MAX_LV || S.gold < S.minerMineCost) return;
+    S.gold -= S.minerMineCost; S.minerMineLv++; S.minerMineCost = Math.floor(S.minerMineCost * 1.5);
+    logMsg(`⛏️ 광부 채굴속도 Lv.${S.minerMineLv}`); renderShop();
+  });
+}
 function renderShop() {
   const ov = document.getElementById('shopOverlay');
   if (!openShop) { ov.style.display = 'none'; return; }
@@ -3215,62 +3289,18 @@ function renderShop() {
   document.getElementById('shopGold').textContent = Math.floor(S.gold) + 'G';
   const title = document.getElementById('shopTitle');
   const el = document.getElementById('shopBody');
-  if (openShop === 'upg') {
-    title.textContent = '⚔️ 종족 업그레이드';
-    el.innerHTML = RACES.map((r, i) =>
-      `<div class="rpgItem" style="border-left:5px solid ${r.color}">
-        <div class="rpgIcon" style="color:${r.color}">${r.suit}</div>
-        <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
-          <span class="desc">현재 보너스: 단일 +${(S.upg[i]*3).toFixed(0)} / 스플래쉬 +${(S.upg[i]*0.6).toFixed(1)} / 전체 +${(S.upg[i]*0.3).toFixed(1)}</span></div>
-        <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
-      </div>`).join('') +
-      '<div class="rpgGuide">레벨당 공격력: 단일 <b>+3</b> / 스플래쉬 <b>+0.6</b> / 소환장 전체타격 <b>+0.3</b> — 다수를 때리는 유닛일수록 증가량이 축소됩니다.<br>♠ 에이스는 <b>가장 많이 올린 상위 2종족</b>의 합산을 받습니다.</div>';
-    el.querySelectorAll('[data-upg]').forEach(b => b.onclick = () => {
-      const i = +b.dataset.upg;
-      if (S.gold < S.upgCost[i]) return;
-      S.gold -= S.upgCost[i]; S.upg[i]++;
-      S.upgCost[i] = Math.floor(S.upgCost[i] * 1.6);
-      logMsg(`⚔️ ${RACES[i].name} 공격력 Lv.${S.upg[i]}`);
-      renderShop(); updateInfoPanel();
-    });
+  const win = document.getElementById('shopWin');
+  win.classList.toggle('wide', openShop === 'castle');
+  if (openShop === 'castle') { // 성 클릭: 공격력(좌) + 광부(우) 통합
+    title.textContent = '🏰 강화';
+    el.innerHTML = `<div class="castleCols">
+      <div class="castleCol"><div class="castleColT">⚔️ 공격력 업그레이드</div>${upgItemsHTML()}</div>
+      <div class="castleCol"><div class="castleColT">⛏️ 광부</div>${minerItemsHTML()}</div></div>`;
+    wireUpg(el); wireMiner(el);
+  } else if (openShop === 'upg') {
+    title.textContent = '⚔️ 종족 업그레이드'; el.innerHTML = upgItemsHTML(); wireUpg(el);
   } else if (openShop === 'miner') {
-    title.textContent = '⛏️ 광부 사무소';
-    const n = S.units.filter(u => u.miner).length;
-    const moveSpd = Math.round(MINER_SPEED * (1 + 0.25 * S.minerMoveLv));
-    const mineSec = (MINE_TIME / (1 + 0.25 * S.minerMineLv)).toFixed(1);
-    el.innerHTML = `
-      <div class="rpgItem"><div class="rpgIcon">⛏️</div>
-        <div class="rpgInfo"><b>광부 고용</b> <span class="lv">현재 ${n}명</span><br><span class="desc">광산에서 캐서 성으로 배달 — 배달해야 골드가 됩니다</span></div>
-        <button class="rpgBuy" id="hireBtn" ${S.gold < S.minerCost ? 'disabled' : ''}>💰 ${S.minerCost}G</button></div>
-      <div class="rpgItem"><div class="rpgIcon">🏃</div>
-        <div class="rpgInfo"><b>이동속도</b> <span class="lv">Lv.${S.minerMoveLv}/${MINER_MAX_LV}</span> (현재 ${moveSpd})<br><span class="desc">광부 전원의 걸음이 빨라집니다</span></div>
-        ${S.minerMoveLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">최대 레벨</span>' : `<button class="rpgBuy" id="mvBtn" ${S.gold < S.minerMoveCost ? 'disabled' : ''}>💰 ${S.minerMoveCost}G</button>`}</div>
-      <div class="rpgItem"><div class="rpgIcon">⚒️</div>
-        <div class="rpgInfo"><b>채굴속도</b> <span class="lv">Lv.${S.minerMineLv}/${MINER_MAX_LV}</span> (현재 ${mineSec}초)<br><span class="desc">한 번 캐는 데 걸리는 시간이 줄어듭니다</span></div>
-        ${S.minerMineLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">최대 레벨</span>' : `<button class="rpgBuy" id="mnBtn" ${S.gold < S.minerMineCost ? 'disabled' : ''}>💰 ${S.minerMineCost}G</button>`}</div>
-      <div class="rpgGuide">광부는 광산에서 <b>${mineSec}초</b> 캔 뒤 광물을 들고 <b>좌측 성</b>에 배달해야 골드가 쌓입니다.<br>배달 1회 = <b>${MINER_LOAD + S.mineBonus}G</b> (기본 ${MINER_LOAD} + 광산 겹 보너스 ${S.mineBonus}) · 몬스터 공격 불가.</div>`;
-    const wire = (id, fn) => { const b = el.querySelector(id); if (b) b.onclick = fn; };
-    wire('#hireBtn', () => {
-      if (S.gold < S.minerCost) return;
-      S.gold -= S.minerCost; spawnMiner();
-      S.minerCost = Math.floor(S.minerCost * 2.5); // 기하급수적으로 비싸진다
-      logMsg(`⛏️ 광부 고용! (총 ${S.units.filter(u => u.miner).length}명)`);
-      renderShop();
-    });
-    wire('#mvBtn', () => {
-      if (S.minerMoveLv >= MINER_MAX_LV || S.gold < S.minerMoveCost) return;
-      S.gold -= S.minerMoveCost; S.minerMoveLv++;
-      S.minerMoveCost = Math.floor(S.minerMoveCost * 1.5);
-      logMsg(`🏃 광부 이동속도 Lv.${S.minerMoveLv}`);
-      renderShop();
-    });
-    wire('#mnBtn', () => {
-      if (S.minerMineLv >= MINER_MAX_LV || S.gold < S.minerMineCost) return;
-      S.gold -= S.minerMineCost; S.minerMineLv++;
-      S.minerMineCost = Math.floor(S.minerMineCost * 1.5);
-      logMsg(`⛏️ 광부 채굴속도 Lv.${S.minerMineLv}`);
-      renderShop();
-    });
+    title.textContent = '⛏️ 광부 사무소'; el.innerHTML = minerItemsHTML(); wireMiner(el);
   } else if (openShop === 'book') {
     title.textContent = '📖 포커 족보 도감';
     const mcard = ([r, s, hl]) =>
@@ -3557,15 +3587,15 @@ function updateHUD() {
 
 // ==================== 사운드 (WebAudio 합성, 중세풍 아기자기) ====================
 let AC = null, sfxGain = null, musicGain = null, musicTimer = null, musicStep = 0;
-let soundOn = true;
-try { soundOn = localStorage.getItem('dpd_sound') !== '0'; } catch (e) {}
+let musicOn = true, sfxOn = true; // 배경음악 / 타격음 개별 토글
+try { musicOn = localStorage.getItem('dpd_music') !== '0'; sfxOn = localStorage.getItem('dpd_sfx') !== '0'; } catch (e) {}
 const lastSfx = {};
 function initAudio() {
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
-    sfxGain = AC.createGain(); sfxGain.gain.value = soundOn ? 0.22 : 0; sfxGain.connect(AC.destination);
-    musicGain = AC.createGain(); musicGain.gain.value = soundOn ? 0.09 : 0; musicGain.connect(AC.destination);
+    sfxGain = AC.createGain(); sfxGain.gain.value = sfxOn ? 0.22 : 0; sfxGain.connect(AC.destination);
+    musicGain = AC.createGain(); musicGain.gain.value = musicOn ? 0.09 : 0; musicGain.connect(AC.destination);
     startMusic();
   } catch (e) {}
 }
@@ -3601,7 +3631,7 @@ function popSound(big) {
   noiseBurst(big ? 0.12 : 0.05, big ? 0.26 : 0.13, 2300, 'bandpass');
 }
 function sfx(type, arg) {
-  if (!AC || !soundOn) return;
+  if (!AC || !sfxOn) return;
   const now = performance.now(), gap = { shoot: 45, slash: 90, boom: 55, bigboom: 300, jackpot: 400, combo: 70,
     splash: 70, glass: 70, metal: 65, thud: 80,
     pick: 200, coin: 220, boss: 1500, clear: 1500, leak: 800, reward: 500, hero: 800 }[type] || 60;
@@ -3633,7 +3663,7 @@ const BASS_B =   [174.6,0,0,0, 196,0,0,0, 146.8,0,0,0, 110,0,0,0];
 function startMusic() {
   clearInterval(musicTimer);
   musicTimer = setInterval(() => {
-    if (!AC || !soundOn || AC.state === 'suspended') return;
+    if (!AC || !musicOn || AC.state === 'suspended') return;
     const i = musicStep % 16;
     const bar = Math.floor(musicStep / 16) % 4;           // 16스텝 마디 기준 A A B A
     const MEL = bar === 2 ? MELODY_B : MELODY, BS = bar === 2 ? BASS_B : BASS;
@@ -3643,15 +3673,23 @@ function startMusic() {
     musicStep++;
   }, 250);
 }
-document.getElementById('bSound').onclick = () => {
+document.getElementById('bMusic').onclick = () => {
   initAudio();
-  soundOn = !soundOn;
-  try { localStorage.setItem('dpd_sound', soundOn ? '1' : '0'); } catch (e) {}
-  if (sfxGain) sfxGain.gain.value = soundOn ? 0.22 : 0;
-  if (musicGain) musicGain.gain.value = soundOn ? 0.09 : 0;
-  document.getElementById('bSound').textContent = soundOn ? '🔊' : '🔇';
+  musicOn = !musicOn;
+  try { localStorage.setItem('dpd_music', musicOn ? '1' : '0'); } catch (e) {}
+  if (musicGain) musicGain.gain.value = musicOn ? 0.09 : 0;
+  document.getElementById('bMusic').textContent = musicOn ? '🎵' : '🎵̶';
+  document.getElementById('bMusic').classList.toggle('off', !musicOn);
 };
-document.getElementById('bSound').textContent = soundOn ? '🔊' : '🔇';
+document.getElementById('bSfx').onclick = () => {
+  initAudio();
+  sfxOn = !sfxOn;
+  try { localStorage.setItem('dpd_sfx', sfxOn ? '1' : '0'); } catch (e) {}
+  if (sfxGain) sfxGain.gain.value = sfxOn ? 0.22 : 0;
+  document.getElementById('bSfx').textContent = sfxOn ? '🔊' : '🔇';
+};
+document.getElementById('bMusic').classList.toggle('off', !musicOn);
+document.getElementById('bSfx').textContent = sfxOn ? '🔊' : '🔇';
 ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, function once() { initAudio(); window.removeEventListener(ev, once); }));
 
 // ==================== 메인 루프 ====================
