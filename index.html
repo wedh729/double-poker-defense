@@ -360,9 +360,9 @@ const WEAPONS = [
   // 4 스트레이트 — 기관총 (단일 dps가 압도적이라 공속 반감: cd 0.13→0.26. 넓은 사거리·연사 이점은 유지)
   {name:'기관총', dmg:8, cd:0.26, range:280, splash:0, bounce:0, atk:'shot', proj:'mg',
    hero:{name:'저격총', atk:'sniper', cd:5, dmgMul:45, range:470, proj:'sniper'}}, // 보스 저격
-  // 5 플러쉬 — 화염방사기 (사거리 반감: 화염 끝이 소환장 정중앙에 닿아 뭉친 공 전체타격 = 카타르시스)
-  {name:'화염방사기', dmg:0.17, cd:0.16, range:90, splash:100, bounce:0, atk:'area', vis:'flame',
-   hero:{name:'대형 화염방사기', splash:150, range:120}},
+  // 5 플러쉬 — 화염방사기 (splash = 불길 반폭: 판정이 눈에 보이는 불줄기 두께와 일치. 원형 스플래시 아님)
+  {name:'화염방사기', dmg:0.17, cd:0.48, range:90, splash:22, bounce:0, atk:'area', vis:'flame',
+   hero:{name:'대형 화염방사기', splash:40, range:120}},
   // 6 풀하우스 — 대검 (검사: 사거리 짧게 = 플러쉬의 2/3, 대신 데미지↑ + 돌진 스킬)
   {name:'대검', dmg:20, cd:1.6, range:60, splash:56, bounce:0, atk:'area', vis:'sword',
    hero:{name:'전기톱', atk:'area', vis:'saw', splash:80, cd:0.24, range:64}},
@@ -1351,12 +1351,14 @@ function areaHit(u, x, y, dmg) {
     S.effects.push({ type:'slash', x, y, r: u.splash * 1.6, a, t: 0.22, dur: 0.22 });
     for (let i = 0; i < 4; i++) { const v = 60 + Math.random()*90, aa = a + (Math.random()-0.5)*1.2; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.22, r: 1.2 + Math.random()*1.6, c: '#dbe9ff' }); }
   } else if (vis === 'flame') {
-    // 진짜 불꽃: 총구에서 착탄점(사거리 끝)까지 뻗는 화염 스트림 — 끝이 소환장 중앙에 닿아야 카타르시스
-    const n = u.hidden ? 13 : 10, dist = Math.hypot(x - mz.x, y - mz.y);
+    // 진짜 불꽃: 총구에서 착탄점까지 뻗는 화염 스트림. 불줄기 두께 = 판정 두께(splash 반폭)와 일치
+    const wide = u.hero; // 영웅은 두껍게, 일반은 얇은 불줄기
+    const n = wide ? 15 : 9, dist = Math.hypot(x - mz.x, y - mz.y);
+    const spread = Math.atan2(u.splash * 0.8, dist); // 불길 퍼짐각 ≈ 판정 반폭
     for (let i = 0; i < n; i++) {
-      const reach = dist * (0.55 + Math.random() * 0.55), sp = reach / 0.32, aa = a + (Math.random() - 0.5) * 0.5;
+      const reach = dist * (0.55 + Math.random() * 0.55), sp = reach / 0.32, aa = a + (Math.random() - 0.5) * 2 * spread;
       S.parts.push({ x: mz.x, y: mz.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp,
-        t: 0.3 + Math.random() * 0.22, r: 4 + Math.random() * 5.5, fire: true, spin: Math.random()*6.28 });
+        t: 0.3 + Math.random() * 0.22, r: (wide ? 5 : 3) + Math.random() * (wide ? 6.5 : 3.8), fire: true, spin: Math.random()*6.28 });
     }
   } else { // rocket / bomb: 폭발
     S.effects.push({ type:'boom', x, y, r: u.splash, t: 0.28 });
@@ -1364,6 +1366,18 @@ function areaHit(u, x, y, dmg) {
       const aa = Math.random() * Math.PI * 2, v = 60 + Math.random() * 140;
       S.parts.push({ x, y, vx: Math.cos(aa) * v, vy: Math.sin(aa) * v, t: 0.3, r: 2 + Math.random() * 3, c: '#ff8a3d' });
     }
+  }
+  if (vis === 'flame') {
+    // 화염 스트림 판정: 총구→착탄점 선을 따라 두께(splash=반폭)의 띠 안에 있는 몹만 타격
+    const ex = x - mz.x, ey = y - mz.y, L = Math.hypot(ex, ey) || 1, nx = ex / L, ny = ey / L;
+    for (const m of S.monsters) {
+      const px = m.x - mz.x, py = m.y - mz.y;
+      const t2 = px * nx + py * ny;                    // 스트림 축 방향 투영
+      if (t2 < -6 || t2 > L + 14) continue;
+      const d = Math.abs(px * ny - py * nx);           // 축에서의 수직 거리
+      if (d <= u.splash + monSize(m) * 0.5) dealDamage(m, dmg, u);
+    }
+    return;
   }
   const r2 = u.splash * u.splash;
   if (vis === 'sword') {
@@ -3165,6 +3179,7 @@ function updateInfoPanel() {
   }
   const traits = [];
   if (u.atk === 'pen') traits.push('<b style="color:#d32f2f">소환장 전체 타격</b>');
+  else if (u.vis === 'flame') traits.push(`화염 스트림 (불길 두께 ${u.splash * 2})`);
   else if (u.splash) traits.push(`스플래쉬 반경 ${u.splash}`);
   if (u.bounce) traits.push(`팅김 ×${u.bounce}`);
   if (u.pierce) traits.push(`관통 ×${u.pierce}`);
