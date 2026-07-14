@@ -764,6 +764,8 @@ function effDmg(u) {
   if (u.hidden) { const s = [...S.upg].sort((a, b) => b - a); return u.dmg + per * (s[0] + s[1]); } // 에이스: 가장 많이 올린 두 종족 합산
   return u.dmg + per * S.upg[u.race];
 }
+// 📯 콰르텟 공속 오라 적용된 실제 쿨다운 (spdBuff는 update()에서 매 프레임 갱신)
+function effCd(u) { return u.cd * (u.spdBuff || 1); }
 
 // ==================== 웨이브 ====================
 function startWave() {
@@ -906,19 +908,96 @@ function spawnGambler(x, y) {
   sfx('jackpot'); sfx('hero');
   logMsg('🎲✨ 히든 조합 발견!! [1·2·3] → 히든 영웅 <b>갬블러</b>! 매 공격이 주사위 — 6이 뜨면 잭팟샷!');
 }
+// 💰 고물상: 하이카드×3 + 원페어×3 → 주변 처치 골드 ×1.2 오라 (전투력은 약함)
+function spawnJunk(x, y) {
+  S.units.push({
+    x, y, tx: x, ty: y, race: 0, tier: 0, hidden: false, hero: true, junk: true, miner: false,
+    keyRank: 14, keyLabel: '💰', kills: 0,
+    jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
+    forceTarget: null, attackMine: false, amove: false, priority: 'near',
+    dmg: 30, cd: 0.9, range: 200, splash: 0, bounce: 0, atk: 'shot', proj: 'pellet', vis: null,
+    pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 고물상', cool: 0, selected: true, walk: 0, speed: 85,
+  });
+  addFloat(x, y - 30, '💰 고물상 강림!! 💰', '#8d6e63', 2.8);
+  sfx('jackpot'); sfx('hero');
+  logMsg('💰✨ 히든 조합 발견!! [하이카드×3·원페어×3] → 히든 영웅 <b>고물상</b>! 반경 40px 처치 골드 ×1.2!');
+}
+// 📯 콰르텟: 원페어+투페어+트리플+스트레이트 각 1 → 반경 50px 아군 공속 +20% (전투력 낮음, 순수 지원)
+function spawnQuartet(x, y) {
+  S.units.push({
+    x, y, tx: x, ty: y, race: 1, tier: 4, hidden: false, hero: true, quartet: true, miner: false,
+    keyRank: 14, keyLabel: '📯', kills: 0,
+    jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
+    forceTarget: null, attackMine: false, amove: false, priority: 'near',
+    dmg: 15, cd: 1.2, range: 150, splash: 0, bounce: 0, atk: 'shot', proj: 'bullet', vis: null,
+    pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 콰르텟', cool: 0, selected: true, walk: 0, speed: 85,
+  });
+  addFloat(x, y - 30, '📯 콰르텟 강림!! 📯', '#5b48d0', 2.8);
+  sfx('jackpot'); sfx('hero');
+  logMsg('📯✨ 히든 조합 발견!! [원페어·투페어·트리플·스트레이트 각1] → 히든 영웅 <b>콰르텟</b>! 반경 50px 아군 공속 +20%!');
+}
+// ⚔️ 길로틴: 원페어1+투페어2+트리플3+포카드4(10기) → 체력 20% 이하 즉시 처형
+function spawnGuillotine(x, y) {
+  S.units.push({
+    x, y, tx: x, ty: y, race: 2, tier: 7, hidden: false, hero: true, execute: true, miner: false,
+    keyRank: 14, keyLabel: '⚔️', kills: 0,
+    jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
+    forceTarget: null, attackMine: false, amove: false, priority: 'near',
+    dmg: 40, cd: 0.45, range: 120, splash: 0, bounce: 0, atk: 'shot', proj: 'bullet', vis: null,
+    pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 길로틴', cool: 0, selected: true, walk: 0, speed: 85,
+  });
+  addFloat(x, y - 30, '⚔️ 길로틴 강림!! ⚔️', '#e53935', 2.8);
+  sfx('jackpot'); sfx('hero');
+  logMsg('⚔️✨ 히든 조합 발견!! [원1·투2·트3·포4] → 히든 영웅 <b>길로틴</b>! 체력 20% 이하 즉시 처형!');
+}
 // 강화 포털: 같은 유닛 5기가 포털 안에 모이면 영웅/슈퍼영웅으로 합성
 function updatePortal() {
-  const inP = S.units.filter(u => fuseKey(u) && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) < PORTAL.r);
+  // 수집 반경은 시각 포털보다 넉넉하게 (길로틴 등 10기 레시피가 유닛 분리 때문에 안 들어가는 문제 방지)
+  const GATHER = PORTAL.r + 30;
+  const inP = S.units.filter(u => fuseKey(u) && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) < GATHER);
   // 히든 조합 먼저 체크: 일반 원페어 ×1 + 투페어 ×2 + 트리플 ×3
   const normals = inP.filter(u => !u.hero && !u.hidden);
   const byT = {};
   normals.forEach(u => (byT[u.tier] = byT[u.tier] || []).push(u));
-  if ((byT[1] || []).length >= 1 && (byT[2] || []).length >= 2 && (byT[3] || []).length >= 3) {
+  // ⚔️ 길로틴 (원1+투2+트3+포4=10기) — 갬블러와 원1투2트3을 공유하므로 먼저 체크. 1기 제한.
+  if (!S.units.some(u => u.execute) &&
+      (byT[1] || []).length >= 1 && (byT[2] || []).length >= 2 && (byT[3] || []).length >= 3 && (byT[7] || []).length >= 4) {
+    const used = [byT[1][0], byT[2][0], byT[2][1], byT[3][0], byT[3][1], byT[3][2], byT[7][0], byT[7][1], byT[7][2], byT[7][3]];
+    S.units = S.units.filter(u => !used.includes(u));
+    spawnGuillotine(PORTAL.x, PORTAL.y + PORTAL.r + 26);
+    S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 70, t: 0.5 });
+    for (let i = 0; i < 26; i++) { const a = Math.random()*6.28, v = 110 + Math.random()*190; S.parts.push({ x: PORTAL.x, y: PORTAL.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.55, r: 2 + Math.random()*3.5, c: '#e53935' }); }
+    updateInfoPanel();
+    return;
+  }
+  if (!S.units.some(u => u.gamble) &&
+      (byT[1] || []).length >= 1 && (byT[2] || []).length >= 2 && (byT[3] || []).length >= 3) {
     const used = [byT[1][0], byT[2][0], byT[2][1], byT[3][0], byT[3][1], byT[3][2]];
     S.units = S.units.filter(u => !used.includes(u));
     spawnGambler(PORTAL.x, PORTAL.y + PORTAL.r + 26);
     S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 60, t: 0.5 });
     for (let i = 0; i < 22; i++) { const a = Math.random()*6.28, v = 100 + Math.random()*170; S.parts.push({ x: PORTAL.x, y: PORTAL.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.55, r: 2 + Math.random()*3.5, c: '#ffd54f' }); }
+    updateInfoPanel();
+    return;
+  }
+  // 💰 고물상 (하이카드×3 + 원페어×3). 1기 제한.
+  if (!S.units.some(u => u.junk) && (byT[0] || []).length >= 3 && (byT[1] || []).length >= 3) {
+    const used = [byT[0][0], byT[0][1], byT[0][2], byT[1][0], byT[1][1], byT[1][2]];
+    S.units = S.units.filter(u => !used.includes(u));
+    spawnJunk(PORTAL.x, PORTAL.y + PORTAL.r + 26);
+    S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 55, t: 0.5 });
+    for (let i = 0; i < 18; i++) { const a = Math.random()*6.28, v = 90 + Math.random()*150; S.parts.push({ x: PORTAL.x, y: PORTAL.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 2 + Math.random()*3, c: '#8d6e63' }); }
+    updateInfoPanel();
+    return;
+  }
+  // 📯 콰르텟 (원1+투2+트3+스트레이트4 각 1기). 1기 제한.
+  if (!S.units.some(u => u.quartet) &&
+      (byT[1] || []).length >= 1 && (byT[2] || []).length >= 1 && (byT[3] || []).length >= 1 && (byT[4] || []).length >= 1) {
+    const used = [byT[1][0], byT[2][0], byT[3][0], byT[4][0]];
+    S.units = S.units.filter(u => !used.includes(u));
+    spawnQuartet(PORTAL.x, PORTAL.y + PORTAL.r + 26);
+    S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 50, t: 0.4 });
+    for (let i = 0; i < 16; i++) { const a = Math.random()*6.28, v = 90 + Math.random()*140; S.parts.push({ x: PORTAL.x, y: PORTAL.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 2 + Math.random()*3, c: '#5b48d0' }); }
     updateInfoPanel();
     return;
   }
@@ -1026,6 +1105,11 @@ function update(dt) {
     const sdx = u.tx - u.x, sdy = u.ty - u.y;
     if (sdx * sdx + sdy * sdy <= 64) { u.tx = u.x; u.ty = u.y; }
   }
+  // 📯 콰르텟 공속 오라: 반경 50px 내 아군(비광부) 공속 +20% (비중첩)
+  const quartets = U.filter(u => u.quartet);
+  for (const u of U) {
+    u.spdBuff = (!u.miner && quartets.some(q => q !== u && (q.x - u.x) * (q.x - u.x) + (q.y - u.y) * (q.y - u.y) <= 2500)) ? 0.833 : 1;
+  }
   updatePortal();
   updateFusableHint();
   assignOreSlots();
@@ -1048,7 +1132,7 @@ function update(dt) {
       u.cool -= dt;
       // 광석 방 안이면 광석을 때린다 (정원 내 자격 유닛만). 광산 채굴은 광부 전담 — 전투 유닛은 안 캔다.
       if (!S.hunt.done && S.hunt.hp > 0 && isInRoom(u)) {
-        if (u.oreSlot && u.cool <= 0 && !u.moving) { u.cool = u.cd; fireAtOre(u); }
+        if (u.oreSlot && u.cool <= 0 && !u.moving) { u.cool = effCd(u); fireAtOre(u); }
       }
     }
     S.pokerTimer -= dt;
@@ -1098,12 +1182,12 @@ function update(dt) {
     u.cool -= dt;
     // 돌격 스킬 발동 중: 소환장 전체를 휩쓴다 (회오리는 평소 공속의 2배)
     if (u.skillT > 0) {
-      if (u.cool <= 0 && !u.moving) { u.cool = u.cd * 0.5; whirlwindHit(u); }
+      if (u.cool <= 0 && !u.moving) { u.cool = effCd(u) * 0.5; whirlwindHit(u); }
       continue;
     }
     // 광석 방 안이면 몬스터 대신 광석을 때린다 (정원 내 자격 유닛만)
     if (!S.hunt.done && S.hunt.hp > 0 && isInRoom(u)) {
-      if (u.oreSlot && u.cool <= 0 && !u.moving) { u.cool = u.cd; fireAtOre(u); }
+      if (u.oreSlot && u.cool <= 0 && !u.moving) { u.cool = effCd(u); fireAtOre(u); }
       continue;
     }
     if (u.forceTarget && (u.forceTarget.dead || u.forceTarget.hp <= 0)) u.forceTarget = null;
@@ -1114,7 +1198,7 @@ function update(dt) {
       if (d > effRange(u)) { const t = clampTargetPos(ft.x + u.jx, ft.y + u.jy); u.tx = t.x; u.ty = t.y; }
       else {
         u.tx = u.x; u.ty = u.y;
-        if (u.cool <= 0 && !u.moving) { u.cool = u.cd; fireAt(u, ft); }
+        if (u.cool <= 0 && !u.moving) { u.cool = effCd(u); fireAt(u, ft); }
       }
       continue;
     }
@@ -1133,7 +1217,7 @@ function update(dt) {
     if (u.amove && u.moving && anyInRange) { u.tx = u.x; u.ty = u.y; }
     if (u.cool > 0 || u.moving) continue;
     if (best) {
-      u.cool = u.cd;
+      u.cool = effCd(u);
       fireAt(u, best);
     }
   }
@@ -1220,6 +1304,7 @@ function update(dt) {
   // 사망 처리 + 폭발 (몹 보상: 기존의 1/10로 축소)
   const killGold = Math.max(1, Math.round(S.round * 0.05)) * ((S.eventMods && S.eventMods.killMul) || 1);
   const newborns = [];
+  const junkUnits = S.units.filter(u => u.junk); // 💰 고물상: 반경 40px 내 처치 골드 ×1.2
   S.monsters = S.monsters.filter(m => {
     if (m.hp <= 0) {
       m.dead = true;
@@ -1228,7 +1313,8 @@ function update(dt) {
       // 연쇄킬 콤보: 1.5초 내 연속 킬 → 카운트 + 사운드 피치 상승 + 소량 보너스 골드
       S.combo.t = 1.5; S.combo.n++; S.combo.pop = 0.18;
       if (S.combo.n >= 3) sfx('combo', S.combo.n);
-      const g = (m.boss ? killGold * 30 : killGold) + Math.floor(S.combo.n / 10);
+      let g = (m.boss ? killGold * 30 : killGold) + Math.floor(S.combo.n / 10);
+      if (junkUnits.some(u => (u.x - m.x) * (u.x - m.x) + (u.y - m.y) * (u.y - m.y) <= 1600)) g = Math.round(g * 1.2);
       S.gold += g;
       // 골드 동전이 튀어나와 좌상단 금고로 빨려간다 (시각 연출 — 골드는 즉시 지급됨)
       const ca = Math.random() * 6.28;
@@ -1292,6 +1378,10 @@ function fireAt(u, target) {
     dmg *= roll * 0.5;
     if (roll === 6) { addFloat(u.x, u.y - 32, '🎲 6! 잭팟샷!!', '#ffd54f', 0.9); sfx('coin'); }
     else if (roll === 1) addFloat(u.x, u.y - 32, '🎲 1…', '#9e9e9e', 0.6);
+  }
+  if (u.execute && target.hp <= target.max * 0.2) { // ⚔️ 길로틴: 체력 20% 이하 즉시 처형
+    dmg = target.hp + (target.shield || 0);
+    addFloat(target.x, target.y - 20, '⚔️ 처형!', '#e53935', 0.8);
   }
   u.aimX = target.x; u.aimY = target.y;   // 바라보는 방향 = 대상
   u.atkAnim = 1;              // 공격 모션 (스윙/반동)
@@ -2945,6 +3035,27 @@ function drawWeapon(u, x, y) {
     ctx.restore(); ctx.lineWidth = 1;
     return;
   }
+  if (has('고물상')) { // 🔧 작은 렌치 (히든 영웅)
+    ctx.save(); ctx.translate(x + 1, y); ctx.rotate(u.atkAnim ? -0.3 : 0.15);
+    ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#8d6e63';
+    ctx.fillText('🔧', 0, 3); ctx.textAlign = 'left';
+    ctx.restore();
+    return;
+  }
+  if (has('콰르텟')) { // 🎵 음표 (히든 영웅, 순수 지원)
+    ctx.save(); ctx.translate(x + 1, y); ctx.rotate(u.atkAnim ? -0.3 : 0);
+    ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#5b48d0';
+    ctx.fillText('🎵', 0, 3); ctx.textAlign = 'left';
+    ctx.restore();
+    return;
+  }
+  if (has('길로틴')) { // ⚔️ 작은 칼날 (히든 영웅, 처형)
+    ctx.save(); ctx.translate(x + 1, y); ctx.rotate(u.atkAnim ? -0.4 : -0.1);
+    ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#e53935';
+    ctx.fillText('⚔️', 0, 3); ctx.textAlign = 'left';
+    ctx.restore();
+    return;
+  }
   if (has('대검')) { // 대검 (큰 검: 손잡이+가드+긴 칼날)
     ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 2.5; // 손잡이
     ctx.beginPath(); ctx.moveTo(x - 4, y + 7); ctx.lineTo(x, y + 2); ctx.stroke();
@@ -3245,6 +3356,9 @@ function updateInfoPanel() {
   if (u.pierce) traits.push(`관통 ×${u.pierce}`);
   if (u.shards) traits.push(`파편 ${u.shards}개 (${Math.round(u.shardFrac*100)}%)`);
   if (u.atk === 'sniper') traits.push('단일 초강력 (보스용)');
+  if (u.junk) traits.push('💰 주변 처치 골드 ×1.2 (반경 40)');
+  if (u.quartet) traits.push('📯 아군 공속 +20% (반경 50, 비중첩)');
+  if (u.execute) traits.push('⚔️ 체력 20% 이하 즉시 처형');
   if (!traits.length) traits.push(u.miner ? '채굴 전용 (전투 불가)' : '단일 공격');
   if (u.forceTarget) traits.push('<b style="color:#e53935">🎯 집중 공격 중</b>');
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
