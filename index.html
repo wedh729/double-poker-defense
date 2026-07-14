@@ -254,21 +254,29 @@
   #cv { touch-action: none; }
   #deselBtn { position: absolute; top: 6px; right: 8px; width: 20px; height: 20px; border-radius: 50%; border: 1px solid #d0d0da; background: #f6f6fa; cursor: pointer; font-size: 11px; line-height: 1; padding: 0; }
   #mobTabs { display: none; }
-  .mobile #mobTabs { display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 8; }
-  #mobTabs button { flex: 1; height: 52px; border: none; border-top: 2px solid #3a3350; background: #241a3a; color: #cfc9e8; font-size: 15px; font-weight: bold; cursor: pointer; }
+  .mobile #mobTabs {
+    display: flex; position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 25;
+    gap: 5px; padding: 4px; background: rgba(13,8,32,0.55);
+    border-radius: 22px; backdrop-filter: blur(3px); box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  #mobTabs button {
+    flex: none; height: 32px; padding: 0 16px; border: none; border-radius: 16px;
+    background: transparent; color: #cfc9e8; font-size: 13px; font-weight: bold; cursor: pointer;
+  }
   #mobTabs button.active { background: #5b48d0; color: #fff; }
   #mobTabs button.alert { animation: mtAlert 0.7s ease-in-out infinite alternate; }
   @keyframes mtAlert { from { box-shadow: inset 0 0 0 0 rgba(255,209,102,0); } to { box-shadow: inset 0 0 0 4px rgba(255,209,102,0.9); } }
   .mobHint { display: none; }
   .mobile .mobHint { display: block; font-size: 12px; color: #b6a8e8; margin-top: -8px; }
 
-  body.mobile { padding-bottom: 60px; overflow-x: hidden; padding-left: 0; padding-right: 0; }
+  body.mobile { padding-bottom: 0; overflow-x: hidden; padding-left: 0; padding-right: 0; }
   .mobile #page { width: 100vw; }
   .mobile #wrap { width: 100%; max-width: 100vw; }
   .mobile #pokerTimerBar { width: 90%; } /* 고정 440px가 레이아웃을 밀어내지 않게 */
   .mobile h1 small { display: none; }
   .mobile h1 { font-size: 14px; text-align: center; }
-  .mobile #cv { width: 100vw; height: auto; border-radius: 0; }
+  .mobile #cv { display: block; width: 100%; height: auto; border-radius: 0; }
   .mobile #topbar { flex-wrap: wrap; gap: 8px; font-size: 12px; padding: 6px 10px; }
   .mobile #chipBar { left: 4px; gap: 6px; }
   .mobile .chipStation { width: 46px; height: 48px; }
@@ -285,14 +293,46 @@
   .mobile #diffBtnRow { flex-wrap: wrap; justify-content: center; }
   .mobile #unitInfo { max-width: 46vw; font-size: 11px; bottom: 6px; left: 6px; }
   .mobile #objInfo { max-width: 46vw; font-size: 11px; }
-  .mobile #pokerPanel { padding-bottom: 64px; }
+  .mobile #pokerPanel { padding-bottom: 52px; }
 
   /* 모바일 탭 분리: 전투 탭에선 포커/로그 숨김, 포커 탭에선 캔버스 숨김 */
   .mobile[data-tab="battle"] #pokerPanel, .mobile[data-tab="battle"] #log { display: none; }
   .mobile[data-tab="poker"] #cvWrap { display: none; }
+
+  #rotateGate { display: none; }
+  @media (orientation: portrait) {
+    body.mobile #rotateGate {
+      display: flex; position: fixed; inset: 0; z-index: 99999;
+      flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      background: #0d0820; color: #e8def8; text-align: center; padding: 24px;
+    }
+    body.mobile #rotateGate .rgIcon { font-size: 64px; animation: rgSpin 2s ease-in-out infinite; }
+    body.mobile #rotateGate .rgText { font-size: 22px; font-weight: bold; color: #c9a227; }
+    body.mobile #rotateGate .rgSub { font-size: 14px; color: #b6a8e8; }
+  }
+  @keyframes rgSpin { 0%,60% { transform: rotate(0deg); } 80%,100% { transform: rotate(90deg); } }
+
+  /* 📱 모바일 전투 탭: 뷰포트에 고정 풀블리드 — 스크롤 구조적으로 불가, 캔버스 화면 꽉 채움(스트레치) */
+  .mobile[data-tab="battle"] #wrap {
+    position: fixed; inset: 0; margin: 0; padding: 0; width: 100vw; height: 100dvh; max-width: none; overflow: hidden;
+  }
+  .mobile[data-tab="battle"] h1 { display: none; }
+  .mobile[data-tab="battle"] #cvWrap {
+    position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; overflow: hidden;
+  }
+  .mobile[data-tab="battle"] #cv {
+    width: 100%; height: 100%; display: block; border-radius: 0; /* 화면 꽉 채움 — 종횡비 무시 스트레치 */
+  }
+  /* 상태바: 캔버스 위 상단 반투명 오버레이 (높이를 뺏지 않음 → 캔버스가 전체 높이 차지) */
+  .mobile[data-tab="battle"] #topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+    background: rgba(13,8,32,0.5); font-size: 12px; padding: 4px 8px;
+    padding-top: calc(4px + env(safe-area-inset-top, 0px));
+  }
 </style>
 </head>
 <body>
+<div id="rotateGate"><div class="rgIcon">📱🔄</div><div class="rgText">가로 모드로 즐겨주세요!</div><div class="rgSub">기기를 옆으로 돌리면 게임이 시작됩니다.</div></div>
 <div id="page">
 <!-- 광고 슬롯: 애드센스 승인 후 .adSlot 내부를 광고 코드로 교체 (300×600 기본, 좁으면 160×600) -->
 <aside class="adRail"><div class="adSlot" id="adSlotLeft">AD<br>300×600</div></aside>
@@ -550,6 +590,7 @@ function reset() {
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0,
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
     tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 20기 → 완성, 라운드 재시작 시 리셋)
+    bird: null, birdTimer: 25 + Math.random() * 20, // 🐦 힌트 새 / 다음 스폰까지 남은 초
   };
   dctx.clearRect(0, 0, 940, 500); // 이전 판 얼룩 제거
   S.mineMax = S.mineHp = mineHP(1);
@@ -1267,6 +1308,23 @@ function update(dt) {
   if (S.combo.t > 0) { S.combo.t -= dt; if (S.combo.t <= 0) S.combo.n = 0; }
   S.combo.pop = Math.max(0, S.combo.pop - dt);
   S.shake = Math.max(0, S.shake - dt);
+  // 🐦 힌트 새: 전투 중 가끔 하늘을 가로지른다 (잡으면 미발견 조합 힌트)
+  if (S.phase === 'wave') {
+    S.birdTimer -= dt;
+    if (S.birdTimer <= 0) {
+      S.birdTimer = 30 + Math.random() * 25;
+      if (!S.bird && HIDDEN_DEX.some(h => !hiddenSeen(h.id))) {
+        const dir = Math.random() < 0.5 ? 1 : -1;
+        S.bird = { x: dir > 0 ? -30 : 970, baseY: 46 + Math.random() * 60, y: 46, dir, vx: dir * (72 + Math.random() * 36), t: Math.random() * 6.28 };
+      }
+    }
+  }
+  if (S.bird) {
+    const b = S.bird;
+    b.t += dt; b.x += b.vx * dt; b.y = b.baseY + Math.sin(b.t * 3.2) * 7;
+    if (Math.random() < 0.14) S.parts.push({ x: b.x, y: b.y + 2, vx: 0, vy: 0, t: 0.4, r: 1.4, c: '#ffe082' }); // 반짝 트레일(눈에 띄게)
+    if (b.x < -40 || b.x > 980) S.bird = null;
+  }
   // 죽음 얼룩 데칼 서서히 페이드 (~3초)
   dctx.globalCompositeOperation = 'destination-out';
   dctx.globalAlpha = Math.min(1, dt * 0.45);
@@ -2017,6 +2075,32 @@ const SKY_TINT = [
 const GRASS_SPOTS = [[60,180],[150,325],[245,140],[330,462],[425,95],[545,425],[625,185],[700,335],[185,462],[762,472],[520,152],[885,245],[70,300],[890,120]];
 const FLOWER_SPOTS = [[112,252,'#f06292'],[592,302,'#ba68c8'],[825,398,'#f06292']];
 const STAR_SPOTS = [[95,42],[140,72],[228,38],[262,88],[330,52],[560,42],[610,92],[650,60],[210,120],[370,105]];
+function drawBird(b) {
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.scale(b.dir, 1); // 진행 방향으로 바라봄
+  // 은은한 노란 글로우 (눈에 띄게) — 기존 glowSprite 패턴
+  ctx.drawImage(glowSprite('hintbird', 'rgba(255,225,110,0.4)', 'rgba(255,225,110,0)'), -22, -22, 44, 44);
+  const flap = Math.sin(b.t * 12); // 날갯짓
+  // 날개 (몸 뒤)
+  ctx.strokeStyle = '#2f3550'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-1, -1); ctx.quadraticCurveTo(-9, -1 - flap * 7, -15, 1); // 뒷날개
+  ctx.moveTo(-1, -1); ctx.quadraticCurveTo(6, -1 - flap * 7, 11, 1);   // 앞날개
+  ctx.stroke();
+  // 몸통
+  ctx.fillStyle = '#3d4458';
+  ctx.beginPath(); ctx.ellipse(0, 0, 8, 5.5, 0, 0, Math.PI * 2); ctx.fill();
+  // 머리
+  ctx.beginPath(); ctx.arc(6.5, -3, 3.6, 0, Math.PI * 2); ctx.fill();
+  // 부리
+  ctx.fillStyle = '#ffb300';
+  ctx.beginPath(); ctx.moveTo(9.5, -3); ctx.lineTo(13.5, -2); ctx.lineTo(9.5, -1); ctx.closePath(); ctx.fill();
+  // 눈
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(7.4, -3.6, 1.1, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(7.7, -3.6, 0.55, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
 function drawBackdrop() {
   const ph = skyPhase(), t = SKY_TINT[ph];
   const g = ctx.createLinearGradient(0, 0, 0, cv.height);
@@ -2110,6 +2194,7 @@ function draw() {
   }
   // 유닛
   for (const u of S.units) drawUnit(u);
+  if (S.bird) drawBird(S.bird); // 🐦 힌트 새 (유닛 위에 그려짐)
   // 이펙트
   for (const e of S.effects) {
     if (e.type === 'line') {
@@ -3561,6 +3646,23 @@ function issueAttack(px, py) {
   S.effects.push({ type:'boom', x: px, y: py, r: 14, t: 0.2 });
   logMsg('⚔️ 어택땅!');
 }
+function tryCatchBird(x, y) {
+  if (S.bird && Math.hypot(S.bird.x - x, S.bird.y - y) < (IS_MOBILE ? 42 : 28)) { catchBird(); return true; }
+  return false;
+}
+function catchBird() {
+  const b = S.bird; S.bird = null; S.birdTimer = 30 + Math.random() * 25;
+  const und = HIDDEN_DEX.filter(h => !hiddenSeen(h.id));
+  if (!und.length) return; // 방어적: 스폰 조건상 발생 안 함
+  const h = und[Math.floor(Math.random() * und.length)];
+  // 깃털 파편
+  for (let i = 0; i < 12; i++) { const a = Math.random() * 6.28, v = 50 + Math.random() * 90; S.parts.push({ x: b.x, y: b.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, g: true, t: 0.5, r: 1.6 + Math.random() * 2, c: i % 3 ? '#e8ecff' : '#3d4458' }); }
+  for (let i = 0; i < 6; i++) { const a = Math.random() * 6.28, v = 40 + Math.random() * 70; S.parts.push({ x: b.x, y: b.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0.4, r: 1.5, c: '#ffe082' }); }
+  sfx('chirp');
+  addFloat(b.x, b.y - 16, '💡 소문!', '#ffe082', 1.2);
+  rewardToast('🐦', h.hint, '#7ec8ff', '새가 소문을 물어왔다!');
+  logMsg('🐦 새를 잡았다! ' + h.hint);
+}
 function mpos(e) {
   const r = cv.getBoundingClientRect();
   return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height };
@@ -3587,7 +3689,7 @@ cv.addEventListener('mousemove', e => {
 // 건물/오브젝트 설명 + 팁 (아이콘 밑 상시 설명 대신, 클릭하면 보인다)
 const OBJ_INFO = {
   portal: { t: '🌀 강화 포털', d: '같은 유닛 <b>5기</b>를 포털 안에 모으면 <b>영웅</b>으로 강화!<br>영웅 5기 → 슈퍼영웅 · 에이스 5기 → 에이스 영웅.',
-    tip: '💡 소문: <b>원페어 하나, 투페어 둘, 트리플 셋</b>… "1·2·3"을 함께 바치면 도박의 신이 강림한다던데…? 🎲' },
+    tip: '💡 소문: 계단을 오르듯 원1·투2·쓰리3 … 그 순서로 바친 자에게 운명의 주사위가 굴러온다. 🎲' },
   room: { t: '💎 광석 방', d: '유닛을 방 안으로 보내면 광석을 캡니다.<br>채굴 정원 <b>' , d2: '</b>명 — 10라운드마다 +1.<br>단계를 완채할 때마다 확정 보상!',
     tip: '💡 <b>새총(하이카드)</b>은 정원과 무관하게 들어가 캘 수 있는 프리패스. 잡패도 쓸모가 있는 법.' },
   mine: { t: '⛰️ 광산', d: '광부가 캐서 겹을 벗겨냅니다. 재질이 흙→철→금→보석으로 점점 비싸져요.<br>한 겹 깰 때마다 <b>배달 골드 +1 (영구)</b>.',
@@ -3619,6 +3721,7 @@ function objAt(x, y) {
 }
 function pressEnd() {
   if (!drag) return;
+  if (!drag.moved && tryCatchBird(drag.x0, drag.y0)) { drag = null; return; } // 🐦 새 잡기 우선
   if (attackMode && !drag.moved) {
     issueAttack(drag.x0, drag.y0);
     setAttackMode(false);
@@ -3720,6 +3823,7 @@ cv.addEventListener('touchend', e => {
   if (longPressFired) { longPressFired = false; drag = null; return; } // 롱프레스가 이미 처리함
   if (drag && drag.moved) { pressEnd(); return; } // 드래그 박스 선택
   const p = touchPos(e);
+  if (tryCatchBird(p.x, p.y)) { drag = null; lastTapTime = 0; lastTapPos = null; return; } // 🐦 새 잡기 우선(유닛 이동보다 먼저)
   const now = performance.now();
   const isDouble = lastTapPos && (now - lastTapTime) < 350 && Math.hypot(p.x - lastTapPos.x, p.y - lastTapPos.y) < 40;
   if (isDouble) {
@@ -3922,23 +4026,23 @@ const HAND_GUIDE = [
 // 📖 히든 조합 도감: 발견 전엔 recipe 대신 riddle(hint)을 보여준다 (localStorage dpd_hidden으로 발견 여부 판정)
 const HIDDEN_DEX = [
   { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '매 공격이 주사위 — 6이 뜨면 잭팟샷!',
-    hint: '원페어 하나, 투페어 둘, 트리플 셋… "1·2·3"을 함께 바치면 도박의 신이 강림한다던데…?' },
+    hint: '계단을 오르듯 원1·투2·쓰리3 … 그 순서로 바친 자에게 운명의 주사위가 굴러온다.' },
   { id: 'junk', icon: '💰', name: '고물상', recipe: '하이카드×3 + 원페어×3', desc: '반경 40px 처치 골드 ×1.2 (지원형)',
-    hint: '잡패도 모이면 쓸모가 있는 법 — 하이카드와 원페어를 각각 셋씩 모아보면?' },
+    hint: '하이3·원3 — 가장 하찮은 두 패를 나란히 그러모으면 쓰레기 더미에서 금이 반짝인다.' },
   { id: 'quartet', icon: '📯', name: '콰르텟', recipe: '원페어·투페어·트리플·스트레이트 각 1', desc: '반경 50px 아군 공속 +20% (비중첩)',
-    hint: '넷이 모여 합주를 하면 주변 모두의 손이 빨라진다던데…' },
+    hint: '원·투·쓰리·스트, 서로 다른 넷을 하나씩 세우면 합주가 시작되고 곁의 손이 빨라진다.' },
   { id: 'guillotine', icon: '⚔️', name: '길로틴', recipe: '원1+투2+트3+포4 (10기)', desc: '체력 20% 이하 즉시 처형',
-    hint: '열 명이 모이면 사형 집행인이 나타난다는 소문 — 원1·투2·트3·포4를 채워보라' },
+    hint: '원1·투2·쓰리3·포4, 열이 줄지어 늘어서는 날 처형대가 세워진다.' },
   { id: 'shogun', icon: '🔥', name: '쇼군', recipe: '풀하우스×2 + 플러쉬×2', desc: '참격 무제한 타격 + 화상 도트',
-    hint: '집을 채우는 자와 무늬를 채우는 자가 둘씩 모이면 무사가 강림한다던데…' },
+    hint: '풀2·플2 — 집을 채운 자와 무늬로 물든 자가 둘씩, 넷이 모이면 불칼을 뽑는다.' },
   { id: 'chrono', icon: '⏳', name: '시간술사', recipe: '스트레이트×3', desc: '시간 정지 스킬 (쿨 150초)',
-    hint: '연속된 셋이 모이면 시간이 멎는다는 이야기가 있다' },
+    hint: '스트3 … 끊기지 않은 흐름을 셋 겹치면 세상의 시계가 잠시 숨을 멈춘다.' },
   { id: 'slot', icon: '🎰', name: '슬롯머신', recipe: '같은 숫자 트리플×3', desc: '잭팟 폭격 스킬 (쿨 75초)',
-    hint: '같은 숫자 트리플을 세 벌 맞추면 릴이 돌아가기 시작한다던데…' },
+    hint: '같은 숫자 쓰리를 세 벌(×3), 릴이 맞아떨어지면 하늘에서 잭팟이 쏟아진다.' },
   { id: 'joker', icon: '🃏', name: '조커', recipe: '하이카드·원페어·투페어 영웅 각 1', desc: '낫으로 베며 몹을 끌어당김 (클럼핑)',
-    hint: '가장 낮은 영웅 셋이 손을 맞잡으면 광대가 나타나 낫을 휘두른다던데…' },
+    hint: '하이·원·투 — 가장 낮은 영웅 셋이 손을 맞잡으면 광대가 낫을 든다.' },
   { id: 'catapult', icon: '🪨', name: '투석기', recipe: '하이카드 20기 제물', desc: '거대한 돌덩이로 소환장 전체 포격 (이동 불가)',
-    hint: '하이카드를 끝없이 포탈에 바치면 언젠가 거대한 돌덩이가 솟아오른다는 전설이…' },
+    hint: '하이 ×20, 홑패를 밑 빠진 독에 붓듯 포탈에 바치면 거대한 바위가 깨어난다.' },
 ];
 function closeShop() {
   openShop = null;
@@ -4211,9 +4315,20 @@ document.getElementById('bSpeed').onclick = () => {
 document.getElementById('btnRestart').onclick = () => {
   if (confirm('처음부터 다시 시작할까요? 현재 진행 상황은 사라집니다.')) reset();
 };
+function lockLandscape() {
+  const el = document.documentElement;
+  const rf = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!rf) return;
+  try {
+    const p = rf.call(el);
+    if (p && p.then) p.then(() => {
+      if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+    }).catch(() => {});
+  } catch (e) {}
+}
 document.getElementById('btnFull').onclick = () => {
   const el = document.documentElement;
-  if (!document.fullscreenElement) { (el.requestFullscreen || el.webkitRequestFullscreen || (()=>{})).call(el); }
+  if (!document.fullscreenElement) { lockLandscape(); }
   else { (document.exitFullscreen || document.webkitExitFullscreen || (()=>{})).call(document); }
 };
 
@@ -4379,7 +4494,7 @@ function sfx(type, arg) {
   if (!AC || !sfxOn) return;
   const now = performance.now(), gap = { shoot: 45, slash: 90, boom: 55, bigboom: 300, jackpot: 400, combo: 70,
     splash: 70, glass: 70, metal: 65, thud: 80,
-    pick: 200, coin: 220, boss: 1500, clear: 1500, leak: 800, reward: 500, hero: 800 }[type] || 60;
+    pick: 200, coin: 220, boss: 1500, clear: 1500, leak: 800, reward: 500, hero: 800, chirp: 300 }[type] || 60;
   if (lastSfx[type] && now - lastSfx[type] < gap) return;
   lastSfx[type] = now;
   if (type === 'shoot') noiseBurst(0.045, 0.17, 2600 + Math.random() * 900, 'bandpass'); // 착! (찰진 슬라이스)
@@ -4399,6 +4514,7 @@ function sfx(type, arg) {
   else if (type === 'glass') { [2100, 2800, 3400].forEach((f, i) => tone(f, 0.09, 'triangle', sfxGain, 0.075, AC.currentTime + i * 0.015)); noiseBurst(0.05, 0.1, 4000, 'bandpass'); } // 쨍
   else if (type === 'metal') { [520, 780, 1170].forEach((f, i) => tone(f, 0.15, 'square', sfxGain, 0.055, AC.currentTime + i * 0.008)); noiseBurst(0.06, 0.11, 3000, 'bandpass'); } // 챙
   else if (type === 'thud') { tone(88, 0.16, 'sine', sfxGain, 0.28); noiseBurst(0.1, 0.13, 500, 'lowpass'); } // 쿵
+  else if (type === 'chirp') { tone(900, 0.05, 'sine', sfxGain, 0.10); tone(1400, 0.05, 'sine', sfxGain, 0.10, AC.currentTime + 0.055); } // 🐦 힌트 새 짹짹
 }
 const MELODY = [293.7,0,440,349.2, 392,0,440,349.2, 261.6,0,329.6,392, 293.7,349.2,440,0]; // D 도리안 (A파트)
 const BASS =   [146.8,0,0,0, 130.8,0,0,0, 174.6,0,0,0, 146.8,0,0,0];
@@ -4478,6 +4594,7 @@ document.getElementById('btnSolo').onclick = () => {
   document.getElementById('diffRow').style.display = 'flex';
 };
 document.querySelectorAll('.diffBtn').forEach(b => b.onclick = () => {
+  if (IS_MOBILE) lockLandscape();
   DIFF_MUL = +b.dataset.mul;
   DIFF_NAME = b.textContent.trim().replace(/^\S+\s/, '');
   document.getElementById('startOverlay').style.display = 'none';
