@@ -547,6 +547,7 @@ function reset() {
     speed: 1, time: 0, paused: false,
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0,
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
+    tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 100기 → 완성, 라운드 재시작 시 리셋)
   };
   dctx.clearRect(0, 0, 940, 500); // 이전 판 얼룩 제거
   S.mineMax = S.mineHp = mineHP(1);
@@ -967,6 +968,7 @@ function spawnGambler(x, y) {
   addFloat(x, y - 30, '🎲 도박의 신 강림!! 🎲', '#ffd54f', 2.8);
   sfx('jackpot'); sfx('hero');
   logMsg('🎲✨ 히든 조합 발견!! [1·2·3] → 히든 영웅 <b>갬블러</b>! 매 공격이 주사위 — 6이 뜨면 잭팟샷!');
+  markHidden('gambler');
 }
 // 💰 고물상: 하이카드×3 + 원페어×3 → 주변 처치 골드 ×1.2 오라 (전투력은 약함)
 function spawnJunk(x, y) {
@@ -981,6 +983,7 @@ function spawnJunk(x, y) {
   addFloat(x, y - 30, '💰 고물상 강림!! 💰', '#8d6e63', 2.8);
   sfx('jackpot'); sfx('hero');
   logMsg('💰✨ 히든 조합 발견!! [하이카드×3·원페어×3] → 히든 영웅 <b>고물상</b>! 반경 40px 처치 골드 ×1.2!');
+  markHidden('junk');
 }
 // 📯 콰르텟: 원페어+투페어+트리플+스트레이트 각 1 → 반경 50px 아군 공속 +20% (전투력 낮음, 순수 지원)
 function spawnQuartet(x, y) {
@@ -995,6 +998,7 @@ function spawnQuartet(x, y) {
   addFloat(x, y - 30, '📯 콰르텟 강림!! 📯', '#5b48d0', 2.8);
   sfx('jackpot'); sfx('hero');
   logMsg('📯✨ 히든 조합 발견!! [원페어·투페어·트리플·스트레이트 각1] → 히든 영웅 <b>콰르텟</b>! 반경 50px 아군 공속 +20%!');
+  markHidden('quartet');
 }
 // ⚔️ 길로틴: 원페어1+투페어2+트리플3+포카드4(10기) → 체력 20% 이하 즉시 처형
 function spawnGuillotine(x, y) {
@@ -1009,6 +1013,7 @@ function spawnGuillotine(x, y) {
   addFloat(x, y - 30, '⚔️ 길로틴 강림!! ⚔️', '#e53935', 2.8);
   sfx('jackpot'); sfx('hero');
   logMsg('⚔️✨ 히든 조합 발견!! [원1·투2·트3·포4] → 히든 영웅 <b>길로틴</b>! 체력 20% 이하 즉시 처형!');
+  markHidden('guillotine');
 }
 // 🔥 쇼군: 풀하우스×2 + 플러쉬×2 → 참격 무제한 타격 + 화상 도트 (강력한 근접 딜러)
 function spawnShogun(x, y) {
@@ -1023,6 +1028,7 @@ function spawnShogun(x, y) {
   addFloat(x, y - 30, '🔥 쇼군 강림!! 🔥', '#e53935', 2.8);
   sfx('jackpot'); sfx('hero');
   logMsg('🔥✨ 히든 조합 발견!! [풀하우스×2·플러쉬×2] → 히든 영웅 <b>쇼군</b>! 참격 무제한 타격 + 화상 도트!');
+  markHidden('shogun');
 }
 // ⏳ 시간술사: 스트레이트×3 → 시간 정지 스킬 (전투력은 약함, 순수 지원)
 function spawnChrono(x, y) {
@@ -1038,6 +1044,7 @@ function spawnChrono(x, y) {
   addFloat(x, y - 30, '⏳ 시간술사 강림!! ⏳', '#42a5f5', 2.8);
   sfx('jackpot'); sfx('hero');
   logMsg('⏳✨ 히든 조합 발견!! [스트레이트×3] → 히든 영웅 <b>시간술사</b>! 시간 정지 스킬 보유!');
+  markHidden('chrono');
 }
 // 🎰 슬롯머신: 같은 숫자 트리플×3 → 잭팟 폭격 스킬 (전투력은 약함, 순수 지원)
 function spawnSlot(x, y) {
@@ -1053,6 +1060,37 @@ function spawnSlot(x, y) {
   addFloat(x, y - 30, '🎰 슬롯머신 강림!! 🎰', '#ffd54f', 2.8);
   sfx('jackpot'); sfx('hero');
   logMsg('🎰✨ 히든 조합 발견!! [같은 숫자 트리플×3] → 히든 영웅 <b>슬롯머신</b>! 잭팟 폭격 스킬 보유!');
+  markHidden('slot');
+}
+// 🃏 조커: 하이카드·원페어·투페어 영웅 각 1기 → 낫으로 베며 몹을 끌어당기는 클럼핑 딜러
+function spawnJoker(x, y) {
+  S.units.push({
+    x, y, tx: x, ty: y, race: 1, tier: 1, hidden: false, hero: true, joker: true, miner: false, // tier 6 금지 — 대검 돌격 스킬 게이트(u.tier===6)와 충돌
+    keyRank: 14, keyLabel: '🃏', kills: 0,
+    jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
+    forceTarget: null, attackMine: false, amove: false, priority: 'near',
+    dmg: 70, cd: 0.9, range: 150, splash: 60, bounce: 0, atk: 'area', proj: null, vis: 'scythe',
+    pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 조커', cool: 0, selected: true, walk: 0, speed: 85,
+  });
+  addFloat(x, y - 30, '🃏 조커 강림!! 🃏', '#8c5bff', 2.8);
+  sfx('jackpot'); sfx('hero');
+  logMsg('🃏✨ 히든 조합 발견!! [하이카드·원페어·투페어 영웅 각1] → 히든 영웅 <b>조커</b>! 낫으로 베며 몹을 끌어당깁니다!');
+  markHidden('joker');
+}
+// 🪨 투석기: 하이카드 100기를 포털에 제물로 바치면 완성되는 거대 공성병기 (이동 불가)
+function spawnCatapult(x, y) {
+  S.units.push({
+    x, y, tx: x, ty: y, race: 2, tier: 7, hidden: false, hero: true, catapult: true, miner: false,
+    keyRank: 14, keyLabel: '🪨', kills: 0,
+    jx: 0, jy: 0,
+    forceTarget: null, attackMine: false, amove: false, priority: 'near',
+    dmg: 300, cd: 4.0, range: 999, splash: 130, bounce: 0, atk: 'area', proj: null, vis: 'bomb',
+    pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 공성 투석기', cool: 0, selected: true, walk: 0, speed: 0,
+  });
+  addFloat(x, y - 30, '🪨 공성 투석기 완성!! 🪨', '#78909c', 2.8);
+  sfx('jackpot'); sfx('hero');
+  logMsg('🪨✨ 하이카드 100기 제물!! <b>공성 투석기</b> 완성! 소환장 전체를 포격합니다 (이동 불가)!');
+  markHidden('catapult');
 }
 // 강화 포털: 같은 유닛 5기가 포털 안에 모이면 영웅/슈퍼영웅으로 합성
 function updatePortal() {
@@ -1141,10 +1179,26 @@ function updatePortal() {
     updateInfoPanel();
     return;
   }
+  // 🃏 조커 (하이카드영웅+원페어영웅+투페어영웅 각1) — 갬블러 등과 달리 티어0/1/2 "영웅"이 재료. 1기 제한.
+  if (!S.units.some(u => u.joker)) {
+    const heroesIn = inP.filter(u => u.hero && !u.hidden && !u.super);
+    const h0 = heroesIn.find(u => u.tier === 0), h1 = heroesIn.find(u => u.tier === 1), h2 = heroesIn.find(u => u.tier === 2);
+    if (h0 && h1 && h2) {
+      const used = [h0, h1, h2];
+      S.units = S.units.filter(u => !used.includes(u));
+      spawnJoker(PORTAL.x, PORTAL.y + PORTAL.r + 26);
+      S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 65, t: 0.5 });
+      for (let i = 0; i < 22; i++) { const a = Math.random()*6.28, v = 100 + Math.random()*170; S.parts.push({ x: PORTAL.x, y: PORTAL.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.55, r: 2 + Math.random()*3.5, c: '#8c5bff' }); }
+      updateInfoPanel();
+      return;
+    }
+  }
+  let genericFused = false;
   const groups = {};
   inP.forEach(u => { const k = fuseKey(u); (groups[k] = groups[k] || []).push(u); });
   for (const k in groups) {
     if (groups[k].length >= 5) {
+      genericFused = true;
       const group = groups[k].slice(0, 5);
       const t = group[0].tier, hero = group[0].hero, hidden = group[0].hidden;
       S.units = S.units.filter(u => !group.includes(u));
@@ -1164,6 +1218,24 @@ function updatePortal() {
       }
       updateInfoPanel();
       break;
+    }
+  }
+  // 🪨 투석기: 아무 레시피도 발동하지 않은 프레임에만, 남은 하이카드(tier0, 비영웅·비히든)를 제물로 소모
+  if (!genericFused && !S.units.some(u => u.catapult)) {
+    const highs = byT[0] || [];
+    if (highs.length) {
+      S.units = S.units.filter(u => !highs.includes(u));
+      S.tribute = (S.tribute || 0) + highs.length;
+      if (S.tribute >= 100) {
+        S.tribute = 0;
+        const cx = CX - PEN.w/2 - 60, cy = CY;
+        spawnCatapult(cx, cy);
+        S.effects.push({ type: 'boom', x: cx, y: cy, r: 80, t: 0.6 });
+        for (let i = 0; i < 30; i++) { const a = Math.random()*6.28, v = 120 + Math.random()*200; S.parts.push({ x: cx, y: cy, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.6, r: 2 + Math.random()*4, c: '#78909c' }); }
+      } else {
+        logMsg(`🪨 하이카드 ${highs.length}기 투석기 제단에 제물로 (${S.tribute}/100)`);
+      }
+      updateInfoPanel();
     }
   }
 }
@@ -1329,10 +1401,18 @@ function update(dt) {
     m.born = Math.min(1, m.born + dt * 2.5);
     m.ang += m.spin * dt;
     m.rot += dt * 0.8;
-    const r = (20 + m.baseR * (0.15 + 0.85 * gw)) * m.born;
-    m.x = CX + r * Math.cos(m.ang) + 5 * Math.sin(S.time * 2.3 + m.phase);
-    m.y = CY + r * Math.sin(m.ang) + 5 * Math.cos(S.time * 2.1 + m.phase * 1.3);
-    // 울타리 밖으로 못 나간다 → 가장자리에서 서로 겹치고 밀린다
+    if (m.pullT > 0) {
+      // 🃏 조커: 낫에 맞아 끌려가는 중 — 오빗 대신 조커 쪽으로 직행 (풀리면 오빗 각도가 그대로 이어져 튕기듯 복귀, 의도된 동작)
+      m.pullT -= dt;
+      const pdx = m.pullX - m.x, pdy = m.pullY - m.y, pd = Math.hypot(pdx, pdy) || 1;
+      const pstep = Math.min(pd, 220 * dt);
+      m.x += pdx / pd * pstep; m.y += pdy / pd * pstep;
+    } else {
+      const r = (20 + m.baseR * (0.15 + 0.85 * gw)) * m.born;
+      m.x = CX + r * Math.cos(m.ang) + 5 * Math.sin(S.time * 2.3 + m.phase);
+      m.y = CY + r * Math.sin(m.ang) + 5 * Math.cos(S.time * 2.1 + m.phase * 1.3);
+    }
+    // 울타리 밖으로 못 나간다 → 가장자리에서 서로 겹치고 밀린다 (풀 중에는 조커 쪽 가장자리로 뭉침)
     m.x = Math.max(CX - hw, Math.min(CX + hw, m.x));
     m.y = Math.max(CY - hh, Math.min(CY + hh, m.y));
   }
@@ -1408,6 +1488,7 @@ function update(dt) {
           for (let i = 0; i < nn; i++) { const a = Math.random()*6.28, v = 110 + Math.random()*230; S.parts.push({ x: p.ex, y: p.ey, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.55, r: 2 + Math.random()*4, c }); }
           for (const m of S.monsters) dealDamage(m, p.dmg, p.owner);
         } else { // 범위 폭발
+          if (p.boulder) sfx('thud'); // 🪨 투석기: 묵직한 착탄음
           S.effects.push({ type:'boom', x: p.ex, y: p.ey, r: p.splash, t: 0.3 });
           for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 70 + Math.random()*150; S.parts.push({ x: p.ex, y: p.ey, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.32, r: 2 + Math.random()*3, c: '#ff8a3d' }); }
           const r2 = p.splash * p.splash;
@@ -1560,6 +1641,7 @@ function fireAt(u, target) {
         const arc = (u.vis === 'bomb');
         S.projs.push({ kind: arc ? 'bombthrow' : 'missile', deliver: 'area', owner: u,
           mini: /바주카/.test(u.weapon), // 바주카포는 미니 미사일
+          boulder: !!u.catapult, // 🪨 투석기: 폭탄 대신 돌덩이로 렌더
           sx: m.x, sy: m.y, x: m.x, y: m.y, ex: target.x, ey: target.y,
           t: 0, dur: arc ? 0.5 : Math.max(0.18, Math.hypot(target.x - m.x, target.y - m.y) / 640),
           dmg, splash: u.splash, spin: 0, ang: Math.atan2(target.y - m.y, target.x - m.x) });
@@ -1621,6 +1703,10 @@ function areaHit(u, x, y, dmg) {
     // 실제 대검 참격 (총구=칼끝에서 호를 그린다). 쇼군은 불타는 참격 (fire 플래그)
     S.effects.push({ type:'slash', x, y, r: u.splash * 1.6, a, t: 0.22, dur: 0.22, fire: u.shogun });
     for (let i = 0; i < 4; i++) { const v = 60 + Math.random()*90, aa = a + (Math.random()-0.5)*1.2; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.22, r: 1.2 + Math.random()*1.6, c: u.shogun ? '#ff8a3d' : '#dbe9ff' }); }
+  } else if (vis === 'scythe') {
+    // 🃏 조커: 대검 크레센트를 재사용하되 보라색 (joker 플래그) + 보라 파티클
+    S.effects.push({ type:'slash', x, y, r: u.splash * 1.5, a, t: 0.22, dur: 0.22, joker: true });
+    for (let i = 0; i < 5; i++) { const v = 60 + Math.random()*100, aa = a + (Math.random()-0.5)*1.3; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1.3 + Math.random()*1.8, c: '#8c5bff' }); }
   } else if (vis === 'flame') {
     // 진짜 불꽃: 총구에서 착탄점까지 뻗는 화염 스트림. 불줄기 두께 = 판정 두께(splash 반폭)와 일치
     const wide = u.hero; // 영웅은 두껍게, 일반은 얇은 불줄기
@@ -1667,6 +1753,7 @@ function areaHit(u, x, y, dmg) {
     if (ddx * ddx + ddy * ddy <= r2) {
       dealDamage(m, dmg, u);
       if (u.shogun) { m.burnT = 1.5; m.burnDmg = dmg * 0.2; } // 🔥 화상 도트 (초당 데미지)
+      if (u.joker) { m.pullT = 0.45; m.pullX = u.x; m.pullY = u.y; } // 🃏 낫에 맞은 몹은 조커 쪽으로 끌려간다
     }
   }
 }
@@ -1746,6 +1833,16 @@ function recordBest(stage) {
   try { best = parseInt(localStorage.getItem('dpd_best') || '0') || 0; } catch (e) {}
   if (stage > best) { best = stage; try { localStorage.setItem('dpd_best', String(best)); } catch (e) {} }
   return best;
+}
+// 📖 히든 도감 발견 기록: 라운드 재시작해도 유지 (reset()이 건드리지 않음)
+function hiddenSeen(id) {
+  try { return !!JSON.parse(localStorage.getItem('dpd_hidden') || '{}')[id]; } catch (e) { return false; }
+}
+function markHidden(id) {
+  try {
+    const d = JSON.parse(localStorage.getItem('dpd_hidden') || '{}');
+    if (!d[id]) { d[id] = 1; localStorage.setItem('dpd_hidden', JSON.stringify(d)); }
+  } catch (e) {}
 }
 // ==================== 우측 상단 광석 방 (정원제: 1명 시작, 10라운드마다 +1) ====================
 const OREPOS = { x: ROOM.cx + 46, y: ROOM.cy };
@@ -2071,7 +2168,9 @@ function draw() {
         const rr = e.r * (1.12 - k * 0.16), ka = al * (0.6 - k * 0.17), ko = -k * 0.3;
         ctx.fillStyle = e.fire
           ? (k === 0 ? `rgba(255,205,120,${ka})` : `rgba(255,110,30,${ka})`) // 🔥 쇼군: 주황/빨강 화염 참격
-          : (k === 0 ? `rgba(245,250,255,${ka})` : `rgba(150,200,255,${ka})`);
+          : e.joker
+            ? (k === 0 ? `rgba(210,170,255,${ka})` : `rgba(140,91,255,${ka})`) // 🃏 조커: 보라 낫 참격
+            : (k === 0 ? `rgba(245,250,255,${ka})` : `rgba(150,200,255,${ka})`);
         ctx.beginPath();
         ctx.arc(0, 0, rr, -0.95 + ko, 0.35 + ko);
         ctx.arc(Math.cos(-0.3 + ko) * rr * 0.32, Math.sin(-0.3 + ko) * rr * 0.32, rr * 0.78, 0.35 + ko, -0.95 + ko, true);
@@ -2133,15 +2232,24 @@ function draw() {
       ctx.beginPath(); ctx.moveTo(4, -2.5); ctx.lineTo(11, 0); ctx.lineTo(4, 2.5); ctx.closePath(); ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(6, -0.6, 0.9, 0, Math.PI*2); ctx.fill();
       ctx.restore(); ctx.lineWidth = 1;
-    } else if (p.kind === 'bombthrow') { // 투척 폭탄
+    } else if (p.kind === 'bombthrow') { // 투척 폭탄 / 🪨 투석기는 돌덩이
       ctx.fillStyle = 'rgba(0,0,0,0.15)';
       ctx.beginPath(); ctx.ellipse(p.x, p.ey + 2, 5, 2, 0, 0, Math.PI*2); ctx.fill();
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.spin || 0);
-      ctx.fillStyle = '#263238';
-      ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#8d6e63'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(2, -9); ctx.stroke();
-      ctx.fillStyle = '#ff6d1f'; ctx.beginPath(); ctx.arc(2 + Math.random(), -9 - Math.random(), 1.6, 0, Math.PI*2); ctx.fill();
+      if (p.boulder) {
+        ctx.fillStyle = '#6d7278';
+        ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#4d5155'; // 크레이터 3개
+        ctx.beginPath(); ctx.arc(-2, -1, 1.8, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(2, 2, 1.3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(1, -2.5, 1, 0, Math.PI*2); ctx.fill();
+      } else {
+        ctx.fillStyle = '#263238';
+        ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#8d6e63'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(2, -9); ctx.stroke();
+        ctx.fillStyle = '#ff6d1f'; ctx.beginPath(); ctx.arc(2 + Math.random(), -9 - Math.random(), 1.6, 0, Math.PI*2); ctx.fill();
+      }
       ctx.restore(); ctx.lineWidth = 1;
     } else if (p.kind === 'brg') { // 날아가는 부메랑 / 영웅은 대형 표창
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.spin);
@@ -2298,6 +2406,11 @@ function drawPortal() {
   ctx.lineWidth = 1;
   ctx.fillStyle = '#8c5bff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('🌀 강화 포털', p.x, p.y + p.r + 13);
+  // 🪨 투석기 제물 카운터 (완성 전까지만 표시)
+  if (S.tribute > 0 && !S.units.some(u => u.catapult)) {
+    ctx.fillStyle = '#78909c'; ctx.font = 'bold 9px sans-serif';
+    ctx.fillText(`🪨 ${S.tribute}/100`, p.x, p.y + p.r + 25);
+  }
   ctx.textAlign = 'left';
 }
 function drawCastle() {
@@ -3258,6 +3371,23 @@ function drawWeapon(u, x, y) {
     ctx.restore();
     return;
   }
+  if (has('조커')) { // 🃏 낫 (히든 영웅) — 곡선 칼날 + 긴 손잡이
+    ctx.save(); ctx.translate(x + 1, y); ctx.rotate(u.atkAnim ? -0.4 : -0.1);
+    ctx.strokeStyle = '#4a2f7a'; ctx.lineWidth = 2; // 긴 손잡이
+    ctx.beginPath(); ctx.moveTo(-6, 7); ctx.lineTo(2, -2); ctx.stroke();
+    ctx.strokeStyle = '#8c5bff'; ctx.lineWidth = 2.2; // 곡선 낫날
+    ctx.beginPath(); ctx.arc(6, -6, 8, Math.PI * 0.25, Math.PI * 1.15); ctx.stroke();
+    ctx.restore(); ctx.lineWidth = 1;
+    return;
+  }
+  if (has('투석기')) { // 🪨 투석기 팔 (히든 영웅, 고정형)
+    ctx.save(); ctx.translate(x + 1, y); ctx.rotate(u.atkAnim ? -0.5 : -0.15);
+    ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 2.5; // 팔
+    ctx.beginPath(); ctx.moveTo(-4, 6); ctx.lineTo(6, -8); ctx.stroke();
+    ctx.fillStyle = '#78909c'; ctx.beginPath(); ctx.arc(6, -8, 3, 0, Math.PI*2); ctx.fill(); // 돌
+    ctx.restore(); ctx.lineWidth = 1;
+    return;
+  }
   if (has('대검')) { // 대검 (큰 검: 손잡이+가드+긴 칼날)
     ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 2.5; // 손잡이
     ctx.beginPath(); ctx.moveTo(x - 4, y + 7); ctx.lineTo(x, y + 2); ctx.stroke();
@@ -3463,7 +3593,14 @@ const OBJ_INFO = {
 function showObjInfo(k) {
   const o = OBJ_INFO[k], el = document.getElementById('objInfo');
   const d = k === 'room' ? o.d + oreCap() + o.d2 : o.d;
-  el.innerHTML = `<b>${o.t}</b><br>${d}<span class="tip">${o.tip}</span>`;
+  let tip = o.tip;
+  if (k === 'portal') { // 💡 힌트 로테이션: 아직 발견 못 한 히든 조합 중 하나를 무작위로 수수께끼로 보여준다
+    const undiscovered = HIDDEN_DEX.filter(h => !hiddenSeen(h.id));
+    tip = undiscovered.length
+      ? '💡 소문: ' + undiscovered[Math.floor(Math.random() * undiscovered.length)].hint
+      : '💡 포털의 모든 비밀을 밝혀냈다! 🏆';
+  }
+  el.innerHTML = `<b>${o.t}</b><br>${d}<span class="tip">${tip}</span>`;
   el.style.display = 'block';
 }
 function hideObjInfo() { document.getElementById('objInfo').style.display = 'none'; }
@@ -3510,7 +3647,7 @@ window.addEventListener('mouseup', e => {
 // 우클릭 이동 명령 (contextmenu·터치 롱프레스가 아닌 탭-이동에서 공용)
 function issueMove(px, py) {
   const p = clampTargetPos(px, py);
-  const sel = S.units.filter(u => u.selected && !u.miner); // 광부는 이동 명령 무시 (광산 전담)
+  const sel = S.units.filter(u => u.selected && !u.miner && !u.catapult); // 광부/투석기는 이동 명령 무시
   sel.forEach((u, i) => {
     const cols = Math.ceil(Math.sqrt(sel.length));
     const t = clampTargetPos(
@@ -3650,6 +3787,8 @@ function updateInfoPanel() {
   if (u.shogun) traits.push('🔥 참격 무제한 + 화상 도트');
   if (u.chrono) traits.push('⏳ 시간 정지 스킬 (쿨 150초)');
   if (u.slot) traits.push('🎰 잭팟 폭격 스킬 (쿨 75초)');
+  if (u.joker) traits.push('🃏 타격한 몹을 잠깐 끌어당김 (클럼핑)');
+  if (u.catapult) traits.push('🪨 설치형 공성병기 (이동 불가)');
   if (!traits.length) traits.push(u.miner ? '채굴 전용 (전투 불가)' : '단일 공격');
   if (u.forceTarget) traits.push('<b style="color:#e53935">🎯 집중 공격 중</b>');
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
@@ -3775,6 +3914,27 @@ const HAND_GUIDE = [
   ['스트레이트 플러쉬', [['5','♣',1],['6','♣',1],['7','♣',1],['8','♣',1],['9','♣',1]], '같은 무늬 <b>+</b> 연속 숫자'],
   ['로얄 스트레이트 플러쉬', [['10','♠',1],['J','♠',1],['Q','♠',1],['K','♠',1],['A','♠',1]], '같은 무늬 10·J·Q·K·A — <b>최강!</b>'],
 ];
+// 📖 히든 조합 도감: 발견 전엔 recipe 대신 riddle(hint)을 보여준다 (localStorage dpd_hidden으로 발견 여부 판정)
+const HIDDEN_DEX = [
+  { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '매 공격이 주사위 — 6이 뜨면 잭팟샷!',
+    hint: '원페어 하나, 투페어 둘, 트리플 셋… "1·2·3"을 함께 바치면 도박의 신이 강림한다던데…?' },
+  { id: 'junk', icon: '💰', name: '고물상', recipe: '하이카드×3 + 원페어×3', desc: '반경 40px 처치 골드 ×1.2 (지원형)',
+    hint: '잡패도 모이면 쓸모가 있는 법 — 하이카드와 원페어를 각각 셋씩 모아보면?' },
+  { id: 'quartet', icon: '📯', name: '콰르텟', recipe: '원페어·투페어·트리플·스트레이트 각 1', desc: '반경 50px 아군 공속 +20% (비중첩)',
+    hint: '넷이 모여 합주를 하면 주변 모두의 손이 빨라진다던데…' },
+  { id: 'guillotine', icon: '⚔️', name: '길로틴', recipe: '원1+투2+트3+포4 (10기)', desc: '체력 20% 이하 즉시 처형',
+    hint: '열 명이 모이면 사형 집행인이 나타난다는 소문 — 원1·투2·트3·포4를 채워보라' },
+  { id: 'shogun', icon: '🔥', name: '쇼군', recipe: '풀하우스×2 + 플러쉬×2', desc: '참격 무제한 타격 + 화상 도트',
+    hint: '집을 채우는 자와 무늬를 채우는 자가 둘씩 모이면 무사가 강림한다던데…' },
+  { id: 'chrono', icon: '⏳', name: '시간술사', recipe: '스트레이트×3', desc: '시간 정지 스킬 (쿨 150초)',
+    hint: '연속된 셋이 모이면 시간이 멎는다는 이야기가 있다' },
+  { id: 'slot', icon: '🎰', name: '슬롯머신', recipe: '같은 숫자 트리플×3', desc: '잭팟 폭격 스킬 (쿨 75초)',
+    hint: '같은 숫자 트리플을 세 벌 맞추면 릴이 돌아가기 시작한다던데…' },
+  { id: 'joker', icon: '🃏', name: '조커', recipe: '하이카드·원페어·투페어 영웅 각 1', desc: '낫으로 베며 몹을 끌어당김 (클럼핑)',
+    hint: '가장 낮은 영웅 셋이 손을 맞잡으면 광대가 나타나 낫을 휘두른다던데…' },
+  { id: 'catapult', icon: '🪨', name: '투석기', recipe: '하이카드 100기 제물', desc: '거대한 돌덩이로 소환장 전체 포격 (이동 불가)',
+    hint: '하이카드를 끝없이 포탈에 바치면 언젠가 거대한 돌덩이가 솟아오른다는 전설이…' },
+];
 function closeShop() {
   openShop = null;
   document.querySelectorAll('.shopIcon').forEach(b => b.classList.remove('open'));
@@ -3877,8 +4037,21 @@ function renderShop() {
       `<div class="rpgGuide">어떤 유닛/무기가 나오는지는 직접 뽑아보며 알아가세요 😏<br>
        같은 족보라도 <b>핵심 카드 숫자가 높을수록</b> 강함 (AA 원페어 &gt; 22 원페어)<br>
        5라운드마다 <b>더블 포커</b> — 두 족보가 일치하면 <b style="color:#e91e8c">♠ 에이스</b>,
-       족보에 <b>숫자까지</b> 일치하면 <b style="color:#ff2d95">♠♠ 슈퍼에이스</b>!</div>`;
+       족보에 <b>숫자까지</b> 일치하면 <b style="color:#ff2d95">♠♠ 슈퍼에이스</b>!</div>` +
+      hiddenDexHTML();
   }
+}
+// 히든 조합 도감 섹션 HTML (발견한 것만 정체 공개, 나머지는 ❓ + 수수께끼 힌트)
+function hiddenDexHTML() {
+  const discovered = HIDDEN_DEX.filter(h => hiddenSeen(h.id)).length;
+  return `<div class="rpgGuide" style="margin-top:10px">🀄 히든 조합 도감 (${discovered}/${HIDDEN_DEX.length} 발견)</div>` +
+    HIDDEN_DEX.map(h => {
+      const seen = hiddenSeen(h.id);
+      return `<div class="handRowG"${seen ? '' : ' style="opacity:.6"'}>
+        <span class="hname">${seen ? h.icon : '❓'} ${seen ? h.name : '???'}</span>
+        <span class="hdesc">${seen ? `${h.recipe} — ${h.desc}` : h.hint}</span>
+      </div>`;
+    }).join('');
 }
 document.getElementById('shopClose').onclick = closeShop;
 document.getElementById('shopOverlay').onclick = e => { if (e.target.id === 'shopOverlay') closeShop(); };
