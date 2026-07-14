@@ -231,6 +231,18 @@
   .modeBtn:disabled { background: #3a3548; border-color: #555; color: #888; cursor: default; box-shadow: none; }
   .diffBtn { font-size: 15px; font-weight: bold; padding: 11px 22px; border-radius: 10px; border: 2px solid transparent; cursor: pointer; color: #fff; transition: transform 0.1s; }
   .diffBtn:hover { transform: translateY(-2px); border-color: #fff; }
+  /* ===== 광석 채굴 보상 팝업 (짜잔!) ===== */
+  #rewardToast { position: fixed; top: 22%; left: 50%; transform: translateX(-50%); z-index: 13; display: none; pointer-events: none; }
+  #rtInner { position: relative; min-width: 240px; padding: 20px 30px 22px; text-align: center;
+    background: linear-gradient(180deg, #fff9e6, #ffe9b0); border: 3px solid #ffb300;
+    border-radius: 18px; box-shadow: 0 0 0 4px rgba(255,179,0,0.3), 0 16px 44px rgba(120,80,0,0.45);
+    animation: rtPop 0.5s cubic-bezier(0.2,1.6,0.4,1); }
+  @keyframes rtPop { 0% { transform: scale(0.3) rotate(-8deg); opacity: 0; } 60% { transform: scale(1.08) rotate(2deg); } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+  #rtBurst { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 26px; animation: rtBurstA 0.8s ease-out; }
+  @keyframes rtBurstA { 0% { transform: translateX(-50%) scale(0); } 60% { transform: translateX(-50%) scale(1.4); } 100% { transform: translateX(-50%) scale(1); } }
+  #rtIcon { font-size: 52px; line-height: 1; filter: drop-shadow(0 3px 6px rgba(160,110,0,0.5)); }
+  #rtTitle { font-size: 13px; font-weight: bold; color: #a06a00; letter-spacing: 2px; margin-top: 4px; }
+  #rtDesc { font-size: 22px; font-weight: 900; margin-top: 3px; }
   #overlay { position: fixed; inset: 0; background: rgba(20,20,30,0.88); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 10; color: #fff; }
   #overlay h2 { font-size: 34px; color: #ff5c5c; }
   #overlay p { font-size: 19px; }
@@ -310,6 +322,13 @@
   <div id="shopGoldRow">💰 <b id="shopGold"></b></div>
   <div id="shopBody"></div>
 </div></div>
+<!-- 광석 채굴 보상 팝업 (짜잔!) -->
+<div id="rewardToast"><div id="rtInner">
+  <div id="rtBurst">🎉</div>
+  <div id="rtIcon"></div>
+  <div id="rtTitle"></div>
+  <div id="rtDesc"></div>
+</div></div>
 <!-- 칩 카지노 모달 (복권/룰렛/교환 애니메이션) -->
 <div id="chipModal"><div id="chipWin">
   <button id="chipClose" title="닫기">✕</button>
@@ -360,12 +379,14 @@ const WEAPONS = [
   // 4 스트레이트 — 기관총 (단일 dps가 압도적이라 공속 반감: cd 0.13→0.26. 넓은 사거리·연사 이점은 유지)
   {name:'기관총', dmg:8, cd:0.26, range:280, splash:0, bounce:0, atk:'shot', proj:'mg',
    hero:{name:'저격총', atk:'sniper', cd:5, dmgMul:45, range:470, proj:'sniper'}}, // 보스 저격
-  // 5 플러쉬 — 화염방사기 (splash = 불길 반폭: 판정이 눈에 보이는 불줄기 두께와 일치. 원형 스플래시 아님)
-  {name:'화염방사기', dmg:0.17, cd:0.48, range:90, splash:22, bounce:0, atk:'area', vis:'flame',
-   hero:{name:'대형 화염방사기', splash:40, range:120}},
-  // 6 풀하우스 — 대검 (검사: 사거리 짧게 = 플러쉬의 2/3, 대신 데미지↑ + 돌진 스킬)
+  // 5 플러쉬 — 화염방사기 (사거리 80: 소환장 정중앙엔 못 닿음. 사거리 손해분은 dmg↑로 보정)
+  //   영웅(대형)은 폭·길이 각 1.5배 → 확실히 강해지고 정중앙까지 태움
+  {name:'화염방사기', dmg:0.24, cd:0.48, range:80, splash:22, bounce:0, atk:'area', vis:'flame',
+   hero:{name:'대형 화염방사기', splash:33, range:120}}, // splash 22×1.5, range 80×1.5
+  // 6 풀하우스 — 대검 (검사: 사거리 짧게 = 60, 데미지↑ + 돌진 스킬)
+  //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
   {name:'대검', dmg:20, cd:1.6, range:60, splash:56, bounce:0, atk:'area', vis:'sword',
-   hero:{name:'전기톱', atk:'area', vis:'saw', splash:80, cd:0.24, range:64}},
+   hero:{name:'전기톱', atk:'area', vis:'saw', splash:80, cd:0.24, range:102}}, // range 60×1.7
   // 7 포카드 — 바주카포 (5초, 스플래쉬)
   {name:'바주카포', dmg:25, cd:5.0, range:330, splash:104, bounce:0, atk:'area', vis:'rocket',
    hero:{name:'탱크', atk:'pen', vis:'tank', cd:2.0}}, // 소환장 전체 타격
@@ -1519,22 +1540,40 @@ function huntBossDown() { // 광석 한 단계 완채
   logMsg(`💎 광석 ${st}단계 완채! → ${S.hunt.stage}단계 (더 단단한 광석)`);
 }
 // 광석 단계별 확정 보상 (점점 좋아짐)
+// 짜잔! 보상 팝업 (오랜 채굴의 카타르시스)
+let rtTimer = null;
+function rewardToast(icon, desc, color) {
+  const el = document.getElementById('rewardToast');
+  document.getElementById('rtIcon').textContent = icon;
+  document.getElementById('rtDesc').textContent = desc;
+  document.getElementById('rtDesc').style.color = color || '#a06a00';
+  el.style.display = 'block';
+  // 애니메이션 리트리거
+  const inner = document.getElementById('rtInner');
+  inner.style.animation = 'none'; void inner.offsetWidth; inner.style.animation = '';
+  clearTimeout(rtTimer);
+  rtTimer = setTimeout(() => { el.style.display = 'none'; }, 2800);
+}
 function giveHuntReward(stage) {
-  const R = { x: ROOM.cx, y: ROOM.cy };
-  const fx = (t, c) => addFloat(R.x, R.y - 10, t, c || '#c9a227', 2.4);
   sfx('reward');
-  switch (Math.min(10, stage)) {
-    case 1: S.gold += 500; fx('🎁 골드 +500'); logMsg('💎 광석 1단계 보상: 골드 뭉치 +500'); break;
-    case 2: spawnMiner(); fx('⛏️ 광부 +1'); logMsg('💎 광석 2단계 보상: 무료 광부 1명'); break;
-    case 3: spawnSuperMiner(); fx('✨ 슈퍼 광부!', '#ff9800'); logMsg('💎 광석 3단계 보상: 슈퍼 광부(능력치 3배)'); break;
-    case 4: S.items.copier++; fx('📑 복사권 +1', '#5b48d0'); logMsg('💎 광석 4단계 보상: 유닛 복사권'); break;
-    case 5: S.items.reroll++; fx('🎟️ 재변경권 +1', '#c0392b'); logMsg('💎 광석 5단계 보상: 포커 전체 재변경권'); break;
-    case 6: S.gold += 3000; fx('🎁 골드 +3000'); logMsg('💎 광석 6단계 보상: 대형 골드 +3000'); break;
-    case 7: S.upg = S.upg.map(v => v + 3); fx('⚔️ 전 종족 +3Lv', '#43a047'); logMsg('💎 광석 7단계 보상: 전 종족 업그레이드 +3레벨'); break;
-    case 8: S.items.copier += 2; spawnSuperMiner(); fx('📑×2 + ✨슈퍼광부', '#5b48d0'); logMsg('💎 광석 8단계 보상: 복사권 2장 + 슈퍼 광부'); break;
-    case 9: { const t = Math.floor(Math.random()*10); spawnUnit(t, 0, true, 14); fx('♠ 무료 에이스!', '#e91e8c'); logMsg(`💎 광석 9단계 보상: 무료 에이스(${HAND_NAMES[t]})`); break; }
-    case 10: { const t = Math.floor(Math.random()*10); spawnHero(t, RACE_OF_RANK[t], CX-40, CY+155, 1.5, true); fx('🌟 슈퍼영웅!', '#ff6b9d'); logMsg('💎🌟 광석 10단계 최종 보상: 슈퍼영웅 강림!!'); break; }
-  }
+  const R = [
+    null,
+    ['💰', '골드 +500', () => S.gold += 500, '#b8860b'],
+    ['⛏️', '광부 +1명', () => spawnMiner(), '#8a6d1f'],
+    ['✨', '슈퍼 광부!', () => spawnSuperMiner(), '#ff9800'],
+    ['📑', '복사권 +1', () => S.items.copier++, '#5b48d0'],
+    ['🎟️', '재변경권 +1', () => S.items.reroll++, '#c0392b'],
+    ['💰', '골드 +3000', () => S.gold += 3000, '#b8860b'],
+    ['⚔️', '전 종족 +3Lv', () => S.upg = S.upg.map(v => v + 3), '#43a047'],
+    ['📑✨', '복사권×2 + 슈퍼광부', () => { S.items.copier += 2; spawnSuperMiner(); }, '#5b48d0'],
+    ['♠', '무료 에이스!', () => spawnUnit(Math.floor(Math.random()*10), 0, true, 14), '#e91e8c'],
+    ['🌟', '슈퍼영웅 강림!!', () => { const t = Math.floor(Math.random()*10); spawnHero(t, RACE_OF_RANK[t], CX-40, CY+155, 1.5, true); }, '#ff6b9d'],
+  ][Math.min(10, stage)];
+  R[2]();
+  rewardToast(R[0], R[1], R[3]);
+  addFloat(ROOM.cx, ROOM.cy - 10, R[1], R[3], 2.4);
+  logMsg(`💎 광석 ${stage}단계 완채 보상: ${R[1]}`);
+  if (stage >= 9) { sfx('jackpot'); sfx('hero'); }
 }
 function spawnHiddenMiner() {
   spawnMiner();
