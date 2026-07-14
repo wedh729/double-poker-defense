@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1">
 <title>더블 포커 디펜스</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -247,6 +247,47 @@
   #overlay h2 { font-size: 34px; color: #ff5c5c; }
   #overlay p { font-size: 19px; }
   #overlay button { font-size: 17px; padding: 12px 34px; border-radius: 10px; border: none; background: #5b48d0; color: #fff; cursor: pointer; }
+
+  /* ===== 모바일 지원 ===== */
+  #cv { touch-action: none; }
+  #deselBtn { position: absolute; top: 6px; right: 8px; width: 20px; height: 20px; border-radius: 50%; border: 1px solid #d0d0da; background: #f6f6fa; cursor: pointer; font-size: 11px; line-height: 1; padding: 0; }
+  #mobTabs { display: none; }
+  .mobile #mobTabs { display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 8; }
+  #mobTabs button { flex: 1; height: 52px; border: none; border-top: 2px solid #3a3350; background: #241a3a; color: #cfc9e8; font-size: 15px; font-weight: bold; cursor: pointer; }
+  #mobTabs button.active { background: #5b48d0; color: #fff; }
+  #mobTabs button.alert { animation: mtAlert 0.7s ease-in-out infinite alternate; }
+  @keyframes mtAlert { from { box-shadow: inset 0 0 0 0 rgba(255,209,102,0); } to { box-shadow: inset 0 0 0 4px rgba(255,209,102,0.9); } }
+  .mobHint { display: none; }
+  .mobile .mobHint { display: block; font-size: 12px; color: #b6a8e8; margin-top: -8px; }
+
+  body.mobile { padding-bottom: 60px; overflow-x: hidden; padding-left: 0; padding-right: 0; }
+  .mobile #page { width: 100vw; }
+  .mobile #wrap { width: 100%; max-width: 100vw; }
+  .mobile #pokerTimerBar { width: 90%; } /* 고정 440px가 레이아웃을 밀어내지 않게 */
+  .mobile h1 small { display: none; }
+  .mobile h1 { font-size: 14px; text-align: center; }
+  .mobile #cv { width: 100vw; height: auto; border-radius: 0; }
+  .mobile #topbar { flex-wrap: wrap; gap: 8px; font-size: 12px; padding: 6px 10px; }
+  .mobile #chipBar { left: 4px; gap: 6px; }
+  .mobile .chipStation { width: 46px; height: 48px; }
+  .mobile .chipStation .ci { font-size: 18px; }
+  .mobile .chipStation .cl { font-size: 9px; }
+  .mobile .card { width: 58px; height: 82px; }
+  .mobile .card .rk { font-size: 22px; }
+  .mobile .card .st { font-size: 17px; }
+  .mobile .card .corner { font-size: 9px; }
+  .mobile .card small { font-size: 8px; }
+  .mobile .card.sm { width: 48px; height: 68px; }
+  .mobile #startOverlay h2 { font-size: 26px; }
+  .mobile #modeRow { flex-direction: column; }
+  .mobile #diffBtnRow { flex-wrap: wrap; justify-content: center; }
+  .mobile #unitInfo { max-width: 46vw; font-size: 11px; bottom: 6px; left: 6px; }
+  .mobile #objInfo { max-width: 46vw; font-size: 11px; }
+  .mobile #pokerPanel { padding-bottom: 64px; }
+
+  /* 모바일 탭 분리: 전투 탭에선 포커/로그 숨김, 포커 탭에선 캔버스 숨김 */
+  .mobile[data-tab="battle"] #pokerPanel, .mobile[data-tab="battle"] #log { display: none; }
+  .mobile[data-tab="poker"] #cvWrap { display: none; }
 </style>
 </head>
 <body>
@@ -298,16 +339,18 @@
 </div>
 <aside class="adRail"><div class="adSlot" id="adSlotRight">AD<br>300×600</div></aside>
 </div>
+<div id="mobTabs"><button id="mtBattle" class="mobTabBtn">⚔️ 전투</button><button id="mtPoker" class="mobTabBtn">🃏 포커</button></div>
 <div id="startOverlay">
   <h2>♠♥ 더블 포커 디펜스 ♦♣</h2>
   <div class="sub">포커로 유닛을 뽑아 몰려오는 몬스터를 막아라!</div>
+  <div class="mobHint">📱 가로 모드가 더 쾌적해요!</div>
   <div id="modeRow" style="display:flex;gap:16px">
     <button class="modeBtn" id="btnSolo">🎮 혼자하기</button>
     <button class="modeBtn" disabled title="멀티플레이는 준비 중입니다!">👥 같이하기 (준비 중)</button>
   </div>
   <div id="diffRow" style="display:none;flex-direction:column;align-items:center;gap:12px">
     <div style="font-size:15px;color:#d9d2f5">난이도를 선택하세요</div>
-    <div style="display:flex;gap:12px">
+    <div id="diffBtnRow" style="display:flex;gap:12px">
       <button class="diffBtn" data-mul="0.7" style="background:#2e7d32">🌱 쉬움</button>
       <button class="diffBtn" data-mul="1" style="background:#1565c0">⚔️ 보통</button>
       <button class="diffBtn" data-mul="1.4" style="background:#e65100">🔥 어려움</button>
@@ -458,6 +501,20 @@ const FINAL_ROUND = 80; // 이후는 헬모드
 
 const cv = document.getElementById('cv');
 let ctx = cv.getContext('2d'); // 스프라이트 캐시 빌드 시 임시 스왑 가능하도록 let
+
+// ==================== 모바일 지원 ====================
+const IS_MOBILE = matchMedia('(pointer: coarse)').matches || innerWidth <= 700;
+if (IS_MOBILE) document.body.classList.add('mobile');
+let mobTab = 'battle'; // 'battle' | 'poker' — 모바일 하단 탭
+function setMobTab(t) {
+  mobTab = t;
+  document.body.dataset.tab = t;
+  document.getElementById('mtBattle').classList.toggle('active', t === 'battle');
+  document.getElementById('mtPoker').classList.toggle('active', t === 'poker');
+}
+document.getElementById('mtBattle').onclick = () => setMobTab('battle');
+document.getElementById('mtPoker').onclick = () => setMobTab('poker');
+
 // 죽음 얼룩 데칼 레이어 (오프스크린 — 매 프레임 drawImage 1회, 서서히 페이드)
 const decalCv = document.createElement('canvas');
 decalCv.width = 940; decalCv.height = 500;
@@ -553,6 +610,7 @@ function startPoker() {
     S.poker.hands.push({ deck, cards: deck.splice(0, 5), swapped: [false,false,false,false,false] });
   }
   renderPoker();
+  if (IS_MOBILE) setMobTab('poker');
 }
 function rerollHand() {
   if (S.phase !== 'poker' || S.items.reroll <= 0) return;
@@ -781,6 +839,7 @@ function startWave() {
   renderPoker();
   const info = stageInfo(S.round);
   logMsg(`🌊 스테이지 ${S.round} [${info.name}] — ${count}마리 (HP ${hp})${boss ? ' + 👹 보스!' : ''}${S.event ? ' · ' + S.event.name : ''}`);
+  if (IS_MOBILE) setMobTab('battle');
 }
 function spawnMonster(hp, isBoss, opt) {
   opt = opt || {};
@@ -3195,13 +3254,15 @@ window.addEventListener('keydown', e => {
     }
   }
 });
+// 모바일은 손가락이 부정확 → 히트박스 확대 (데스크톱 값은 그대로 유지)
+const HIT_R = IS_MOBILE ? 40 : 22;
 function issueAttack(px, py) {
   const sel = S.units.filter(u => u.selected);
   if (!sel.length) return;
   // 몬스터 클릭 → 집중 공격 (보스 저격)
   let hitM = null;
   for (const m of S.monsters) {
-    if (Math.hypot(m.x - px, m.y - py) < (m.boss ? 32 : 15)) { hitM = m; break; }
+    if (Math.hypot(m.x - px, m.y - py) < (m.boss ? (IS_MOBILE ? 48 : 32) : (IS_MOBILE ? 30 : 15))) { hitM = m; break; }
   }
   if (hitM) {
     sel.forEach(u => { if (u.miner) return; u.forceTarget = hitM; u.attackMine = false; u.amove = false; u.hold = false; });
@@ -3226,16 +3287,24 @@ function mpos(e) {
   const r = cv.getBoundingClientRect();
   return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height };
 }
+function pressStart(x, y) {
+  drag = { x0: x, y0: y, x1: x, y1: y, moved: false };
+}
+function pressMove(x, y) {
+  if (!drag) return;
+  drag.x1 = x; drag.y1 = y;
+  // 탭/드래그 판정: 터치는 손가락 떨림이 커서 임계값을 넉넉하게 (모바일은 화면 0.4배 축소라 24 ≈ 물리 10px)
+  if (Math.hypot(drag.x1 - drag.x0, drag.y1 - drag.y0) > (IS_MOBILE ? 24 : 6)) drag.moved = true;
+}
 cv.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
   const p = mpos(e);
-  drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, moved: false };
+  pressStart(p.x, p.y);
 });
 cv.addEventListener('mousemove', e => {
   if (!drag) return;
   const p = mpos(e);
-  drag.x1 = p.x; drag.y1 = p.y;
-  if (Math.hypot(drag.x1 - drag.x0, drag.y1 - drag.y0) > 6) drag.moved = true;
+  pressMove(p.x, p.y);
 });
 // 건물/오브젝트 설명 + 팁 (아이콘 밑 상시 설명 대신, 클릭하면 보인다)
 const OBJ_INFO = {
@@ -3263,8 +3332,8 @@ function objAt(x, y) {
   if (Math.abs(x - PEN.x) < PEN.w/2 + 8 && Math.abs(y - PEN.y) < PEN.h/2 + 8) return 'pen';
   return null;
 }
-window.addEventListener('mouseup', e => {
-  if (e.button !== 0 || !drag) return;
+function pressEnd() {
+  if (!drag) return;
   if (attackMode && !drag.moved) {
     issueAttack(drag.x0, drag.y0);
     setAttackMode(false);
@@ -3279,7 +3348,7 @@ window.addEventListener('mouseup', e => {
     hideObjInfo();
   } else {
     let hit = null;
-    for (const u of S.units) if (Math.hypot(u.x - drag.x0, u.y - drag.y0) < 22) { hit = u; break; }
+    for (const u of S.units) if (Math.hypot(u.x - drag.x0, u.y - drag.y0) < HIT_R) { hit = u; break; }
     S.units.forEach(u => u.selected = false);
     if (hit) { hit.selected = true; hideObjInfo(); }
     else { // 빈 곳 클릭: 성이면 강화창, 다른 건물이면 설명 팝업, 아니면 닫기
@@ -3290,12 +3359,14 @@ window.addEventListener('mouseup', e => {
   }
   drag = null;
   updateInfoPanel();
+}
+window.addEventListener('mouseup', e => {
+  if (e.button !== 0 || !drag) return;
+  pressEnd();
 });
-cv.addEventListener('contextmenu', e => {
-  e.preventDefault();
-  if (attackMode) { setAttackMode(false); return; } // 우클릭 = 어택 모드 취소
-  const mp = mpos(e);
-  const p = clampTargetPos(mp.x, mp.y);
+// 우클릭 이동 명령 (contextmenu·터치 롱프레스가 아닌 탭-이동에서 공용)
+function issueMove(px, py) {
+  const p = clampTargetPos(px, py);
   const sel = S.units.filter(u => u.selected && !u.miner); // 광부는 이동 명령 무시 (광산 전담)
   sel.forEach((u, i) => {
     const cols = Math.ceil(Math.sqrt(sel.length));
@@ -3307,18 +3378,88 @@ cv.addEventListener('contextmenu', e => {
     u.forceTarget = null; u.attackMine = false; u.amove = false; u.hold = false; // 이동 명령은 기존 명령 해제
   });
   if (sel.length) S.effects.push({ type:'boom', x: p.x, y: p.y, r: 12, t: 0.2 });
+}
+cv.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if (attackMode) { setAttackMode(false); return; } // 우클릭 = 어택 모드 취소
+  const mp = mpos(e);
+  issueMove(mp.x, mp.y);
 });
-// 더블클릭: 같은 종류 유닛 전체 부대지정 (스타크래프트식)
-cv.addEventListener('dblclick', e => {
-  const p = mpos(e);
+// 같은 종류 유닛 전체 부대지정 (스타크래프트식 더블클릭 / 모바일 더블탭 공용)
+function selectSameType(x, y) {
   let hit = null;
   for (const u of S.units) {
-    if (Math.hypot(u.x - p.x, u.y - p.y) < 22) { hit = u; break; }
+    if (Math.hypot(u.x - x, u.y - y) < HIT_R) { hit = u; break; }
   }
   if (!hit) return;
   S.units.forEach(u => u.selected =
     (u.tier === hit.tier && u.hero === hit.hero && u.miner === hit.miner && u.hidden === hit.hidden));
   updateInfoPanel();
+}
+cv.addEventListener('dblclick', e => {
+  const p = mpos(e);
+  selectSameType(p.x, p.y);
+});
+
+// ==================== 터치 컨트롤 (모바일) ====================
+function touchPos(e) {
+  const t = e.touches[0] || e.changedTouches[0];
+  const r = cv.getBoundingClientRect();
+  return { x: (t.clientX - r.left) * cv.width / r.width, y: (t.clientY - r.top) * cv.height / r.height };
+}
+let longPressTimer = null, longPressFired = false;
+let lastTapTime = 0, lastTapPos = null;
+cv.addEventListener('touchstart', e => {
+  e.preventDefault();
+  initAudio();
+  const p = touchPos(e);
+  pressStart(p.x, p.y);
+  longPressFired = false;
+  clearTimeout(longPressTimer);
+  longPressTimer = setTimeout(() => {
+    longPressFired = true;
+    issueAttack(p.x, p.y);
+    if (navigator.vibrate) navigator.vibrate(40);
+  }, 400);
+}, { passive: false });
+cv.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!drag) return;
+  const p = touchPos(e);
+  pressMove(p.x, p.y);
+  if (Math.hypot(p.x - drag.x0, p.y - drag.y0) > 24) clearTimeout(longPressTimer); // 롱프레스 취소(움직임)
+}, { passive: false });
+cv.addEventListener('touchend', e => {
+  e.preventDefault();
+  clearTimeout(longPressTimer);
+  if (longPressFired) { longPressFired = false; drag = null; return; } // 롱프레스가 이미 처리함
+  if (drag && drag.moved) { pressEnd(); return; } // 드래그 박스 선택
+  const p = touchPos(e);
+  const now = performance.now();
+  const isDouble = lastTapPos && (now - lastTapTime) < 350 && Math.hypot(p.x - lastTapPos.x, p.y - lastTapPos.y) < 40;
+  if (isDouble) {
+    lastTapTime = 0; lastTapPos = null;
+    selectSameType(p.x, p.y);
+    drag = null;
+    return;
+  }
+  lastTapTime = now; lastTapPos = { x: p.x, y: p.y };
+  // 탭: ①유닛 명중 → 선택(pressEnd) ②선택유닛 있음 → 이동 ③건물 → 팝업 ④빈땅 → 선택해제
+  let hit = null;
+  for (const u of S.units) if (Math.hypot(u.x - p.x, u.y - p.y) < HIT_R) { hit = u; break; }
+  const hasSel = S.units.some(u => u.selected && !u.miner);
+  if (!hit && hasSel) {
+    issueMove(p.x, p.y);
+    drag = null;
+    updateInfoPanel();
+    return;
+  }
+  pressEnd();
+}, { passive: false });
+cv.addEventListener('touchcancel', e => {
+  clearTimeout(longPressTimer);
+  longPressFired = false;
+  drag = null;
 });
 function updateInfoPanel() {
   const el = document.getElementById('unitInfo');
@@ -3336,8 +3477,10 @@ function updateInfoPanel() {
     const commonPri = sel.every(u => u.priority === sel[0].priority) ? (sel[0].priority || 'near') : '';
     el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>우클릭 이동 · A키+클릭 공격 지정` +
       (sel.some(u => !u.miner) ? priorityRow(commonPri) : '') +
-      (canFuse ? `<br><span style="color:#8c5bff;font-weight:bold">🌀 같은 유닛 5기! 좌측 상단 포털로 이동시키면 강화!</span>` : '');
+      (canFuse ? `<br><span style="color:#8c5bff;font-weight:bold">🌀 같은 유닛 5기! 좌측 상단 포털로 이동시키면 강화!</span>` : '') +
+      deselBtnHTML();
     wirePriorityButtons(el);
+    wireDesel(el);
     return;
   }
   const u = sel[0];
@@ -3345,7 +3488,9 @@ function updateInfoPanel() {
     const kind = u.sminer ? '✨ 슈퍼 광부' : u.hminer ? '✨ 히든 광부' : '광부';
     el.innerHTML = `<b>⛏️ ${kind}</b><br>` +
       `역할: 광산에서 캐서 <b>성</b>에 배달 (전투 불가)<br>` +
-      `이동속도: ${Math.round(u.speed)} · 💀 배달로 골드 획득`;
+      `이동속도: ${Math.round(u.speed)} · 💀 배달로 골드 획득` +
+      deselBtnHTML();
+    wireDesel(el);
     return;
   }
   const traits = [];
@@ -3377,10 +3522,18 @@ function updateInfoPanel() {
     `특성: ${traits.join(', ')}` +
     (u.miner ? '' : priorityRow(u.priority || 'near')) +
     (u.tier === 6 ? skillRow(u) : '') +
-    ((!u.miner && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier})</button>` : '');
+    ((!u.miner && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier})</button>` : '') +
+    deselBtnHTML();
   wirePriorityButtons(el);
+  wireDesel(el);
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
   if (el.querySelector('#copyBtn')) el.querySelector('#copyBtn').onclick = () => copyUnit(u);
+}
+// 선택 해제 ✕ 버튼 (unitInfo 우상단, 데스크톱/모바일 공용)
+function deselBtnHTML() { return `<button id="deselBtn" title="선택 해제">✕</button>`; }
+function wireDesel(el) {
+  const b = el.querySelector('#deselBtn');
+  if (b) b.onclick = () => { S.units.forEach(u => u.selected = false); updateInfoPanel(); };
 }
 function skillRow(u) {
   const active = (u.skillT || 0) > 0, cd = u.skillCd || 0;
@@ -3795,6 +3948,11 @@ function updateHUD() {
   }
   const deg = Math.max(0, Math.min(1, frac)) * 360;
   clock.style.background = `conic-gradient(${col} ${deg}deg, #e3e8ee ${deg}deg)`;
+  // 모바일 탭 배지: 지금 안 보고 있는 탭에서 페이즈가 진행 중이면 깜빡임
+  if (IS_MOBILE) {
+    document.getElementById('mtPoker').classList.toggle('alert', S.phase === 'poker' && mobTab === 'battle');
+    document.getElementById('mtBattle').classList.toggle('alert', S.phase === 'wave' && mobTab === 'poker');
+  }
   // 상점 버튼 활성화 + 골드 표시 갱신 (열려있을 때만)
   if (openShop) {
     document.getElementById('shopGold').textContent = Math.floor(S.gold) + 'G';
@@ -3932,7 +4090,7 @@ function frame(now) {
     }
   }
   const t1 = performance.now();
-  draw();
+  if (!(IS_MOBILE && document.body.dataset.tab === 'poker')) draw(); // 포커 탭 중엔 캔버스 안 보이므로 draw 스킵 (update/HUD는 계속)
   if (DEBUG) {
     perfU += t1 - t0; perfD += performance.now() - t1;
     if (++perfN >= 60) {
