@@ -546,6 +546,7 @@ function reset() {
     poker: null, portalA: 0,
     speed: 1, time: 0, paused: false,
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0,
+    freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
   };
   dctx.clearRect(0, 0, 940, 500); // 이전 판 얼룩 제거
   S.mineMax = S.mineHp = mineHP(1);
@@ -1009,6 +1010,50 @@ function spawnGuillotine(x, y) {
   sfx('jackpot'); sfx('hero');
   logMsg('⚔️✨ 히든 조합 발견!! [원1·투2·트3·포4] → 히든 영웅 <b>길로틴</b>! 체력 20% 이하 즉시 처형!');
 }
+// 🔥 쇼군: 풀하우스×2 + 플러쉬×2 → 참격 무제한 타격 + 화상 도트 (강력한 근접 딜러)
+function spawnShogun(x, y) {
+  S.units.push({
+    x, y, tx: x, ty: y, race: 2, tier: 5, hidden: false, hero: true, shogun: true, miner: false,
+    keyRank: 14, keyLabel: '🔥', kills: 0,
+    jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
+    forceTarget: null, attackMine: false, amove: false, priority: 'near',
+    dmg: 95, cd: 1.1, range: 130, splash: 100, bounce: 0, atk: 'area', proj: null, vis: 'sword',
+    pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 쇼군', cool: 0, selected: true, walk: 0, speed: 85,
+  });
+  addFloat(x, y - 30, '🔥 쇼군 강림!! 🔥', '#e53935', 2.8);
+  sfx('jackpot'); sfx('hero');
+  logMsg('🔥✨ 히든 조합 발견!! [풀하우스×2·플러쉬×2] → 히든 영웅 <b>쇼군</b>! 참격 무제한 타격 + 화상 도트!');
+}
+// ⏳ 시간술사: 스트레이트×3 → 시간 정지 스킬 (전투력은 약함, 순수 지원)
+function spawnChrono(x, y) {
+  S.units.push({
+    x, y, tx: x, ty: y, race: 1, tier: 4, hidden: false, hero: true, chrono: true, miner: false,
+    keyRank: 14, keyLabel: '⏳', kills: 0,
+    jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
+    forceTarget: null, attackMine: false, amove: false, priority: 'near',
+    dmg: 10, cd: 1.0, range: 150, splash: 0, bounce: 0, atk: 'shot', proj: 'bullet', vis: null,
+    pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 시간술사', cool: 0, selected: true, walk: 0, speed: 85,
+    chronoCd: 0,
+  });
+  addFloat(x, y - 30, '⏳ 시간술사 강림!! ⏳', '#42a5f5', 2.8);
+  sfx('jackpot'); sfx('hero');
+  logMsg('⏳✨ 히든 조합 발견!! [스트레이트×3] → 히든 영웅 <b>시간술사</b>! 시간 정지 스킬 보유!');
+}
+// 🎰 슬롯머신: 같은 숫자 트리플×3 → 잭팟 폭격 스킬 (전투력은 약함, 순수 지원)
+function spawnSlot(x, y) {
+  S.units.push({
+    x, y, tx: x, ty: y, race: 0, tier: 3, hidden: false, hero: true, slot: true, miner: false,
+    keyRank: 14, keyLabel: '🎰', kills: 0,
+    jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
+    forceTarget: null, attackMine: false, amove: false, priority: 'near',
+    dmg: 12, cd: 1.0, range: 160, splash: 0, bounce: 0, atk: 'shot', proj: 'chip', vis: null,
+    pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 슬롯머신', cool: 0, selected: true, walk: 0, speed: 85,
+    slotCd: 0,
+  });
+  addFloat(x, y - 30, '🎰 슬롯머신 강림!! 🎰', '#ffd54f', 2.8);
+  sfx('jackpot'); sfx('hero');
+  logMsg('🎰✨ 히든 조합 발견!! [같은 숫자 트리플×3] → 히든 영웅 <b>슬롯머신</b>! 잭팟 폭격 스킬 보유!');
+}
 // 강화 포털: 같은 유닛 5기가 포털 안에 모이면 영웅/슈퍼영웅으로 합성
 function updatePortal() {
   // 수집 반경은 시각 포털보다 넉넉하게 (길로틴 등 10기 레시피가 유닛 분리 때문에 안 들어가는 문제 방지)
@@ -1028,6 +1073,22 @@ function updatePortal() {
     for (let i = 0; i < 26; i++) { const a = Math.random()*6.28, v = 110 + Math.random()*190; S.parts.push({ x: PORTAL.x, y: PORTAL.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.55, r: 2 + Math.random()*3.5, c: '#e53935' }); }
     updateInfoPanel();
     return;
+  }
+  // 🎰 슬롯머신 (같은 숫자 트리플×3). 갬블러(원1투2트3)보다 먼저 체크 — 의도적으로 모은 동일 숫자 트리플 3개가
+  // 갬블러 레시피에 뺏기지 않도록. 1기 제한.
+  if (!S.units.some(u => u.slot)) {
+    const byRank = {};
+    (byT[3] || []).forEach(u => (byRank[u.keyRank] = byRank[u.keyRank] || []).push(u));
+    const slotKey = Object.keys(byRank).find(k => byRank[k].length >= 3);
+    if (slotKey) {
+      const used = byRank[slotKey].slice(0, 3);
+      S.units = S.units.filter(u => !used.includes(u));
+      spawnSlot(PORTAL.x, PORTAL.y + PORTAL.r + 26);
+      S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 55, t: 0.5 });
+      for (let i = 0; i < 18; i++) { const a = Math.random()*6.28, v = 90 + Math.random()*150; S.parts.push({ x: PORTAL.x, y: PORTAL.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 2 + Math.random()*3, c: '#ffd54f' }); }
+      updateInfoPanel();
+      return;
+    }
   }
   if (!S.units.some(u => u.gamble) &&
       (byT[1] || []).length >= 1 && (byT[2] || []).length >= 2 && (byT[3] || []).length >= 3) {
@@ -1049,6 +1110,16 @@ function updatePortal() {
     updateInfoPanel();
     return;
   }
+  // 🔥 쇼군 (풀하우스×2 + 플러쉬×2). 1기 제한.
+  if (!S.units.some(u => u.shogun) && (byT[6] || []).length >= 2 && (byT[5] || []).length >= 2) {
+    const used = [byT[6][0], byT[6][1], byT[5][0], byT[5][1]];
+    S.units = S.units.filter(u => !used.includes(u));
+    spawnShogun(PORTAL.x, PORTAL.y + PORTAL.r + 26);
+    S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 60, t: 0.5 });
+    for (let i = 0; i < 20; i++) { const a = Math.random()*6.28, v = 100 + Math.random()*170; S.parts.push({ x: PORTAL.x, y: PORTAL.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 2 + Math.random()*3.5, c: '#ff6d1f' }); }
+    updateInfoPanel();
+    return;
+  }
   // 📯 콰르텟 (원1+투2+트3+스트레이트4 각 1기). 1기 제한.
   if (!S.units.some(u => u.quartet) &&
       (byT[1] || []).length >= 1 && (byT[2] || []).length >= 1 && (byT[3] || []).length >= 1 && (byT[4] || []).length >= 1) {
@@ -1057,6 +1128,16 @@ function updatePortal() {
     spawnQuartet(PORTAL.x, PORTAL.y + PORTAL.r + 26);
     S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 50, t: 0.4 });
     for (let i = 0; i < 16; i++) { const a = Math.random()*6.28, v = 90 + Math.random()*140; S.parts.push({ x: PORTAL.x, y: PORTAL.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 2 + Math.random()*3, c: '#5b48d0' }); }
+    updateInfoPanel();
+    return;
+  }
+  // ⏳ 시간술사 (스트레이트×3). 1기 제한.
+  if (!S.units.some(u => u.chrono) && (byT[4] || []).length >= 3) {
+    const used = [byT[4][0], byT[4][1], byT[4][2]];
+    S.units = S.units.filter(u => !used.includes(u));
+    spawnChrono(PORTAL.x, PORTAL.y + PORTAL.r + 26);
+    S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 50, t: 0.4 });
+    for (let i = 0; i < 16; i++) { const a = Math.random()*6.28, v = 90 + Math.random()*140; S.parts.push({ x: PORTAL.x, y: PORTAL.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 2 + Math.random()*3, c: '#42a5f5' }); }
     updateInfoPanel();
     return;
   }
@@ -1182,6 +1263,19 @@ function update(dt) {
       u.tx = CX + u.jx * 0.25; u.ty = CY + u.jy * 0.25;
       if (u.skillT <= 0) { u.skillT = 0; u.inPen = false; u.tx = CX - 40; u.ty = CY + 150; u.skillCd = 300; }
     }
+    if (u.chronoCd > 0) u.chronoCd = Math.max(0, u.chronoCd - dt); // ⏳ 시간술사 스킬 쿨
+    if (u.slotCd > 0) u.slotCd = Math.max(0, u.slotCd - dt);       // 🎰 슬롯머신 스킬 쿨
+  }
+  // 🎰 슬롯머신 잭팟 폭격: 대기열의 폭탄을 지연시간만큼 순차 발사 (bombthrow 투사체 재사용)
+  if (S.slotBombs.length) {
+    S.slotBombs = S.slotBombs.filter(b => {
+      b.delay -= dt;
+      if (b.delay > 0) return true;
+      S.projs.push({ kind: 'bombthrow', deliver: 'area', owner: b.owner,
+        sx: b.owner.x, sy: b.owner.y, x: b.owner.x, y: b.owner.y, ex: b.ex, ey: b.ey,
+        t: 0, dur: 0.5, dmg: b.dmg, splash: 60, spin: 0, ang: 0 });
+      return false;
+    });
   }
 
   if (S.phase === 'poker') {
@@ -1204,28 +1298,35 @@ function update(dt) {
   }
   if (S.phase !== 'wave') return;
 
-  S.timer -= dt;
-  // 몬스터 스폰
+  // ⏳ 시간술사 시간 정지: S.timer/스폰/스웜 이동만 멈춘다 (유닛 행동·사망 처리는 계속)
   const q = S.spawnQueue;
-  if (q.left > 0) {
-    q.acc += dt;
-    while (q.acc >= q.interval && q.left > 0) {
-      q.acc -= q.interval; q.left--;
-      spawnMonster(q.hp, false);
+  if (S.freezeT > 0) {
+    S.freezeT -= dt;
+  } else {
+    S.timer -= dt;
+    // 몬스터 스폰
+    if (q.left > 0) {
+      q.acc += dt;
+      while (q.acc >= q.interval && q.left > 0) {
+        q.acc -= q.interval; q.left--;
+        spawnMonster(q.hp, false);
+      }
     }
-  }
-  if (q.bossLeft > 0 && S.timer < WAVE_TIME - 5) {
-    q.bossLeft = 0;
-    spawnMonster(q.hp * 45, true);
-    logMsg('👹 보스 등장!');
-    sfx('boss');
+    if (q.bossLeft > 0 && S.timer < WAVE_TIME - 5) {
+      q.bossLeft = 0;
+      spawnMonster(q.hp * 45, true);
+      logMsg('👹 보스 등장!');
+      sfx('boss');
+    }
   }
   // 몬스터 스웜: 울타리 안에서 파도처럼 뭉쳤다 퍼지며 서로 비벼진다
   const gw = 0.5 + 0.5 * Math.sin(S.time * 0.55); // 0(뭉침)~1(퍼짐), 주기 ~11초
   const hw = PEN.w / 2 - 12, hh = PEN.h / 2 - 12;
   for (const m of S.monsters) {
-    m.born = Math.min(1, m.born + dt * 2.5);
     m.hitT = Math.max(0, (m.hitT || 0) - dt);
+    if (m.burnT > 0) { m.burnT -= dt; m.hp -= m.burnDmg * dt; } // 🔥 쇼군 화상 도트 (얼어붙어도 계속 탄다)
+    if (S.freezeT > 0) continue; // 시간 정지 중엔 위치 갱신 없이 제자리
+    m.born = Math.min(1, m.born + dt * 2.5);
     m.ang += m.spin * dt;
     m.rot += dt * 0.8;
     const r = (20 + m.baseR * (0.15 + 0.85 * gw)) * m.born;
@@ -1517,9 +1618,9 @@ function areaHit(u, x, y, dmg) {
     S.effects.push({ type:'saw', x, y, r: u.splash * 0.62, t: 0.18 });
     for (let i = 0; i < 3; i++) { const v = 40 + Math.random()*60, aa = Math.random()*6.28; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.2, r: 1 + Math.random()*1.5, c: '#eceff1' }); }
   } else if (vis === 'sword') {
-    // 실제 대검 참격 (총구=칼끝에서 호를 그린다)
-    S.effects.push({ type:'slash', x, y, r: u.splash * 1.6, a, t: 0.22, dur: 0.22 });
-    for (let i = 0; i < 4; i++) { const v = 60 + Math.random()*90, aa = a + (Math.random()-0.5)*1.2; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.22, r: 1.2 + Math.random()*1.6, c: '#dbe9ff' }); }
+    // 실제 대검 참격 (총구=칼끝에서 호를 그린다). 쇼군은 불타는 참격 (fire 플래그)
+    S.effects.push({ type:'slash', x, y, r: u.splash * 1.6, a, t: 0.22, dur: 0.22, fire: u.shogun });
+    for (let i = 0; i < 4; i++) { const v = 60 + Math.random()*90, aa = a + (Math.random()-0.5)*1.2; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.22, r: 1.2 + Math.random()*1.6, c: u.shogun ? '#ff8a3d' : '#dbe9ff' }); }
   } else if (vis === 'flame') {
     // 진짜 불꽃: 총구에서 착탄점까지 뻗는 화염 스트림. 불줄기 두께 = 판정 두께(splash 반폭)와 일치
     const wide = u.hero; // 영웅은 두껍게, 일반은 얇은 불줄기
@@ -1550,8 +1651,8 @@ function areaHit(u, x, y, dmg) {
     return;
   }
   const r2 = u.splash * u.splash;
-  if (vis === 'sword') {
-    // 대검: 한 번의 참격은 가까운 5마리까지만 (스플래쉬 다수 타격 밸런스)
+  if (vis === 'sword' && !u.shogun) {
+    // 대검: 한 번의 참격은 가까운 5마리까지만 (스플래쉬 다수 타격 밸런스). 쇼군은 무제한 → 아래 전체 루프로
     const inR = [];
     for (const m of S.monsters) {
       const ddx = m.x - x, ddy = m.y - y, d2 = ddx * ddx + ddy * ddy;
@@ -1563,7 +1664,10 @@ function areaHit(u, x, y, dmg) {
   }
   for (const m of S.monsters) {
     const ddx = m.x - x, ddy = m.y - y;
-    if (ddx * ddx + ddy * ddy <= r2) dealDamage(m, dmg, u);
+    if (ddx * ddx + ddy * ddy <= r2) {
+      dealDamage(m, dmg, u);
+      if (u.shogun) { m.burnT = 1.5; m.burnDmg = dmg * 0.2; } // 🔥 화상 도트 (초당 데미지)
+    }
   }
 }
 // 파편: 명중 지점에서 돌조각이 사방으로 튀며 주변 몹에 소량 데미지
@@ -1895,6 +1999,13 @@ function draw() {
   drawEnemyPortal(); // 소환장 안 적 포탈 (몹보다 뒤)
   // 몬스터
   for (const m of S.monsters) drawMonster(m);
+  // ⏳ 시간 정지: 소환장 위 얼음 틴트 오버레이
+  if (S.freezeT > 0) {
+    ctx.fillStyle = 'rgba(140,200,255,0.18)';
+    ctx.fillRect(PEN.x - PEN.w/2, PEN.y - PEN.h/2, PEN.w, PEN.h);
+    ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillText('⏸', PEN.x, PEN.y - PEN.h/2 - 8); ctx.textAlign = 'left';
+  }
   // 유닛
   for (const u of S.units) drawUnit(u);
   // 이펙트
@@ -1958,7 +2069,9 @@ function draw() {
       ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.a + sweep);
       for (let k = 0; k < 3; k++) {
         const rr = e.r * (1.12 - k * 0.16), ka = al * (0.6 - k * 0.17), ko = -k * 0.3;
-        ctx.fillStyle = k === 0 ? `rgba(245,250,255,${ka})` : `rgba(150,200,255,${ka})`;
+        ctx.fillStyle = e.fire
+          ? (k === 0 ? `rgba(255,205,120,${ka})` : `rgba(255,110,30,${ka})`) // 🔥 쇼군: 주황/빨강 화염 참격
+          : (k === 0 ? `rgba(245,250,255,${ka})` : `rgba(150,200,255,${ka})`);
         ctx.beginPath();
         ctx.arc(0, 0, rr, -0.95 + ko, 0.35 + ko);
         ctx.arc(Math.cos(-0.3 + ko) * rr * 0.32, Math.sin(-0.3 + ko) * rr * 0.32, rr * 0.78, 0.35 + ko, -0.95 + ko, true);
@@ -2684,6 +2797,11 @@ function drawMonster(m) {
     }
   }
   if (squish) ctx.restore(); // 스쿼시 변환 해제
+  // 🔥 쇼군 화상 도트: 작은 불꽃 아른거림 (저렴하게 — shadowBlur 없이 원 하나)
+  if (m.burnT > 0) {
+    ctx.fillStyle = `rgba(255,110,20,${(0.4 + 0.3 * Math.sin(S.time * 22 + m.phase)).toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(m.x + Math.sin(S.time * 14 + m.phase) * sz * 0.25, m.y - sz * 0.3, sz * 0.22, 0, Math.PI*2); ctx.fill();
+  }
   // 💥 분열 몹: 균열 표시
   if (m.split) {
     ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.2;
@@ -3115,6 +3233,31 @@ function drawWeapon(u, x, y) {
     ctx.restore();
     return;
   }
+  if (has('쇼군')) { // 🔥 긴 카타나 (히든 영웅) — 칼날+작은 가드+붉은 손잡이
+    ctx.save(); ctx.translate(x + 1, y); ctx.rotate(u.atkAnim ? -0.4 : -0.12);
+    ctx.strokeStyle = '#7a1010'; ctx.lineWidth = 2.5; // 손잡이 (붉은)
+    ctx.beginPath(); ctx.moveTo(-5, 6); ctx.lineTo(0, 2); ctx.stroke();
+    ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 2.5; // 작은 가드
+    ctx.beginPath(); ctx.moveTo(-3, 1); ctx.lineTo(3, 3); ctx.stroke();
+    ctx.strokeStyle = '#eceff1'; ctx.lineWidth = 2; // 긴 칼날
+    ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(22, -13); ctx.stroke();
+    ctx.restore(); ctx.lineWidth = 1;
+    return;
+  }
+  if (has('시간술사')) { // ⏳ 모래시계 (히든 영웅)
+    ctx.save(); ctx.translate(x + 1, y); ctx.rotate(u.atkAnim ? -0.3 : 0);
+    ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#42a5f5';
+    ctx.fillText('⏳', 0, 3); ctx.textAlign = 'left';
+    ctx.restore();
+    return;
+  }
+  if (has('슬롯머신')) { // 🎰 슬롯 (히든 영웅)
+    ctx.save(); ctx.translate(x + 1, y); ctx.rotate(u.atkAnim ? -0.3 : 0);
+    ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd54f';
+    ctx.fillText('🎰', 0, 3); ctx.textAlign = 'left';
+    ctx.restore();
+    return;
+  }
   if (has('대검')) { // 대검 (큰 검: 손잡이+가드+긴 칼날)
     ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 2.5; // 손잡이
     ctx.beginPath(); ctx.moveTo(x - 4, y + 7); ctx.lineTo(x, y + 2); ctx.stroke();
@@ -3504,6 +3647,9 @@ function updateInfoPanel() {
   if (u.junk) traits.push('💰 주변 처치 골드 ×1.2 (반경 40)');
   if (u.quartet) traits.push('📯 아군 공속 +20% (반경 50, 비중첩)');
   if (u.execute) traits.push('⚔️ 체력 20% 이하 즉시 처형');
+  if (u.shogun) traits.push('🔥 참격 무제한 + 화상 도트');
+  if (u.chrono) traits.push('⏳ 시간 정지 스킬 (쿨 150초)');
+  if (u.slot) traits.push('🎰 잭팟 폭격 스킬 (쿨 75초)');
   if (!traits.length) traits.push(u.miner ? '채굴 전용 (전투 불가)' : '단일 공격');
   if (u.forceTarget) traits.push('<b style="color:#e53935">🎯 집중 공격 중</b>');
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
@@ -3522,11 +3668,15 @@ function updateInfoPanel() {
     `특성: ${traits.join(', ')}` +
     (u.miner ? '' : priorityRow(u.priority || 'near')) +
     (u.tier === 6 ? skillRow(u) : '') +
+    (u.chrono ? chronoRow(u) : '') +
+    (u.slot ? slotRow(u) : '') +
     ((!u.miner && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier})</button>` : '') +
     deselBtnHTML();
   wirePriorityButtons(el);
   wireDesel(el);
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
+  if (el.querySelector('#chronoBtn')) el.querySelector('#chronoBtn').onclick = () => { activateChrono(u); updateInfoPanel(); };
+  if (el.querySelector('#slotBtn')) el.querySelector('#slotBtn').onclick = () => { activateSlot(u); updateInfoPanel(); };
   if (el.querySelector('#copyBtn')) el.querySelector('#copyBtn').onclick = () => copyUnit(u);
 }
 // 선택 해제 ✕ 버튼 (unitInfo 우상단, 데스크톱/모바일 공용)
@@ -3540,6 +3690,41 @@ function skillRow(u) {
   const label = active ? `⚔️ 돌격 중… ${u.skillT.toFixed(0)}초` : (cd > 0 ? `⚔️ 돌격 (재사용 ${cd.toFixed(0)}초)` : '⚔️ 돌격 스킬 (5초 · 휘두르는 반경 타격)');
   const dis = active || cd > 0 ? 'disabled' : '';
   return `<br><button id="skillBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:#c0392b;font-weight:bold">${label}</button>`;
+}
+// ⏳ 시간술사: 시간 정지 (4초간 몬스터 스폰·타이머·이동 정지, 아군은 그대로 행동)
+function activateChrono(u) {
+  if (!u.chrono || (u.chronoCd || 0) > 0) return;
+  S.freezeT = 4;
+  u.chronoCd = 150;
+  addFloat(u.x, u.y - 28, '⏳ 시간 정지!', '#42a5f5', 1.6);
+  logMsg(`⏳ ${u.weapon} 시간 정지! 4초간 몬스터가 얼어붙습니다.`);
+  sfx('reward');
+}
+function chronoRow(u) {
+  const active = S.freezeT > 0, cd = u.chronoCd || 0;
+  const label = active ? `⏳ 시간 정지 중… ${S.freezeT.toFixed(0)}초` : (cd > 0 ? `⏳ 시간 정지 (재사용 ${cd.toFixed(0)}초)` : '⏳ 시간 정지 스킬 (쿨 150초)');
+  const dis = cd > 0 ? 'disabled' : '';
+  return `<br><button id="chronoBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:#1976d2;font-weight:bold">${label}</button>`;
+}
+// 🎰 슬롯머신: 잭팟 폭격 (소환장 안 무작위 지점에 14~22개 폭탄이 순차 낙하)
+function activateSlot(u) {
+  if (!u.slot || (u.slotCd || 0) > 0) return;
+  u.slotCd = 75;
+  const n = 14 + Math.floor(Math.random() * 9); // 14~22
+  const dmg = 60 + S.upg[u.race] * 3;
+  for (let i = 0; i < n; i++) {
+    const ex = CX + (Math.random() - 0.5) * PEN.w * 0.9, ey = CY + (Math.random() - 0.5) * PEN.h * 0.9;
+    S.slotBombs.push({ delay: i * (1.2 / n), ex, ey, dmg, owner: u });
+  }
+  addFloat(u.x, u.y - 28, '🎰 잭팟 폭격!', '#ffd54f', 1.6);
+  logMsg(`🎰 ${u.weapon} 잭팟 폭격! 소환장에 폭탄 세례!`);
+  sfx('jackpot');
+}
+function slotRow(u) {
+  const cd = u.slotCd || 0;
+  const label = cd > 0 ? `🎰 잭팟 폭격 (재사용 ${cd.toFixed(0)}초)` : '🎰 잭팟 폭격 스킬 (쿨 75초)';
+  const dis = cd > 0 ? 'disabled' : '';
+  return `<br><button id="slotBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:#b8860b;font-weight:bold">${label}</button>`;
 }
 // 공격 우선순위 버튼 UI
 function priorityRow(cur) {
