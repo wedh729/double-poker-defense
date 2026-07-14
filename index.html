@@ -547,7 +547,7 @@ function reset() {
     speed: 1, time: 0, paused: false,
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0,
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
-    tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 100기 → 완성, 라운드 재시작 시 리셋)
+    tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 20기 → 완성, 라운드 재시작 시 리셋)
   };
   dctx.clearRect(0, 0, 940, 500); // 이전 판 얼룩 제거
   S.mineMax = S.mineHp = mineHP(1);
@@ -1077,7 +1077,7 @@ function spawnJoker(x, y) {
   logMsg('🃏✨ 히든 조합 발견!! [하이카드·원페어·투페어 영웅 각1] → 히든 영웅 <b>조커</b>! 낫으로 베며 몹을 끌어당깁니다!');
   markHidden('joker');
 }
-// 🪨 투석기: 하이카드 100기를 포털에 제물로 바치면 완성되는 거대 공성병기 (이동 불가)
+// 🪨 투석기: 하이카드 20기를 포털에 제물로 바치면 완성되는 거대 공성병기 (이동 불가)
 function spawnCatapult(x, y) {
   S.units.push({
     x, y, tx: x, ty: y, race: 2, tier: 7, hidden: false, hero: true, catapult: true, miner: false,
@@ -1089,7 +1089,7 @@ function spawnCatapult(x, y) {
   });
   addFloat(x, y - 30, '🪨 공성 투석기 완성!! 🪨', '#78909c', 2.8);
   sfx('jackpot'); sfx('hero');
-  logMsg('🪨✨ 하이카드 100기 제물!! <b>공성 투석기</b> 완성! 소환장 전체를 포격합니다 (이동 불가)!');
+  logMsg('🪨✨ 하이카드 20기 제물!! <b>공성 투석기</b> 완성! 소환장 전체를 포격합니다 (이동 불가)!');
   markHidden('catapult');
 }
 // 강화 포털: 같은 유닛 5기가 포털 안에 모이면 영웅/슈퍼영웅으로 합성
@@ -1226,14 +1226,14 @@ function updatePortal() {
     if (highs.length) {
       S.units = S.units.filter(u => !highs.includes(u));
       S.tribute = (S.tribute || 0) + highs.length;
-      if (S.tribute >= 100) {
+      if (S.tribute >= 20) {
         S.tribute = 0;
         const cx = CX - PEN.w/2 - 60, cy = CY;
         spawnCatapult(cx, cy);
         S.effects.push({ type: 'boom', x: cx, y: cy, r: 80, t: 0.6 });
         for (let i = 0; i < 30; i++) { const a = Math.random()*6.28, v = 120 + Math.random()*200; S.parts.push({ x: cx, y: cy, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.6, r: 2 + Math.random()*4, c: '#78909c' }); }
       } else {
-        logMsg(`🪨 하이카드 ${highs.length}기 투석기 제단에 제물로 (${S.tribute}/100)`);
+        logMsg(`🪨 하이카드 ${highs.length}기 투석기 제단에 제물로 (${S.tribute}/20)`);
       }
       updateInfoPanel();
     }
@@ -1701,21 +1701,21 @@ function areaHit(u, x, y, dmg) {
     for (let i = 0; i < 3; i++) { const v = 40 + Math.random()*60, aa = Math.random()*6.28; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.2, r: 1 + Math.random()*1.5, c: '#eceff1' }); }
   } else if (vis === 'sword') {
     // 실제 대검 참격 (총구=칼끝에서 호를 그린다). 쇼군은 불타는 참격 (fire 플래그)
-    S.effects.push({ type:'slash', x, y, r: u.splash * 1.6, a, t: 0.22, dur: 0.22, fire: u.shogun });
+    S.effects.push({ type:'slash', x, y, r: u.splash, a, t: 0.22, dur: 0.22, fire: u.shogun }); // 크레센트 반경 = 실제 참격 반경(과장 X)
     for (let i = 0; i < 4; i++) { const v = 60 + Math.random()*90, aa = a + (Math.random()-0.5)*1.2; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.22, r: 1.2 + Math.random()*1.6, c: u.shogun ? '#ff8a3d' : '#dbe9ff' }); }
   } else if (vis === 'scythe') {
     // 🃏 조커: 대검 크레센트를 재사용하되 보라색 (joker 플래그) + 보라 파티클
-    S.effects.push({ type:'slash', x, y, r: u.splash * 1.5, a, t: 0.22, dur: 0.22, joker: true });
+    S.effects.push({ type:'slash', x, y, r: u.splash, a, t: 0.22, dur: 0.22, joker: true });
     for (let i = 0; i < 5; i++) { const v = 60 + Math.random()*100, aa = a + (Math.random()-0.5)*1.3; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1.3 + Math.random()*1.8, c: '#8c5bff' }); }
   } else if (vis === 'flame') {
-    // 진짜 불꽃: 총구에서 착탄점까지 뻗는 화염 스트림. 불줄기 두께 = 판정 두께(splash 반폭)와 일치
+    // 진짜 불꽃: 총구에서 조준 방향으로 **사거리 끝까지** 뻗는 화염 스트림 (착탄점이 아니라 range까지 항상 표현)
     const wide = u.hero; // 영웅은 두껍게, 일반은 얇은 불줄기
-    const n = wide ? 15 : 9, dist = Math.hypot(x - mz.x, y - mz.y);
-    const spread = Math.atan2(u.splash * 0.8, dist); // 불길 퍼짐각 ≈ 판정 반폭
+    const n = wide ? 20 : 13, reach0 = u.range; // 스트림 길이 = 사거리
+    const spread = Math.atan2(u.splash * 0.8, reach0); // 불길 퍼짐각 ≈ 판정 반폭
     for (let i = 0; i < n; i++) {
-      const reach = dist * (0.55 + Math.random() * 0.55), sp = reach / 0.32, aa = a + (Math.random() - 0.5) * 2 * spread;
+      const reach = reach0 * (0.5 + Math.random() * 0.55), sp = reach / 0.34, aa = a + (Math.random() - 0.5) * 2 * spread;
       S.parts.push({ x: mz.x, y: mz.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp,
-        t: 0.3 + Math.random() * 0.22, r: (wide ? 5 : 3) + Math.random() * (wide ? 6.5 : 3.8), fire: true, spin: Math.random()*6.28 });
+        t: 0.34 + Math.random() * 0.22, r: (wide ? 5.5 : 3.8) + Math.random() * (wide ? 7 : 4), fire: true, spin: Math.random()*6.28 });
     }
   } else { // rocket / bomb: 폭발
     S.effects.push({ type:'boom', x, y, r: u.splash, t: 0.28 });
@@ -1725,8 +1725,9 @@ function areaHit(u, x, y, dmg) {
     }
   }
   if (vis === 'flame') {
-    // 화염 스트림 판정: 총구→착탄점 선을 따라 두께(splash=반폭)의 띠 안에 있는 몹만 타격
-    const ex = x - mz.x, ey = y - mz.y, L = Math.hypot(ex, ey) || 1, nx = ex / L, ny = ey / L;
+    // 화염 스트림 판정: 총구→조준방향으로 사거리(range) 길이의 띠(두께 splash) 안 몹 전부 타격 (시각과 일치)
+    const dx0 = x - mz.x, dy0 = y - mz.y, dl = Math.hypot(dx0, dy0) || 1;
+    const nx = dx0 / dl, ny = dy0 / dl, L = u.range;   // 스트림 길이 = 사거리
     for (const m of S.monsters) {
       const px = m.x - mz.x, py = m.y - mz.y;
       const t2 = px * nx + py * ny;                    // 스트림 축 방향 투영
@@ -1892,8 +1893,9 @@ function huntBossDown() { // 광석 한 단계 완채
 // 광석 단계별 확정 보상 (점점 좋아짐)
 // 짜잔! 보상 팝업 (오랜 채굴의 카타르시스)
 let rtTimer = null;
-function rewardToast(icon, desc, color) {
+function rewardToast(icon, desc, color, title) {
   const el = document.getElementById('rewardToast');
+  document.getElementById('rtTitle').textContent = title || '보 상 획 득';
   document.getElementById('rtIcon').textContent = icon;
   document.getElementById('rtDesc').textContent = desc;
   document.getElementById('rtDesc').style.color = color || '#a06a00';
@@ -1920,9 +1922,10 @@ function giveHuntReward(stage) {
     ['🌟', '슈퍼영웅 강림!!', () => { const t = Math.floor(Math.random()*10); spawnHero(t, RACE_OF_RANK[t], CX-40, CY+155, 1.5, true); }, '#ff6b9d'],
   ][Math.min(10, stage)];
   R[2]();
-  rewardToast(R[0], R[1], R[3]);
+  const oreName = (ORES[Math.min(9, stage - 1)] || {}).name || '광석';
+  rewardToast(R[0], R[1], R[3], `⛏️ ${oreName} 채굴 보상`);
   addFloat(ROOM.cx, ROOM.cy - 10, R[1], R[3], 2.4);
-  logMsg(`💎 광석 ${stage}단계 완채 보상: ${R[1]}`);
+  logMsg(`💎 ${oreName}(${stage}단계) 완채 보상: ${R[1]}`);
   if (stage >= 9) { sfx('jackpot'); sfx('hero'); }
 }
 function spawnHiddenMiner() {
@@ -2409,7 +2412,7 @@ function drawPortal() {
   // 🪨 투석기 제물 카운터 (완성 전까지만 표시)
   if (S.tribute > 0 && !S.units.some(u => u.catapult)) {
     ctx.fillStyle = '#78909c'; ctx.font = 'bold 9px sans-serif';
-    ctx.fillText(`🪨 ${S.tribute}/100`, p.x, p.y + p.r + 25);
+    ctx.fillText(`🪨 ${S.tribute}/20`, p.x, p.y + p.r + 25);
   }
   ctx.textAlign = 'left';
 }
@@ -3101,12 +3104,12 @@ function drawUnit(u) {
     // 칼 궤적 잔상: 스윙 시작각(0.85) → 현재각까지 부채꼴 (4방향 프레임 안이라 방향 자동 일치)
     const aCur = -1.15 + anim * 2.0;
     ctx.save(); ctx.translate(wx - 5, wy);
-    const tg = ctx.createRadialGradient(0, 0, 4, 0, 0, 20);
+    const tg = ctx.createRadialGradient(0, 0, 3, 0, 0, 13);
     tg.addColorStop(0, 'rgba(220,235,255,0)');
-    tg.addColorStop(1, `rgba(185,218,255,${(anim * 0.55).toFixed(2)})`);
+    tg.addColorStop(1, `rgba(185,218,255,${(anim * 0.5).toFixed(2)})`);
     ctx.fillStyle = tg;
     ctx.beginPath(); ctx.moveTo(0, 0);
-    ctx.arc(0, 0, 20, aCur - Math.PI / 2, 0.85 - Math.PI / 2);
+    ctx.arc(0, 0, 13, aCur - Math.PI / 2, 0.85 - Math.PI / 2);
     ctx.closePath(); ctx.fill();
     ctx.restore();
   }
@@ -3932,7 +3935,7 @@ const HIDDEN_DEX = [
     hint: '같은 숫자 트리플을 세 벌 맞추면 릴이 돌아가기 시작한다던데…' },
   { id: 'joker', icon: '🃏', name: '조커', recipe: '하이카드·원페어·투페어 영웅 각 1', desc: '낫으로 베며 몹을 끌어당김 (클럼핑)',
     hint: '가장 낮은 영웅 셋이 손을 맞잡으면 광대가 나타나 낫을 휘두른다던데…' },
-  { id: 'catapult', icon: '🪨', name: '투석기', recipe: '하이카드 100기 제물', desc: '거대한 돌덩이로 소환장 전체 포격 (이동 불가)',
+  { id: 'catapult', icon: '🪨', name: '투석기', recipe: '하이카드 20기 제물', desc: '거대한 돌덩이로 소환장 전체 포격 (이동 불가)',
     hint: '하이카드를 끝없이 포탈에 바치면 언젠가 거대한 돌덩이가 솟아오른다는 전설이…' },
 ];
 function closeShop() {
@@ -4115,9 +4118,10 @@ function doLottery() {
 // 🎰 룰렛 (골드 베팅) — 가중 결과 후 휠이 해당 칸에 멈춘다
 const WHEEL = [0, 1.5, 0, 2, 0, 3, 0, 4, 0, 5, 0, 7, 0, 10, 0, 0, 20, 0]; // 18칸
 function rollMult() {
-  const r = Math.random() * 1000; // EV ≈ 0.93 (집 우위 약간 — 진짜 도박)
-  if (r < 666) return 0; if (r < 786) return 1.5; if (r < 876) return 2; if (r < 931) return 3;
-  if (r < 959) return 4; if (r < 977) return 5; if (r < 991) return 7; if (r < 999) return 10; return 20;
+  // 꽝 48% (기존 66%는 너무 잦았음) — 절반 이상 당첨, 대부분 소액(1.5×), 잭팟 유지. EV ≈ 1.15
+  const r = Math.random() * 1000;
+  if (r < 480) return 0; if (r < 780) return 1.5; if (r < 900) return 2; if (r < 950) return 3;
+  if (r < 970) return 4; if (r < 985) return 5; if (r < 992) return 7; if (r < 997) return 10; return 20;
 }
 function doRoulette() {
   if (S.chips <= 0) return;
