@@ -171,6 +171,7 @@
     background: radial-gradient(circle at 40% 33%, #ffe9ad, #c9a75a 55%, #7a6335); box-shadow: 0 3px 7px rgba(0,0,0,0.55), inset 0 2px 3px rgba(255,255,255,0.6), inset 0 -2px 4px rgba(0,0,0,0.4); border: 2px solid #7a6335; }
   .wheelHub::after { content: ''; position: absolute; top: 26%; left: 30%; width: 22%; height: 18%; border-radius: 50%; background: rgba(255,255,255,0.7); filter: blur(1px); }
   .wheelPointer { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 11px solid transparent; border-right: 11px solid transparent; border-top: 20px solid #ffd166; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.6)); z-index: 5; }
+  .back { font-size:12px; color:#9a8fc0; cursor:pointer; display:inline-block; margin-bottom:6px; }
 
   /* 교환 카드 뒤집기 */
   .flipWrap { perspective: 700px; width: 100px; height: 140px; margin: 10px auto; }
@@ -368,9 +369,7 @@
     <div id="objInfo"></div>
     <!-- 좌측 카지노 스테이션: 보스 칩을 넣어 진행 -->
     <div id="chipBar">
-      <button class="chipStation" id="stLottery" title="복권"><span class="ci">🎟️</span><span class="cl">복권</span></button>
-      <button class="chipStation" id="stRoulette" title="룰렛"><span class="ci">🎰</span><span class="cl">룰렛</span></button>
-      <button class="chipStation" id="stExchange" title="카드 교환권"><span class="ci">🃏</span><span class="cl">교환</span></button>
+      <button class="chipStation" id="stCasino" title="카지노"><span class="ci">🎰</span><span class="cl">카지노</span></button>
     </div>
   </div>
   <div id="pokerPanel">
@@ -4268,84 +4267,75 @@ function rollLottery() {
   return { icon: '⭐', label: `${HAND_NAMES[t]} 영웅!!`, apply: () => spawnHero(t, RACE_OF_RANK[t], PORTAL.x, PORTAL.y + PORTAL.r + 30, 1), rare: true };
 }
 const LOTTO_ICONS = ['💰', '💰', '⚔️', '⛏️', '🎟️', '⭐', '💰', '⚔️'];
-function doLottery() {
-  if (S.chips <= 0) return;
+// ===== 🎰 카지노: 단일 진입 → 메뉴 → 3섹션 =====
+function openCasino() { openChip('🎰 카지노'); casMenu(); }
+function casMenu() {
+  CB.innerHTML =
+    `<div style="display:flex;flex-direction:column;gap:10px">
+      <button class="chipBtn casItem" data-go="roulette" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎡</span> <b style="color:#ffd166">룰렛</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 휠을 돌려 랜덤 보상 (골드·유닛·영웅·광부·아이템)</span></button>
+      <button class="chipBtn casItem" data-go="lotto" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎟️</span> <b style="color:#ffd166">복권</b><br><span style="font-size:11px;color:#c9b8f0">골드 배팅 — 500·1000·3000원권, 하이리스크 하이리턴!</span></button>
+      <button class="chipBtn" disabled style="text-align:left;padding:12px;opacity:0.55"><span style="font-size:26px;vertical-align:middle">🎁</span> <b>아이템뽑기</b> <span style="font-size:11px">(준비 중)</span></button>
+    </div>`;
+  CB.querySelector('[data-go="roulette"]').onclick = () => { if (S.chips <= 0) return; casRoulette(); };
+  CB.querySelector('[data-go="lotto"]').onclick = () => casLotto();
+}
+// --- 🎡 룰렛: 칩 1개 → 휠 돌려 보상 (rollLottery 재사용) ---
+const RCAT = { gs:{icon:'💰',c:'#3a2f52'}, gb:{icon:'💰',c:'#c98a2f'}, u:{icon:'⚔️',c:'#2f9e44'}, mi:{icon:'⛏️',c:'#b8860b'}, it:{icon:'🎁',c:'#8e44ad'}, hero:{icon:'⭐',c:'#e53935'} };
+const RWHEEL = ['gs','u','gs','gb','gs','u','mi','gs','it','gs','u','gb','gs','hero','gs','u','mi','gb']; // 18칸
+function rewardCat(rw) { if (rw.rare) return 'hero'; if (rw.icon === '⚔️') return 'u'; if (rw.icon === '⛏️') return 'mi'; if (rw.icon === '🎟️' || rw.icon === '📑') return 'it'; return (rw.label && rw.label.includes('뭉치')) ? 'gb' : 'gs'; }
+function casRoulette() {
   S.chips--; sfx('coin');
-  const reward = rollLottery();
-  const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '';
-  openChip('🎟️ 복권');
-  // 가로 룰렛 릴: 아이콘이 지나가다 당첨 아이콘에서 멈춘다
-  const WIN = 22, cells = [];
-  for (let i = 0; i < 28; i++) cells.push(i === WIN ? reward.icon : LOTTO_ICONS[Math.floor(Math.random() * LOTTO_ICONS.length)]);
-  CB.innerHTML = luckMsg + `<div class="reelBox"><div class="reelStrip" id="reelStrip">${cells.map(c => `<div class="reelCell">${c}</div>`).join('')}</div></div><div class="chipResult" id="lottoRes">🎲 두구두구…</div><div id="lottoBtns"></div>`;
-  const strip = document.getElementById('reelStrip');
-  const boxW = document.querySelector('.reelBox').clientWidth;
-  strip.style.transition = 'none'; strip.style.transform = 'translateX(0px)';
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    strip.style.transition = 'transform 2.7s cubic-bezier(0.12,0.6,0.12,1)';
-    strip.style.transform = `translateX(${-(WIN * 72 + 36 - boxW / 2)}px)`;
-  }));
+  const reward = rollLottery(); // gamblerLuck 이미 반영됨
+  const cat = rewardCat(reward);
+  let idxs = []; RWHEEL.forEach((k, i) => { if (k === cat) idxs.push(i); });
+  const slice = idxs[Math.floor(Math.random() * idxs.length)];
+  const seg = 360 / RWHEEL.length;
+  CB.innerHTML =
+    `<span class="back" onclick="casMenu()">‹ 카지노</span>` +
+    `<div class="wheelWrap"><div class="wheel" id="wheel"></div><div class="wheelSheen"></div><div class="ballTrack" id="ballTrack"><div class="ball"></div></div><div class="wheelHub"></div><div class="wheelPointer"></div></div>` +
+    `<div class="chipResult" id="rlRes">🎡 도는 중…</div>`;
+  const wheel = document.getElementById('wheel'), ballTrack = document.getElementById('ballTrack');
+  const stops = []; RWHEEL.forEach((k, i) => { stops.push(`${RCAT[k].c} ${i*seg}deg ${(i+1)*seg-0.8}deg`, `#141024 ${(i+1)*seg-0.8}deg ${(i+1)*seg}deg`); });
+  wheel.style.background = `conic-gradient(from -${seg/2}deg, ${stops.join(',')})`;
+  const R = Math.max(78, wheel.clientWidth/2 - 26);
+  wheel.innerHTML = RWHEEL.map((k, i) => `<div class="lab" style="transform:translate(-50%,-50%) rotate(${i*seg}deg) translateY(-${R}px) rotate(${-i*seg}deg);font-size:17px">${RCAT[k].icon}</div>`).join('');
+  requestAnimationFrame(() => { wheel.style.transform = `rotate(${360*6 - slice*seg}deg)`; ballTrack.style.transform = 'rotate(-3240deg)'; });
   setTimeout(() => {
     reward.apply(); updateInfoPanel();
-    document.getElementById('lottoRes').innerHTML = (reward.rare ? '🌟🌟 ' : '🎉 ') + `<span style="color:${reward.rare ? '#ff6b9d' : '#ffd166'}">${reward.label}</span> 당첨!`;
+    document.getElementById('rlRes').innerHTML = (reward.rare ? '🌟🌟 ' : '🎉 ') + `<span style="color:${reward.rare ? '#ff6b9d' : '#ffd166'}">${reward.label}</span> 당첨!`;
     if (reward.rare) sfx('hero'); else sfx('reward');
-    document.getElementById('lottoBtns').innerHTML =
-      `<button class="chipBtn" onclick="closeChip()">확인</button>` +
-      (S.chips > 0 ? `<button class="chipBtn sub" onclick="doLottery()">한 번 더 (칩 ${S.chips})</button>` : '');
-  }, 2850);
+    document.getElementById('rlRes').insertAdjacentHTML('afterend', `<div style="margin-top:8px;text-align:center"><button class="chipBtn" onclick="casMenu()">메뉴</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="casRoulette()">한 번 더 (칩 ${S.chips})</button>` : ''}</div>`);
+  }, 5100);
 }
-
-// 🎰 룰렛 (골드 베팅) — 가중 결과 후 휠이 해당 칸에 멈춘다
-const WHEEL = [0, 1.5, 0, 2, 0, 3, 0, 4, 0, 5, 0, 7, 0, 10, 0, 0, 20, 0]; // 18칸
-function rollMult() {
+// --- 🎟️ 복권: 골드 티켓 (HRHR, EV≈0.89). gamblerLuck으로 꽝↓ ---
+const LOTTO_TIERS = [500, 1000, 3000];
+function rollTicket() { // 배수: 꽝62 / 0.5x18 / 1x10 / 2x5 / 5x3 / 10x1.5 / 50x0.4 / 100x0.1 (max 100배)
   const L = gamblerLuck();
   const r = Math.random() * 1000;
-  let acc = 1000 - 520 * L; // 꽝 경계 (L1→480=48%, L1.1→428=42.8%)
-  if (r < acc) return 0;
-  const bands = [[300,1.5],[120,2],[50,3],[20,4],[15,5],[7,7],[5,10]]; // 각 당첨 폭 ×L
+  let lose = 620 - (380 * (L - 1)); // 가호 시 꽝 경계↓ (당첨 확률↑)
+  if (r < lose) return 0;
+  let acc = lose;
+  const bands = [[180,0.5],[100,1],[50,2],[30,5],[15,10],[4,50],[1,100]];
   for (const b of bands) { acc += b[0] * L; if (r < acc) return b[1]; }
-  return 20;
+  return 100;
 }
-function doRoulette() {
-  if (S.chips <= 0) return;
-  openChip('🎰 카지노 룰렛');
+function casLotto() {
   const g = Math.floor(S.gold);
-  const bets = [['20%', Math.floor(g * 0.2)], ['50%', Math.floor(g * 0.5)], ['올인', g]];
-  const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '';
-  CB.innerHTML = luckMsg +
-    `<div style="font-size:13px;color:#c9b8f0;margin-bottom:6px">보유 골드 <b style="color:#ffd166">${g}G</b> — 얼마를 걸까요?</div>` +
-    `<div class="wheelWrap"><div class="wheel" id="wheel"></div><div class="wheelSheen"></div><div class="ballTrack" id="ballTrack"><div class="ball"></div></div><div class="wheelHub"></div><div class="wheelPointer"></div></div>` +
-    `<div id="betRow">${bets.map(([lb, amt], i) => `<button class="chipBtn" ${amt < 10 ? 'disabled' : ''} data-bet="${amt}">${lb} (${amt}G)</button>`).join('')}</div>` +
-    `<div class="chipResult" id="rlRes">칩을 걸면 시작!</div>`;
-  // 휠 색칠 (포켓 + 얇은 분리선)
-  const seg = 360 / WHEEL.length, stops = [];
-  WHEEL.forEach((v, i) => {
-    const col = v === 0 ? (i % 2 ? '#3a2f52' : '#241b38') : v >= 10 ? '#e53935' : v >= 4 ? '#ff9100' : '#2f9e44';
-    stops.push(`${col} ${i * seg}deg ${(i + 1) * seg - 0.8}deg`, `#141024 ${(i + 1) * seg - 0.8}deg ${(i + 1) * seg}deg`);
-  });
-  const wheel = document.getElementById('wheel'), ballTrack = document.getElementById('ballTrack');
-  wheel.style.background = `conic-gradient(from -${seg / 2}deg, ${stops.join(',')})`;
-  const R = Math.max(90, wheel.clientWidth / 2 - 30); // 라벨 반경(px) — 모달 미표시 시 대비 하한
-  wheel.innerHTML = WHEEL.map((v, i) => v ? `<div class="lab" style="transform:translate(-50%,-50%) rotate(${i * seg}deg) translateY(-${R}px) rotate(${-i * seg}deg)">${v}×</div>` : '').join('');
-  let spun = false;
-  CB.querySelectorAll('[data-bet]').forEach(b => b.onclick = () => {
-    if (spun) return; const bet = +b.dataset.bet; if (bet < 10 || S.chips <= 0) return;
-    spun = true; S.chips--; S.gold -= bet; sfx('coin');
-    document.getElementById('betRow').style.display = 'none';
-    const mult = rollMult();
-    const winners = []; WHEEL.forEach((v, i) => { if (v === mult) winners.push(i); });
-    const slice = winners[Math.floor(Math.random() * winners.length)];
-    const targetDeg = 360 * 6 - slice * seg; // 여러 바퀴 후 당첨칸 중앙이 상단(포인터)에
-    wheel.style.transform = `rotate(${targetDeg}deg)`;
-    ballTrack.style.transform = 'rotate(-3240deg)'; // 공은 반대로 9바퀴 → 상단(당첨칸) 정착
-    document.getElementById('rlRes').textContent = '🎡 도는 중…';
-    setTimeout(() => {
-      const won = Math.floor(bet * mult); S.gold += won;
-      const res = document.getElementById('rlRes');
-      if (mult === 0) { res.innerHTML = `<span style="color:#e57373">💥 꽝! ${bet}G 잃음</span>`; sfx('leak'); }
-      else { res.innerHTML = `<span style="color:#ffd166">🎉 ${mult}배! +${won}G (순익 ${won - bet >= 0 ? '+' : ''}${won - bet}G)</span>`; sfx(mult >= 10 ? 'jackpot' : 'reward'); }
-      document.getElementById('betRow').insertAdjacentHTML('afterend', `<div style="margin-top:8px"><button class="chipBtn" onclick="closeChip()">확인</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="doRoulette()">다시 (칩 ${S.chips})</button>` : ''}</div>`);
-    }, 5100);
+  const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 당첨 확률 +10%</div>' : '';
+  CB.innerHTML =
+    `<span class="back" onclick="casMenu()">‹ 카지노</span>` + luckMsg +
+    `<div style="font-size:12px;color:#c9b8f0;text-align:center;margin-bottom:6px">보유 <b style="color:#ffd166">${g}G</b> — 티켓을 사서 긁어보세요! (최대 <b>100배</b>)</div>` +
+    `<div id="tixRow" style="display:flex;gap:8px;justify-content:center">${LOTTO_TIERS.map(c => `<button class="chipBtn" ${g < c ? 'disabled' : ''} data-tix="${c}" style="flex:1;flex-direction:column">${c}G<br><span style="font-size:10px;color:#c9b8f0">최대 ${(c*100/10000).toFixed(1)}만</span></button>`).join('')}</div>` +
+    `<div class="chipResult" id="ltRes">티켓을 고르세요</div>`;
+  CB.querySelectorAll('[data-tix]').forEach(b => b.onclick = () => {
+    const cost = +b.dataset.tix; if (S.gold < cost) return;
+    S.gold -= cost; sfx('coin');
+    const mult = rollTicket(), won = Math.floor(cost * mult); S.gold += won;
+    updateInfoPanel();
+    const el = document.getElementById('ltRes');
+    if (mult === 0) { el.innerHTML = `<span style="color:#e57373">💥 꽝! ${cost}G 잃음</span>`; sfx('leak'); }
+    else { el.innerHTML = `<span style="color:${mult >= 50 ? '#ff6b9d' : '#ffd166'}">🎉 ${mult}배! +${won}G (순익 ${won - cost >= 0 ? '+' : ''}${won - cost}G)</span>`; sfx(mult >= 50 ? 'jackpot' : 'reward'); }
+    document.getElementById('tixRow').querySelectorAll('button').forEach(x => x.disabled = S.gold < +x.dataset.tix);
   });
 }
 
@@ -4368,9 +4358,7 @@ function doExchange() {
     document.getElementById('exBtns').innerHTML = `<button class="chipBtn" onclick="closeChip()">확인</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="doExchange()">한 번 더 (칩 ${S.chips})</button>` : ''}`;
   }, 900);
 }
-document.getElementById('stLottery').onclick = () => { initAudio(); doLottery(); };
-document.getElementById('stRoulette').onclick = () => { initAudio(); doRoulette(); };
-document.getElementById('stExchange').onclick = () => { initAudio(); doExchange(); };
+document.getElementById('stCasino').onclick = () => { initAudio(); openCasino(); };
 
 // ==================== 라운드 이벤트 (난이도 곡선 사이 변주) ====================
 const EVENTS = [
