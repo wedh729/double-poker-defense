@@ -594,7 +594,7 @@ function reset() {
   S = {
     phase: 'poker', round: 1, life: 20, gold: 120,
     minerCost: 80, chips: 0, event: null, eventMods: null,
-    hunt: null, items: { reroll: 0, copier: 0 }, groups: {},
+    hunt: null, items: { reroll: 0, copier: 0, timestop: 0, stimpack: 0, acid: 0, bombard: 0, revive: 0 }, groups: {},
     upg: [0,0,0], upgCost: [50,50,50],
     units: [], monsters: [], effects: [], floats: [], parts: [], projs: [],
     timer: 0, pokerTimer: POKER_TIME, spawnQueue: null,
@@ -604,6 +604,7 @@ function reset() {
     speed: 1, time: 0, paused: false,
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0,
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
+    stimT: 0, acidPools: [],  // 💉 스팀팩 남은시간 / 🧪 염산 장판
     tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 20기 → 완성, 라운드 재시작 시 리셋)
     bird: null, birdTimer: 250 + Math.random() * 200, // 🐦 힌트 새 / 다음 스폰까지 남은 초
   };
@@ -881,7 +882,35 @@ function effDmg(u) {
   return u.dmg + per * S.upg[u.race];
 }
 // 📯 콰르텟 공속 오라 적용된 실제 쿨다운 (spdBuff는 update()에서 매 프레임 갱신)
-function effCd(u) { return u.cd * (u.spdBuff || 1); }
+function effCd(u) { return u.cd * (u.spdBuff || 1) * (S.stimT > 0 ? 0.5 : 1); }
+
+const ITEM_META = {
+  reroll:  { icon:'🎟️', name:'재변경권',  active:false },
+  timestop:{ icon:'⏳', name:'시간정지 모래시계', active:true },
+  stimpack:{ icon:'💉', name:'스팀팩',     active:true },
+  acid:    { icon:'🧪', name:'염산병',     active:true },
+  bombard: { icon:'💣', name:'융단폭격',   active:true },
+  revive:  { icon:'🔄', name:'부활권',     active:false },
+};
+function hasActiveItems() { return ['timestop','stimpack','acid','bombard'].some(k => S.items[k] > 0); }
+function useTimestop() { S.freezeT = 5; addFloat(PEN.x, PEN.y - 60, '⏳ 시간 정지!', '#42a5f5', 2); sfx('jackpot'); logMsg('⏳ 시간정지 모래시계 — 5초간 몬스터 정지!'); }
+function useStimpack() { S.stimT = 20; addFloat(CX, CY, '💉 스팀팩! 전군 공속 2배 20초!', '#43a047', 2); sfx('hero'); logMsg('💉 스팀팩 — 20초간 전 아군 공속 2배!'); }
+function useBombard() { // 소환장 전체 즉발 광역
+  S.effects.push({ type:'boom', x: PEN.x, y: PEN.y, r: 150, t: 0.6 });
+  for (let i = 0; i < 40; i++) { const a = Math.random()*6.28, v = 120 + Math.random()*220; S.parts.push({ x: PEN.x, y: PEN.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.55, r: 2 + Math.random()*4, c: i%2?'#ff5252':'#ffb74d' }); }
+  for (const m of S.monsters) dealDamage(m, 500, null);
+  addFloat(PEN.x, PEN.y - 60, '💣 융단폭격!', '#ff5252', 2); sfx('bigboom'); logMsg('💣 융단폭격 — 소환장 전체 강타!');
+}
+function useAcid() { // 소환장 중앙에 염산 장판 (5초 도트)
+  S.acidPools.push({ x: PEN.x, y: PEN.y, r: 95, t: 5, dps: 70 });
+  addFloat(PEN.x, PEN.y - 60, '🧪 염산 장판!', '#7cb342', 2); sfx('slash'); logMsg('🧪 염산병 — 5초간 장판 도트 데미지!');
+}
+function useItem(key) { // 제물대 사용 메뉴에서 호출
+  if (S.items[key] <= 0) return;
+  S.items[key]--;
+  ({ timestop: useTimestop, stimpack: useStimpack, acid: useAcid, bombard: useBombard }[key])();
+  closeChip(); updateInfoPanel();
+}
 
 // ==================== 웨이브 ====================
 function startWave() {
@@ -957,14 +986,19 @@ function endWave() {
   S.monsters = [];
   S.projs = [];
   if (S.life <= 0) {
-    S.phase = 'gameover';
-    const best = recordBest(S.round);
-    const isNew = S.round >= best;
-    document.getElementById('finalScore').innerHTML =
-      `도달 스테이지: <b>${S.round}</b> (${stageInfo(S.round).name})<br>` +
-      `🏆 최고 기록: <b>${best}</b> 스테이지` + (isNew ? ' <span style="color:#ffd166">★ 신기록! ★</span>' : '');
-    document.getElementById('overlay').style.display = 'flex';
-    return;
+    if (S.items.revive > 0) { // 🔄 부활권: 사망 대신 소모하고 부활
+      S.items.revive--; S.life = 10;
+      logMsg('🔄✨ 부활권 발동! 목숨 10으로 부활!'); addFloat(CX, CY, '🔄 부활!!', '#43a047', 2.5); sfx('hero');
+    } else {
+      S.phase = 'gameover';
+      const best = recordBest(S.round);
+      const isNew = S.round >= best;
+      document.getElementById('finalScore').innerHTML =
+        `도달 스테이지: <b>${S.round}</b> (${stageInfo(S.round).name})<br>` +
+        `🏆 최고 기록: <b>${best}</b> 스테이지` + (isNew ? ' <span style="color:#ffd166">★ 신기록! ★</span>' : '');
+      document.getElementById('overlay').style.display = 'flex';
+      return;
+    }
   }
   if (S.round === FINAL_ROUND) {
     S.paused = true;
@@ -1446,6 +1480,12 @@ function update(dt) {
   if (S.phase !== 'wave') return;
 
   // ⏳ 시간술사 시간 정지: S.timer/스폰/스웜 이동만 멈춘다 (유닛 행동·사망 처리는 계속)
+  if (S.stimT > 0) S.stimT -= dt;
+  if (S.acidPools.length) S.acidPools = S.acidPools.filter(p => {
+    p.t -= dt;
+    if (S.freezeT <= 0) for (const m of S.monsters) { if (Math.hypot(m.x - p.x, m.y - p.y) <= p.r) dealDamage(m, p.dps * dt, null); } // 시간정지 중엔 도트도 멈춤
+    return p.t > 0;
+  });
   const q = S.spawnQueue;
   if (S.freezeT > 0) {
     S.freezeT -= dt;
@@ -2203,6 +2243,13 @@ function draw() {
   drawPortal();
   drawAltar();
   drawEnemyPortal(); // 소환장 안 적 포탈 (몹보다 뒤)
+  for (const p of S.acidPools) {
+    const al = Math.min(1, p.t) * (0.28 + 0.1*Math.sin(S.time*6));
+    ctx.fillStyle = `rgba(124,179,66,${al.toFixed(2)})`;
+    ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r, p.r*0.62, 0, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = 'rgba(85,139,47,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+    for (let i = 0; i < 3; i++) { const a = S.time*2 + i*2.1; ctx.fillStyle = 'rgba(160,200,90,0.5)'; ctx.beginPath(); ctx.arc(p.x + Math.cos(a)*p.r*0.5, p.y + Math.sin(a)*p.r*0.3, 3, 0, 6.28); ctx.fill(); }
+  }
   // 몬스터
   for (const m of S.monsters) drawMonster(m);
   // ⏳ 시간 정지: 소환장 위 얼음 틴트 오버레이
@@ -2212,6 +2259,7 @@ function draw() {
     ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.fillText('⏸', PEN.x, PEN.y - PEN.h/2 - 8); ctx.textAlign = 'left';
   }
+  if (S.stimT > 0) { ctx.fillStyle = '#43a047'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign='center'; ctx.fillText(`💉 스팀팩 ${Math.ceil(S.stimT)}초`, CX, 20); ctx.textAlign='left'; }
   // 유닛
   for (const u of S.units) drawUnit(u);
   if (S.bird) drawBird(S.bird); // 🐦 힌트 새 (유닛 위에 그려짐)
@@ -2552,6 +2600,7 @@ function drawAltar() {
     ctx.fillStyle = 'rgba(200,210,220,0.5)'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('제물대', a.x, a.y - a.h/2 - 6); ctx.textAlign = 'left';
   }
+  if (hasActiveItems()) { ctx.fillStyle='#ffd166'; ctx.font='11px sans-serif'; ctx.textAlign='center'; ctx.fillText('🎒 아이템! 탭하여 사용', a.x, a.y + a.h/2 + 14); ctx.textAlign='left'; }
   ctx.restore();
 }
 function drawCastle() {
@@ -3762,6 +3811,14 @@ const OBJ_INFO = {
     tip: '💡 포털이 아니라 여기에 바쳐야 합니다 — 덕분에 포털의 하이카드는 고물상(하이3+원페어3)에 쓸 수 있어요.' },
 };
 function showObjInfo(k) {
+  if (k === 'altar' && hasActiveItems()) {
+    openChip('🪨 제물대 — 아이템 사용');
+    const act = ['timestop','stimpack','acid','bombard'].filter(x => S.items[x] > 0);
+    CB.innerHTML = `<div style="font-size:12px;color:#c9b8f0;text-align:center;margin-bottom:8px">사용할 아이템을 선택하세요</div>` +
+      act.map(x => `<button class="chipBtn" onclick="useItem('${x}')" style="display:block;width:100%;margin:4px 0;text-align:left">${ITEM_META[x].icon} <b>${ITEM_META[x].name}</b> ×${S.items[x]}</button>`).join('') +
+      `<div style="margin-top:8px;text-align:center"><button class="chipBtn sub" onclick="closeChip()">닫기</button></div>`;
+    return;
+  }
   const o = OBJ_INFO[k], el = document.getElementById('objInfo');
   const d = k === 'room' ? o.d + oreCap() + o.d2 : o.d;
   let tip = o.tip;
@@ -4274,10 +4331,26 @@ function casMenu() {
     `<div style="display:flex;flex-direction:column;gap:10px">
       <button class="chipBtn casItem" data-go="roulette" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎡</span> <b style="color:#ffd166">룰렛</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 휠을 돌려 랜덤 보상 (골드·유닛·영웅·광부·아이템)</span></button>
       <button class="chipBtn casItem" data-go="lotto" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎟️</span> <b style="color:#ffd166">복권</b><br><span style="font-size:11px;color:#c9b8f0">골드 배팅 — 500·1000·3000원권, 하이리스크 하이리턴!</span></button>
-      <button class="chipBtn" disabled style="text-align:left;padding:12px;opacity:0.55"><span style="font-size:26px;vertical-align:middle">🎁</span> <b>아이템뽑기</b> <span style="font-size:11px">(준비 중)</span></button>
+      <button class="chipBtn casItem" data-go="item" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎁</span> <b style="color:#ffd166">아이템뽑기</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 능동/보조 아이템을 랜덤으로 획득</span></button>
     </div>`;
   CB.querySelector('[data-go="roulette"]').onclick = () => { if (S.chips <= 0) return; casRoulette(); };
   CB.querySelector('[data-go="lotto"]').onclick = () => casLotto();
+  CB.querySelector('[data-go="item"]').onclick = () => { if (S.chips <= 0) return; casItem(); };
+}
+const ITEM_POOL = [ ['reroll',30], ['timestop',15], ['stimpack',15], ['acid',15], ['bombard',15], ['revive',10] ];
+function rollItem() { let s=ITEM_POOL.reduce((a,b)=>a+b[1],0), r=Math.random()*s; for(const [k,w] of ITEM_POOL){ r-=w; if(r<0) return k; } return 'reroll'; }
+function casItem() {
+  if (S.chips <= 0) return;
+  S.chips--; sfx('coin');
+  const key = rollItem(), meta = ITEM_META[key];
+  S.items[key]++;
+  CB.innerHTML = `<span class="back" onclick="casMenu()">‹ 카지노</span><div class="flipWrap"><div class="flipCard" id="flipCard"><div class="flipFace flipFront">🎁</div><div class="flipFace flipBack">${meta.icon}</div></div></div><div class="chipResult" id="itRes">뽑는 중…</div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('flipCard').classList.add('flipped')));
+  setTimeout(() => {
+    document.getElementById('itRes').innerHTML = `🎉 <span style="color:#ffd166">${meta.icon} ${meta.name}</span> 획득!`;
+    sfx(key === 'revive' ? 'hero' : 'reward'); updateInfoPanel();
+    document.getElementById('itRes').insertAdjacentHTML('afterend', `<div style="margin-top:8px;text-align:center;font-size:11px;color:#c9b8f0">${ITEM_META[key].active ? '🪨 제물대를 눌러 사용하세요' : '포커/유닛에서 사용'}</div><div style="margin-top:6px;text-align:center"><button class="chipBtn" onclick="casMenu()">메뉴</button>${S.chips>0?`<button class="chipBtn sub" onclick="casItem()">한 번 더 (칩 ${S.chips})</button>`:''}</div>`);
+  }, 900);
 }
 // --- 🎡 룰렛: 칩 1개 → 휠 돌려 보상 (rollLottery 재사용) ---
 const RCAT = { gs:{icon:'💰',c:'#3a2f52'}, gb:{icon:'💰',c:'#c98a2f'}, u:{icon:'⚔️',c:'#2f9e44'}, mi:{icon:'⛏️',c:'#b8860b'}, it:{icon:'🎁',c:'#8e44ad'}, hero:{icon:'⭐',c:'#e53935'} };
@@ -4477,7 +4550,7 @@ function fmtTime(s) {
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 }
 function updateHUD() {
-  document.getElementById('tLife').textContent = S.life;
+  document.getElementById('tLife').textContent = S.life + (S.items.revive > 0 ? ' 🔄' : '');
   document.getElementById('tGold').textContent = Math.floor(S.gold) + 'G';
   document.getElementById('tMiner').textContent = S.units.filter(u => u.miner).length + '명';
   document.getElementById('tChips').textContent = S.chips;
