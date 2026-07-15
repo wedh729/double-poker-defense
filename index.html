@@ -481,8 +481,8 @@ const WEAPONS = [
    hero:{name:'저격총', atk:'sniper', cd:0.8, dmgMul:7, range:470, proj:'sniper'}}, // 속사 저격 (cd 0.8·데미지 하향, DPS 유지 리워크)
   // 5 플러쉬 — 화염방사기 (사거리 80: 소환장 정중앙엔 못 닿음. 사거리 손해분은 dmg↑로 보정)
   //   영웅(대형)은 폭·길이 각 1.5배 → 확실히 강해지고 정중앙까지 태움
-  {name:'화염방사기', dmg:0.24, cd:0.48, range:80, splash:22, bounce:0, atk:'area', vis:'flame',
-   hero:{name:'대형 화염방사기', splash:33, range:120, cd:0.125, dmgMul:3}}, // 공속 8/초 + 데미지 ×3 (타겟당 ~29 DPS, 기존 2.5의 ~11배)
+  {name:'화염방사기', dmg:0.24, cd:0.48, range:80, splash:44, bounce:0, atk:'area', vis:'flame',
+   hero:{name:'대형 화염방사기', splash:66, range:120, cd:0.125, dmgMul:3}}, // 공속 8/초 + 데미지 ×3 + 불길 폭 2배(splash 33→66)
   // 6 풀하우스 — 대검 (검사: 사거리 짧게 = 60, 데미지↑ + 돌진 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
   {name:'대검', dmg:20, cd:1.6, range:60, splash:56, bounce:0, atk:'area', vis:'sword',
@@ -637,8 +637,8 @@ function stageInfo(n) {
 let DIFF_MUL = 1, DIFF_NAME = '보통'; // 시작 화면에서 선택 (쉬움 0.7 / 보통 1.0 / 어려움 1.4 / 지옥 2.0)
 function monsterHP(n) {
   let hp;
-  if (n <= 3) hp = 16 * Math.pow(1.10, n - 1);
-  else hp = 16 * Math.pow(1.10, 2) * 1.5 * Math.pow(1.15, n - 3);
+  if (n <= 3) hp = 14 * Math.pow(1.10, n - 1);
+  else hp = 14 * Math.pow(1.10, 2) * 1.42 * Math.pow(1.15, n - 3); // 수입 완화에 맞춰 HP 소폭 하향 (base 16→14, 점프 1.5→1.42)
   if (n > 50) hp *= Math.pow(1.05, n - 50);
   if (n > FINAL_ROUND) hp *= Math.pow(2, n - FINAL_ROUND);
   return Math.max(1, Math.floor(hp * DIFF_MUL));
@@ -1786,12 +1786,12 @@ function areaHit(u, x, y, dmg) {
   } else if (vis === 'flame') {
     // 진짜 불꽃: 총구에서 조준 방향으로 **사거리 끝까지** 뻗는 화염 스트림 (착탄점이 아니라 range까지 항상 표현)
     const wide = u.hero; // 영웅은 두껍게, 일반은 얇은 불줄기
-    const n = wide ? 20 : 13, reach0 = u.range; // 스트림 길이 = 사거리
-    const spread = Math.atan2(u.splash * 0.8, reach0); // 불길 퍼짐각 ≈ 판정 반폭
+    const n = wide ? 28 : 18, reach0 = u.range; // 스트림 길이 = 사거리 (불꽃 개수↑)
+    const spread = Math.atan2(u.splash * 0.8, reach0); // 불길 퍼짐각 ≈ 판정 반폭 (splash 2배라 더 뚱뚱)
     for (let i = 0; i < n; i++) {
-      const reach = reach0 * (0.5 + Math.random() * 0.55), sp = reach / 0.34, aa = a + (Math.random() - 0.5) * 2 * spread;
+      const reach = reach0 * (0.5 + Math.random() * 0.55), sp = reach / 0.42, aa = a + (Math.random() - 0.5) * 2 * spread;
       S.parts.push({ x: mz.x, y: mz.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp,
-        t: 0.34 + Math.random() * 0.22, r: (wide ? 5.5 : 3.8) + Math.random() * (wide ? 7 : 4), fire: true, spin: Math.random()*6.28 });
+        t: 0.52 + Math.random() * 0.36, r: (wide ? 8 : 5.5) + Math.random() * (wide ? 9 : 6), fire: true, spin: Math.random()*6.28 }); // 크게 + 오래(안 금방 꺼짐)
     }
   } else { // rocket / bomb: 폭발
     S.effects.push({ type:'boom', x, y, r: u.splash, t: 0.28 });
@@ -1892,7 +1892,7 @@ function burstJuice(e) {
 function mineReward() {
   // 겹이 깊어질수록 배달 보너스가 기하급수로 커진다 (+3, +5, +6, +8, +11 … 10겹째 +45)
   // 광산 HP도 ×1.4씩 커서 깊이 파려면 시간이 필요 → "포커 시간을 벌며 채굴하는 운영"이 수익의 축
-  const inc = Math.ceil(3 * Math.pow(1.35, S.mineLayer - 1));
+  const inc = Math.ceil(2.2 * Math.pow(1.30, S.mineLayer - 1)); // 후반 인플레 완화 (기존 3×1.35 → 2.2×1.30, 10겹 48→24)
   S.mineBonus += inc;
   S.mineLayer++;
   logMsg(`⛰️💥 광산 ${S.mineLayer - 1}겹 파괴! 채굴량 +${inc} — 이제 배달마다 골드 +${S.mineBonus}`);
@@ -4129,7 +4129,7 @@ function wireUpg(el) {
     const i = +b.dataset.upg;
     if (S.gold < S.upgCost[i]) return;
     S.gold -= S.upgCost[i]; S.upg[i]++;
-    S.upgCost[i] = Math.floor(S.upgCost[i] * 1.6);
+    S.upgCost[i] = Math.floor(S.upgCost[i] * 1.5); // 완만한 증가율 (기존 ×1.6)
     logMsg(`⚔️ ${RACES[i].name} 공격력 Lv.${S.upg[i]}`);
     renderShop(); updateInfoPanel();
   });
