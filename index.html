@@ -157,11 +157,20 @@
   .reelCell { width: 72px; height: 84px; flex: 0 0 72px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
 
   /* 룰렛 휠 */
-  .wheelWrap { position: relative; width: 220px; height: 220px; margin: 6px auto 4px; }
-  .wheel { width: 100%; height: 100%; border-radius: 50%; border: 6px solid #c9a75a; box-shadow: 0 0 0 3px #2e2444, inset 0 0 22px rgba(0,0,0,0.5);
-    transition: transform 4s cubic-bezier(0.15, 0.6, 0.15, 1); }
-  .wheelWrap::after { content: '▼'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); color: #ffd166; font-size: 22px; text-shadow: 0 1px 2px #000; }
-  .wheelHub { position: absolute; top: 50%; left: 50%; width: 34px; height: 34px; border-radius: 50%; transform: translate(-50%,-50%); background: radial-gradient(#ffe9ad, #c9a75a); border: 2px solid #7a6335; }
+  .wheelWrap { position: relative; width: min(290px, 80vw); aspect-ratio: 1; margin: 10px auto 6px; filter: drop-shadow(0 12px 16px rgba(0,0,0,0.6)); }
+  .wheel { position: absolute; inset: 0; border-radius: 50%; border: 9px solid #b98d3e;
+    box-shadow: 0 0 0 4px #2e2444, 0 0 0 7px #6b4f22, inset 0 0 34px rgba(0,0,0,0.65), inset 0 4px 10px rgba(255,255,255,0.22);
+    transition: transform 5s cubic-bezier(0.16, 0.72, 0.10, 1); }
+  .wheel .lab { position: absolute; top: 50%; left: 50%; font-weight: 800; color: #fff; text-shadow: 0 1px 2px #000, 0 0 3px rgba(0,0,0,0.6); font-size: clamp(11px, 3.4vw, 15px); }
+  .wheelSheen { position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(60% 55% at 36% 28%, rgba(255,255,255,0.30), rgba(255,255,255,0.06) 42%, transparent 60%), radial-gradient(70% 65% at 66% 82%, rgba(0,0,0,0.42), transparent 60%); }
+  .ballTrack { position: absolute; inset: 0; transition: transform 5s cubic-bezier(0.12, 0.76, 0.08, 1); }
+  .ball { position: absolute; top: 5.5%; left: 50%; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%;
+    background: radial-gradient(circle at 34% 30%, #fff, #d3d7de 58%, #9aa0aa); box-shadow: 0 2px 4px rgba(0,0,0,0.55), inset 0 -1px 2px rgba(0,0,0,0.25); }
+  .wheelHub { position: absolute; top: 50%; left: 50%; width: 46px; height: 46px; border-radius: 50%; transform: translate(-50%,-50%);
+    background: radial-gradient(circle at 40% 33%, #ffe9ad, #c9a75a 55%, #7a6335); box-shadow: 0 3px 7px rgba(0,0,0,0.55), inset 0 2px 3px rgba(255,255,255,0.6), inset 0 -2px 4px rgba(0,0,0,0.4); border: 2px solid #7a6335; }
+  .wheelHub::after { content: ''; position: absolute; top: 26%; left: 30%; width: 22%; height: 18%; border-radius: 50%; background: rgba(255,255,255,0.7); filter: blur(1px); }
+  .wheelPointer { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 11px solid transparent; border-right: 11px solid transparent; border-top: 20px solid #ffd166; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.6)); z-index: 5; }
 
   /* 교환 카드 뒤집기 */
   .flipWrap { perspective: 700px; width: 100px; height: 140px; margin: 10px auto; }
@@ -4266,17 +4275,19 @@ function doRoulette() {
   const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '';
   CB.innerHTML = luckMsg +
     `<div style="font-size:13px;color:#c9b8f0;margin-bottom:6px">보유 골드 <b style="color:#ffd166">${g}G</b> — 얼마를 걸까요?</div>` +
-    `<div class="wheelWrap"><div class="wheel" id="wheel"></div><div class="wheelHub"></div></div>` +
+    `<div class="wheelWrap"><div class="wheel" id="wheel"></div><div class="wheelSheen"></div><div class="ballTrack" id="ballTrack"><div class="ball"></div></div><div class="wheelHub"></div><div class="wheelPointer"></div></div>` +
     `<div id="betRow">${bets.map(([lb, amt], i) => `<button class="chipBtn" ${amt < 10 ? 'disabled' : ''} data-bet="${amt}">${lb} (${amt}G)</button>`).join('')}</div>` +
     `<div class="chipResult" id="rlRes">칩을 걸면 시작!</div>`;
-  // 휠 색칠
-  const seg = 360 / WHEEL.length, stops = WHEEL.map((v, i) => {
-    const col = v === 0 ? (i % 2 ? '#3a2f52' : '#2c2340') : v >= 10 ? '#e53935' : v >= 4 ? '#ff9100' : '#43a047';
-    return `${col} ${i * seg}deg ${(i + 1) * seg}deg`;
+  // 휠 색칠 (포켓 + 얇은 분리선)
+  const seg = 360 / WHEEL.length, stops = [];
+  WHEEL.forEach((v, i) => {
+    const col = v === 0 ? (i % 2 ? '#3a2f52' : '#241b38') : v >= 10 ? '#e53935' : v >= 4 ? '#ff9100' : '#2f9e44';
+    stops.push(`${col} ${i * seg}deg ${(i + 1) * seg - 0.8}deg`, `#141024 ${(i + 1) * seg - 0.8}deg ${(i + 1) * seg}deg`);
   });
-  const wheel = document.getElementById('wheel');
-  wheel.style.background = `conic-gradient(${stops.join(',')})`;
-  wheel.innerHTML = WHEEL.map((v, i) => v ? `<div style="position:absolute;top:50%;left:50%;transform:rotate(${(i + 0.5) * seg}deg) translateY(-88px);transform-origin:0 0;font-size:12px;font-weight:800;color:#fff">${v}×</div>` : '').join('');
+  const wheel = document.getElementById('wheel'), ballTrack = document.getElementById('ballTrack');
+  wheel.style.background = `conic-gradient(from -${seg / 2}deg, ${stops.join(',')})`;
+  const R = Math.max(90, wheel.clientWidth / 2 - 30); // 라벨 반경(px) — 모달 미표시 시 대비 하한
+  wheel.innerHTML = WHEEL.map((v, i) => v ? `<div class="lab" style="transform:translate(-50%,-50%) rotate(${i * seg}deg) translateY(-${R}px) rotate(${-i * seg}deg)">${v}×</div>` : '').join('');
   let spun = false;
   CB.querySelectorAll('[data-bet]').forEach(b => b.onclick = () => {
     if (spun) return; const bet = +b.dataset.bet; if (bet < 10 || S.chips <= 0) return;
@@ -4285,8 +4296,9 @@ function doRoulette() {
     const mult = rollMult();
     const winners = []; WHEEL.forEach((v, i) => { if (v === mult) winners.push(i); });
     const slice = winners[Math.floor(Math.random() * winners.length)];
-    const targetDeg = 360 * 6 - (slice + 0.5) * seg; // 여러 바퀴 돌고 해당 칸이 상단(▼)에
+    const targetDeg = 360 * 6 - slice * seg; // 여러 바퀴 후 당첨칸 중앙이 상단(포인터)에
     wheel.style.transform = `rotate(${targetDeg}deg)`;
+    ballTrack.style.transform = 'rotate(-3240deg)'; // 공은 반대로 9바퀴 → 상단(당첨칸) 정착
     document.getElementById('rlRes').textContent = '🎡 도는 중…';
     setTimeout(() => {
       const won = Math.floor(bet * mult); S.gold += won;
@@ -4294,7 +4306,7 @@ function doRoulette() {
       if (mult === 0) { res.innerHTML = `<span style="color:#e57373">💥 꽝! ${bet}G 잃음</span>`; sfx('leak'); }
       else { res.innerHTML = `<span style="color:#ffd166">🎉 ${mult}배! +${won}G (순익 ${won - bet >= 0 ? '+' : ''}${won - bet}G)</span>`; sfx(mult >= 10 ? 'jackpot' : 'reward'); }
       document.getElementById('betRow').insertAdjacentHTML('afterend', `<div style="margin-top:8px"><button class="chipBtn" onclick="closeChip()">확인</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="doRoulette()">다시 (칩 ${S.chips})</button>` : ''}</div>`);
-    }, 4100);
+    }, 5100);
   });
 }
 
