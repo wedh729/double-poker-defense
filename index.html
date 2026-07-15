@@ -482,7 +482,7 @@ const WEAPONS = [
   // 5 플러쉬 — 화염방사기 (사거리 80: 소환장 정중앙엔 못 닿음. 사거리 손해분은 dmg↑로 보정)
   //   영웅(대형)은 폭·길이 각 1.5배 → 확실히 강해지고 정중앙까지 태움
   {name:'화염방사기', dmg:0.24, cd:0.48, range:80, splash:22, bounce:0, atk:'area', vis:'flame',
-   hero:{name:'대형 화염방사기', splash:33, range:120}}, // splash 22×1.5, range 80×1.5
+   hero:{name:'대형 화염방사기', splash:33, range:120, cd:0.125, dmgMul:3}}, // 공속 8/초 + 데미지 ×3 (타겟당 ~29 DPS, 기존 2.5의 ~11배)
   // 6 풀하우스 — 대검 (검사: 사거리 짧게 = 60, 데미지↑ + 돌진 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
   {name:'대검', dmg:20, cd:1.6, range:60, splash:56, bounce:0, atk:'area', vis:'sword',
@@ -2806,10 +2806,10 @@ function drawMatStatic(x, y, sz, mat, esc, c) {
     ctx.globalAlpha = 0.5; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x - sz*0.2, y - sz*0.2, sz*0.5, 0, 6.28); ctx.fill(); ctx.globalAlpha = 1;
     ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1;
     for (let i = 0; i < 4; i++) { const a = i * 0.9 + 0.3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a)*sz, y + Math.sin(a)*sz); ctx.stroke(); }
-  } else if (mat === 2) { // 축구공: 검은 오각 점
+  } else if (mat === 2) { // 축구공: 검은 오각 점 (5개 모두 같은 크기)
     ctx.fillStyle = shade(c, -180);
-    polyPath(x, y, 5, sz*0.34, 0); ctx.fill();
-    for (let i = 0; i < 4; i++) { const a = i*1.57; polyPath(x + Math.cos(a)*sz*0.7, y + Math.sin(a)*sz*0.7, 5, sz*0.22, a); ctx.fill(); }
+    polyPath(x, y, 5, sz*0.24, 0); ctx.fill();
+    for (let i = 0; i < 4; i++) { const a = i*1.57; polyPath(x + Math.cos(a)*sz*0.7, y + Math.sin(a)*sz*0.7, 5, sz*0.24, a); ctx.fill(); }
   } else if (mat === 3) { // 농구공: 표준 심 — 십자 + 좌우 대칭 곡선
     ctx.strokeStyle = 'rgba(30,15,5,0.65)'; ctx.lineWidth = Math.max(1.2, sz * 0.09);
     ctx.beginPath(); ctx.moveTo(x - sz, y); ctx.lineTo(x + sz, y); ctx.stroke();
