@@ -881,6 +881,7 @@ function updateMiner(u, dt) {
 // 단일 +3 / 스플래쉬 +0.6 / 소환장 전체타격(탱크·핵) +0.3
 function upgPer(u) { return u.atk === 'pen' ? 0.3 : (u.splash > 0 ? 0.6 : 3); }
 function effDmg(u) {
+  if (u.joker) return u.dmg; // 🃏 조커는 업그레이드 영향 없음 — 고정 공격력 (업글까지 되면 너무 사기)
   const per = upgPer(u);
   if (u.hidden) { const s = [...S.upg].sort((a, b) => b - a); return u.dmg + per * (s[0] + s[1]); } // 에이스: 가장 많이 올린 두 종족 합산
   return u.dmg + per * S.upg[u.race];
@@ -1538,15 +1539,21 @@ function update(dt) {
     m.ang += m.spin * dt;
     m.rot += dt * 0.8;
     if (m.pullT > 0) {
-      // 🃏 조커: 낫에 맞아 끌려가는 중 — 오빗 대신 조커 쪽으로 직행 (풀리면 오빗 각도가 그대로 이어져 튕기듯 복귀, 의도된 동작)
+      // 🃏 조커: 낫에 맞아 끌려가는 중 — 오빗 대신 조커 쪽으로 직행
       m.pullT -= dt;
+      if (m.pullT <= 0) m.returnT = 0.7; // 견인 끝 → 부드럽게 오빗 복귀 시작
       const pdx = m.pullX - m.x, pdy = m.pullY - m.y, pd = Math.hypot(pdx, pdy) || 1;
       const pstep = Math.min(pd, 220 * dt);
       m.x += pdx / pd * pstep; m.y += pdy / pd * pstep;
     } else {
       const r = (20 + m.baseR * (0.15 + 0.85 * gw)) * m.born;
-      m.x = CX + r * Math.cos(m.ang) + 5 * Math.sin(S.time * 2.3 + m.phase);
-      m.y = CY + r * Math.sin(m.ang) + 5 * Math.cos(S.time * 2.1 + m.phase * 1.3);
+      const ox = CX + r * Math.cos(m.ang) + 5 * Math.sin(S.time * 2.3 + m.phase);
+      const oy = CY + r * Math.sin(m.ang) + 5 * Math.cos(S.time * 2.1 + m.phase * 1.3);
+      if (m.returnT > 0) { // 견인 후 순간이동 방지 — 오빗 위치로 서서히 복귀
+        m.returnT -= dt;
+        const k = Math.min(1, dt * 5);
+        m.x += (ox - m.x) * k; m.y += (oy - m.y) * k;
+      } else { m.x = ox; m.y = oy; }
     }
     // 울타리 밖으로 못 나간다 → 가장자리에서 서로 겹치고 밀린다 (풀 중에는 조커 쪽 가장자리로 뭉침)
     m.x = Math.max(CX - hw, Math.min(CX + hw, m.x));
@@ -3306,6 +3313,8 @@ function drawUnit(u) {
   if (u.hidden) {
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
     ctx.fillText('♠', u.x, u.y + 4);
+  } else if (u.joker) { // 🃏 조커: 다이아 대신 조커 표시
+    ctx.font = '14px sans-serif'; ctx.fillText('🃏', u.x, u.y + 5);
   } else if (!u.miner) {
     ctx.fillStyle = raceC; ctx.font = 'bold 10px sans-serif';
     ctx.fillText(RACES[u.race].suit, u.x, u.y - 1);
@@ -3611,13 +3620,22 @@ function drawWeapon(u, x, y) {
     ctx.restore();
     return;
   }
-  if (has('조커')) { // 🃏 낫 (히든 영웅) — 곡선 칼날 + 긴 손잡이
-    ctx.save(); ctx.translate(x + 1, y); ctx.rotate(u.atkAnim ? -0.4 : -0.1);
-    ctx.strokeStyle = '#4a2f7a'; ctx.lineWidth = 2; // 긴 손잡이
-    ctx.beginPath(); ctx.moveTo(-6, 7); ctx.lineTo(2, -2); ctx.stroke();
-    ctx.strokeStyle = '#8c5bff'; ctx.lineWidth = 2.2; // 곡선 낫날
-    ctx.beginPath(); ctx.arc(6, -6, 8, Math.PI * 0.25, Math.PI * 1.15); ctx.stroke();
-    ctx.restore(); ctx.lineWidth = 1;
+  if (has('조커')) { // 🃏 하데스의 낫 (히든 영웅) — 긴 자루 + 큰 초승달 낫날
+    ctx.save(); ctx.translate(x + 1, y); ctx.rotate(u.atkAnim ? -0.5 : -0.12);
+    ctx.lineCap = 'round';
+    // 긴 자루
+    ctx.strokeStyle = '#2e2016'; ctx.lineWidth = 2.8;
+    ctx.beginPath(); ctx.moveTo(-5, 14); ctx.lineTo(4, -12); ctx.stroke();
+    ctx.strokeStyle = '#6b4e2e'; ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.moveTo(-5, 14); ctx.lineTo(4, -12); ctx.stroke();
+    // 이음쇠 (보라 보석)
+    ctx.fillStyle = '#8c5bff'; ctx.beginPath(); ctx.arc(4, -12, 2.4, 0, 6.28); ctx.fill();
+    // 큰 초승달 낫날
+    ctx.strokeStyle = '#d9ccff'; ctx.lineWidth = 3.2;
+    ctx.beginPath(); ctx.arc(4, -4, 13, Math.PI * 1.15, Math.PI * 2.05); ctx.stroke();
+    ctx.strokeStyle = '#8c5bff'; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.arc(4, -4, 13, Math.PI * 1.2, Math.PI * 2.0); ctx.stroke();
+    ctx.restore(); ctx.lineCap = 'butt'; ctx.lineWidth = 1;
     return;
   }
   if (has('투석기')) { // 🪨 투석기 팔 (히든 영웅, 고정형)
