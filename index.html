@@ -3829,6 +3829,7 @@ const OBJ_INFO = {
     tip: '💡 포털이 아니라 여기에 바쳐야 합니다 — 덕분에 포털의 하이카드는 고물상(하이3+원페어3)에 쓸 수 있어요.' },
 };
 function showObjInfo(k) {
+  S.selMon = null; // 건물 정보 표시 중엔 몬스터 실시간 갱신 안 함
   const o = OBJ_INFO[k], el = document.getElementById('objInfo');
   const d = k === 'room' ? o.d + oreCap() + o.d2 : o.d;
   let tip = o.tip;
@@ -3841,7 +3842,52 @@ function showObjInfo(k) {
   el.innerHTML = `<b>${o.t}</b><br>${d}<span class="tip">${tip}</span>`;
   el.style.display = 'block';
 }
-function hideObjInfo() { document.getElementById('objInfo').style.display = 'none'; }
+function hideObjInfo() { S.selMon = null; document.getElementById('objInfo').style.display = 'none'; }
+// 🎯 몬스터 클릭 정보 (스타크래프트처럼 이름·아기자기한 설명·실시간 체력)
+const MAT_DESC = [
+  '말랑말랑 물풍선. 톡 터뜨리면 첨벙! 🫧',
+  '반짝이는 수정구. 깨지면 쨍그랑 유리조각. 🔮',
+  '검은 오각이 매력인 축구공. 슛, 골인! ⚽',
+  '통통 튀는 주황 농구공. 드리블 조심! 🏀',
+  '빨간 실밥의 야구공. 홈런볼 조심! ⚾',
+  '반질반질 8번 당구공. 딱! 🎱',
+  '묵직한 검은 볼링공. 스트라이크! 🎳',
+  '차갑고 단단한 쇠구슬. 잘 안 부서져요. ⚙️',
+  '지옥에서 온 이글이글 뜨거운 쇳덩이! 🔥',
+  '은은한 달빛 구슬. 크레이터가 콕콕. 🌙',
+  '우리 행성?! 초록 대륙이 보여요. 🌍',
+  '거대한 가스 행성 목성. 대적점이 눈길. 🪐',
+  '이글이글 태양! 만지면 큰일나요. ☀️',
+  '모든 걸 삼키는 심연, 블랙홀… 🕳️',
+];
+function monsterAt(x, y) {
+  let best = null, bd = Infinity;
+  for (const m of S.monsters) {
+    if (m.hp <= 0 || m.dead) continue;
+    const rad = monSize(m) + (IS_MOBILE ? 16 : 8);
+    const d = Math.hypot(m.x - x, m.y - y);
+    if (d < rad && d < bd) { bd = d; best = m; }
+  }
+  return best;
+}
+function showMonsterInfo(m) {
+  const el = document.getElementById('objInfo');
+  const mat = MATERIALS[m.mat] || { name: '수수께끼 공' };
+  const name = m.boss ? '👹 보스' : mat.name + (m.golden ? ' ✨' : '');
+  const desc = m.boss ? '거대하고 위협적인 보스! 시간 내에 못 잡으면 즉사… 💀' : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…');
+  const hp = Math.max(0, Math.ceil(m.hp)), max = Math.max(1, Math.ceil(m.max));
+  const pct = Math.max(0, Math.min(1, m.hp / m.max));
+  const col = pct > 0.5 ? '#43a047' : pct > 0.25 ? '#ff9800' : '#e53935';
+  const tags = [];
+  if (m.golden) tags.push('✨ 황금 레어! 잡으면 보너스 골드');
+  if (m.shield > 0) tags.push('🛡️ 보호막 ' + Math.ceil(m.shield));
+  if (m.split) tags.push('💥 분열체 — 잡으면 둘로 갈라져요');
+  el.innerHTML = `<b>${name}</b><br>${desc}` +
+    `<div style="margin-top:6px;color:#333">❤️ <b>${hp}</b> / ${max}` +
+    `<div style="height:8px;background:#e6e6e6;border-radius:5px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${(pct*100).toFixed(0)}%;background:${col}"></div></div></div>` +
+    (tags.length ? `<span class="tip">${tags.join('<br>')}</span>` : '');
+  el.style.display = 'block';
+}
 function objAt(x, y) {
   if (Math.abs(x - ALTAR.x) <= ALTAR.w/2 && Math.abs(y - ALTAR.y) <= ALTAR.h/2) return 'altar';
   if (Math.hypot(x - PORTAL.x, y - PORTAL.y) < PORTAL.r + 12) return 'portal';
@@ -3871,10 +3917,14 @@ function pressEnd() {
     for (const u of S.units) if (Math.hypot(u.x - drag.x0, u.y - drag.y0) < HIT_R) { hit = u; break; }
     S.units.forEach(u => u.selected = false);
     if (hit) { hit.selected = true; hideObjInfo(); }
-    else { // 빈 곳 클릭: 성이면 강화창, 다른 건물이면 설명 팝업, 아니면 닫기
-      const k = objAt(drag.x0, drag.y0);
-      if (k === 'castle') { hideObjInfo(); if (openShop !== 'castle') toggleShop('castle'); }
-      else k ? showObjInfo(k) : hideObjInfo();
+    else {
+      const mon = monsterAt(drag.x0, drag.y0);
+      if (mon) { S.selMon = mon; showMonsterInfo(mon); } // 🎯 몬스터 클릭 → 정보
+      else { // 빈 곳 클릭: 성이면 강화창, 다른 건물이면 설명 팝업, 아니면 닫기
+        const k = objAt(drag.x0, drag.y0);
+        if (k === 'castle') { hideObjInfo(); if (openShop !== 'castle') toggleShop('castle'); }
+        else k ? showObjInfo(k) : hideObjInfo();
+      }
     }
   }
   drag = null;
@@ -3968,6 +4018,7 @@ cv.addEventListener('touchend', e => {
   // 탭: ①유닛 명중 → 선택(pressEnd) ②선택유닛 있음 → 이동 ③건물 → 팝업 ④빈땅 → 선택해제
   let hit = null;
   for (const u of S.units) if (Math.hypot(u.x - p.x, u.y - p.y) < HIT_R) { hit = u; break; }
+  if (!hit) { const mon = monsterAt(p.x, p.y); if (mon) { S.selMon = mon; showMonsterInfo(mon); drag = null; return; } } // 🎯 몬스터 탭 → 정보 (이동보다 우선)
   const hasSel = S.units.some(u => u.selected && !u.miner);
   if (!hit && hasSel) {
     issueMove(p.x, p.y);
@@ -4568,6 +4619,10 @@ function fmtTime(s) {
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 }
 function updateHUD() {
+  if (S.selMon) { // 🎯 선택한 몬스터 체력 실시간 갱신 (죽거나 사라지면 팝업 닫기)
+    if (S.selMon.hp <= 0 || S.selMon.dead || !S.monsters.includes(S.selMon)) hideObjInfo();
+    else showMonsterInfo(S.selMon);
+  }
   document.getElementById('tLife').textContent = S.life + (S.reviveArmed ? ' 🔄' : '');
   document.getElementById('tGold').textContent = Math.floor(S.gold) + 'G';
   document.getElementById('tMiner').textContent = S.units.filter(u => u.miner).length + '명';
