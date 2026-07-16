@@ -1079,7 +1079,7 @@ function spawnJunk(x, y) {
   });
   addFloat(x, y - 30, '💰 고물상 강림!! 💰', '#8d6e63', 2.8);
   sfx('jackpot'); sfx('hero');
-  logMsg('💰✨ 히든 조합 발견!! [하이카드×3·원페어×3] → 히든 영웅 <b>고물상</b>! 반경 40px 처치 골드 ×1.2!');
+  logMsg('💰✨ 히든 조합 발견!! [하이카드×3·원페어×3] → 히든 영웅 <b>고물상</b>! 반경 10px 처치 골드 ×1.2!');
   markHidden('junk');
 }
 // 📯 콰르텟: 원페어+투페어+트리플+스트레이트 각 1 → 반경 50px 아군 공속 +20% (전투력 낮음, 순수 지원)
@@ -1676,7 +1676,7 @@ function update(dt) {
   // 사망 처리 + 폭발 (몹 보상: 기존의 1/10로 축소)
   const killGold = Math.max(1, Math.round(S.round * 0.05)) * ((S.eventMods && S.eventMods.killMul) || 1);
   const newborns = [];
-  const junkUnits = S.units.filter(u => u.junk); // 💰 고물상: 반경 40px 내 처치 골드 ×1.2
+  const junkUnits = S.units.filter(u => u.junk); // 💰 고물상: 반경 10px 내 처치 골드 ×1.2
   S.monsters = S.monsters.filter(m => {
     if (m.hp <= 0) {
       m.dead = true;
@@ -1686,7 +1686,7 @@ function update(dt) {
       S.combo.t = 1.5; S.combo.n++; S.combo.pop = 0.18;
       if (S.combo.n >= 3) sfx('combo', S.combo.n);
       let g = (m.boss ? killGold * 30 : killGold) + Math.floor(S.combo.n / 10);
-      if (junkUnits.some(u => (u.x - m.x) * (u.x - m.x) + (u.y - m.y) * (u.y - m.y) <= 1600)) g = Math.round(g * 1.2);
+      if (junkUnits.some(u => (u.x - m.x) * (u.x - m.x) + (u.y - m.y) * (u.y - m.y) <= 100)) g = Math.round(g * 1.2);
       S.gold += g;
       // 골드 동전이 튀어나와 좌상단 금고로 빨려간다 (시각 연출 — 골드는 즉시 지급됨)
       const ca = Math.random() * 6.28;
@@ -4030,7 +4030,7 @@ function updateInfoPanel() {
   if (u.pierce) traits.push(`관통 ×${u.pierce}`);
   if (u.shards) traits.push(`파편 ${u.shards}개 (${Math.round(u.shardFrac*100)}%)`);
   if (u.atk === 'sniper') traits.push('단일 초강력 (보스용)');
-  if (u.junk) traits.push('💰 주변 처치 골드 ×1.2 (반경 40)');
+  if (u.junk) traits.push('💰 주변 처치 골드 ×1.2 (반경 10)');
   if (u.quartet) traits.push('📯 아군 공속 +20% (반경 50, 비중첩)');
   if (u.execute) traits.push('⚔️ 체력 20% 이하 즉시 처형');
   if (u.shogun) traits.push('🔥 참격 무제한 + 화상 도트');
@@ -4169,7 +4169,7 @@ const HAND_GUIDE = [
 const HIDDEN_DEX = [
   { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '주사위를 던져 1~6회 팅기는 공격 + 카지노·복권·교환 행운 +10%',
     hint: '계단을 오르듯 원1·투2·쓰리3 … 그 순서로 바친 자에게 운명의 주사위가 굴러온다.' },
-  { id: 'junk', icon: '💰', name: '고물상', recipe: '하이카드×3 + 원페어×3', desc: '반경 40px 처치 골드 ×1.2 (지원형)',
+  { id: 'junk', icon: '💰', name: '고물상', recipe: '하이카드×3 + 원페어×3', desc: '반경 10px 처치 골드 ×1.2 (지원형)',
     hint: '하이3·원3 — 가장 하찮은 두 패를 나란히 그러모으면 쓰레기 더미에서 금이 반짝인다.' },
   { id: 'quartet', icon: '📯', name: '콰르텟', recipe: '원페어·투페어·트리플·스트레이트 각 1', desc: '반경 50px 아군 공속 +20% (비중첩)',
     hint: '원·투·쓰리·스트, 서로 다른 넷을 하나씩 세우면 합주가 시작되고 곁의 손이 빨라진다.' },
