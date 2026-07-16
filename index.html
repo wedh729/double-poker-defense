@@ -2599,21 +2599,12 @@ function drawAltar() {
     ctx.fillStyle = g; ctx.strokeStyle = '#2a2f34'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.rect(a.x - iw/2, yy - ih/2, iw, ih); ctx.fill(); ctx.stroke();
   }
-  // 제물 접시(상단)
-  const topY = a.y - a.h/2 + 12;
-  const gg = ctx.createRadialGradient(a.x, topY, 2, a.x, topY, a.w*0.4);
-  gg.addColorStop(0, S.tribute > 0 ? '#cfd8dc' : '#8b929a'); gg.addColorStop(1, '#4a5058');
-  ctx.fillStyle = gg; ctx.beginPath(); ctx.ellipse(a.x, topY, a.w*0.38, 9, 0, 0, 6.28); ctx.fill();
-  ctx.strokeStyle = '#2a2f34'; ctx.stroke();
-  // 제물 있으면 은은한 발광 + 카운터
-  if (S.tribute > 0 && !S.units.some(u => u.catapult)) {
-    ctx.fillStyle = `rgba(150,180,210,${(0.25 + 0.15*Math.sin(S.time*4)).toFixed(2)})`;
-    ctx.beginPath(); ctx.ellipse(a.x, topY, a.w*0.38, 9, 0, 0, 6.28); ctx.fill();
-    ctx.fillStyle = '#cfd8dc'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(`🪨 ${S.tribute}/20`, a.x, a.y - a.h/2 - 6); ctx.textAlign = 'left';
-  } else if (!S.units.some(u => u.catapult)) {
-    ctx.fillStyle = 'rgba(200,210,220,0.5)'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('제물대', a.x, a.y - a.h/2 - 6); ctx.textAlign = 'left';
+  // 카운터/라벨 (타원 접시 제거 — 직사각형 3단만)
+  if (!S.units.some(u => u.catapult)) {
+    ctx.textAlign = 'center';
+    if (S.tribute > 0) { ctx.fillStyle = '#cfd8dc'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(`🪨 ${S.tribute}/20`, a.x, a.y - a.h/2 - 6); }
+    else { ctx.fillStyle = 'rgba(200,210,220,0.5)'; ctx.font = '11px sans-serif'; ctx.fillText('제물대', a.x, a.y - a.h/2 - 6); }
+    ctx.textAlign = 'left';
   }
   ctx.restore();
 }
