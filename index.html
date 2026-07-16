@@ -887,7 +887,8 @@ function effDmg(u) {
   return u.dmg + per * S.upg[u.race];
 }
 // 📯 콰르텟 공속 오라 적용된 실제 쿨다운 (spdBuff는 update()에서 매 프레임 갱신)
-function effCd(u) { return u.cd * (u.spdBuff || 1) * (S.stimT > 0 ? 0.5 : 1); }
+function isHiddenCombo(u) { return !!(u.gamble || u.junk || u.quartet || u.execute || u.shogun || u.chrono || u.slot || u.joker || u.catapult); } // 히든 조합 유닛 판별
+function effCd(u) { return u.cd * (u.spdBuff || 1) * (S.stimT > 0 ? 0.5 : 1) * (isHiddenCombo(u) ? 1.4286 : 1); } // 히든 조합 유닛 공속 30%↓
 
 const ITEM_META = {
   reroll:  { icon:'🎟️', name:'재변경권',  active:false },
@@ -2095,7 +2096,7 @@ function activateSkill(u) {
 function whirlwindHit(u) {
   const dmg = effDmg(u);
   u.atkAnim = 1;
-  const r = u.range + u.splash, r2 = r * r; // 검을 휘두르는 반경
+  const r = effRange(u) + u.splash, r2 = r * r; // 검을 휘두르는 반경 (히든 유닛 사거리 감소 반영)
   for (const m of S.monsters) { const dx = m.x - u.x, dy = m.y - u.y; if (dx*dx + dy*dy <= r2) dealDamage(m, dmg, u); }
   S.effects.push({ type:'whirl', x: u.x, y: u.y, r, t: 0.22 });
   if (S.monsters.length) sfx('slash');
@@ -4148,7 +4149,7 @@ function updateInfoPanel() {
     (u.tier === 6 ? skillRow(u) : '') +
     (u.chrono ? chronoRow(u) : '') +
     (u.slot ? slotRow(u) : '') +
-    ((!u.miner && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier})</button>` : '') +
+    ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier})</button>` : '') +
     deselBtnHTML();
   wirePriorityButtons(el);
   wireDesel(el);
@@ -4218,6 +4219,7 @@ function wirePriorityButtons(el) {
 }
 function copyUnit(u) {
   if (S.items.copier <= 0 || u.miner) return;
+  if (isHiddenCombo(u)) { addFloat(u.x, u.y - 26, '📑 히든 유닛은 복사 불가!', '#e57373', 1.6); logMsg('📑 히든 조합 유닛은 복사기로 복사할 수 없습니다.'); return; }
   S.items.copier--;
   const rate = u.hero ? 0.5 : 0.7; // 영웅 복사는 더 어렵다
   if (Math.random() >= rate) { addFloat(u.x, u.y - 26, '📑 복사 실패…', '#8d8d8d', 1.4); sfx('leak'); logMsg(`📑 복사 실패! (${u.weapon} · 성공률 ${Math.round(rate*100)}%)`); updateInfoPanel(); return; }
@@ -4558,7 +4560,7 @@ function rollEvent() {
     logMsg(`✨ [이벤트] ${S.event.name} — ${S.event.desc}`);
   } else { S.event = null; S.eventMods = null; }
 }
-function effRange(u) { return u.range * ((S.eventMods && S.eventMods.rangeMul) || 1); }
+function effRange(u) { return u.range * ((S.eventMods && S.eventMods.rangeMul) || 1) * (isHiddenCombo(u) ? 0.8 : 1); } // 히든 조합 유닛 사거리 20%↓
 
 document.getElementById('bSpeed').onclick = () => {
   S.speed = S.speed >= 3 ? 1 : S.speed + 1;
