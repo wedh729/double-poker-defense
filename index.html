@@ -643,7 +643,7 @@ function monsterHP(n) {
   else hp = 14 * Math.pow(1.10, 2) * 1.42 * Math.pow(1.15, n - 3); // 수입 완화에 맞춰 HP 소폭 하향 (base 16→14, 점프 1.5→1.42)
   if (n > 50) hp *= Math.pow(1.05, n - 50);
   if (n > FINAL_ROUND) hp *= Math.pow(2, n - FINAL_ROUND);
-  return Math.max(1, Math.floor(hp * DIFF_MUL));
+  return Math.max(1, Math.floor(hp * DIFF_MUL * 0.7)); // 전체 난이도 30% 하향 (몬스터 HP ×0.7)
 }
 // 몬스터 수: 초반은 ~50에서 완만 증가, 10스테이지부터 2배 (최대 400)
 function mobCount(n) {
