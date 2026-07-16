@@ -550,6 +550,8 @@ const DIG_RATE = 30;             // 광부가 캐는 동안 광산 체력 감소
 const MINER_MAX_LV = 5;          // 광부 업그레이드 최대 레벨
 const PEN = { x: CX, y: CY, w: 264, h: 176 }; // 몬스터 소환장 울타리 (2배 확장 — 몬스터도 2배, 카타르시스 업)
 const ALTAR = { x: CX - PEN.w/2 - 58, y: CY, w: 64, h: 78 }; // 🪨 제물대: 소환장 왼쪽. 하이카드를 바쳐 투석기 완성
+const PLANK_W = 26, PLANK_DEPTH = 36; // 🪵 나무판자: 소환장 중앙 하단 발판(하이카드 크기). 유닛이 올라가 소환장 안을 직접 타격(대검용)
+function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > CY + PEN.h/2 - PLANK_DEPTH && y < CY + PEN.h/2 + 8; }
 // 몬스터 크기 (2배 스케일) — drawMonster/deathPop 공용
 // 크기: 밴드 진행도(esc)만큼 커진다 (③ 시각적 난이도 신호)
 function monSize(m) { return (m.boss ? 52 : 19) * (m.small ? 0.6 : 1) * (1 + (m.esc || 0) * 0.32); }
@@ -893,6 +895,7 @@ const ITEM_META = {
   acid:    { icon:'🧪', name:'염산병',     active:true },
   bombard: { icon:'💣', name:'융단폭격',   active:true },
   revive:  { icon:'🔄', name:'부활권',     active:false },
+  plank:   { icon:'🪵', name:'나무판자',   active:true },
 };
 function spawnItemUnit(key) {
   const meta = ITEM_META[key];
@@ -1023,7 +1026,7 @@ function endWave() {
 
 // 울타리 충돌: 안에 들어오면 가까운 가장자리로 밀어낸다 (돌격 스킬 중인 유닛은 예외)
 function pushOutOfPen(u) {
-  if (u.inPen) return;
+  if (u.inPen || onPlank(u.x, u.y)) return; // 돌격 중이거나 나무판자 위면 소환장 안 허용
   const hw = PEN.w / 2 + 10, hh = PEN.h / 2 + 10;
   const dx = u.x - CX, dy = u.y - CY;
   if (Math.abs(dx) < hw && Math.abs(dy) < hh) {
@@ -1034,6 +1037,7 @@ function pushOutOfPen(u) {
 }
 // 이동 목표가 울타리 안이면 바깥 가장자리로 보정
 function clampTargetPos(x, y) {
+  if (onPlank(x, y)) return { x, y }; // 🪵 나무판자 위는 이동 목표 허용(소환장 안이어도)
   const hw = PEN.w / 2 + 14, hh = PEN.h / 2 + 14;
   const dx = x - CX, dy = y - CY;
   if (Math.abs(dx) >= hw || Math.abs(dy) >= hh) return { x, y };
@@ -1325,6 +1329,7 @@ function updateAltar() {
     S.units = S.units.filter(u => u !== it);
     for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 50 + Math.random()*80; S.parts.push({ x: ALTAR.x, y: ALTAR.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 20, t: 0.4, r: 1.5 + Math.random()*2, c: '#ffd166' }); }
     if (it.item === 'revive') { S.reviveArmed = true; addFloat(ALTAR.x, ALTAR.y - 44, '🔄 부활 봉인!', '#43a047', 2); sfx('hero'); logMsg('🔄 부활권 봉인 — 이번 라운드 사망 시 부활! (무사 클리어 시 소멸)'); }
+    else if (it.item === 'plank') { S.plank = true; addFloat(CX, CY + PEN.h/2 + 22, '🪵 나무판자 설치!', '#a1887f', 2); sfx('pick'); logMsg('🪵 나무판자 설치 — 소환장 중앙 하단에 발판! 대검(풀하우스)을 올려보세요.'); }
     else { ({ timestop: useTimestop, stimpack: useStimpack, acid: useAcid, bombard: useBombard })[it.item](); }
     updateInfoPanel();
   }
@@ -2258,6 +2263,7 @@ function draw() {
   drawBarrack();
   drawPortal();
   drawAltar();
+  if (S.plank) drawPlank();
   drawEnemyPortal(); // 소환장 안 적 포탈 (몹보다 뒤)
   for (const p of S.acidPools) {
     const al = Math.min(1, p.t) * (0.28 + 0.1*Math.sin(S.time*6));
@@ -2607,6 +2613,21 @@ function drawAltar() {
     else { ctx.fillStyle = 'rgba(200,210,220,0.5)'; ctx.font = '11px sans-serif'; ctx.fillText('제물대', a.x, a.y - a.h/2 - 6); }
     ctx.textAlign = 'left';
   }
+  ctx.restore();
+}
+// 🪵 나무판자: 소환장 중앙 하단 발판 (유닛이 올라가 소환장 안을 직접 타격)
+function drawPlank() {
+  const x = CX, yTop = CY + PEN.h/2 - PLANK_DEPTH, h = PLANK_DEPTH + 8, w = PLANK_W;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(x, yTop + h, w*0.6, 5, 0, 0, 6.28); ctx.fill();
+  const g = ctx.createLinearGradient(x - w/2, 0, x + w/2, 0);
+  g.addColorStop(0, '#a9794a'); g.addColorStop(0.5, '#c69a63'); g.addColorStop(1, '#8a5f38');
+  ctx.fillStyle = g; ctx.strokeStyle = '#5c3d22'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.rect(x - w/2, yTop, w, h); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(92,61,34,0.5)'; ctx.lineWidth = 1;
+  for (let i = 1; i < 3; i++) { const lx = x - w/2 + w*i/3; ctx.beginPath(); ctx.moveTo(lx, yTop+2); ctx.lineTo(lx, yTop+h-2); ctx.stroke(); }
+  ctx.fillStyle = '#4a4a4a';
+  for (const ny of [yTop+4, yTop+h-4]) { ctx.beginPath(); ctx.arc(x - w/2+4, ny, 1.4, 0, 6.28); ctx.fill(); ctx.beginPath(); ctx.arc(x + w/2-4, ny, 1.4, 0, 6.28); ctx.fill(); }
   ctx.restore();
 }
 function drawCastle() {
@@ -4406,7 +4427,7 @@ function casMenu() {
   CB.querySelector('[data-go="lotto"]').onclick = () => casLotto();
   CB.querySelector('[data-go="item"]').onclick = () => { if (S.chips <= 0) return; casItem(); };
 }
-const ITEM_POOL = [ ['reroll',30], ['timestop',15], ['stimpack',15], ['acid',15], ['bombard',15], ['revive',10] ];
+const ITEM_POOL = [ ['reroll',28], ['timestop',14], ['stimpack',14], ['acid',14], ['bombard',13], ['revive',9], ['plank',8] ];
 function rollItem() { let s=ITEM_POOL.reduce((a,b)=>a+b[1],0), r=Math.random()*s; for(const [k,w] of ITEM_POOL){ r-=w; if(r<0) return k; } return 'reroll'; }
 function casItem() {
   if (S.chips <= 0) return;
