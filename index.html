@@ -1524,7 +1524,7 @@ function update(dt) {
     }
     if (q.bossLeft > 0 && S.timer < WAVE_TIME - 5) {
       q.bossLeft = 0;
-      spawnMonster(q.hp * 45, true);
+      spawnMonster(q.hp * 15, true); // 보스 HP 1/3로 하향 (×45 → ×15)
       logMsg('👹 보스 등장!');
       sfx('boss');
     }
