@@ -3400,8 +3400,23 @@ function drawUnit(u) {
   if (u.hidden || u.ace) { // 에이스·에이스 영웅: ♠ 유지
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
     ctx.fillText('♠', u.x, u.y + 4);
-  } else if (u.joker) { // 🃏 조커: 다이아 대신 조커 표시
-    ctx.font = '14px sans-serif'; ctx.fillText('🃏', u.x, u.y + 5);
+  } else if (u.joker) { // 🃏 조커: 광대 얼굴 (좌빨강·우검정 모자 + 주황 방울 + 아이마스크 + 빨간 미소)
+    const jx = u.x, jy = u.y + 1;
+    ctx.fillStyle = '#d92b2b'; // 왼쪽 뿔 (빨강)
+    ctx.beginPath(); ctx.moveTo(jx, jy - 3); ctx.quadraticCurveTo(jx - 4, jy - 12, jx - 9, jy - 8); ctx.quadraticCurveTo(jx - 5, jy - 4.5, jx - 4.5, jy - 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#2e3440'; // 오른쪽 뿔 (검정)
+    ctx.beginPath(); ctx.moveTo(jx, jy - 3); ctx.quadraticCurveTo(jx + 4, jy - 12, jx + 9, jy - 8); ctx.quadraticCurveTo(jx + 5, jy - 4.5, jx + 4.5, jy - 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#f39c12'; // 방울 2개
+    ctx.beginPath(); ctx.arc(jx - 9, jy - 8.5, 1.7, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(jx + 9, jy - 8.5, 1.7, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#2e3440'; // 아이마스크
+    ctx.beginPath(); ctx.ellipse(jx, jy + 1.5, 6.5, 3, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#fff'; // 눈구멍
+    ctx.beginPath(); ctx.ellipse(jx - 2.8, jy + 1.5, 1.7, 1.1, 0, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(jx + 2.8, jy + 1.5, 1.7, 1.1, 0, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = '#d92b2b'; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; // 미소
+    ctx.beginPath(); ctx.arc(jx, jy + 4.5, 3, 0.35, Math.PI - 0.35); ctx.stroke();
+    ctx.lineCap = 'butt'; ctx.lineWidth = 1;
   } else if (!u.miner) {
     ctx.fillStyle = raceC; ctx.font = 'bold 10px sans-serif';
     ctx.fillText(RACES[u.race].suit, u.x, u.y - 1);
