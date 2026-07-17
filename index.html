@@ -221,7 +221,7 @@
   /* 교환 완료: 뒤집힌 파란 카드(뒷면)가 뒤에 깔리고 새 카드가 겹쳐 올라온 모양 */
   .card.swapped { cursor: default; }
   .card.swapped::before { content: ''; position: absolute; inset: 0; z-index: -1; /* 음수 z-index = 카드 배경 뒤에 그려짐 */
-    transform: translate(13px, 15px) rotate(6deg); border-radius: 11px;
+    transform: translate(12px, 14px); border-radius: 11px; /* 회전 없이 반듯하게, 넉넉히 보이게 */
     background:
       radial-gradient(rgba(255,255,255,0.22) 1.3px, transparent 1.7px) 2px 2px/7px 7px,
       repeating-linear-gradient(45deg, rgba(255,255,255,0.13) 0 2px, transparent 2px 6px),
