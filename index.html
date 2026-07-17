@@ -875,7 +875,8 @@ function updateMiner(u, dt) {
 }
 // 업그레이드 레벨당 공격력 보너스 — 다수 타격 유닛은 대폭 축소(밸런스)
 // 단일 +3 / 스플래쉬 +0.6 / 소환장 전체타격(탱크·핵) +0.3
-function upgPer(u) { return u.atk === 'pen' ? 0.3 : (u.splash > 0 ? 0.6 : 3); }
+// 업글 보정(발당) = 계수 × 무기 공속(cd) → 렙당 DPS 증가가 전 무기 동일 (기존 발당 고정은 기관총·표창 등 빠른 무기가 압도적으로 유리했음)
+function upgPer(u) { return (u.atk === 'pen' ? 0.15 : (u.splash > 0 ? 0.55 : 3.6)) * u.cd; }
 // 합성 재료 수 = 업글 계수 (재료 수만큼 업글 보정도 커야 "합치면 손해" 역전이 없다)
 function fuseCount(u) {
   if (u.super) return 25;      // 슈퍼영웅 = 기본 25기분
@@ -4394,7 +4395,7 @@ function upgItemsHTML() {
     `<div class="rpgItem" style="border-left:5px solid ${r.color}">
       <div class="rpgIcon" style="color:${r.color}">${r.suit}</div>
       <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
-        <span class="desc">단일 +${(S.upg[i]*3).toFixed(0)} / 스플래쉬 +${(S.upg[i]*0.6).toFixed(1)} / 전체 +${(S.upg[i]*0.3).toFixed(1)}</span></div>
+        <span class="desc">초당 공격력: 단일 +${(S.upg[i]*3.6).toFixed(0)} · 스플래시 +${(S.upg[i]*0.55).toFixed(1)}/마리 · 전체 +${(S.upg[i]*0.15).toFixed(1)}/마리</span></div>
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
     </div>`).join('') +
     '<div class="rpgGuide">레벨당: 단일 <b>+3</b> / 스플래쉬 <b>+0.6</b> / 전체타격 <b>+0.3</b>.<br>♠ 에이스는 상위 2종족 합산.</div>';
