@@ -4891,7 +4891,7 @@ function renderPoker(spin) {
       el.onclick = () => swapCard(h, i);
       const rb = el.querySelector('.reswap');
       if (rb) rb.onclick = (e) => { e.stopPropagation(); ticketReswap(h, i); };
-      if (spin && spin.h === h && spin.i === i) el.classList.add('spin');
+      if (spin && spin.h === h && spin.i === i) { el.classList.add('spin'); el.addEventListener('animationend', () => el.classList.remove('spin'), { once: true }); } // 애니 끝나면 spin 제거 — 안 그러면 뒷면(::before)이 다음 리렌더까지 안 보임
       cardsRow.appendChild(el);
     });
     row.appendChild(label);
