@@ -806,11 +806,11 @@ function spawnHero(tier, race, x, y, keyBonus, sup) {
     cd: (h.cd !== undefined ? h.cd : w.cd * (h.cdMul || 1)) * superCd,
     range: pick('range', w.range) + (sup ? 25 : 0),
     splash: pick('splash', w.splash || 0) * (sup ? 1.25 : 1),
-    bounce: pick('bounce', w.bounce || 0),
+    bounce: Math.round(pick('bounce', w.bounce || 0) * (sup ? 2.5 : 1)), // 슈퍼: 특수효과 ×2.5 (팅김 7→18)
     atk: pick('atk', w.atk),
     proj: pick('proj', w.proj || null),
     vis: pick('vis', w.vis || null),
-    pierce: h.pierce || 0, shards: h.shards || 0, shardFrac: h.shardFrac || 0,
+    pierce: Math.round((h.pierce || 0) * (sup ? 2.5 : 1)), shards: Math.round((h.shards || 0) * (sup ? 2.5 : 1)), shardFrac: h.shardFrac || 0, // 관통 2→5, 파편 5→13
     weapon: (sup ? '슈퍼 ' : '') + '영웅 ' + (h.name || w.name),
     cool: 0, selected: true, walk: 0, speed: 85,
   });
@@ -1621,6 +1621,16 @@ function update(dt) {
           const nn = big ? 46 : 24, c = big ? '#ff5252' : '#ffb74d';
           for (let i = 0; i < nn; i++) { const a = Math.random()*6.28, v = 110 + Math.random()*230; S.parts.push({ x: p.ex, y: p.ey, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.55, r: 2 + Math.random()*4, c }); }
           for (const m of S.monsters) dealDamage(m, p.dmg, p.owner);
+          if (p.cluster) { // 💥 슈퍼 탱크 2단 폭탄: 파편 8개가 사방으로 흩어져 한 번 더 폭발
+            for (let i = 0; i < 8; i++) {
+              const a2 = i / 8 * 6.28 + Math.random() * 0.5, rr = 40 + Math.random() * (PEN.w / 2 - 40);
+              const fx = Math.max(CX - PEN.w/2 + 14, Math.min(CX + PEN.w/2 - 14, p.ex + Math.cos(a2) * rr));
+              const fy = Math.max(CY - PEN.h/2 + 14, Math.min(CY + PEN.h/2 - 14, p.ey + Math.sin(a2) * rr * 0.66));
+              S.projs.push({ kind: 'bombthrow', deliver: 'area', owner: p.owner, mini: true,
+                sx: p.ex, sy: p.ey, x: p.ex, y: p.ey, ex: fx, ey: fy,
+                t: 0, dur: 0.35 + Math.random() * 0.2, dmg: p.dmg * 0.35, splash: 60, spin: 0, ang: 0 });
+            }
+          }
         } else { // 범위 폭발
           if (p.boulder) sfx('thud'); // 🪨 투석기: 묵직한 착탄음
           S.effects.push({ type:'boom', x: p.ex, y: p.ey, r: p.splash, t: 0.3 });
@@ -1786,7 +1796,7 @@ function fireAt(u, target) {
       break;
     case 'pen': { // 탱크 포탄 / 핵폭탄: 소환장 중앙으로 포물선 발사 → 착탄 시 전체 타격
       const nuke = (u.vis === 'nuke');
-      S.projs.push({ kind: 'shell', deliver: 'pen', nuke, owner: u,
+      S.projs.push({ kind: 'shell', deliver: 'pen', nuke, owner: u, cluster: u.super && !nuke, // 💥 슈퍼 탱크: 2단 폭탄
         sx: m.x, sy: m.y, x: m.x, y: m.y, ex: CX, ey: CY,
         t: 0, dur: nuke ? 0.75 : 0.5, dmg, spin: 0 });
       break;
