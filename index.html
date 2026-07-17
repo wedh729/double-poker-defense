@@ -3297,7 +3297,7 @@ function drawBossFace(m, sz) {
 }
 function drawUnit(u) {
   if (u.item) { drawItemUnit(u); return; }
-  const raceC = u.hidden ? '#e91e8c' : (u.miner ? (u.sminer ? '#e6a817' : u.hminer ? '#c9a227' : '#8d8d8d') : RACES[u.race].color);
+  const raceC = (u.hidden || u.ace) ? '#e91e8c' : (u.miner ? (u.sminer ? '#e6a817' : u.hminer ? '#c9a227' : '#8d8d8d') : RACES[u.race].color); // 에이스 영웅(u.ace)도 핑크 유지
   // 선택 표시 + 사거리
   if (u.selected) {
     ctx.strokeStyle = 'rgba(91,72,208,0.35)';
@@ -3372,9 +3372,9 @@ function drawUnit(u) {
   ctx.stroke();
   // 몸통 (좌우 그라데이션 셰이딩 + 티어별 모양)
   ctx.save();
-  if (u.hidden) ctx.drawImage(glowSprite('ace', 'rgba(233,30,140,0.45)', 'rgba(233,30,140,0)'), u.x - 24, u.y - 24, 48, 48);
+  if (u.hidden || u.ace) ctx.drawImage(glowSprite('ace', 'rgba(233,30,140,0.45)', 'rgba(233,30,140,0)'), u.x - 24, u.y - 24, 48, 48);
   else if (u.tier >= 6 && !u.miner) ctx.drawImage(glowSprite('t' + raceC, hexGlow(raceC, 0.4), hexGlow(raceC, 0)), u.x - 20, u.y - 20, 40, 40);
-  const base = u.hidden ? '#2a2340' : (u.sminer ? '#ffe9ad' : '#ffffff');
+  const base = (u.hidden || u.ace) ? '#2a2340' : (u.sminer ? '#ffe9ad' : '#ffffff'); // 에이스 영웅도 다크 바디
   const grad = ctx.createLinearGradient(u.x - B.w/2, 0, u.x + B.w/2, 0);
   grad.addColorStop(0, shade(base, 18)); grad.addColorStop(1, shade(base, -22));
   ctx.fillStyle = grad; ctx.strokeStyle = raceC; ctx.lineWidth = u.hero ? 3 : 2.5;
@@ -3396,7 +3396,7 @@ function drawUnit(u) {
   ctx.lineWidth = 1;
   // 몸통 안: 무늬 + 라벨 (광부는 표기 없음 — 곡괭이만)
   ctx.textAlign = 'center';
-  if (u.hidden) {
+  if (u.hidden || u.ace) { // 에이스·에이스 영웅: ♠ 유지
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
     ctx.fillText('♠', u.x, u.y + 4);
   } else if (u.joker) { // 🃏 조커: 다이아 대신 조커 표시
@@ -3649,7 +3649,7 @@ function drawWeapon(u, x, y) {
   }
   const nm = u.weapon, has = s => nm.includes(s);
   // 히든/에이스는 기본 무기와 같은 모양이되 분홍/금색으로 (별 대신 실제 무기 + 오라는 몸통에서)
-  const wc = u.hidden ? '#e91e8c' : (u.hero || u.tier >= 7 ? '#c9a227' : '#666');
+  const wc = (u.hidden || u.ace) ? '#e91e8c' : (u.hero || u.tier >= 7 ? '#c9a227' : '#666'); // 에이스 영웅 무기도 핑크
   ctx.strokeStyle = wc; ctx.fillStyle = wc; ctx.lineWidth = 1.8;
   if (has('갬블러')) { // 🎲 주사위 (히든 영웅)
     ctx.save(); ctx.translate(x + 1, y); ctx.rotate(u.atkAnim ? -0.4 : -0.15);
