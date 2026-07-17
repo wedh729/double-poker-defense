@@ -365,6 +365,7 @@
     <div id="toolbar">
       <div class="tbGroup" title="게임 상점">
         <button class="shopIcon" data-shop="book" title="족보">📖</button>
+        <button class="shopIcon" id="bSandbox" data-shop="sandbox" title="샌드박스 소환" style="display:none">🧪</button>
       </div>
       <div class="tbGroup" title="시스템">
         <button class="shopIcon" id="bMusic" title="배경음악 켜기/끄기">🎵</button>
@@ -392,6 +393,7 @@
   <div id="modeRow" style="display:flex;gap:16px">
     <button class="modeBtn" id="btnSolo">🎮 혼자하기</button>
     <button class="modeBtn" disabled title="멀티플레이는 준비 중입니다!">👥 같이하기 (준비 중)</button>
+    <button class="modeBtn" id="btnSandbox" style="background:#4a3d70">🧪 샌드박스<br><small style="font-size:11px">모든 유닛 실험</small></button>
   </div>
   <div id="diffRow" style="display:none;flex-direction:column;align-items:center;gap:12px">
     <div style="font-size:15px;color:#d9d2f5">난이도를 선택하세요</div>
@@ -605,6 +607,7 @@ function reset() {
     stats: {}, // 🏆 무기별 딜/킬 통계 (게임오버 화면용)
     tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 20기 → 완성, 라운드 재시작 시 리셋)
     bird: null, birdTimer: 250 + Math.random() * 200, // 🐦 힌트 새 / 다음 스폰까지 남은 초
+    sandbox: false,
   };
   dctx.clearRect(0, 0, 940, 500); // 이전 판 얼룩 제거
   S.mineMax = S.mineHp = mineHP(1);
@@ -2026,6 +2029,7 @@ function addFloat(x, y, text, color, dur) {
 }
 // 로컬 명예의 전당: 최고 도달 스테이지를 브라우저에 저장
 function recordBest(stage) {
+  if (S && S.sandbox) { try { return parseInt(localStorage.getItem('dpd_best') || '0') || 0; } catch (e) { return 0; } }
   let best = 0;
   try { best = parseInt(localStorage.getItem('dpd_best') || '0') || 0; } catch (e) {}
   if (stage > best) { best = stage; try { localStorage.setItem('dpd_best', String(best)); } catch (e) {} }
@@ -2036,6 +2040,7 @@ function hiddenSeen(id) {
   try { return !!JSON.parse(localStorage.getItem('dpd_hidden') || '{}')[id]; } catch (e) { return false; }
 }
 function markHidden(id) {
+  if (S && S.sandbox) return;
   try {
     const d = JSON.parse(localStorage.getItem('dpd_hidden') || '{}');
     if (!d[id]) {
@@ -2050,6 +2055,7 @@ function achvSeen(id) {
   try { return !!JSON.parse(localStorage.getItem('dpd_achv') || '{}')[id]; } catch (e) { return false; }
 }
 function markAchv(id) {
+  if (S && S.sandbox) return;
   try {
     const d = JSON.parse(localStorage.getItem('dpd_achv') || '{}');
     if (!d[id]) {
@@ -2064,6 +2070,7 @@ function monSeen(i) {
   try { return !!JSON.parse(localStorage.getItem('dpd_mondex') || '{}')[i]; } catch (e) { return false; }
 }
 function markMon(i) {
+  if (S && S.sandbox) return;
   try {
     const d = JSON.parse(localStorage.getItem('dpd_mondex') || '{}');
     if (!d[i]) {
@@ -4557,6 +4564,43 @@ function renderShop() {
        5라운드마다 <b>더블 포커</b> — 두 족보가 일치하면 <b style="color:#e91e8c">♠ 에이스</b>,
        족보에 <b>숫자까지</b> 일치하면 <b style="color:#ff2d95">♠♠ 슈퍼에이스</b>!</div>` +
       hiddenDexHTML() + achvDexHTML() + monDexHTML();
+  } else if (openShop === 'sandbox') {
+    title.textContent = '🧪 샌드박스 소환';
+    const grid = (label, inner) => `<div class="rpgGuide" style="margin-top:10px">${label}</div><div style="display:flex;flex-wrap:wrap;gap:4px">${inner}</div>`;
+    const btn = (idx, label) => `<button class="shopBtn" data-sb="${idx}" style="width:auto;flex:0 0 auto">${label}</button>`;
+    const units = HAND_NAMES.map((n, t) => btn('u' + t, `${n}(${WEAPONS[t].name})`)).join('');
+    const heroes = HAND_NAMES.map((n, t) => btn('h' + t, `${n} 영웅`)).join('');
+    const supers = HAND_NAMES.map((n, t) => btn('sh' + t, `${n} 슈퍼영웅`)).join('');
+    const aces = HAND_NAMES.map((n, t) => btn('a' + t, `${n} 에이스`)).join('');
+    const superAces = HAND_NAMES.map((n, t) => btn('sa' + t, `${n} 슈퍼에이스`)).join('');
+    const hiddenKeys = Object.keys(HIDDEN_META);
+    const hiddens = hiddenKeys.map(k => btn('hid_' + k, `${HIDDEN_META[k][0]} ${HIDDEN_META[k][1]}`)).join('');
+    const miners = btn('miner', '⛏️ 광부') + btn('sminer', '⛏️ 슈퍼광부');
+    const itemKeys = ['timestop', 'stimpack', 'acid', 'bombard', 'revive', 'plank'];
+    const items = itemKeys.map(k => btn('it_' + k, `${ITEM_META[k].icon} ${ITEM_META[k].name}`)).join('');
+    const misc = btn('gold', '💰 골드 +100k') + btn('chip', '🎰 칩 +10');
+    el.innerHTML = grid('⚔️ 일반 유닛', units) + grid('⭐ 영웅', heroes) + grid('🌟 슈퍼영웅', supers) +
+      grid('♠ 에이스', aces) + grid('♠♠ 슈퍼에이스', superAces) + grid('🀄 히든', hiddens) +
+      grid('⛏️ 광부', miners) + grid('🎒 아이템 유닛', items) + grid('🛠️ 기타', misc);
+    el.querySelectorAll('[data-sb]').forEach(b => b.onclick = () => {
+      const v = b.dataset.sb;
+      if (v.startsWith('sa')) spawnUnit(+v.slice(2), RACE_OF_RANK[+v.slice(2)], true, 14, true);
+      else if (v.startsWith('a')) spawnUnit(+v.slice(1), RACE_OF_RANK[+v.slice(1)], true, 14);
+      else if (v.startsWith('sh')) spawnHero(+v.slice(2), RACE_OF_RANK[+v.slice(2)], CX - 40, CY + 150, 1.5, true);
+      else if (v.startsWith('hid_')) {
+        const k = v.slice(4), pos = k === 'catapult' ? [CX - 200, CY] : [CX - 40, CY + 150];
+        ({ gamble: spawnGambler, junk: spawnJunk, quartet: spawnQuartet, execute: spawnGuillotine,
+          shogun: spawnShogun, chrono: spawnChrono, slot: spawnSlot, joker: spawnJoker, catapult: spawnCatapult })[k](...pos);
+      }
+      else if (v.startsWith('h')) spawnHero(+v.slice(1), RACE_OF_RANK[+v.slice(1)], CX - 40, CY + 150, 1);
+      else if (v.startsWith('u')) spawnUnit(+v.slice(1), RACE_OF_RANK[+v.slice(1)], false, 14);
+      else if (v === 'miner') spawnMiner();
+      else if (v === 'sminer') spawnSuperMiner();
+      else if (v.startsWith('it_')) spawnItemUnit(v.slice(3));
+      else if (v === 'gold') S.gold += 100000;
+      else if (v === 'chip') S.chips += 10;
+      updateInfoPanel();
+    });
   }
 }
 // 히든 조합 도감 섹션 HTML (발견한 것만 정체 공개, 나머지는 ❓ + 수수께끼 힌트)
@@ -5059,8 +5103,19 @@ document.querySelectorAll('.diffBtn').forEach(b => b.onclick = () => {
   document.getElementById('startOverlay').style.display = 'none';
   reset();
   S.paused = false;
+  document.getElementById('bSandbox').style.display = 'none';
   logMsg(`🎮 난이도 [${b.textContent.trim()}] — 몬스터 체력 ×${DIFF_MUL}`);
 });
+document.getElementById('btnSandbox').onclick = () => {
+  DIFF_MUL = 1; DIFF_NAME = '샌드박스';
+  document.getElementById('startOverlay').style.display = 'none';
+  reset();
+  S.sandbox = true; S.gold = 999999; S.chips = 99;
+  S.items.reroll = 9; S.items.copier = 9;
+  S.paused = false;
+  document.getElementById('bSandbox').style.display = '';
+  logMsg('🧪 샌드박스 모드 — 골드·칩 무제한, 🧪 버튼으로 모든 유닛 소환! (기록·업적 저장 안 됨)');
+};
 reset();
 S.paused = true; // 시작 화면 동안 정지 (배경은 계속 그려짐)
 requestAnimationFrame(frame);
