@@ -1465,7 +1465,7 @@ function update(dt) {
     if (u.skillT > 0) {
       u.skillT -= dt; u.inPen = true;
       u.tx = CX + u.jx * 0.25; u.ty = CY + u.jy * 0.25;
-      if (u.skillT <= 0) { u.skillT = 0; u.inPen = false; u.tx = CX - 40; u.ty = CY + 150; u.skillCd = 300; }
+      if (u.skillT <= 0) { u.skillT = 0; u.inPen = false; u.tx = u.homeX != null ? u.homeX : CX - 40; u.ty = u.homeY != null ? u.homeY : CY + 150; u.skillCd = 300; } // 출발했던 자리로 복귀
     }
     if (u.chronoCd > 0) u.chronoCd = Math.max(0, u.chronoCd - dt); // ⏳ 시간술사 스킬 쿨
     if (u.slotCd > 0) u.slotCd = Math.max(0, u.slotCd - dt);       // 🎰 슬롯머신 스킬 쿨
@@ -1566,7 +1566,7 @@ function update(dt) {
     u.cool -= dt;
     // 돌격 스킬 발동 중: 소환장 전체를 휩쓴다 (회오리는 평소 공속의 2배)
     if (u.skillT > 0) {
-      if (u.cool <= 0 && !u.moving) { u.cool = effCd(u) * 0.5; whirlwindHit(u); }
+      if (u.cool <= 0 && !u.moving) { u.cool = effCd(u); whirlwindHit(u); } // 돌격 중에도 평소 공속 그대로 (기존 2배 버프 제거)
       continue;
     }
     // 광석 방 안이면 몬스터 대신 광석을 때린다 (정원 내 자격 유닛만)
@@ -2088,6 +2088,7 @@ function spawnSuperMiner() {
 // 풀하우스 돌격 스킬: 발동 (소환장 진입 + 10초 전체 타격)
 function activateSkill(u) {
   if (u.tier !== 6 || (u.skillCd || 0) > 0 || (u.skillT || 0) > 0) return;
+  u.homeX = u.x; u.homeY = u.y; // 돌격 끝나면 원래 자리로 복귀
   u.skillT = 5;
   logMsg(`⚔️ ${u.weapon} 돌격! 5초간 소환장으로 뛰어들어 칼을 휘두릅니다!`);
   addFloat(u.x, u.y - 28, '⚔️ 돌격!', '#c0392b', 1.6);
