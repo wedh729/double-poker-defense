@@ -550,7 +550,7 @@ const DIG_RATE = 30;             // 광부가 캐는 동안 광산 체력 감소
 const MINER_MAX_LV = 5;          // 광부 업그레이드 최대 레벨
 const PEN = { x: CX, y: CY, w: 264, h: 176 }; // 몬스터 소환장 울타리 (2배 확장 — 몬스터도 2배, 카타르시스 업)
 const ALTAR = { x: CX - PEN.w/2 - 58, y: CY, w: 64, h: 78 }; // 🪨 제물대: 소환장 왼쪽. 하이카드를 바쳐 투석기 완성
-const PLANK_W = 26, PLANK_DEPTH = 36; // 🪵 나무판자: 소환장 중앙 하단 발판(하이카드 크기). 유닛이 올라가 소환장 안을 직접 타격(대검용)
+const PLANK_W = 39, PLANK_DEPTH = 36; // 🪵 나무판자: 소환장 중앙 하단 발판. 가로 1.5배(26→39) — 대검 2기가 낑겨 들어갈 폭. 유닛이 올라가 소환장 안을 직접 타격
 function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > CY + PEN.h/2 - PLANK_DEPTH && y < CY + PEN.h/2 + 8; }
 // 몬스터 크기 (2배 스케일) — drawMonster/deathPop 공용
 // 크기: 밴드 진행도(esc)만큼 커진다 (③ 시각적 난이도 신호)
