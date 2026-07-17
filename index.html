@@ -535,7 +535,7 @@ const ORES = [
 ];
 const MINE_TIME = 5;              // 광부 기본 채굴 시간(초)
 const MINER_SPEED = 42;          // 광부 기본 이동속도 (느릿느릿)
-const MINER_LOAD = 25;           // 배달 1회 기본 골드
+const MINER_LOAD = 30;           // 배달 1회 기본 골드 (킬↔광부 리밸런스로 +5)
 const DIG_RATE = 30;             // 광부가 캐는 동안 광산 체력 감소/초
 const MINER_MAX_LV = 5;          // 광부 업그레이드 최대 레벨
 const PEN = { x: CX, y: CY, w: 264, h: 176 }; // 몬스터 소환장 울타리 (2배 확장 — 몬스터도 2배, 카타르시스 업)
@@ -1720,7 +1720,7 @@ function update(dt) {
     return true;
   });
   // 사망 처리 + 폭발 (몹 보상: 기존의 1/10로 축소)
-  const killGold = Math.max(1, Math.round(S.round * 0.05)) * ((S.eventMods && S.eventMods.killMul) || 1) * (S.feverT > 0 ? 2 : 1);
+  const killGold = Math.max(1, Math.round(S.round * 0.04)) * ((S.eventMods && S.eventMods.killMul) || 1) * (S.feverT > 0 ? 2 : 1);
   const newborns = [];
   const junkUnits = S.units.filter(u => u.junk); // 💰 고물상: 반경 10px 내 처치 골드 ×1.2
   S.monsters = S.monsters.filter(m => {
@@ -2004,7 +2004,7 @@ function burstJuice(e) {
 function mineReward() {
   // 겹이 깊어질수록 배달 보너스가 기하급수로 커진다 (+3, +5, +6, +8, +11 … 10겹째 +45)
   // 광산 HP도 ×1.4씩 커서 깊이 파려면 시간이 필요 → "포커 시간을 벌며 채굴하는 운영"이 수익의 축
-  const inc = Math.ceil(2.2 * Math.pow(1.30, S.mineLayer - 1)); // 후반 인플레 완화 (기존 3×1.35 → 2.2×1.30, 10겹 48→24)
+  const inc = Math.ceil(3 * Math.pow(1.33, S.mineLayer - 1)); // 킬↔광부 리밸런스: 후반 골드를 광부 쪽으로 (킬 0.05→0.04와 세트)
   S.mineBonus += inc;
   S.mineLayer++;
   logMsg(`⛰️💥 광산 ${S.mineLayer - 1}겹 파괴! 채굴량 +${inc} — 이제 배달마다 골드 +${S.mineBonus}`);
