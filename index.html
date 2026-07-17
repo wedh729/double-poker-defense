@@ -600,6 +600,8 @@ function reset() {
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
     stimT: 0, acidPools: [],  // 💉 스팀팩 남은시간 / 🧪 염산 장판
     reviveArmed: false, // 🔄 부활권 봉인 여부
+    feverT: 0, feverUsed: false, // 🔥 피버 타임 남은시간 / 이번 웨이브 발동 여부
+    stats: {}, // 🏆 무기별 딜/킬 통계 (게임오버 화면용)
     tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 20기 → 완성, 라운드 재시작 시 리셋)
     bird: null, birdTimer: 250 + Math.random() * 200, // 🐦 힌트 새 / 다음 스폰까지 남은 초
   };
@@ -792,6 +794,7 @@ function spawnUnit(rank, race, hidden, keyRank, superAce) {
     cool: 0, selected: false, walk: 0, speed: 85,
   });
   addFloat(x, y - 24, superAce ? '♠♠ ' + w.name : hidden ? '♠ ' + w.name : rankLabel(kr) + ' ' + w.name, superAce ? '#ff2d95' : hidden ? '#e91e8c' : RACES[race].color, 1.4);
+  if (hidden) { markAchv('ace'); if (superAce) markAchv('super_ace'); }
 }
 function spawnHero(tier, race, x, y, keyBonus, sup) {
   const w = WEAPONS[tier], h = w.hero || {};
@@ -818,6 +821,7 @@ function spawnHero(tier, race, x, y, keyBonus, sup) {
   });
   addFloat(x, y - 28, sup ? '🌟 슈퍼영웅 강림! 🌟' : '⚡ 영웅 탄생! ⚡', sup ? '#ff6b9d' : '#c9a227', 2.4);
   sfx('hero');
+  markAchv(sup ? 'first_super' : 'first_hero');
 }
 function spawnMiner() {
   const x = HOUSE.x + 30 + Math.random() * 20, y = HOUSE.y + 40;
@@ -917,6 +921,7 @@ function useAcid() { // 소환장 중앙에 염산 장판 (5초 도트)
 function startWave() {
   S.phase = 'wave';
   S.timer = WAVE_TIME;
+  S.feverUsed = false;
   const em = S.eventMods || {};
   const hp = Math.max(1, Math.floor(monsterHP(S.round) * (em.hpMul || 1)));
   const count = Math.max(1, Math.floor(mobCount(S.round) * (em.countMul || 1)));
@@ -990,13 +995,20 @@ function endWave() {
     if (S.reviveArmed) { // 🔄 부활권 봉인: 사망 대신 소모하고 부활
       S.reviveArmed = false; S.life = 10;
       logMsg('🔄✨ 부활권 발동! 목숨 10으로 부활!'); addFloat(CX, CY, '🔄 부활!!', '#43a047', 2.5); sfx('hero');
+      markAchv('revive');
     } else {
       S.phase = 'gameover';
       const best = recordBest(S.round);
       const isNew = S.round >= best;
+      const fmt = v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(1)+'k' : Math.round(v);
+      const top = Object.entries(S.stats).sort((a,b) => b[1].dmg - a[1].dmg).slice(0, 6);
+      const maxD = top.length ? top[0][1].dmg : 1;
+      const statsHTML = top.length ? `<div style="margin-top:12px;text-align:left;font-size:12px"><b style="color:#ffd166">🏆 이번 판 MVP: ${top[0][0]}</b>` +
+        top.map(([nm, st]) => `<div style="margin-top:5px">${nm} — 딜 ${fmt(st.dmg)} · 킬 ${st.kills}<div style="height:6px;background:#2a2340;border-radius:3px;margin-top:2px"><div style="height:100%;border-radius:3px;width:${Math.max(3, 100*st.dmg/maxD).toFixed(0)}%;background:linear-gradient(90deg,#8c5bff,#ff6b9d)"></div></div></div>`).join('') + '</div>' : '';
       document.getElementById('finalScore').innerHTML =
         `도달 스테이지: <b>${S.round}</b> (${stageInfo(S.round).name})<br>` +
-        `🏆 최고 기록: <b>${best}</b> 스테이지` + (isNew ? ' <span style="color:#ffd166">★ 신기록! ★</span>' : '');
+        `🏆 최고 기록: <b>${best}</b> 스테이지` + (isNew ? ' <span style="color:#ffd166">★ 신기록! ★</span>' : '') +
+        statsHTML;
       document.getElementById('overlay').style.display = 'flex';
       return;
     }
@@ -1010,6 +1022,8 @@ function endWave() {
     logMsg('🎉🎉 80라운드 클리어!! 이제부터는 헬모드... 🎉🎉');
   }
   S.round++;
+  if (S.round >= 40) markAchv('r40');
+  if (S.round >= 80) markAchv('r80');
   // 광석방 정원 증가 알림 (10라운드마다)
   if (S.round % 10 === 0) {
     logMsg(`💎⛏️ 광석방 채굴 정원이 늘었습니다! 이제 동시에 ${oreCap()}명까지 캘 수 있습니다.`);
@@ -1496,6 +1510,7 @@ function update(dt) {
 
   // ⏳ 시간술사 시간 정지: S.timer/스폰/스웜 이동만 멈춘다 (유닛 행동·사망 처리는 계속)
   if (S.stimT > 0) S.stimT -= dt;
+  if (S.feverT > 0) S.feverT -= dt;
   if (S.acidPools.length) S.acidPools = S.acidPools.filter(p => {
     p.t -= dt;
     if (S.freezeT <= 0) for (const m of S.monsters) { if (Math.hypot(m.x - p.x, m.y - p.y) <= p.r) dealDamage(m, p.dps * dt, null); } // 시간정지 중엔 도트도 멈춤
@@ -1690,16 +1705,25 @@ function update(dt) {
     return true;
   });
   // 사망 처리 + 폭발 (몹 보상: 기존의 1/10로 축소)
-  const killGold = Math.max(1, Math.round(S.round * 0.05)) * ((S.eventMods && S.eventMods.killMul) || 1);
+  const killGold = Math.max(1, Math.round(S.round * 0.05)) * ((S.eventMods && S.eventMods.killMul) || 1) * (S.feverT > 0 ? 2 : 1);
   const newborns = [];
   const junkUnits = S.units.filter(u => u.junk); // 💰 고물상: 반경 10px 내 처치 골드 ×1.2
   S.monsters = S.monsters.filter(m => {
     if (m.hp <= 0) {
       m.dead = true;
       if (m.lastHitBy && m.lastHitBy.kills != null) m.lastHitBy.kills++;
+      if (m.lastHitBy && m.lastHitBy.weapon && S.stats[m.lastHitBy.weapon]) S.stats[m.lastHitBy.weapon].kills++;
+      if (!m.boss && markMon(m.mat)) addFloat(m.x, m.y - 30, '📚 도감 등록!', '#7ec8ff', 1.5);
       deathPop(m);
       // 연쇄킬 콤보: 1.5초 내 연속 킬 → 카운트 + 사운드 피치 상승 + 소량 보너스 골드
       S.combo.t = 1.5; S.combo.n++; S.combo.pop = 0.18;
+      if (S.combo.n >= 30 && !S.feverUsed) {
+        S.feverUsed = true; S.feverT = 10; sfx('jackpot');
+        addFloat(CX, CY - 100, '🔥 FEVER TIME! 골드 2배! 🔥', '#ff6b9d', 2.5);
+        logMsg('🔥 피버 타임!! 10초간 킬 골드 2배!'); markAchv('fever');
+      }
+      if (S.combo.n >= 30) markAchv('combo30');
+      if (S.combo.n >= 50) markAchv('combo50');
       if (S.combo.n >= 3) sfx('combo', S.combo.n);
       let g = (m.boss ? killGold * 30 : killGold) + Math.floor(S.combo.n / 10);
       if (junkUnits.some(u => (u.x - m.x) * (u.x - m.x) + (u.y - m.y) * (u.y - m.y) <= 100)) g = Math.round(g * 1.2);
@@ -1710,6 +1734,7 @@ function update(dt) {
       if (m.golden) { // ✨ 황금 레어 처치 보너스 (0.3% 희귀 — 보상 3배)
         const bonus = (50 + S.round * 8) * 3; S.gold += bonus;
         addFloat(m.x, m.y - 26, `✨✨ 황금!! +${bonus}G`, '#ffd54f', 2.4); sfx('jackpot');
+        markAchv('golden');
       }
       if (m.boss) {
         S.chips++; // 보스 처치 → 카지노 칩 지급
@@ -1742,6 +1767,7 @@ function update(dt) {
 // 데미지 적용: 쉴드가 있으면 쉴드부터 깎고, 넘치면 체력으로 (모든 공격이 이 함수를 거침)
 function dealDamage(m, dmg, owner) {
   if (owner) m.lastHitBy = owner;
+  if (owner && owner.weapon) { const st = S.stats[owner.weapon] = S.stats[owner.weapon] || { dmg: 0, kills: 0 }; st.dmg += dmg; }
   m.hitT = 0.09; // 피격 리액션 (스쿼시 + 놀란 표정)
   if (m.shield > 0) {
     m.shield -= dmg;
@@ -1989,8 +2015,41 @@ function hiddenSeen(id) {
 function markHidden(id) {
   try {
     const d = JSON.parse(localStorage.getItem('dpd_hidden') || '{}');
-    if (!d[id]) { d[id] = 1; localStorage.setItem('dpd_hidden', JSON.stringify(d)); }
+    if (!d[id]) {
+      d[id] = 1; localStorage.setItem('dpd_hidden', JSON.stringify(d));
+      markAchv('h_' + id);
+      if (HIDDEN_DEX.every(h => hiddenSeen(h.id))) markAchv('hidden_all');
+    }
   } catch (e) {}
+}
+// 🏆 업적 도감 발견 기록: 라운드 재시작해도 유지
+function achvSeen(id) {
+  try { return !!JSON.parse(localStorage.getItem('dpd_achv') || '{}')[id]; } catch (e) { return false; }
+}
+function markAchv(id) {
+  try {
+    const d = JSON.parse(localStorage.getItem('dpd_achv') || '{}');
+    if (!d[id]) {
+      d[id] = 1; localStorage.setItem('dpd_achv', JSON.stringify(d));
+      const a = ACHV.find(x => x.id === id);
+      if (a) { rewardToast('🏆', a.name, '#ffd166', '업 적 달 성'); logMsg(`🏆 업적 달성: ${a.name}`); sfx('jackpot'); }
+    }
+  } catch (e) {}
+}
+// 📚 몬스터 도감 발견 기록 (mat 인덱스 0~13)
+function monSeen(i) {
+  try { return !!JSON.parse(localStorage.getItem('dpd_mondex') || '{}')[i]; } catch (e) { return false; }
+}
+function markMon(i) {
+  try {
+    const d = JSON.parse(localStorage.getItem('dpd_mondex') || '{}');
+    if (!d[i]) {
+      d[i] = 1; localStorage.setItem('dpd_mondex', JSON.stringify(d));
+      if (MATERIALS.every((_, k) => monSeen(k))) markAchv('mondex');
+      return true;
+    }
+  } catch (e) {}
+  return false;
 }
 // ==================== 우측 상단 광석 방 (정원제: 1명 시작, 10라운드마다 +1) ====================
 const OREPOS = { x: ROOM.cx + 46, y: ROOM.cy };
@@ -2555,6 +2614,16 @@ function draw() {
     ctx.fillRect(Math.min(drag.x0,drag.x1), Math.min(drag.y0,drag.y1), Math.abs(drag.x1-drag.x0), Math.abs(drag.y1-drag.y0));
   }
   ctx.restore(); // 흔들림 변환 해제
+  if (S.feverT > 0) {
+    const fa = 0.25 + 0.15 * Math.sin(S.time * 10);
+    for (const [gx, gy, gw2, gh2, dir] of [[0,0,940,14,'v'],[0,486,940,14,'v2'],[0,0,14,500,'h'],[926,0,14,500,'h2']]) {
+      const g = dir==='v' ? ctx.createLinearGradient(0,0,0,14) : dir==='v2' ? ctx.createLinearGradient(0,500,0,486) : dir==='h' ? ctx.createLinearGradient(0,0,14,0) : ctx.createLinearGradient(940,0,926,0);
+      g.addColorStop(0, `rgba(255,80,60,${fa.toFixed(2)})`); g.addColorStop(1, 'rgba(255,80,60,0)');
+      ctx.fillStyle = g; ctx.fillRect(gx, gy, gw2, gh2);
+    }
+    ctx.fillStyle = '#ff6b9d'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`🔥 FEVER ×2 (${Math.ceil(S.feverT)}s) 🔥`, CX, 36); ctx.textAlign = 'left';
+  }
 }
 function drawBarrack() {
   // 몬스터 소환장 울타리 (몹들이 이 안에서 뒤엉킨다)
@@ -4284,6 +4353,24 @@ const HIDDEN_DEX = [
   { id: 'catapult', icon: '🪨', name: '투석기', recipe: '하이카드 20기 제물(제물대)', desc: '거대한 돌덩이로 소환장 전체 포격 (이동 불가)',
     hint: '하이 ×20, 홑패를 밑 빠진 독에 붓듯 제물대에 바치면 거대한 바위가 깨어난다.' },
 ];
+// 🏆 업적 도감: HIDDEN_DEX 9종 발견 업적을 자동 포함
+const ACHV = [
+  { id: 'first_hero', icon: '⚡', name: '첫 영웅', desc: '유닛 5기 합성으로 첫 영웅 탄생' },
+  { id: 'first_super', icon: '🌟', name: '슈퍼영웅', desc: '영웅 5기 합성으로 슈퍼영웅 강림' },
+  { id: 'ace', icon: '♠', name: '에이스', desc: '더블 포커 족보 일치로 에이스 소환' },
+  { id: 'super_ace', icon: '💥', name: '슈퍼에이스', desc: '핵심 숫자까지 완전 일치' },
+  { id: 'combo30', icon: '🔥', name: '콤보 30', desc: '' },
+  { id: 'combo50', icon: '⚡', name: '콤보 50', desc: '' },
+  { id: 'golden', icon: '✨', name: '황금 사냥꾼', desc: '황금 몬스터 처치' },
+  { id: 'revive', icon: '🔄', name: '기사회생', desc: '부활권으로 생환' },
+  { id: 'fever', icon: '🎉', name: '피버!', desc: '피버 타임 발동' },
+  { id: 'lotto50', icon: '🎰', name: '대박', desc: '복권 50배 이상 당첨' },
+  { id: 'r40', icon: '🏳️', name: '40 라운드', desc: '' },
+  { id: 'r80', icon: '👹', name: '헬 게이트', desc: '80 라운드 돌파' },
+  { id: 'mondex', icon: '📚', name: '몬스터 박사', desc: '몬스터 도감 14종 완성' },
+  { id: 'hidden_all', icon: '🀄', name: '비밀의 끝', desc: '히든 조합 9종 모두 발견' },
+  ...HIDDEN_DEX.map(h => ({ id: 'h_' + h.id, icon: h.icon, name: '히든: ' + h.name, desc: h.recipe })),
+];
 function closeShop() {
   openShop = null;
   document.querySelectorAll('.shopIcon').forEach(b => b.classList.remove('open'));
@@ -4387,7 +4474,7 @@ function renderShop() {
        같은 족보라도 <b>핵심 카드 숫자가 높을수록</b> 강함 (AA 원페어 &gt; 22 원페어)<br>
        5라운드마다 <b>더블 포커</b> — 두 족보가 일치하면 <b style="color:#e91e8c">♠ 에이스</b>,
        족보에 <b>숫자까지</b> 일치하면 <b style="color:#ff2d95">♠♠ 슈퍼에이스</b>!</div>` +
-      hiddenDexHTML();
+      hiddenDexHTML() + achvDexHTML() + monDexHTML();
   }
 }
 // 히든 조합 도감 섹션 HTML (발견한 것만 정체 공개, 나머지는 ❓ + 수수께끼 힌트)
@@ -4399,6 +4486,30 @@ function hiddenDexHTML() {
       return `<div class="handRowG"${seen ? '' : ' style="opacity:.6"'}>
         <span class="hname">${seen ? h.icon : '❓'} ${seen ? h.name : '???'}</span>
         <span class="hdesc">${seen ? `${h.recipe} — ${h.desc}` : h.hint}</span>
+      </div>`;
+    }).join('');
+}
+// 📖 업적 도감 섹션 HTML (달성=컬러+이름+desc, 미달성=회색 그대로 desc 노출)
+function achvDexHTML() {
+  const discovered = ACHV.filter(a => achvSeen(a.id)).length;
+  return `<div class="rpgGuide" style="margin-top:10px">📖 업적 도감 (${discovered}/${ACHV.length})</div>` +
+    ACHV.map(a => {
+      const seen = achvSeen(a.id);
+      return `<div class="handRowG"${seen ? '' : ' style="opacity:.6"'}>
+        <span class="hname">${a.icon} <span style="${seen ? 'color:#ffd166' : ''}">${a.name}</span></span>
+        <span class="hdesc">${a.desc}</span>
+      </div>`;
+    }).join('');
+}
+// 📚 몬스터 도감 섹션 HTML (발견: 이름+설명+색칩, 미발견: ❓ ???)
+function monDexHTML() {
+  const discovered = MATERIALS.filter((_, i) => monSeen(i)).length;
+  return `<div class="rpgGuide" style="margin-top:10px">📚 몬스터 도감 (${discovered}/${MATERIALS.length})</div>` +
+    MATERIALS.map((mat, i) => {
+      const seen = monSeen(i);
+      return `<div class="handRowG"${seen ? '' : ' style="opacity:.6"'}>
+        <span class="hname"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${seen ? mat.col : '#555'};margin-right:4px"></span>${seen ? mat.name : '❓ ???'}</span>
+        <span class="hdesc">${seen ? MAT_DESC[i] : ''}</span>
       </div>`;
     }).join('');
 }
@@ -4520,6 +4631,7 @@ function casLotto() {
     const cost = +b.dataset.tix; if (S.gold < cost) return;
     S.gold -= cost; sfx('coin');
     const mult = rollTicket(), won = Math.floor(cost * mult); S.gold += won;
+    if (mult >= 50) markAchv('lotto50');
     updateInfoPanel();
     const el = document.getElementById('ltRes');
     if (mult === 0) { el.innerHTML = `<span style="color:#e57373">💥 꽝! ${cost}G 잃음</span>`; sfx('leak'); }
