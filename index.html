@@ -1184,7 +1184,7 @@ function spawnSlot(x, y) {
   logMsg('🎰✨ 히든 조합 발견!! [같은 숫자 트리플×3] → 히든 영웅 <b>슬롯머신</b>! 잭팟 폭격 스킬 보유!');
   markHidden('slot');
 }
-// 🃏 조커: 하이카드·원페어·투페어 영웅 각 1기 → 낫으로 베며 몹을 끌어당기는 클럼핑 딜러
+// 🃏 조커: 원페어·투페어·트리플 영웅 각 1기 → 낫으로 베며 몹을 끌어당기는 클럼핑 딜러
 function spawnJoker(x, y) {
   S.units.push({
     x, y, tx: x, ty: y, race: 1, tier: 1, hidden: false, hero: true, joker: true, miner: false, // tier 6 금지 — 대검 돌격 스킬 게이트(u.tier===6)와 충돌
@@ -1196,7 +1196,7 @@ function spawnJoker(x, y) {
   });
   addFloat(x, y - 30, '🃏 조커 강림!! 🃏', '#8c5bff', 2.8);
   sfx('jackpot'); sfx('hero');
-  logMsg('🃏✨ 히든 조합 발견!! [하이카드·원페어·투페어 영웅 각1] → 히든 영웅 <b>조커</b>! 낫으로 베며 몹을 끌어당깁니다!');
+  logMsg('🃏✨ 히든 조합 발견!! [원페어·투페어·트리플 영웅 각1] → 히든 영웅 <b>조커</b>! 낫으로 베며 몹을 끌어당깁니다!');
   markHidden('joker');
 }
 // 🪨 투석기: 하이카드 20기를 포털에 제물로 바치면 완성되는 거대 공성병기 (이동 불가)
@@ -1301,10 +1301,10 @@ function updatePortal() {
     updateInfoPanel();
     return;
   }
-  // 🃏 조커 (하이카드영웅+원페어영웅+투페어영웅 각1) — 갬블러 등과 달리 티어0/1/2 "영웅"이 재료. 1기 제한.
+  // 🃏 조커 (원페어+투페어+트리플 영웅 각1) — 갬블러 등과 달리 티어1/2/3 "영웅"이 재료. 1기 제한.
   if (!S.units.some(u => u.joker)) {
     const heroesIn = inP.filter(u => u.hero && !u.hidden && !u.super && !u.ace && !isHiddenCombo(u)); // 에이스 영웅·히든 유닛은 조커 재료로 안 먹힘
-    const h0 = heroesIn.find(u => u.tier === 0), h1 = heroesIn.find(u => u.tier === 1), h2 = heroesIn.find(u => u.tier === 2);
+    const h0 = heroesIn.find(u => u.tier === 1), h1 = heroesIn.find(u => u.tier === 2), h2 = heroesIn.find(u => u.tier === 3); // 레시피 상향: 원페어·투페어·트리플 영웅 (성능 대비 재료가 너무 쌌음)
     if (h0 && h1 && h2) {
       const used = [h0, h1, h2];
       S.units = S.units.filter(u => !used.includes(u));
@@ -4381,8 +4381,8 @@ const HIDDEN_DEX = [
     hint: '스트3 … 끊기지 않은 흐름을 셋 겹치면 세상의 시계가 잠시 숨을 멈춘다.' },
   { id: 'slot', icon: '🎰', name: '슬롯머신', recipe: '같은 숫자 트리플×3', desc: '잭팟 폭격 스킬 (쿨 75초)',
     hint: '같은 숫자 쓰리를 세 벌(×3), 릴이 맞아떨어지면 하늘에서 잭팟이 쏟아진다.' },
-  { id: 'joker', icon: '🃏', name: '조커', recipe: '하이카드·원페어·투페어 영웅 각 1', desc: '낫으로 베며 몹을 끌어당김 (클럼핑)',
-    hint: '하이·원·투 — 가장 낮은 영웅 셋이 손을 맞잡으면 광대가 낫을 든다.' },
+  { id: 'joker', icon: '🃏', name: '조커', recipe: '원페어·투페어·트리플 영웅 각 1', desc: '낫으로 베며 몹을 끌어당김 (클럼핑)',
+    hint: '원·투·쓰리 — 영웅 셋이 손을 맞잡으면 광대가 낫을 든다.' },
   { id: 'catapult', icon: '🪨', name: '투석기', recipe: '하이카드 20기 제물(제물대)', desc: '거대한 돌덩이로 소환장 전체 포격 (이동 불가)',
     hint: '하이 ×20, 홑패를 밑 빠진 독에 붓듯 제물대에 바치면 거대한 바위가 깨어난다.' },
 ];
