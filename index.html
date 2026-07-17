@@ -540,9 +540,10 @@ const DIG_RATE = 30;             // 광부가 캐는 동안 광산 체력 감소
 const MINER_MAX_LV = 5;          // 광부 업그레이드 최대 레벨
 const PEN = { x: CX, y: CY, w: 264, h: 176 }; // 몬스터 소환장 울타리 (2배 확장 — 몬스터도 2배, 카타르시스 업)
 const ALTAR = { x: CX - PEN.w/2 - 58, y: CY, w: 64, h: 78 }; // 🪨 제물대: 소환장 왼쪽. 하이카드를 바쳐 투석기 완성
-const PLANK_W = 48, PLANK_DEPTH = 36; // 🪵 나무판자: 소환장 중앙 하단 발판. 폭 48 — 유닛 2기가 낑겨 들어갈 폭. 유닛이 올라가 소환장 안을 직접 타격
-// 판정 하한 +16: 울타리 밀어내기 경계(+10)보다 아래까지 겹치게 — 안 그러면 걸어 올라오다 경계 틈(+8~+10)에서 계속 밀려나 못 올라가는 데드존이 생긴다
-function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > CY + PEN.h/2 - PLANK_DEPTH && y < CY + PEN.h/2 + 16; }
+const PLANK_W = 48, PLANK_DEPTH = 12; // 🪵 나무판자: 소환장 중앙 하단 발판. 폭 48(2기 낑김), 깊이 12(짧게) — 유닛이 올라가 소환장 안을 직접 타격
+// 판정 상한 -26 = 발 위치 보정: 유닛 중심이 판자 위끝보다 26px 위까지 허용 → "발"이 판자 끝단에 딱 서는 그림
+// 판정 하한 +16: 울타리 밀어내기 경계(+10)보다 아래까지 겹치게 (경계 틈 데드존 방지)
+function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > CY + PEN.h/2 - PLANK_DEPTH - 26 && y < CY + PEN.h/2 + 16; }
 // 몬스터 크기 (2배 스케일) — drawMonster/deathPop 공용
 // 크기: 밴드 진행도(esc)만큼 커진다 (③ 시각적 난이도 신호)
 function monSize(m) { return (m.boss ? 52 : 19) * (m.small ? 0.6 : 1) * (1 + (m.esc || 0) * 0.32); }
