@@ -899,6 +899,9 @@ function effDmg(u) {
 }
 // 📯 콰르텟 공속 오라 적용된 실제 쿨다운 (spdBuff는 update()에서 매 프레임 갱신)
 function isHiddenCombo(u) { return !!(u.gamble || u.junk || u.quartet || u.execute || u.shogun || u.chrono || u.slot || u.joker || u.catapult); } // 히든 조합 유닛 판별
+// 히든 유닛 표기 메타: [아이콘, 이름, 테마색] — 종족(하트/다이아)이 아니라 자기 정체성으로 표기
+const HIDDEN_META = { gamble:['🎲','갬블러','#c9a227'], junk:['💰','고물상','#8d6e63'], quartet:['📯','콰르텟','#5b48d0'], execute:['⚔️','길로틴','#c62828'], shogun:['🔥','쇼군','#ff6d1f'], chrono:['⏳','시간술사','#42a5f5'], slot:['🎰','슬롯머신','#c9a227'], joker:['🃏','조커','#8c5bff'], catapult:['🪨','투석기','#78909c'] };
+function hiddenMeta(u) { for (const k in HIDDEN_META) if (u[k]) return HIDDEN_META[k]; return null; }
 function effCd(u) { return u.cd * (u.spdBuff || 1) * (S.stimT > 0 ? 0.5 : 1) * (isHiddenCombo(u) ? 1.4286 : 1); } // 히든 조합 유닛 공속 30%↓
 
 const ITEM_META = {
@@ -3312,7 +3315,8 @@ function drawBossFace(m, sz) {
 }
 function drawUnit(u) {
   if (u.item) { drawItemUnit(u); return; }
-  const raceC = (u.hidden || u.ace) ? '#e91e8c' : (u.miner ? (u.sminer ? '#e6a817' : u.hminer ? '#c9a227' : '#8d8d8d') : RACES[u.race].color); // 에이스 영웅(u.ace)도 핑크 유지
+  const hm = (!u.miner && !u.hidden) ? hiddenMeta(u) : null; // 히든 유닛 테마
+  const raceC = (u.hidden || u.ace) ? '#e91e8c' : (u.miner ? (u.sminer ? '#e6a817' : u.hminer ? '#c9a227' : '#8d8d8d') : hm ? hm[2] : RACES[u.race].color); // 에이스=핑크, 히든=테마색
   // 선택 표시 + 사거리
   if (u.selected) {
     ctx.strokeStyle = 'rgba(91,72,208,0.35)';
@@ -3431,6 +3435,8 @@ function drawUnit(u) {
     ctx.strokeStyle = '#d92b2b'; ctx.lineWidth = 1.4; ctx.lineCap = 'round'; // 미소
     ctx.beginPath(); ctx.arc(jx, jy + 4, 2.8, 0.35, Math.PI - 0.35); ctx.stroke();
     ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+  } else if (hm) { // 히든 유닛: 종족 무늬 대신 자기 아이콘
+    ctx.font = '13px sans-serif'; ctx.fillText(hm[0], u.x, u.y + 4);
   } else if (!u.miner) {
     ctx.fillStyle = raceC; ctx.font = 'bold 10px sans-serif';
     ctx.fillText(RACES[u.race].suit, u.x, u.y - 1);
@@ -4261,11 +4267,14 @@ function updateInfoPanel() {
   if (!traits.length) traits.push(u.miner ? '채굴 전용 (전투 불가)' : '단일 공격');
   if (u.forceTarget) traits.push('<b style="color:#e53935">🎯 집중 공격 중</b>');
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
-  const sub = u.miner ? '광부' : keyTag + HAND_NAMES[u.tier] + (u.hero ? ' 영웅' : '');
+  const sub = u.miner ? '광부' : isHiddenCombo(u) ? '히든 영웅' : keyTag + HAND_NAMES[u.tier] + (u.hero ? ' 영웅' : '');
   const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = top2[0] + top2[1];
   const upFlat = u.joker ? 0 : +(((u.hidden || u.ace) ? aceUp : S.upg[u.race]) * upgPer(u) * fuseCount(u)).toFixed(1); // 합성 재료 수만큼 업글 계수 (영웅5·슈퍼25·히든은 레시피 수). 조커는 업글 무효
+  const hmI = hiddenMeta(u);
   const raceLine = u.joker
     ? `종족: <span style="color:#8c5bff">🃏 조커</span> (업그레이드 무효 — 고정 공격력)`
+    : hmI
+    ? `종족: <span style="color:${hmI[2]}">${hmI[0]} ${hmI[1]}</span> (업그레이드: ${RACES[u.race].suit} ${RACES[u.race].name} Lv.${S.upg[u.race]} ×${fuseCount(u)} 적용)`
     : (u.hidden || u.ace)
     ? `종족: <span style="color:#e91e8c">♠ 에이스</span> (상위 2종족 업그레이드 합산 +${upFlat})`
     : `종족: <span style="color:${RACES[u.race].color}">${RACES[u.race].suit} ${RACES[u.race].name}</span> (업그레이드 Lv.${S.upg[u.race]})`;
