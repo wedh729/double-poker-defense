@@ -446,6 +446,8 @@ const RACES = [
 // 종족은 족보로 고정 (같은 족보 = 같은 종족): 다이아=새총/부메랑/전기톱/로얄, 하트=활/기관총 계열, 클로버=총/화염 계열
 const RACE_OF_RANK = [0, 1, 2, 0, 1, 2, 0, 1, 2, 0];
 const HAND_NAMES = ['하이카드','원페어','투페어','트리플','스트레이트','플러쉬','풀하우스','포카드','스트레이트 플러쉬','로얄 스트레이트 플러쉬'];
+// ♠ 에이스 배수: 두 패 일치 확률이 티어마다 수백 배씩 희귀해지므로 배수도 티어 사다리로 (기존 일괄 1.5는 투페어+ 일치가 손해였음). 슈퍼에이스 = ×2
+const ACE_MUL = [1.5, 1.5, 2.2, 3.0, 4.5, 5.5, 6.5, 8, 10, 12];
 // 족보 → 무기. atk = 공격 방식, hero = 영웅(5기 강화) 시 변형.
 // splash 계열은 다수를 동시 타격하므로 per-hit 데미지를 낮게 잡음(기존 대비 대폭 하향).
 const HERO_DMG = 5;   // 영웅 공격력 = 기본 유닛 × 5
@@ -753,7 +755,7 @@ function confirmHand() {
       addFloat(CX, CY - 120, '★★ ♠♠ 슈퍼에이스!! ★★', '#ff2d95', 3);
       sfx('jackpot'); sfx('hero');
     } else {
-      logMsg(`💥💥 잭팟! ${HAND_NAMES[res[0].rank]} 더블! ♠ 에이스 유닛만 소환!! 💥💥`);
+      logMsg(`💥💥 잭팟! ${HAND_NAMES[res[0].rank]} 더블! ♠ 에이스 유닛 소환 (공격력 ×${ACE_MUL[res[0].rank] || 1.5})!! 💥💥`);
       addFloat(CX, CY - 120, '★ ♠ 에이스! ★', '#e91e8c', 2.5);
       sfx('jackpot');
     }
@@ -783,7 +785,7 @@ function spawnUnit(rank, race, hidden, keyRank, superAce) {
     jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
     forceTarget: null, attackMine: false, amove: false, priority: 'near',
     // 에이스(히든): 기본 1.5배 / 슈퍼에이스(족보+숫자 일치): 기본 3.0배. 둘 다 + 상위 2종족 업그레이드 합산
-    dmg: w.dmg * (hidden ? (superAce ? 3.0 : 1.5) : keyMul(kr)),
+    dmg: w.dmg * (hidden ? (ACE_MUL[rank] || 1.5) * (superAce ? 2 : 1) : keyMul(kr)), // 에이스: 티어별 배수 (원페어 1.5 → 트리플 3.0 → 포카드 8…), 슈퍼 ×2
     cd: w.cd, range: w.range, splash: w.splash, bounce: w.bounce,
     atk: w.atk, proj: w.proj || null, vis: w.vis || null, pierce: 0, shards: 0, shardFrac: 0,
     weapon: (superAce ? '♠♠ 슈퍼에이스 ' : hidden ? '에이스 ' : '') + w.name,
@@ -1299,7 +1301,7 @@ function updatePortal() {
         for (let i = 0; i < 26; i++) { const a = Math.random()*6.28, v = 110 + Math.random()*180; S.parts.push({ x: PORTAL.x, y: PORTAL.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.6, r: 2 + Math.random()*4, c: `hsl(${(i*40)%360},90%,60%)` }); }
         logMsg(`🌟🌀 포털 초강화! 영웅 ${WEAPONS[t].hero.name} ×5 → 슈퍼영웅!!`);
       } else {
-        const keyBonus = hidden ? (group[0].superAce ? 3.6 : 1.8) : group.reduce((a, u) => a + keyMul(u.keyRank), 0) / 5;
+        const keyBonus = hidden ? (ACE_MUL[t] || 1.5) * 1.2 * (group[0].superAce ? 2 : 1) : group.reduce((a, u) => a + keyMul(u.keyRank), 0) / 5; // 에이스 영웅도 티어 배수 (원페어 1.8 기존 유지, 상위 티어 급상승)
         spawnHero(t, group[0].race, PORTAL.x, PORTAL.y + PORTAL.r + 26, keyBonus);
         const nh = S.units[S.units.length - 1];
         if (hidden) { nh.ace = true; nh.weapon = '에이스 영웅 ' + WEAPONS[t].hero.name; }
@@ -4609,7 +4611,7 @@ function renderPoker(spin) {
   const ranks = S.poker.hands.map(h => evalHand(h.cards));
   const match = double && ranks[0] === ranks[1] && ranks[0] > 0; // 에이스는 원페어부터 (하이카드 제외)
   if (double) {
-    banner.innerHTML = `<span class="hidden-chance">★ 히든 찬스! 두 패를 비교하며 교환 — 원페어 이상 족보가 같으면 ♠ 에이스 유닛! ★</span>`;
+    banner.innerHTML = `<span class="hidden-chance">★ 히든 찬스! 두 패를 비교하며 교환 — 원페어 이상 족보가 같으면 ♠ 에이스! 높은 족보 일치일수록 훨씬 강력! ★</span>`;
   } else {
     banner.textContent = `스테이지 ${S.round} 준비 — 카드 클릭으로 교환 (각 1회)`;
   }
