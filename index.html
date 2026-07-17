@@ -3738,8 +3738,21 @@ function drawWeapon(u, x, y) {
     ctx.beginPath(); ctx.moveTo(-5, 6); ctx.lineTo(0, 2); ctx.stroke();
     ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 2.5; // 작은 가드
     ctx.beginPath(); ctx.moveTo(-3, 1); ctx.lineTo(3, 3); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,120,30,0.35)'; ctx.lineWidth = 5; // 칼날 화염 글로우
+    ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(22, -13); ctx.stroke();
     ctx.strokeStyle = '#eceff1'; ctx.lineWidth = 2; // 긴 칼날
     ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(22, -13); ctx.stroke();
+    // 🔥 훨훨 타는 불꽃: 칼날 위 4갈래, 시간 따라 일렁임
+    for (let i = 0; i < 4; i++) {
+      const t01 = 0.22 + i * 0.21, fx = t01 * 22, fy = 1 - t01 * 14;
+      const fl = 3.5 + Math.sin(S.time * 13 + i * 2.3) * 1.6;
+      ctx.fillStyle = i % 2 ? '#ff8a3d' : '#ffb300';
+      ctx.beginPath(); ctx.moveTo(fx - 1.8, fy);
+      ctx.quadraticCurveTo(fx - 1.2, fy - fl * 0.55, fx + Math.sin(S.time * 9 + i) * 1.3, fy - fl);
+      ctx.quadraticCurveTo(fx + 1.6, fy - fl * 0.5, fx + 1.8, fy); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = '#fff3c4'; // 불심 하이라이트
+    for (let i = 0; i < 2; i++) { const t01 = 0.35 + i * 0.35, fx = t01 * 22, fy = 1 - t01 * 14; ctx.beginPath(); ctx.arc(fx, fy - 1.5, 0.9, 0, 6.28); ctx.fill(); }
     ctx.restore(); ctx.lineWidth = 1;
     return;
   }
