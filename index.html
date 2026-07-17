@@ -878,7 +878,8 @@ function updateMiner(u, dt) {
 function upgPer(u) { return u.atk === 'pen' ? 0.3 : (u.splash > 0 ? 0.6 : 3); }
 function effDmg(u) {
   if (u.joker) return u.dmg; // 🃏 조커는 업그레이드 영향 없음 — 고정 공격력 (업글까지 되면 너무 사기)
-  const per = upgPer(u);
+  // 합성 유닛은 재료 수만큼 업글 계수도 곱한다 (영웅=5기분 ×5, 슈퍼=25기분 ×25) — 안 그러면 고레벨 업글에서 기본 5마리가 영웅 1마리보다 강해지는 역전
+  const per = upgPer(u) * (u.super ? 25 : u.hero ? 5 : 1);
   if (u.hidden) { const s = [...S.upg].sort((a, b) => b - a); return u.dmg + per * (s[0] + s[1]); } // 에이스: 가장 많이 올린 두 종족 합산
   return u.dmg + per * S.upg[u.race];
 }
@@ -4209,7 +4210,7 @@ function updateInfoPanel() {
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
   const sub = u.miner ? '광부' : keyTag + HAND_NAMES[u.tier] + (u.hero ? ' 영웅' : '');
   const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = top2[0] + top2[1];
-  const upFlat = +((u.hidden ? aceUp : S.upg[u.race]) * upgPer(u)).toFixed(1);
+  const upFlat = +((u.hidden ? aceUp : S.upg[u.race]) * upgPer(u) * (u.super ? 25 : u.hero ? 5 : 1)).toFixed(1); // 합성 유닛 업글 계수 반영 (영웅 ×5, 슈퍼 ×25)
   const raceLine = u.hidden
     ? `종족: <span style="color:#e91e8c">♠ 에이스</span> (상위 2종족 업그레이드 합산 +${upFlat})`
     : `종족: <span style="color:${RACES[u.race].color}">${RACES[u.race].suit} ${RACES[u.race].name}</span> (업그레이드 Lv.${S.upg[u.race]})`;
