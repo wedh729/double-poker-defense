@@ -876,11 +876,21 @@ function updateMiner(u, dt) {
 // 업그레이드 레벨당 공격력 보너스 — 다수 타격 유닛은 대폭 축소(밸런스)
 // 단일 +3 / 스플래쉬 +0.6 / 소환장 전체타격(탱크·핵) +0.3
 function upgPer(u) { return u.atk === 'pen' ? 0.3 : (u.splash > 0 ? 0.6 : 3); }
+// 합성 재료 수 = 업글 계수 (재료 수만큼 업글 보정도 커야 "합치면 손해" 역전이 없다)
+function fuseCount(u) {
+  if (u.super) return 25;      // 슈퍼영웅 = 기본 25기분
+  if (u.catapult) return 20;   // 투석기 = 하이카드 20기
+  if (u.execute) return 10;    // 길로틴 = 10기
+  if (u.gamble || u.junk) return 6;   // 갬블러·고물상 = 6기
+  if (u.quartet || u.shogun) return 4; // 콰르텟·쇼군 = 4기
+  if (u.chrono || u.slot) return 3;    // 시간술사·슬롯 = 3기
+  if (u.hero) return 5;        // 영웅 = 기본 5기분
+  return 1;
+}
 function effDmg(u) {
   if (u.joker) return u.dmg; // 🃏 조커는 업그레이드 영향 없음 — 고정 공격력 (업글까지 되면 너무 사기)
-  // 합성 유닛은 재료 수만큼 업글 계수도 곱한다 (영웅=5기분 ×5, 슈퍼=25기분 ×25) — 안 그러면 고레벨 업글에서 기본 5마리가 영웅 1마리보다 강해지는 역전
-  const per = upgPer(u) * (u.super ? 25 : u.hero ? 5 : 1);
-  if (u.hidden) { const s = [...S.upg].sort((a, b) => b - a); return u.dmg + per * (s[0] + s[1]); } // 에이스: 가장 많이 올린 두 종족 합산
+  const per = upgPer(u) * fuseCount(u);
+  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return u.dmg + per * (s[0] + s[1]); } // 에이스·에이스 영웅: 가장 많이 올린 두 종족 합산
   return u.dmg + per * S.upg[u.race];
 }
 // 📯 콰르텟 공속 오라 적용된 실제 쿨다운 (spdBuff는 update()에서 매 프레임 갱신)
@@ -1055,8 +1065,8 @@ function clampTargetPos(x, y) {
 }
 // 합성 가능한 그룹 키 (일반=티어+히든, 영웅=티어+영웅). 슈퍼영웅은 합성 대상 아님
 function fuseKey(u) {
-  if (u.miner || u.super || u.item) return null;
-  if (u.hero) return 'S' + u.tier;
+  if (u.miner || u.super || u.item || isHiddenCombo(u)) return null; // 히든 조합 유닛은 합성 재료 아님 (갬블러가 소총영웅 5합성에 잡아먹히던 버그)
+  if (u.hero) return 'S' + u.tier + (u.ace ? 'A' : ''); // 에이스 영웅은 자기들끼리만 (일반 영웅 합성에 섞이면 에이스 특성 소실)
   return u.tier + '_' + (u.superAce ? 'SA' : u.hidden ? 'H' : 'N'); // 슈퍼에이스는 자기들끼리만 합성
 }
 // 같은 유닛 5기 이상이면 fusable=true (주황 오라 힌트)
@@ -1291,7 +1301,7 @@ function updatePortal() {
   }
   // 🃏 조커 (하이카드영웅+원페어영웅+투페어영웅 각1) — 갬블러 등과 달리 티어0/1/2 "영웅"이 재료. 1기 제한.
   if (!S.units.some(u => u.joker)) {
-    const heroesIn = inP.filter(u => u.hero && !u.hidden && !u.super);
+    const heroesIn = inP.filter(u => u.hero && !u.hidden && !u.super && !u.ace && !isHiddenCombo(u)); // 에이스 영웅·히든 유닛은 조커 재료로 안 먹힘
     const h0 = heroesIn.find(u => u.tier === 0), h1 = heroesIn.find(u => u.tier === 1), h2 = heroesIn.find(u => u.tier === 2);
     if (h0 && h1 && h2) {
       const used = [h0, h1, h2];
@@ -4210,8 +4220,8 @@ function updateInfoPanel() {
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
   const sub = u.miner ? '광부' : keyTag + HAND_NAMES[u.tier] + (u.hero ? ' 영웅' : '');
   const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = top2[0] + top2[1];
-  const upFlat = +((u.hidden ? aceUp : S.upg[u.race]) * upgPer(u) * (u.super ? 25 : u.hero ? 5 : 1)).toFixed(1); // 합성 유닛 업글 계수 반영 (영웅 ×5, 슈퍼 ×25)
-  const raceLine = u.hidden
+  const upFlat = +(((u.hidden || u.ace) ? aceUp : S.upg[u.race]) * upgPer(u) * fuseCount(u)).toFixed(1); // 합성 재료 수만큼 업글 계수 (영웅5·슈퍼25·히든은 레시피 수)
+  const raceLine = (u.hidden || u.ace)
     ? `종족: <span style="color:#e91e8c">♠ 에이스</span> (상위 2종족 업그레이드 합산 +${upFlat})`
     : `종족: <span style="color:${RACES[u.race].color}">${RACES[u.race].suit} ${RACES[u.race].name}</span> (업그레이드 Lv.${S.upg[u.race]})`;
   el.innerHTML =
