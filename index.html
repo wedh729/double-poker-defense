@@ -488,7 +488,7 @@ const WEAPONS = [
   {name:'대검', dmg:20, cd:1.6, range:60, splash:56, bounce:0, atk:'area', vis:'sword',
    hero:{name:'전기톱', atk:'area', vis:'saw', splash:80, cd:0.24, range:102}}, // range 60×1.7
   // 7 포카드 — 바주카포 (5초, 스플래쉬)
-  {name:'바주카포', dmg:25, cd:5.0, range:330, splash:104, bounce:0, atk:'area', vis:'rocket',
+  {name:'바주카포', dmg:25, cd:2.5, range:330, splash:52, bounce:0, atk:'area', vis:'rocket', // 공속 2배(5→2.5)·스플래시 반경 절반(104→52)
    hero:{name:'탱크', atk:'pen', vis:'tank', cd:2.0}}, // 소환장 전체 타격
   // 8 스트레이트 플러쉬 — 표창 (닌자, 초고속 단일)
   {name:'표창', dmg:26, cd:0.2, range:300, splash:0, bounce:0, atk:'shot', proj:'shuriken',
@@ -1465,7 +1465,7 @@ function update(dt) {
     if (u.skillT > 0) {
       u.skillT -= dt; u.inPen = true;
       u.tx = CX + u.jx * 0.25; u.ty = CY + u.jy * 0.25;
-      if (u.skillT <= 0) { u.skillT = 0; u.inPen = false; u.tx = u.homeX != null ? u.homeX : CX - 40; u.ty = u.homeY != null ? u.homeY : CY + 150; u.skillCd = 300; } // 출발했던 자리로 복귀
+      if (u.skillT <= 0) { u.skillT = 0; u.inPen = false; u.tx = u.homeX != null ? u.homeX : CX - 40; u.ty = u.homeY != null ? u.homeY : CY + 150; u.skillCd = 210; } // 출발했던 자리로 복귀 (쿨 300→210초: 공속 2배 버프 제거 보상)
     }
     if (u.chronoCd > 0) u.chronoCd = Math.max(0, u.chronoCd - dt); // ⏳ 시간술사 스킬 쿨
     if (u.slotCd > 0) u.slotCd = Math.max(0, u.slotCd - dt);       // 🎰 슬롯머신 스킬 쿨
