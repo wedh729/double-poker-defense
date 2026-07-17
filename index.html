@@ -4251,14 +4251,16 @@ function updateInfoPanel() {
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
   const sub = u.miner ? '광부' : keyTag + HAND_NAMES[u.tier] + (u.hero ? ' 영웅' : '');
   const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = top2[0] + top2[1];
-  const upFlat = +(((u.hidden || u.ace) ? aceUp : S.upg[u.race]) * upgPer(u) * fuseCount(u)).toFixed(1); // 합성 재료 수만큼 업글 계수 (영웅5·슈퍼25·히든은 레시피 수)
-  const raceLine = (u.hidden || u.ace)
+  const upFlat = u.joker ? 0 : +(((u.hidden || u.ace) ? aceUp : S.upg[u.race]) * upgPer(u) * fuseCount(u)).toFixed(1); // 합성 재료 수만큼 업글 계수 (영웅5·슈퍼25·히든은 레시피 수). 조커는 업글 무효
+  const raceLine = u.joker
+    ? `종족: <span style="color:#8c5bff">🃏 조커</span> (업그레이드 무효 — 고정 공격력)`
+    : (u.hidden || u.ace)
     ? `종족: <span style="color:#e91e8c">♠ 에이스</span> (상위 2종족 업그레이드 합산 +${upFlat})`
     : `종족: <span style="color:${RACES[u.race].color}">${RACES[u.race].suit} ${RACES[u.race].name}</span> (업그레이드 Lv.${S.upg[u.race]})`;
   el.innerHTML =
     `<b>${u.hidden ? '♠ ' + u.weapon : u.weapon}</b> (${sub})<br>` +
     raceLine + '<br>' +
-    `공격력: <b>${effDmg(u).toFixed(1)}</b> (기본 ${(+u.dmg).toFixed(1)} +${upFlat})<br>` +
+    `공격력: <b>${effDmg(u).toFixed(1)}</b>${u.joker ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
     `공속: ${(1/u.cd).toFixed(1)}회/초 · 사거리: ${u.range}<br>` +
     `💀 처치: <b>${u.kills || 0}</b>킬<br>` +
     `특성: ${traits.join(', ')}` +
