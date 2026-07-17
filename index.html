@@ -887,7 +887,7 @@ function fuseCount(u) {
   if (u.junk) return 9;        // 고물상 = 9기 (상향 레시피)
   if (u.gamble) return 6;      // 갬블러 = 6기
   if (u.quartet) return 8;     // 콰르텟 = 8기 (상향 레시피)
-  if (u.shogun) return 4;      // 쇼군 = 4기
+  if (u.shogun) return 6;      // 쇼군 = 6기 (상향 레시피)
   if (u.chrono || u.slot) return 3;    // 시간술사·슬롯 = 3기
   if (u.hero) return 5;        // 영웅 = 기본 5기분
   return 1;
@@ -1143,19 +1143,19 @@ function spawnGuillotine(x, y) {
   logMsg('⚔️✨ 히든 조합 발견!! [원1·투2·트3·포4] → 히든 영웅 <b>길로틴</b>! 체력 15% 이하 즉시 처형!');
   markHidden('guillotine');
 }
-// 🔥 쇼군: 풀하우스×2 + 플러쉬×2 → 참격 무제한 타격 + 화상 도트 (강력한 근접 딜러)
+// 🔥 쇼군: 풀하우스×3 + 플러쉬×3 → 참격 무제한 타격 + 화상 도트 (강력한 근접 딜러)
 function spawnShogun(x, y) {
   S.units.push({
     x, y, tx: x, ty: y, race: 2, tier: 5, hidden: false, hero: true, shogun: true, miner: false,
     keyRank: 14, keyLabel: '🔥', kills: 0,
     jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
     forceTarget: null, attackMine: false, amove: false, priority: 'near',
-    dmg: 95, cd: 1.1, range: 130, splash: 100, bounce: 0, atk: 'area', proj: null, vis: 'sword',
+    dmg: 66, cd: 1.1, range: 130, splash: 100, bounce: 0, atk: 'area', proj: null, vis: 'sword', // dmg 95→66 (-30%, 사기 너프)
     pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 쇼군', cool: 0, selected: true, walk: 0, speed: 85,
   });
   addFloat(x, y - 30, '🔥 쇼군 강림!! 🔥', '#e53935', 2.8);
   sfx('jackpot'); sfx('hero');
-  logMsg('🔥✨ 히든 조합 발견!! [풀하우스×2·플러쉬×2] → 히든 영웅 <b>쇼군</b>! 참격 무제한 타격 + 화상 도트!');
+  logMsg('🔥✨ 히든 조합 발견!! [풀하우스×3·플러쉬×3] → 히든 영웅 <b>쇼군</b>! 참격 무제한 타격 + 화상 도트!');
   markHidden('shogun');
 }
 // ⏳ 시간술사: 스트레이트×3 → 시간 정지 스킬 (전투력은 약함, 순수 지원)
@@ -1276,9 +1276,9 @@ function updatePortal() {
     updateInfoPanel();
     return;
   }
-  // 🔥 쇼군 (풀하우스×2 + 플러쉬×2). 1기 제한.
-  if (!S.units.some(u => u.shogun) && (byT[6] || []).length >= 2 && (byT[5] || []).length >= 2) {
-    const used = [byT[6][0], byT[6][1], byT[5][0], byT[5][1]];
+  // 🔥 쇼군 (풀하우스×3 + 플러쉬×3 = 6기, 상향). 1기 제한.
+  if (!S.units.some(u => u.shogun) && (byT[6] || []).length >= 3 && (byT[5] || []).length >= 3) {
+    const used = [byT[6][0], byT[6][1], byT[6][2], byT[5][0], byT[5][1], byT[5][2]];
     S.units = S.units.filter(u => !used.includes(u));
     spawnShogun(PORTAL.x, PORTAL.y + PORTAL.r + 26);
     S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 60, t: 0.5 });
@@ -4431,8 +4431,8 @@ const HIDDEN_DEX = [
     hint: '원·투·쓰리·스트, 서로 다른 넷을 둘씩 세우면 합주가 시작되고 곁의 손이 빨라진다.' },
   { id: 'guillotine', icon: '⚔️', name: '길로틴', recipe: '원1+투2+트3+포4 (10기)', desc: '체력 15% 이하 즉시 처형',
     hint: '원1·투2·쓰리3·포4, 열이 줄지어 늘어서는 날 처형대가 세워진다.' },
-  { id: 'shogun', icon: '🔥', name: '쇼군', recipe: '풀하우스×2 + 플러쉬×2', desc: '참격 무제한 타격 + 화상 도트',
-    hint: '풀2·플2 — 집을 채운 자와 무늬로 물든 자가 둘씩, 넷이 모이면 불칼을 뽑는다.' },
+  { id: 'shogun', icon: '🔥', name: '쇼군', recipe: '풀하우스×3 + 플러쉬×3', desc: '참격 무제한 타격 + 화상 도트',
+    hint: '풀3·플3 — 집을 채운 자와 무늬로 물든 자가 셋씩, 여섯이 모이면 불칼을 뽑는다.' },
   { id: 'chrono', icon: '⏳', name: '시간술사', recipe: '스트레이트×3', desc: '시간 정지 스킬 (쿨 150초)',
     hint: '스트3 … 끊기지 않은 흐름을 셋 겹치면 세상의 시계가 잠시 숨을 멈춘다.' },
   { id: 'slot', icon: '🎰', name: '슬롯머신', recipe: '같은 숫자 트리플×3', desc: '잭팟 폭격 스킬 (쿨 75초)',
