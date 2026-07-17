@@ -219,7 +219,7 @@
     font-weight: 800; transition: transform 0.15s; position: relative; transform-style: preserve-3d; }
   .card:hover { transform: translateY(-10px) rotateZ(-2deg) scale(1.05); }
   /* 교환 완료: 뒤집힌 파란 카드(뒷면)가 뒤에 깔리고 새 카드가 겹쳐 올라온 모양 */
-  .card.swapped { cursor: default; }
+  .card.swapped { cursor: default; transform-style: flat; } /* preserve-3d가 스태킹 컨텍스트를 만들어 뒷면(::before)이 위로 올라오던 문제 — flat이면 z-index:-1이 카드 뒤로 */
   .card.swapped::before { content: ''; position: absolute; inset: 0; z-index: -1; /* 음수 z-index = 카드 배경 뒤에 그려짐 */
     transform: translate(12px, 14px); border-radius: 11px; /* 회전 없이 반듯하게, 넉넉히 보이게 */
     background:
