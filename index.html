@@ -218,8 +218,12 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     font-weight: 800; transition: transform 0.15s; position: relative; transform-style: preserve-3d; }
   .card:hover { transform: translateY(-10px) rotateZ(-2deg) scale(1.05); }
-  .card.swapped { cursor: default; filter: saturate(0.5) brightness(0.94); }
+  .card.swapped { cursor: default; filter: grayscale(0.55) brightness(0.88); outline: 2px dashed #8a94a8; outline-offset: -3px; }
   .card.swapped:hover { transform: none; }
+  .card.swapped::after { content: '✔'; position: absolute; top: -7px; left: -7px; width: 21px; height: 21px; border-radius: 50%;
+    background: #43a047; color: #fff; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center;
+    border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.4); z-index: 3; filter: none; }
+  .card.swapped small { color: #43a047; font-weight: bold; }
   .card .rk { font-size: 34px; line-height: 1; }
   .card .st { font-size: 26px; margin-top: 2px; }
   .card .corner { position: absolute; top: 6px; left: 8px; font-size: 13px; line-height: 1.1; text-align: center; }
