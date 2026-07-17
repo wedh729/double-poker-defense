@@ -2634,7 +2634,7 @@ function draw() {
       ctx.fillStyle = g; ctx.fillRect(gx, gy, gw2, gh2);
     }
     ctx.fillStyle = '#ff6b9d'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(`🔥 FEVER ×2 (${Math.ceil(S.feverT)}s) 🔥`, CX, 36); ctx.textAlign = 'left';
+    ctx.fillText(`🔥 FEVER ×2 (${Math.ceil(S.feverT)}s) 🔥`, CX, 112); ctx.textAlign = 'left'; // 시계(y10~66)·콤보(y88) 아래로 — 가림 방지
   }
 }
 function drawBarrack() {
