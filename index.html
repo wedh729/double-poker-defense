@@ -316,40 +316,28 @@
   .mobile[data-tab="battle"] #pokerPanel, .mobile[data-tab="battle"] #log { display: none; }
   .mobile[data-tab="poker"] #cvWrap { display: none; }
 
-  #rotateGate { display: none; }
-  @media (orientation: portrait) {
-    body.mobile #rotateGate {
-      display: flex; position: fixed; inset: 0; z-index: 99999;
-      flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-      background: #0d0820; color: #e8def8; text-align: center; padding: 24px;
+  /* 📱 모바일 전투 탭: 가로에서만 풀블리드(꽉 찬 화면) — 세로는 일반 흐름 레이아웃 (둘 다 플레이 가능) */
+  @media (orientation: landscape) {
+    .mobile[data-tab="battle"] #wrap {
+      position: fixed; inset: 0; margin: 0; padding: 0; width: 100vw; height: 100dvh; max-width: none; overflow: hidden;
     }
-    body.mobile #rotateGate .rgIcon { font-size: 64px; animation: rgSpin 2s ease-in-out infinite; }
-    body.mobile #rotateGate .rgText { font-size: 22px; font-weight: bold; color: #c9a227; }
-    body.mobile #rotateGate .rgSub { font-size: 14px; color: #b6a8e8; }
-  }
-  @keyframes rgSpin { 0%,60% { transform: rotate(0deg); } 80%,100% { transform: rotate(90deg); } }
-
-  /* 📱 모바일 전투 탭: 뷰포트에 고정 풀블리드 — 스크롤 구조적으로 불가, 캔버스 화면 꽉 채움(스트레치) */
-  .mobile[data-tab="battle"] #wrap {
-    position: fixed; inset: 0; margin: 0; padding: 0; width: 100vw; height: 100dvh; max-width: none; overflow: hidden;
-  }
-  .mobile[data-tab="battle"] h1 { display: none; }
-  .mobile[data-tab="battle"] #cvWrap {
-    position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; overflow: hidden;
-  }
-  .mobile[data-tab="battle"] #cv {
-    width: 100%; height: 100%; display: block; border-radius: 0; /* 화면 꽉 채움 — 종횡비 무시 스트레치 */
-  }
-  /* 상태바: 캔버스 위 상단 반투명 오버레이 (높이를 뺏지 않음 → 캔버스가 전체 높이 차지) */
-  .mobile[data-tab="battle"] #topbar {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
-    background: rgba(13,8,32,0.5); font-size: 12px; padding: 4px 8px;
-    padding-top: calc(4px + env(safe-area-inset-top, 0px));
+    .mobile[data-tab="battle"] h1 { display: none; }
+    .mobile[data-tab="battle"] #cvWrap {
+      position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; overflow: hidden;
+    }
+    .mobile[data-tab="battle"] #cv {
+      width: 100%; height: 100%; display: block; border-radius: 0; /* 화면 꽉 채움 — 종횡비 무시 스트레치 */
+    }
+    /* 상태바: 캔버스 위 상단 반투명 오버레이 (높이를 뺏지 않음 → 캔버스가 전체 높이 차지) */
+    .mobile[data-tab="battle"] #topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+      background: rgba(13,8,32,0.5); font-size: 12px; padding: 4px 8px;
+      padding-top: calc(4px + env(safe-area-inset-top, 0px));
+    }
   }
 </style>
 </head>
 <body>
-<div id="rotateGate"><div class="rgIcon">📱🔄</div><div class="rgText">가로 모드로 즐겨주세요!</div><div class="rgSub">기기를 옆으로 돌리면 게임이 시작됩니다.</div></div>
 <div id="page">
 <!-- 광고 슬롯: 애드센스 승인 후 .adSlot 내부를 광고 코드로 교체 (300×600 기본, 좁으면 160×600) -->
 <aside class="adRail"><div class="adSlot" id="adSlotLeft">AD<br>300×600</div></aside>
