@@ -460,7 +460,7 @@ const WEAPONS = [
    hero:{name:'석궁', atk:'pierce', pierce:2, proj:'bolt'}},
   // 2 투페어 — 총
   {name:'총', dmg:22, cd:0.7, range:236, splash:0, bounce:0, atk:'shot', proj:'bullet',
-   hero:{name:'소총', cdMul:1/1.3, proj:'bullet'}}, // 공속 +30%
+   hero:{name:'소총', cdMul:1/2, proj:'bullet'}}, // 공속 2배 (기존 +30%에서 대폭 향상)
   // 3 트리플 — 부메랑
   {name:'부메랑', dmg:16, cd:1.0, range:210, splash:0, bounce:3, atk:'boomerang',
    hero:{name:'대형 표창', bounce:7}}, // 영웅은 부메랑 대신 표창 (모양·투사체 모두)
@@ -806,7 +806,7 @@ function spawnHero(tier, race, x, y, keyBonus, sup) {
     cd: (h.cd !== undefined ? h.cd : w.cd * (h.cdMul || 1)) * superCd,
     range: pick('range', w.range) + (sup ? 25 : 0),
     splash: pick('splash', w.splash || 0) * (sup ? 1.25 : 1),
-    bounce: Math.round(pick('bounce', w.bounce || 0) * (sup ? 2.5 : 1)), // 슈퍼: 특수효과 ×2.5 (팅김 7→18)
+    bounce: sup ? Math.min(12, Math.round(pick('bounce', w.bounce || 0) * 2.5)) : pick('bounce', w.bounce || 0), // 슈퍼: 팅김 ×2.5, 최대 12 (18은 사기)
     atk: pick('atk', w.atk),
     proj: pick('proj', w.proj || null),
     vis: pick('vis', w.vis || null),
@@ -4060,8 +4060,9 @@ cv.addEventListener('touchend', e => {
   // 탭: ①유닛 명중 → 선택(pressEnd) ②선택유닛 있음 → 이동 ③건물 → 팝업 ④빈땅 → 선택해제
   let hit = null;
   for (const u of S.units) if (Math.hypot(u.x - p.x, u.y - p.y) < HIT_R) { hit = u; break; }
-  if (!hit) { const mon = monsterAt(p.x, p.y); if (mon) { S.selMon = mon; showMonsterInfo(mon); drag = null; return; } } // 🎯 몬스터 탭 → 정보 (이동보다 우선)
   const hasSel = S.units.some(u => u.selected && !u.miner);
+  // 🎯 몬스터 탭 → 정보: 유닛 미선택일 때만 (선택 중엔 이동이 우선 — 몹 근처 나무판자 이동이 정보창에 먹히던 버그)
+  if (!hit && !hasSel) { const mon = monsterAt(p.x, p.y); if (mon) { S.selMon = mon; showMonsterInfo(mon); drag = null; return; } }
   if (!hit && hasSel) {
     issueMove(p.x, p.y);
     drag = null;
