@@ -1699,7 +1699,7 @@ function update(dt) {
     }
     if (p.kind === 'brg') {
       p.spin += dt * (p.pause > 0 ? 34 : 22);
-      if (p.pause > 0) { p.pause -= dt; return true; } // 명중 후 잠깐 머무름 → 탕—탕—탕 타격 리듬
+      if (p.pause > 0) { p.pause -= dt; if (p.trail && p.trail.length) p.trail.shift(); return true; } // 머무는 동안 잔상이 타격점으로 빨려들며 사라짐
     }
     const dx = t.x - p.x, dy = t.y - p.y, d = Math.hypot(dx, dy);
     const step = p.speed * dt;
@@ -1710,13 +1710,16 @@ function update(dt) {
       if (p.onHit === 'shards') spawnShards(p);   // 대왕새총: 파편 튐
       if (p.kind === 'brg' && p.left > 0) {
         const nt = nearestMob(t.x, t.y, p.hitList, 180);
-        if (nt) { p.left--; p.tgt = nt; nt.inc += p.dmg; p.hitList.push(nt); p.pause = 0.14; p.hopD0 = Math.hypot(nt.x - t.x, nt.y - t.y); return true; }
+        if (nt) { p.left--; p.tgt = nt; nt.inc += p.dmg; p.hitList.push(nt); p.pause = 0.14; p.hopD0 = Math.hypot(nt.x - t.x, nt.y - t.y); p.speed = Math.min(420, p.speed + 45); return true; } // 튕길수록 가속 → 타-타-탕
       }
       return false;
     }
     p.x += dx / d * step; p.y += dy / d * step;
     p.ang = Math.atan2(dy, dx);
-    if (p.dice) p.hopY = p.hopD0 > 8 ? -16 * Math.sin(Math.PI * Math.max(0, 1 - d / p.hopD0)) : 0; // 🎲 탱탱볼 호(arc)
+    if (p.kind === 'brg') { // 탱탱볼 호(arc) — 부메랑·표창·주사위 모든 팅김 무기 공통
+      p.hopY = p.hopD0 > 8 ? -16 * Math.sin(Math.PI * Math.max(0, 1 - d / p.hopD0)) : 0;
+      (p.trail = p.trail || []).push({ x: p.x, y: p.y + p.hopY }); if (p.trail.length > 9) p.trail.shift(); // 뮤탈식 잔상 동선
+    }
     return true;
   });
   // 사망 처리 + 폭발 (몹 보상: 기존의 1/10로 축소)
@@ -2518,7 +2521,16 @@ function draw() {
       }
       ctx.restore(); ctx.lineWidth = 1;
     } else if (p.kind === 'brg') { // 날아가는 부메랑 / 영웅은 대형 표창
-      ctx.save(); ctx.translate(p.x, p.y + (p.hopY || 0)); ctx.rotate(p.spin); // hopY = 🎲 탱탱볼 호
+      if (p.trail && p.trail.length > 1) { // 뮤탈식 잔상 트레일 (머리쪽이 진하고 굵게)
+        const tc = p.dice ? '255,213,79' : p.star ? '176,196,222' : '232,161,92';
+        for (let ti = 1; ti < p.trail.length; ti++) {
+          ctx.strokeStyle = `rgba(${tc},${(ti / p.trail.length * 0.55).toFixed(2)})`;
+          ctx.lineWidth = 1 + ti / p.trail.length * 3;
+          ctx.beginPath(); ctx.moveTo(p.trail[ti-1].x, p.trail[ti-1].y); ctx.lineTo(p.trail[ti].x, p.trail[ti].y); ctx.stroke();
+        }
+        ctx.lineWidth = 1;
+      }
+      ctx.save(); ctx.translate(p.x, p.y + (p.hopY || 0)); ctx.rotate(p.spin); // hopY = 탱탱볼 호
       if (p.dice) { // 🎲 갬블러 주사위 (회전하며 날아가 팅긴다)
         ctx.fillStyle = '#fafafa'; ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.rect(-6, -6, 12, 12); ctx.fill(); ctx.stroke();
