@@ -229,6 +229,7 @@
       #2e57b8;
     border: 4px solid #f4f1e8; box-shadow: 3px 4px 9px rgba(0,0,0,0.35); }
   .card.swapped:hover { transform: none; }
+  .card.swapped.spin::before { display: none; } /* 교체 회전 애니 중엔 transform이 스태킹 컨텍스트를 만들어 뒷면이 앞면 위로 비치는 문제 — 스핀 끝난 뒤에만 뒷면 표시 */
   .card.swapped small { color: #43a047; font-weight: bold; }
   .card .rk { font-size: 34px; line-height: 1; }
   .card .st { font-size: 26px; margin-top: 2px; }
