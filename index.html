@@ -879,7 +879,7 @@ function upgPer(u) { return u.atk === 'pen' ? 0.3 : (u.splash > 0 ? 0.6 : 3); }
 // 합성 재료 수 = 업글 계수 (재료 수만큼 업글 보정도 커야 "합치면 손해" 역전이 없다)
 function fuseCount(u) {
   if (u.super) return 25;      // 슈퍼영웅 = 기본 25기분
-  if (u.catapult) return 20;   // 투석기 = 하이카드 20기
+  if (u.catapult) return 4;    // 투석기 = 하이카드 20기지만 단일(계수3)→스플래시(계수0.6) 전환 비율 1/5 반영 → ×4
   if (u.execute) return 10;    // 길로틴 = 10기
   if (u.gamble || u.junk) return 6;   // 갬블러·고물상 = 6기
   if (u.quartet || u.shogun) return 4; // 콰르텟·쇼군 = 4기
