@@ -4139,8 +4139,10 @@ function selectSameType(x, y) {
     if (Math.hypot(u.x - x, u.y - y) < HIT_R) { hit = u; break; }
   }
   if (!hit) return;
-  S.units.forEach(u => u.selected =
-    (u.tier === hit.tier && u.hero === hit.hero && u.miner === hit.miner && u.hidden === hit.hidden));
+  // 같은 종류 판정: 히든 유닛(조커 등)·아이템·에이스·슈퍼까지 구분 (기존엔 조커가 원페어 영웅과 같이 잡히던 버그)
+  const typeKey = v => v.item ? 'I' + v.item : (hiddenMeta(v) ? 'H' + hiddenMeta(v)[1] : [v.tier, !!v.hero, !!v.miner, !!v.hidden, !!v.ace, !!v.super].join('_'));
+  const hk = typeKey(hit);
+  S.units.forEach(u => u.selected = (typeKey(u) === hk));
   updateInfoPanel();
 }
 cv.addEventListener('dblclick', e => {
