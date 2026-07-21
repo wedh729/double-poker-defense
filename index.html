@@ -652,7 +652,7 @@ let DIFF_MUL = 1, DIFF_NAME = '보통'; // 시작 화면에서 선택 (쉬움 0.
 function monsterHP(n) {
   // ~30R: 기존 복리 곡선 유지 / 30R 이후: 복리 → 선형 증가 (후반 기하급수 벽 제거 — 업글 화력도 선형이라 결이 맞음)
   const grow = m => m <= 3 ? 14 * Math.pow(1.10, m - 1) : 14 * Math.pow(1.10, 2) * 1.42 * Math.pow(1.15, m - 3);
-  let hp = n <= 30 ? grow(n) : grow(30) * (1 + 0.15 * (n - 30)); // 30R HP 기준 라운드당 +15%p 선형
+  let hp = n <= 30 ? grow(n) : grow(30) * (1 + 0.15 * Math.min(n - 30, 10) + 0.09 * Math.max(0, n - 40)); // 30~40R +15%p/R 선형 → 40R부터 +9%p/R (기울기 40%↓)
   if (n > FINAL_ROUND) hp *= Math.pow(2, n - FINAL_ROUND); // 헬(80+)만 가파르게 유지
   return Math.max(1, Math.floor(hp * DIFF_MUL * 0.7)); // 전체 난이도 30% 하향 (몬스터 HP ×0.7)
 }
@@ -995,7 +995,7 @@ function spawnMonster(hp, isBoss, opt) {
   if (!isBoss && !opt.child) {
     const st = S.round;
     if (st >= 50 && Math.random() < 0.16) { m.shieldMax = m.shield = Math.max(1, Math.floor(hp * 0.6)); } // 🛡️ 쉴드
-    else if (st >= 40 && Math.random() < 0.10) { m.split = true; } // 💥 분열 (처치 시 10마리)
+    else if (st >= 40 && Math.random() < 0.10) { m.split = true; } // 💥 분열 (처치 시 6마리)
   }
   S.monsters.push(m);
   return m;
@@ -1777,11 +1777,11 @@ function update(dt) {
         addFloat(m.x, m.y - 20, `+${g}G · 🎰 칩+1!`, '#ffd54f', 2.6);
         for (let i = 0; i < 3; i++) S.parts.push({ x: m.x, y: m.y, vx: (Math.random()-0.5)*120, vy: -80 - Math.random()*80, coin: true, chipFx: true, t: 1.6, r: 3.4, c: '#ffd54f' });
       }
-      // 💥 분열: 처치 시 10마리 (각각 원래 체력의 80%, 자식은 재분열 안 함)
+      // 💥 분열: 처치 시 6마리 (각각 원래 체력의 80% — 10마리는 40R 실효 HP +80% 스파이크라 6으로 완화)
       if (m.split && S.monsters.length + newborns.length < 520) {
         const chp = Math.max(1, Math.floor(m.max * 0.8));
         S.effects.push({ type:'boom', x: m.x, y: m.y, r: 30, t: 0.3 });
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 6; i++) {
           newborns.push({
             ang: Math.random()*Math.PI*2, baseR: 6 + Math.random()*30, phase: Math.random()*6.28,
             spin: (Math.random()<0.5?-1:1)*(0.2+Math.random()*0.4), x: m.x, y: m.y, rot: Math.random()*3,
