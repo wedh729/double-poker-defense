@@ -139,7 +139,7 @@
 
   /* ===== 칩 모달 ===== */
   #chipModal { position: fixed; inset: 0; background: rgba(18,12,34,0.72); display: none; align-items: center; justify-content: center; z-index: 12; }
-  #chipWin { position: relative; width: min(460px, 92vw); background: linear-gradient(180deg, #241a3a, #17102b);
+  #chipWin { position: relative; width: min(460px, 92vw); max-height: 94dvh; overflow-y: auto; background: linear-gradient(180deg, #241a3a, #17102b); /* 모바일(가로)에서 룰렛 휠이 위아래 잘리던 문제 — 창 안에서 스크롤 */
     border: 3px solid #c9a75a; border-radius: 18px; box-shadow: 0 0 0 3px #7a6335, 0 24px 60px rgba(0,0,0,0.6); padding: 20px 22px 24px; color: #fff; text-align: center; }
   #chipClose { position: absolute; top: 10px; right: 12px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #c9a75a; background: #241a3a; color: #e8d9a8; cursor: pointer; font-weight: bold; }
   #chipTitle { font-size: 19px; font-weight: 800; color: #ffd166; letter-spacing: 2px; margin-bottom: 14px; }
@@ -793,7 +793,7 @@ function confirmHand() {
 // ==================== 유닛 ====================
 function spawnUnit(rank, race, hidden, keyRank, superAce) {
   const i = S.units.length;
-  const x = CX + (i % 8 - 3.5) * 34, y = CY + 130 + Math.floor(i / 8) * 30;
+  const x = CX + (i % 8 - 3.5) * 34, y = Math.min(CY + 130 + Math.floor(i / 8) * 30, 462); // y 클램프: 유닛 많아져도 캔버스(500) 아래로 안 숨음
   const w = WEAPONS[rank];
   const kr = keyRank || 14;
   S.units.push({
