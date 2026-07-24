@@ -490,7 +490,7 @@ const WEAPONS = [
    hero:{name:'대형 화염방사기', splash:66, range:120, cd:0.125, dmgMul:3}}, // 공속 8/초 + 데미지 ×3 + 불길 폭 2배(splash 33→66)
   // 6 풀하우스 — 대검 (검사: 사거리 짧게 = 60, 데미지↑ + 돌진 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
-  {name:'대검', dmg:20, cd:1.6, range:60, splash:56, bounce:0, atk:'area', vis:'sword',
+  {name:'대검', dmg:20, cd:0.53, range:72, splash:56, bounce:0, atk:'area', vis:'sword', // 공속 3배(1.6→0.53)·사거리 20%↑(60→72)
    hero:{name:'전기톱', atk:'area', vis:'saw', splash:80, cd:0.24, range:102}}, // range 60×1.7
   // 7 포카드 — 바주카포 (5초, 스플래쉬)
   {name:'바주카포', dmg:25, cd:2.5, range:330, splash:52, bounce:0, atk:'area', vis:'rocket', // 공속 2배(5→2.5)·스플래시 반경 절반(104→52)
@@ -1722,12 +1722,16 @@ function update(dt) {
     const step = p.speed * dt;
     if (d <= step + 6) {
       t.inc -= p.dmg; dealDamage(t, p.dmg, p.owner);
-      S.effects.push({ type:'boom', x: t.x, y: t.y, r: p.kind === 'brg' ? 11 : 5, t: p.kind === 'brg' ? 0.16 : 0.1 });
-      if (p.kind === 'brg') sfx('boom'); // 팅길 때마다 탕!
+      if (p.kind === 'brg') { // 탕! — 큰 착탄 + 불똥 사방으로 + 미세 셰이크 → 리듬감
+        S.effects.push({ type:'boom', x: t.x, y: t.y, r: 17, t: 0.2 });
+        for (let i = 0; i < 6; i++) { const aa = Math.random()*6.28, v = 80 + Math.random()*130; const sc = p.dice ? '#ffd54f' : p.star ? '#e8eefc' : '#ffc27a'; S.parts.push({ x: t.x, y: t.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1.4 + Math.random()*2, c: sc }); }
+        S.shake = Math.max(S.shake, 0.05);
+        sfx('boom'); // 팅길 때마다 탕!
+      } else S.effects.push({ type:'boom', x: t.x, y: t.y, r: 5, t: 0.1 });
       if (p.onHit === 'shards') spawnShards(p);   // 대왕새총: 파편 튐
       if (p.kind === 'brg' && p.left > 0) {
         const nt = nearestMob(t.x, t.y, p.hitList, 180);
-        if (nt) { p.left--; p.tgt = nt; nt.inc += p.dmg; p.hitList.push(nt); p.pause = 0.14; p.hopD0 = Math.hypot(nt.x - t.x, nt.y - t.y); p.speed = Math.min(420, p.speed + 45); return true; } // 튕길수록 가속 → 타-타-탕
+        if (nt) { p.left--; p.tgt = nt; nt.inc += p.dmg; p.hitList.push(nt); p.pause = 0.06; p.hopD0 = Math.hypot(nt.x - t.x, nt.y - t.y); p.speed = Math.min(520, p.speed + 70); return true; } // 짧게 끊어 탕-탕-탕 (머무름 X, 튕길수록 가속)
       }
       return false;
     }
@@ -1904,12 +1908,16 @@ function fireAt(u, target) {
 // 범위 스플래쉬: 대상 지점 반경 splash 안의 몹 전부 타격 (즉시, inc 미사용)
 function areaHit(u, x, y, dmg) {
   const vis = u.vis, mz = muzzle(u), a = Math.atan2(y - mz.y, x - mz.x);
+  const big = u.hero || u.hidden; // 🎇 희귀 유닛(영웅·히든)은 이펙트를 크고 오래 남게 + 미세 화면 흔들림
+  if (big) S.shake = Math.max(S.shake, 0.06); // 타격 손맛 (max라 누적X, ~1.4px 진동)
   if (vis === 'saw') {
-    S.effects.push({ type:'saw', x, y, r: u.splash * 0.62, t: 0.18 });
-    for (let i = 0; i < 3; i++) { const v = 40 + Math.random()*60, aa = Math.random()*6.28; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.2, r: 1 + Math.random()*1.5, c: '#eceff1' }); }
+    S.effects.push({ type:'saw', x, y, r: u.splash * (big ? 0.9 : 0.62), t: big ? 0.28 : 0.18 });
+    if (big) { S.effects.push({ type:'slash', x, y, r: u.splash * 1.35, a, t: 0.3, dur: 0.3 }); } // 전기톱: 톱날 뒤로 큰 참격 궤적
+    for (let i = 0; i < (big ? 8 : 3); i++) { const v = 40 + Math.random()*90, aa = Math.random()*6.28; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1 + Math.random()*2, c: '#eceff1' }); }
   } else if (vis === 'sword') {
     // 실제 대검 참격 (총구=칼끝에서 호를 그린다). 쇼군은 불타는 참격 (fire 플래그)
-    S.effects.push({ type:'slash', x, y, r: u.splash, a, t: 0.22, dur: 0.22, fire: u.shogun }); // 크레센트 반경 = 실제 참격 반경(과장 X)
+    S.effects.push({ type:'slash', x, y, r: u.splash * (big ? 1.4 : 1), a, t: big ? 0.42 : 0.22, dur: big ? 0.42 : 0.22, fire: u.shogun }); // 희귀 유닛은 크레센트 1.4배·오래
+    if (big) S.effects.push({ type:'slash', x, y, r: u.splash * 1.75, a: a + 0.3, t: 0.5, dur: 0.5, fire: u.shogun }); // 뒤따라 번지는 큰 잔광 궤적
     if (u.shogun) { // 🔥 쇼군: 이도류 X자 이중 참격 — 반박자 늦게 교차 궤적 + 불똥 폭발
       S.effects.push({ type:'slash', x, y, r: u.splash * 1.3, a: a + 0.55, t: 0.34, dur: 0.34, fire: true });
       for (let i = 0; i < 10; i++) { const v = 90 + Math.random()*160, aa = a + (Math.random()-0.5)*1.8; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 30, g: true, t: 0.4, r: 1.5 + Math.random()*2.2, c: i%3 ? '#ff8a3d' : '#ffd54f' }); }
@@ -1917,8 +1925,9 @@ function areaHit(u, x, y, dmg) {
     for (let i = 0; i < 4; i++) { const v = 60 + Math.random()*90, aa = a + (Math.random()-0.5)*1.2; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.22, r: 1.2 + Math.random()*1.6, c: u.shogun ? '#ff8a3d' : '#dbe9ff' }); }
   } else if (vis === 'scythe') {
     // 🃏 조커: 대검 크레센트를 재사용하되 보라색 (joker 플래그) + 보라 파티클
-    S.effects.push({ type:'slash', x, y, r: u.splash, a, t: 0.22, dur: 0.22, joker: true });
-    for (let i = 0; i < 5; i++) { const v = 60 + Math.random()*100, aa = a + (Math.random()-0.5)*1.3; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1.3 + Math.random()*1.8, c: '#8c5bff' }); }
+    S.effects.push({ type:'slash', x, y, r: u.splash * (big ? 1.45 : 1), a, t: big ? 0.45 : 0.22, dur: big ? 0.45 : 0.22, joker: true }); // 크게·오래
+    if (big) S.effects.push({ type:'slash', x, y, r: u.splash * 1.8, a: a + 0.35, t: 0.55, dur: 0.55, joker: true }); // 크게 호를 그리는 보라 잔상
+    for (let i = 0; i < (big ? 11 : 5); i++) { const v = 60 + Math.random()*130, aa = a + (Math.random()-0.5)*1.5; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.3, r: 1.3 + Math.random()*2.2, c: '#8c5bff' }); }
   } else if (vis === 'flame') {
     // 진짜 불꽃: 총구에서 조준 방향으로 **사거리 끝까지** 뻗는 화염 스트림 (착탄점이 아니라 range까지 항상 표현)
     const wide = u.hero; // 영웅은 두껍게, 일반은 얇은 불줄기
@@ -1930,10 +1939,11 @@ function areaHit(u, x, y, dmg) {
         t: 0.52 + Math.random() * 0.36, r: (wide ? 8 : 5.5) + Math.random() * (wide ? 9 : 6), fire: true, spin: Math.random()*6.28 }); // 크게 + 오래(안 금방 꺼짐)
     }
   } else { // rocket / bomb: 폭발
-    S.effects.push({ type:'boom', x, y, r: u.splash, t: 0.28 });
-    for (let i = 0; i < 8; i++) {
-      const aa = Math.random() * Math.PI * 2, v = 60 + Math.random() * 140;
-      S.parts.push({ x, y, vx: Math.cos(aa) * v, vy: Math.sin(aa) * v, t: 0.3, r: 2 + Math.random() * 3, c: '#ff8a3d' });
+    S.effects.push({ type:'boom', x, y, r: u.splash * (big ? 1.3 : 1), t: big ? 0.42 : 0.28 });
+    if (big) S.effects.push({ type:'boom', x, y, r: u.splash * 1.9, t: 0.28 }); // 바깥으로 퍼지는 충격파 링
+    for (let i = 0; i < (big ? 18 : 8); i++) {
+      const aa = Math.random() * Math.PI * 2, v = 60 + Math.random() * (big ? 220 : 140);
+      S.parts.push({ x, y, vx: Math.cos(aa) * v, vy: Math.sin(aa) * v, t: 0.34, r: 2 + Math.random() * (big ? 4.5 : 3), c: '#ff8a3d' });
     }
   }
   if (vis === 'flame') {
@@ -2562,10 +2572,12 @@ function draw() {
         ctx.fillStyle = '#c62828';
         for (const pip of [[-3,-3],[3,-3],[0,0],[-3,3],[3,3]]) { ctx.beginPath(); ctx.arc(pip[0], pip[1], 1.2, 0, 6.28); ctx.fill(); }
       } else if (p.star) {
+        ctx.shadowColor = 'rgba(200,220,255,0.9)'; ctx.shadowBlur = 8; // 큼직한 표창 광
         ctx.fillStyle = '#455a64';
-        polyPath(0, 0, 4, 9.5, 0, 3.4); ctx.fill();
-        ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.2; ctx.stroke();
-        ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(0, 0, 2, 0, Math.PI*2); ctx.fill();
+        polyPath(0, 0, 4, 14, 0, 5); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.6; ctx.stroke();
+        ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI*2); ctx.fill();
       } else {
         ctx.strokeStyle = '#c8752f'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(3, -3, 8, Math.PI * 0.05, Math.PI * 0.65); ctx.stroke();
