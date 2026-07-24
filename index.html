@@ -617,6 +617,7 @@ function reset() {
     stimT: 0, acidPools: [],  // 💉 스팀팩 남은시간 / 🧪 염산 장판
     reviveArmed: false, // 🔄 부활권 봉인 여부
     feverT: 0, feverUsed: false, // 🔥 피버 타임 남은시간 / 이번 웨이브 발동 여부
+    goldFlash: 0, // 🎲 갬블러 6 잭팟 골드 화면 플래시 타이머
     stats: {}, // 🏆 무기별 딜/킬 통계 (게임오버 화면용)
     tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 20기 → 완성, 라운드 재시작 시 리셋)
     bird: null, birdTimer: 250 + Math.random() * 200, // 🐦 힌트 새 / 다음 스폰까지 남은 초
@@ -1543,6 +1544,7 @@ function update(dt) {
   // ⏳ 시간술사 시간 정지: S.timer/스폰/스웜 이동만 멈춘다 (유닛 행동·사망 처리는 계속)
   if (S.stimT > 0) S.stimT -= dt;
   if (S.feverT > 0) S.feverT -= dt;
+  if (S.goldFlash > 0) S.goldFlash -= dt;
   if (S.acidPools.length) S.acidPools = S.acidPools.filter(p => {
     p.t -= dt;
     if (S.freezeT <= 0) for (const m of S.monsters) { if (Math.hypot(m.x - p.x, m.y - p.y) <= p.r) dealDamage(m, p.dps * dt, null); } // 시간정지 중엔 도트도 멈춤
@@ -1830,7 +1832,10 @@ function fireAt(u, target) {
   if (u.gamble) { // 🎲 갬블러: 주사위를 던져 1~6회 팅기는 공격 (6=잭팟 6연타)
     gambleBounce = 1 + Math.floor(Math.random() * 6);
     addFloat(u.x, u.y - 32, gambleBounce === 6 ? '🎲 6! 잭팟!!' : `🎲 ${gambleBounce}`, gambleBounce >= 5 ? '#ffd54f' : gambleBounce === 1 ? '#9e9e9e' : '#fff', gambleBounce === 6 ? 0.9 : 0.6);
-    if (gambleBounce === 6) sfx('coin');
+    if (gambleBounce === 6) { // 🎲✨ 6 잭팟 시그니처: 화면 전체 골드 플래시 + 반짝이 분수
+      sfx('coin'); S.goldFlash = 0.55; S.shake = Math.max(S.shake, 0.1);
+      for (let i = 0; i < 20; i++) { const aa = Math.random()*6.28, v = 90 + Math.random()*180; S.parts.push({ x: u.x, y: u.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 40, g: true, t: 0.6, r: 1.6 + Math.random()*2.6, c: i%2 ? '#ffd54f' : '#fff3b0' }); }
+    }
   }
   if (u.execute && target.hp <= target.max * 0.15) { // ⚔️ 길로틴: 체력 15% 이하 즉시 처형
     dmg = target.hp + (target.shield || 0);
@@ -1840,6 +1845,10 @@ function fireAt(u, target) {
   u.atkAnim = 1;              // 공격 모션 (스윙/반동)
   sfx(u.vis === 'sword' ? 'slash' : 'shoot');
   const m = muzzle(u);        // 모든 공격은 무기 총구에서 발사
+  if (u.super) { // 🌈 슈퍼영웅 시그니처: 공격마다 총구에서 무지개 스파크가 튄다
+    const rc = ['#ff5252','#ffb74d','#ffee58','#66bb6a','#42a5f5','#ab47bc'];
+    for (let i = 0; i < 4; i++) { const aa = Math.random()*6.28, v = 60 + Math.random()*110; S.parts.push({ x: m.x, y: m.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.3, r: 1.4 + Math.random()*1.8, c: rc[(Math.random()*6)|0] }); }
+  }
   switch (u.atk) {
     case 'boomerang': { // 부메랑: 날아가 연쇄로 팅긴다 (한 방씩 탕—탕—탕 리듬, 영웅은 표창 모양)
       target.inc += dmg;
@@ -2688,6 +2697,15 @@ function draw() {
     ctx.fillStyle = '#ff6b9d'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(`🔥 FEVER ×2 (${Math.ceil(S.feverT)}s) 🔥`, CX, 112); ctx.textAlign = 'left'; // 시계(y10~66)·콤보(y88) 아래로 — 가림 방지
   }
+  if (S.goldFlash > 0) { // 🎲✨ 갬블러 6 잭팟: 화면 전체 골드 섬광 + JACKPOT 배너
+    const k = S.goldFlash / 0.55; // 1→0 페이드
+    const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, 620);
+    g.addColorStop(0, `rgba(255,215,79,${(0.32 * k).toFixed(2)})`); g.addColorStop(1, 'rgba(255,180,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 940, 500);
+    ctx.save(); ctx.textAlign = 'center'; ctx.shadowColor = '#c9971a'; ctx.shadowBlur = 12;
+    ctx.fillStyle = `rgba(255,236,140,${k.toFixed(2)})`; ctx.font = `bold ${Math.round(30 + (1 - k) * 16)}px sans-serif`;
+    ctx.fillText('🎲 JACKPOT! 🎲', CX, CY - 40); ctx.restore(); ctx.textAlign = 'left';
+  }
 }
 function drawBarrack() {
   // 몬스터 소환장 울타리 (몹들이 이 안에서 뒤엉킨다)
@@ -3174,6 +3192,15 @@ function drawMatMob(m, sz, c) {
   }
 }
 function drawMonster(m) {
+  if (m.pullT > 0) { // 🃏 조커 시그니처: 낫에 걸린 몹을 조커 쪽으로 잇는 보라 사슬 (지그재그 + 광)
+    const dx = m.pullX - m.x, dy = m.pullY - m.y, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(140,91,255,0.85)'; ctx.lineWidth = 2.4; ctx.shadowColor = '#8c5bff'; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.moveTo(m.x, m.y);
+    const seg = 6; for (let i = 1; i < seg; i++) { const t2 = i / seg, w = (i % 2 ? 1 : -1) * 4 * Math.sin(S.time * 18); ctx.lineTo(m.x + dx * t2 + nx * w, m.y + dy * t2 + ny * w); }
+    ctx.lineTo(m.pullX, m.pullY); ctx.stroke();
+    ctx.restore();
+  }
   const c = monColor(m);
   const sz = monSize(m) * m.born;
   // 피격 스쿼시: 맞는 순간 옆으로 찌그러진다 (보스 제외 — 얼굴 클립 보호)
@@ -4346,7 +4373,7 @@ function updateInfoPanel() {
     (u.tier === 6 ? skillRow(u) : '') +
     (u.chrono ? chronoRow(u) : '') +
     (u.slot ? slotRow(u) : '') +
-    ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier})</button>` : '') +
+    ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier}) <span style="color:${u.hero?'#e57373':'#66bb6a'};font-size:11px">성공률 ${u.hero?50:70}%</span></button>` : '') +
     deselBtnHTML();
   wirePriorityButtons(el);
   wireDesel(el);
