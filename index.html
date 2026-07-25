@@ -490,7 +490,7 @@ const WEAPONS = [
    hero:{name:'대형 화염방사기', splash:66, range:120, cd:0.125, dmgMul:3}}, // 공속 8/초 + 데미지 ×3 + 불길 폭 2배(splash 33→66)
   // 6 풀하우스 — 대검 (검사: 사거리 짧게 = 60, 데미지↑ + 돌진 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
-  {name:'대검', dmg:20, cd:0.53, range:72, splash:56, bounce:0, atk:'area', vis:'sword', // 공속 3배(1.6→0.53)·사거리 20%↑(60→72)
+  {name:'대검', dmg:26, cd:0.2, range:72, splash:44, bounce:0, atk:'area', vis:'sword', bossCrack:true, // 💎 보석 브레이커: 단일 타겟·초고속 난도질(cd 0.2)·보스 대미지 2배 (스플래시 제거)
    hero:{name:'전기톱', atk:'area', vis:'saw', splash:80, cd:0.24, range:102}}, // range 60×1.7
   // 7 포카드 — 바주카포 (5초, 스플래쉬)
   {name:'바주카포', dmg:25, cd:2.5, range:330, splash:52, bounce:0, atk:'area', vis:'rocket', // 공속 2배(5→2.5)·스플래시 반경 절반(104→52)
@@ -1925,7 +1925,9 @@ function areaHit(u, x, y, dmg) {
     for (let i = 0; i < (big ? 8 : 3); i++) { const v = 40 + Math.random()*90, aa = Math.random()*6.28; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1 + Math.random()*2, c: '#eceff1' }); }
   } else if (vis === 'sword') {
     // 실제 대검 참격 (총구=칼끝에서 호를 그린다). 쇼군은 불타는 참격 (fire 플래그)
-    S.effects.push({ type:'slash', x, y, r: u.splash * (big ? 1.4 : 1), a, t: big ? 0.42 : 0.22, dur: big ? 0.42 : 0.22, fire: u.shogun }); // 희귀 유닛은 크레센트 1.4배·오래
+    const flurry = !u.shogun && !big; // 💎 풀하우스: 초고속 난도질 — 짧게·좌우 교차로 다다닥
+    const sdur = flurry ? 0.13 : (big ? 0.42 : 0.22), soff = flurry ? ((u._flur = (u._flur || 0) + 1) % 2 ? 0.55 : -0.55) : 0;
+    S.effects.push({ type:'slash', x, y, r: u.splash * (big ? 1.4 : 1), a: a + soff, t: sdur, dur: sdur, fire: u.shogun }); // 희귀 유닛은 크레센트 1.4배·오래 / 풀하우스는 짧고 교차
     if (big) S.effects.push({ type:'slash', x, y, r: u.splash * 1.75, a: a + 0.3, t: 0.5, dur: 0.5, fire: u.shogun }); // 뒤따라 번지는 큰 잔광 궤적
     if (u.shogun) { // 🔥 쇼군: 이도류 X자 이중 참격 — 반박자 늦게 교차 궤적 + 불똥 폭발
       S.effects.push({ type:'slash', x, y, r: u.splash * 1.3, a: a + 0.55, t: 0.34, dur: 0.34, fire: true });
@@ -1970,14 +1972,16 @@ function areaHit(u, x, y, dmg) {
   }
   const r2 = u.splash * u.splash;
   if (vis === 'sword' && !u.shogun) {
-    // 대검: 한 번의 참격은 가까운 5마리까지만 (스플래쉬 다수 타격 밸런스). 쇼군은 무제한 → 아래 전체 루프로
-    const inR = [];
+    // 💎 풀하우스(대검): 단일 타겟 보석 브레이커 — 착탄점 최근접 1마리만, 보스에겐 대미지 2배
+    let best = null, bd = r2;
     for (const m of S.monsters) {
       const ddx = m.x - x, ddy = m.y - y, d2 = ddx * ddx + ddy * ddy;
-      if (d2 <= r2) inR.push([d2, m]);
+      if (d2 <= bd) { bd = d2; best = m; }
     }
-    inR.sort((a, b) => a[0] - b[0]);
-    for (let i = 0; i < Math.min(5, inR.length); i++) dealDamage(inR[i][1], dmg, u);
+    if (best) {
+      dealDamage(best, dmg * (best.boss ? 2 : 1), u);
+      if (best.boss) addFloat(best.x, best.y - 24, '💎 CRACK! ×2', '#7ab8ff', 0.7); // 보스 크래커
+    }
     return;
   }
   for (const m of S.monsters) {
@@ -4334,6 +4338,7 @@ function updateInfoPanel() {
   const traits = [];
   if (u.atk === 'pen') traits.push('<b style="color:#d32f2f">소환장 전체 타격</b>');
   else if (u.vis === 'flame') traits.push(`화염 스트림 (불길 두께 ${u.splash * 2})`);
+  else if (u.vis === 'sword' && !u.shogun) traits.push('💎 단일 타겟 초고속 난도질 · 보스 대미지 ×2 (보석 브레이커)');
   else if (u.splash) traits.push(`스플래쉬 반경 ${u.splash}`);
   if (u.gamble) traits.push('🎲 주사위만큼 1~6회 랜덤 팅김');
   else if (u.bounce) traits.push(`팅김 ×${u.bounce}`);
