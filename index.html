@@ -1741,7 +1741,7 @@ function update(dt) {
       t.inc -= p.dmg; dealDamage(t, p.dmg, p.owner);
       if (p.kind === 'brg') { // 탕! — 큰 착탄 + 불똥 사방으로 + 미세 셰이크 → 리듬감
         S.effects.push({ type:'boom', x: t.x, y: t.y, r: 17, t: 0.2 });
-        for (let i = 0; i < 6; i++) { const aa = Math.random()*6.28, v = 80 + Math.random()*130; const sc = p.dice ? '#ffd54f' : p.star ? '#e8eefc' : '#ffc27a'; S.parts.push({ x: t.x, y: t.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1.4 + Math.random()*2, c: sc }); }
+        for (let i = 0; i < 3; i++) { const aa = Math.random()*6.28, v = 80 + Math.random()*130; const sc = p.dice ? '#ffd54f' : p.star ? '#e8eefc' : '#ffc27a'; S.parts.push({ x: t.x, y: t.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1.4 + Math.random()*2, c: sc }); }
         S.shake = Math.max(S.shake, 0.05);
         sfx('boom'); // 팅길 때마다 탕!
       } else S.effects.push({ type:'boom', x: t.x, y: t.y, r: 5, t: 0.1 });
@@ -2456,8 +2456,11 @@ function draw() {
   if (S.stimT > 0) { ctx.fillStyle = '#43a047'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign='center'; ctx.fillText(`💉 스팀팩 ${Math.ceil(S.stimT)}초`, CX, 20); ctx.textAlign='left'; }
   // 유닛
   for (const u of S.units) { // 🌀 분신은 반투명 + 보라 잔광으로 본체와 구분
-    if (u.clone) { ctx.save(); ctx.globalAlpha = 0.5; ctx.shadowColor = '#7e57c2'; ctx.shadowBlur = 6; drawUnit(u); ctx.restore(); }
-    else drawUnit(u);
+    if (u.clone) { // 분신: 반투명 + 발밑 보라 링으로 구분 (shadowBlur 없이 저렴하게)
+      ctx.strokeStyle = 'rgba(126,87,194,0.6)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(u.x, u.y + 15, 12, 4.5, 0, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1;
+      ctx.save(); ctx.globalAlpha = 0.55; drawUnit(u); ctx.restore();
+    } else drawUnit(u);
   }
   if (S.bird) drawBird(S.bird); // 🐦 힌트 새 (유닛 위에 그려짐)
   // 이펙트
@@ -2623,10 +2626,10 @@ function draw() {
         ctx.fillStyle = '#c62828';
         for (const pip of [[-3,-3],[3,-3],[0,0],[-3,3],[3,3]]) { ctx.beginPath(); ctx.arc(pip[0], pip[1], 1.2, 0, 6.28); ctx.fill(); }
       } else if (p.star) {
-        ctx.shadowColor = 'rgba(200,220,255,0.9)'; ctx.shadowBlur = 8; // 큼직한 표창 광
+        ctx.fillStyle = 'rgba(200,220,255,0.28)'; // 큼직한 표창 광 (shadowBlur 대신 저렴한 반투명 원)
+        ctx.beginPath(); ctx.arc(0, 0, 17, 0, 6.28); ctx.fill();
         ctx.fillStyle = '#455a64';
         polyPath(0, 0, 4, 14, 0, 5); ctx.fill();
-        ctx.shadowBlur = 0;
         ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.6; ctx.stroke();
         ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI*2); ctx.fill();
       } else {
@@ -2744,9 +2747,9 @@ function draw() {
     const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, 620);
     g.addColorStop(0, `rgba(255,215,79,${(0.32 * k).toFixed(2)})`); g.addColorStop(1, 'rgba(255,180,0,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, 940, 500);
-    ctx.save(); ctx.textAlign = 'center'; ctx.shadowColor = '#c9971a'; ctx.shadowBlur = 12;
-    ctx.fillStyle = `rgba(255,236,140,${k.toFixed(2)})`; ctx.font = `bold ${Math.round(30 + (1 - k) * 16)}px sans-serif`;
-    ctx.fillText('🎲 JACKPOT! 🎲', CX, CY - 40); ctx.restore(); ctx.textAlign = 'left';
+    ctx.save(); ctx.textAlign = 'center'; ctx.font = `bold ${Math.round(30 + (1 - k) * 16)}px sans-serif`;
+    ctx.strokeStyle = `rgba(150,110,20,${k.toFixed(2)})`; ctx.lineWidth = 4; ctx.strokeText('🎲 JACKPOT! 🎲', CX, CY - 40); // 외곽선 (shadowBlur 대체)
+    ctx.fillStyle = `rgba(255,236,140,${k.toFixed(2)})`; ctx.fillText('🎲 JACKPOT! 🎲', CX, CY - 40); ctx.restore(); ctx.textAlign = 'left';
   }
 }
 function drawBarrack() {
@@ -3234,14 +3237,15 @@ function drawMatMob(m, sz, c) {
   }
 }
 function drawMonster(m) {
-  if (m.pullT > 0) { // 🃏 조커 시그니처: 낫에 걸린 몹을 조커 쪽으로 잇는 보라 사슬 (지그재그 + 광)
+  if (m.pullT > 0) { // 🃏 조커 시그니처: 낫에 걸린 몹을 조커 쪽으로 잇는 보라 사슬 (지그재그, shadowBlur 대신 2겹 스트로크로 광 표현)
     const dx = m.pullX - m.x, dy = m.pullY - m.y, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(140,91,255,0.85)'; ctx.lineWidth = 2.4; ctx.shadowColor = '#8c5bff'; ctx.shadowBlur = 8;
+    const seg = 6, sw = 4 * Math.sin(S.time * 18);
     ctx.beginPath(); ctx.moveTo(m.x, m.y);
-    const seg = 6; for (let i = 1; i < seg; i++) { const t2 = i / seg, w = (i % 2 ? 1 : -1) * 4 * Math.sin(S.time * 18); ctx.lineTo(m.x + dx * t2 + nx * w, m.y + dy * t2 + ny * w); }
-    ctx.lineTo(m.pullX, m.pullY); ctx.stroke();
-    ctx.restore();
+    for (let i = 1; i < seg; i++) { const t2 = i / seg, w = (i % 2 ? 1 : -1) * sw; ctx.lineTo(m.x + dx * t2 + nx * w, m.y + dy * t2 + ny * w); }
+    ctx.lineTo(m.pullX, m.pullY);
+    ctx.strokeStyle = 'rgba(140,91,255,0.28)'; ctx.lineWidth = 5; ctx.stroke(); // 바깥 광
+    ctx.strokeStyle = 'rgba(160,120,255,0.9)'; ctx.lineWidth = 2; ctx.stroke(); // 심지
+    ctx.lineWidth = 1;
   }
   const c = monColor(m);
   const sz = monSize(m) * m.born;
