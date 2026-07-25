@@ -4484,9 +4484,9 @@ function wireDesel(el) {
   const b = el.querySelector('#deselBtn');
   if (b) b.onclick = () => { S.units.forEach(u => u.selected = false); updateInfoPanel(); };
 }
-// ⭐ 영웅 단련 (개별 영웅 전용 공격력 강화 — 초고가: 1500G 시작, 레벨마다 2배, 총 153.6만G)
+// ⭐ 영웅 단련 (개별 영웅 전용 공격력 강화 — 초고가: 5000G 시작, ×1.8, 총 ~222만G. 한 번 한 번이 투자 결정)
 const HERO_UP_MAX = 10;
-function heroUpCost(u) { return 1500 * Math.pow(2, u.heroUpLv || 0); }
+function heroUpCost(u) { return Math.floor(5000 * Math.pow(1.8, u.heroUpLv || 0)); }
 function heroUpRow(u) {
   const lv = u.heroUpLv || 0;
   if (lv >= HERO_UP_MAX) return `<br><span style="color:#c9971a;font-weight:bold">⭐ 단련 완료 (Lv.${HERO_UP_MAX} · 공격력 +100%)</span>`;
