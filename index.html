@@ -655,11 +655,12 @@ function monsterHP(n) {
   const grow = m => m <= 3 ? 14 * Math.pow(1.10, m - 1) : 14 * Math.pow(1.10, 2) * 1.42 * Math.pow(1.15, m - 3);
   let hp = n <= 30 ? grow(n) : grow(30) * (1 + 0.15 * Math.min(n - 30, 10) + 0.09 * Math.max(0, n - 40)); // 30~40R +15%p/R 선형 → 40R부터 +9%p/R (기울기 40%↓)
   if (n > FINAL_ROUND) hp *= Math.pow(2, n - FINAL_ROUND); // 헬(80+)만 가파르게 유지
-  return Math.max(1, Math.floor(hp * DIFF_MUL * 0.7)); // 전체 난이도 30% 하향 (몬스터 HP ×0.7)
+  // ×0.7 = 전체 난이도 30% 하향 / ×1.6 = 몹 수 절반 보정 (2배가 아닌 이유: 밀도 절반 → 스플래시 효율도 절반이라 2배면 실효 난이도 상승)
+  return Math.max(1, Math.floor(hp * DIFF_MUL * 0.7 * 1.6));
 }
-// 몬스터 수: 초반은 ~50에서 완만 증가, 10스테이지부터 2배 (최대 400)
+// 몬스터 수: 렉 저감을 위해 절반 (최대 200) — 대신 개체 HP ×1.6 + 킬 골드 ×2로 보정
 function mobCount(n) {
-  const base = Math.min(200, 44 + n * 6);
+  const base = Math.min(100, 22 + n * 3);
   return n >= 10 ? base * 2 : base;
 }
 
@@ -982,6 +983,7 @@ function spawnMonster(hp, isBoss, opt) {
     shape: isBoss ? (Math.floor(S.round / 10) <= 1 ? 14 : 9 + Math.min(4, Math.floor(S.round / 10) - 1)) : (opt.shape != null ? opt.shape : stageInfo(S.round).si),
     boss: isBoss, born: opt.child ? 0.35 : 0, hell: opt.hell != null ? opt.hell : S.round > FINAL_ROUND,
     small: !!opt.child, shield: 0, shieldMax: 0, split: false,
+    bobP: Math.random() * 6.28, // 공별 바운스 위상 (전원 동기화되면 어색해서 랜덤)
   };
   // 재질 배정: 밴드 후반엔 다음 재질을 한둘씩 섞어 부드럽게 전환 (10라운드마다 확 바뀌지 않게)
   if (isBoss) { m.mat = 0; m.esc = 0; }
@@ -1577,7 +1579,7 @@ function update(dt) {
     }
     if (q.bossLeft > 0 && S.timer < WAVE_TIME - 5) {
       q.bossLeft = 0;
-      spawnMonster(q.hp * 15, true); // 보스 HP 1/3로 하향 (×45 → ×15)
+      spawnMonster(q.hp * 9.4, true); // 보스 HP: 기존 ×15 수준 유지 (기본 HP ×1.6 보정 상쇄 → 15/1.6≈9.4)
       logMsg('👹 보스 등장!');
       sfx('boss');
     }
@@ -1762,7 +1764,7 @@ function update(dt) {
     return true;
   });
   // 사망 처리 + 폭발 (몹 보상: 기존의 1/10로 축소)
-  const killGold = Math.max(1, Math.round(S.round * 0.04)) * ((S.eventMods && S.eventMods.killMul) || 1) * (S.feverT > 0 ? 2 : 1);
+  const killGold = Math.max(1, Math.round(S.round * 0.08)) * ((S.eventMods && S.eventMods.killMul) || 1) * (S.feverT > 0 ? 2 : 1); // 0.04→0.08: 몹 수 절반이라 킬 수입 유지
   const newborns = [];
   const junkUnits = S.units.filter(u => u.junk); // 💰 고물상: 반경 10px 내 처치 골드 ×1.2
   S.monsters = S.monsters.filter(m => {
@@ -1800,7 +1802,7 @@ function update(dt) {
         for (let i = 0; i < 3; i++) S.parts.push({ x: m.x, y: m.y, vx: (Math.random()-0.5)*120, vy: -80 - Math.random()*80, coin: true, chipFx: true, t: 1.6, r: 3.4, c: '#ffd54f' });
       }
       // 💥 분열: 처치 시 6마리 (각각 원래 체력의 80% — 10마리는 40R 실효 HP +80% 스파이크라 6으로 완화)
-      if (m.split && S.monsters.length + newborns.length < 520) {
+      if (m.split && S.monsters.length + newborns.length < 260) { // 몹 수 절반 정책에 맞춰 상한도 절반
         const chp = Math.max(1, Math.floor(m.max * 0.8));
         S.effects.push({ type:'boom', x: m.x, y: m.y, r: 30, t: 0.3 });
         for (let i = 0; i < 6; i++) {
@@ -2487,7 +2489,15 @@ function draw() {
     for (let i = 0; i < 3; i++) { const a = S.time*2 + i*2.1; ctx.fillStyle = 'rgba(160,200,90,0.5)'; ctx.beginPath(); ctx.arc(p.x + Math.cos(a)*p.r*0.5, p.y + Math.sin(a)*p.r*0.3, 3, 0, 6.28); ctx.fill(); }
   }
   // 몬스터
-  for (const m of S.monsters) drawMonster(m);
+  // 공 재질별 움직임 개성: [바운스 높이, 주파수] — 수정구·당구·볼링·쇠구슬은 미끄러지고, 축구공은 통통, 농구공은 높이
+  // idx: 0물풍선 1수정구 2축구공 3농구공 4야구공 5당구공 6볼링공 7쇠구슬 8+헬/천체
+  const MAT_BOB = [[2,3],[0,0],[4,7],[8,4.5],[3,8],[0,0],[0,0],[1.2,2.5]];
+  for (const m of S.monsters) {
+    const bb = (!m.boss && m.mat < 8) ? MAT_BOB[m.mat] : null;
+    const bob = bb && bb[0] ? Math.abs(Math.sin(S.time * bb[1] + m.bobP)) * bb[0] * m.born : 0;
+    if (bob > 0.3) { ctx.save(); ctx.translate(0, -bob); drawMonster(m); ctx.restore(); }
+    else drawMonster(m);
+  }
   // ⏳ 시간 정지: 소환장 위 얼음 틴트 오버레이
   if (S.freezeT > 0) {
     ctx.fillStyle = 'rgba(140,200,255,0.18)';
@@ -3073,7 +3083,9 @@ function drawMine() {
   ctx.fillStyle = '#2b2b2b';
   ctx.beginPath(); ctx.arc(x - 21, y + 37, 2, 0, Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.arc(x - 16, y + 37, 2, 0, Math.PI*2); ctx.fill();
-  drawBar(x - 30, y + 46, 60, S.mineHp / S.mineMax, T.dark); // 겹 진행 바 (텍스트 없음)
+  drawBar(x - 30, y + 46, 60, S.mineHp / S.mineMax, T.dark); // 겹 진행 바
+  ctx.fillStyle = '#7a6a52'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`⛏️ ${S.mineLayer}단계`, x, y + 62); ctx.textAlign = 'left'; // 현재 겹(단계) 표시
 }
 function polyPath(x, y, n, r, rot, r2) {
   ctx.beginPath();
@@ -3502,10 +3514,15 @@ function drawUnit(u) {
     ctx.textAlign = 'left';
   }
   // 오라: 상시 오라는 최종 등급(슈퍼영웅/슈퍼에이스)만. 일반 유닛·영웅·에이스는 5기 합성 대기(fusable) 주황 오라만
-  if (u.super || u.superAce) { // 슈퍼영웅/슈퍼에이스: 무지개 이중 오라
-    for (let ri = 0; ri < 2; ri++) {
-      ctx.strokeStyle = `hsl(${(S.time*120 + ri*180)%360},90%,60%)`;
-      ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(u.x, u.y, (u.super ? 26 : 20) + ri*5 + 3*Math.sin(S.time*5 + ri), 0, Math.PI*2); ctx.stroke(); ctx.lineWidth = 1;
+  if (u.super || u.superAce) { // 슈퍼영웅/슈퍼에이스: 발밑에서 무지개 연기가 스멀스멀 피어오르는 오라 (원형 링 대체)
+    const fy = u.y + 15, seed = (u.jx || 0) * 7; // 발 위치 기준, 유닛별 위상
+    for (let si = 0; si < 5; si++) {
+      const ph = (S.time * 0.55 + si * 0.2 + seed) % 1;               // 0→1 상승 수명
+      const sx = u.x + Math.sin(S.time * 1.7 + si * 2.1 + seed) * (7 + ph * 6) * (si % 2 ? 1 : -1); // 좌우로 흔들리며
+      const sy = fy - ph * 26;                                        // 위로 상승
+      const r = 3.2 + ph * 3.5, al = 0.38 * (1 - ph);                 // 커지며 옅어짐
+      ctx.fillStyle = `hsla(${(S.time * 120 + si * 72) % 360},90%,62%,${al.toFixed(2)})`;
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
     }
   }
   // 망토 (풀하우스+ / 영웅 / 슈퍼에이스) — 몸통 뒤(바라보는 반대쪽)
