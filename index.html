@@ -908,9 +908,10 @@ function fuseCount(u) {
 }
 function effDmg(u) {
   if (u.joker) return u.dmg; // 🃏 조커는 업그레이드 영향 없음 — 고정 공격력 (업글까지 되면 너무 사기)
+  const heroUp = 1 + 0.1 * (u.heroUpLv || 0); // ⭐ 영웅 단련: 레벨당 기본 공격력 +10% (개별 영웅 전용)
   const per = upgPer(u) * fuseCount(u);
-  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return u.dmg + per * (s[0] + s[1]); } // 에이스·에이스 영웅: 가장 많이 올린 두 종족 합산
-  return u.dmg + per * S.upg[u.race];
+  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return u.dmg * heroUp + per * (s[0] + s[1]); } // 에이스·에이스 영웅: 가장 많이 올린 두 종족 합산
+  return u.dmg * heroUp + per * S.upg[u.race];
 }
 // 📯 콰르텟 공속 오라 적용된 실제 쿨다운 (spdBuff는 update()에서 매 프레임 갱신)
 function isHiddenCombo(u) { return !!(u.gamble || u.junk || u.quartet || u.execute || u.shogun || u.chrono || u.slot || u.joker || u.catapult); } // 히든 조합 유닛 판별
@@ -4437,6 +4438,7 @@ function updateInfoPanel() {
   if (u.joker) traits.push('🃏 타격한 몹을 잠깐 끌어당김 (클럼핑)');
   if (u.catapult) traits.push('🪨 설치형 공성병기 (이동 불가)');
   if (u.ascend) traits.push(`<b style="color:#ff6b9d">🩸 승급 Lv.${u.ascend}</b>`);
+  if (u.heroUpLv) traits.push(`<b style="color:#c9971a">⭐ 단련 Lv.${u.heroUpLv} (+${u.heroUpLv * 10}%)</b>`);
   if (!traits.length) traits.push(u.miner ? '채굴 전용 (전투 불가)' : '단일 공격');
   if (u.forceTarget) traits.push('<b style="color:#e53935">🎯 집중 공격 중</b>');
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
@@ -4463,11 +4465,14 @@ function updateInfoPanel() {
     (u.chrono ? chronoRow(u) : '') +
     (u.slot ? slotRow(u) : '') +
     (ascendKey(u) ? ascendRow(u) : '') +
+    ((u.hero && !isHiddenCombo(u) && !u.clone) ? heroUpRow(u) : '') +
     ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier}) <span style="color:${u.hero?'#e57373':'#66bb6a'};font-size:11px">성공률 ${u.hero?50:70}%</span></button>` : '') +
     deselBtnHTML();
   wirePriorityButtons(el);
   wireDesel(el);
   if (el.querySelector('#ascBtn')) el.querySelector('#ascBtn').onclick = () => doAscend(u);
+  if (el.querySelector('#heroUpBtn')) el.querySelector('#heroUpBtn').onclick = () => heroTrain(u, false);
+  if (el.querySelector('#heroUpGBtn')) el.querySelector('#heroUpGBtn').onclick = () => heroTrain(u, true);
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
   if (el.querySelector('#chronoBtn')) el.querySelector('#chronoBtn').onclick = () => { activateChrono(u); updateInfoPanel(); };
   if (el.querySelector('#slotBtn')) el.querySelector('#slotBtn').onclick = () => { activateSlot(u); updateInfoPanel(); };
@@ -4478,6 +4483,39 @@ function deselBtnHTML() { return `<button id="deselBtn" title="선택 해제">�
 function wireDesel(el) {
   const b = el.querySelector('#deselBtn');
   if (b) b.onclick = () => { S.units.forEach(u => u.selected = false); updateInfoPanel(); };
+}
+// ⭐ 영웅 단련 (개별 영웅 전용 공격력 강화 — 비싸다: 기본 업글의 3배 시작, ×1.6 증가, 최대 Lv.10)
+const HERO_UP_MAX = 10;
+function heroUpCost(u) { return Math.floor(150 * Math.pow(1.6, u.heroUpLv || 0)); }
+function heroUpRow(u) {
+  const lv = u.heroUpLv || 0;
+  if (lv >= HERO_UP_MAX) return `<br><span style="color:#c9971a;font-weight:bold">⭐ 단련 완료 (Lv.${HERO_UP_MAX} · 공격력 +100%)</span>`;
+  const cost = heroUpCost(u), ok = S.gold >= cost;
+  return `<br><button id="heroUpBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:#c9971a;font-weight:bold">⭐ 영웅 단련 Lv.${lv}→${lv + 1} (+10%) — 💰${cost}G</button>` +
+    `<button id="heroUpGBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:4px;text-align:center;color:#8e44ad;font-weight:bold" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎰 도박 단련 (25% 확률 +3Lv) — 💰${cost}G</button>`;
+}
+function heroTrain(u, gamble) {
+  const lv = u.heroUpLv || 0;
+  if (lv >= HERO_UP_MAX) return;
+  const cost = heroUpCost(u);
+  if (S.gold < cost) return;
+  S.gold -= cost;
+  if (!gamble) {
+    u.heroUpLv = lv + 1;
+    logMsg(`⭐ ${u.weapon} 단련 Lv.${u.heroUpLv} (공격력 +${u.heroUpLv * 10}%)`);
+    addFloat(u.x, u.y - 28, `⭐ 단련 Lv.${u.heroUpLv}!`, '#c9971a', 1.4); sfx('reward');
+  } else { // 🎰 도박 단련: 25%(갬블러 35%)로 +3레벨
+    const p = 0.25 + (S.units.some(v => v.gamble) ? 0.10 : 0);
+    if (Math.random() < p) {
+      u.heroUpLv = Math.min(HERO_UP_MAX, lv + 3);
+      logMsg(`🎰✨ <b>도박 단련 대성공!!</b> ${u.weapon} Lv.${u.heroUpLv} (+${u.heroUpLv * 10}%)`);
+      addFloat(u.x, u.y - 28, '🎰 단련 ×3!!', '#ffd54f', 2.2); S.goldFlash = 0.55; sfx('jackpot');
+    } else {
+      logMsg(`🎰💨 도박 단련 실패… ${cost}G만 날렸습니다`);
+      addFloat(u.x, u.y - 28, '💨 실패…', '#8d8d8d', 1.2); sfx('leak');
+    }
+  }
+  updateInfoPanel();
 }
 // 🩸 히든 영웅 제물 승급 줄 (쇼군·조커·갬블러)
 function ascendRow(u) {
