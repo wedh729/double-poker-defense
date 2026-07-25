@@ -654,7 +654,7 @@ function monsterHP(n) {
   // ~30R: 기존 복리 곡선 유지 / 30R 이후: 복리 → 선형 증가 (후반 기하급수 벽 제거 — 업글 화력도 선형이라 결이 맞음)
   const grow = m => m <= 3 ? 14 * Math.pow(1.10, m - 1) : 14 * Math.pow(1.10, 2) * 1.42 * Math.pow(1.15, m - 3);
   let hp = n <= 30 ? grow(n) : grow(30) * (1 + 0.15 * Math.min(n - 30, 10) + 0.09 * Math.max(0, n - 40)); // 30~40R +15%p/R 선형 → 40R부터 +9%p/R (기울기 40%↓)
-  if (n > FINAL_ROUND) hp *= Math.pow(2, n - FINAL_ROUND); // 헬(80+)만 가파르게 유지
+  if (n > FINAL_ROUND) hp *= Math.pow(1.5, n - FINAL_ROUND); // 헬(80+): 라운드당 ×2 → ×1.5 완화 (가파르되 맛볼 수 있게)
   // ×0.7 = 전체 난이도 30% 하향 / ×1.6 = 몹 수 절반 보정 (2배가 아닌 이유: 밀도 절반 → 스플래시 효율도 절반이라 2배면 실효 난이도 상승)
   if (n >= 40) hp *= 1.45; // 일반 몹 분열 제거 보정: 기존 분열(10% 확률·6마리×80%)의 실효 HP ≈ ×1.48을 평탄하게 환산
   return Math.max(1, Math.floor(hp * DIFF_MUL * 0.7 * 1.6));
@@ -980,8 +980,8 @@ function spawnMonster(hp, isBoss, opt) {
     spin: (Math.random() < 0.5 ? -1 : 1) * (0.15 + Math.random() * 0.35),
     x: opt.x != null ? opt.x : CX, y: opt.y != null ? opt.y : CY, rot: Math.random() * Math.PI,
     hp, max: hp, colorIdx: opt.colorIdx != null ? opt.colorIdx : ci, inc: 0, dead: false,
-    // 보스 사다리: R10 슬라임(14) → R20 성게(10) → R30 별(11) → R40 초승달(12) → R50~80 해(13, 최종 보스) → 헬 블랙홀(15)
-    shape: isBoss ? (S.round > FINAL_ROUND ? 15 : Math.floor(S.round / 10) <= 1 ? 14 : 9 + Math.min(4, Math.floor(S.round / 10) - 1)) : (opt.shape != null ? opt.shape : stageInfo(S.round).si),
+    // 보스 사다리(우주): R10 운석(20) → R20 보름달(21) → R30 혜성(22) → R40 수성(23) → R50 토성(24) → R60 금성(25) → R70 목성(26) → R80 태양(27, 최종) → 헬 블랙홀(15)
+    shape: isBoss ? (S.round > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(S.round / 10))) : (opt.shape != null ? opt.shape : stageInfo(S.round).si),
     boss: isBoss, born: opt.child ? 0.35 : 0, hell: opt.hell != null ? opt.hell : S.round > FINAL_ROUND,
     small: !!opt.child, shield: 0, shieldMax: 0, split: false,
     bobP: Math.random() * 6.28, // 공별 바운스 위상 (전원 동기화되면 어색해서 랜덤)
@@ -2813,9 +2813,9 @@ function draw() {
     const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, 620);
     g.addColorStop(0, `rgba(255,215,79,${(0.32 * k).toFixed(2)})`); g.addColorStop(1, 'rgba(255,180,0,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, 940, 500);
-    ctx.save(); ctx.textAlign = 'center'; ctx.font = `bold ${Math.round(30 + (1 - k) * 16)}px sans-serif`;
-    ctx.strokeStyle = `rgba(150,110,20,${k.toFixed(2)})`; ctx.lineWidth = 4; ctx.strokeText('🎲 JACKPOT! 🎲', CX, CY - 40); // 외곽선 (shadowBlur 대체)
-    ctx.fillStyle = `rgba(255,236,140,${k.toFixed(2)})`; ctx.fillText('🎲 JACKPOT! 🎲', CX, CY - 40); ctx.restore(); ctx.textAlign = 'left';
+    ctx.save(); ctx.textAlign = 'center'; ctx.font = `bold ${Math.round(34 + (1 - k) * 16)}px sans-serif`;
+    ctx.strokeStyle = `rgba(90,50,5,${k.toFixed(2)})`; ctx.lineWidth = 7; ctx.strokeText('🎰 JACKPOT! 🎰', CX, CY - 40); // 두꺼운 진갈색 외곽선 — 골드 섬광 위에서도 또렷
+    ctx.fillStyle = `rgba(255,255,255,${k.toFixed(2)})`; ctx.fillText('🎰 JACKPOT! 🎰', CX, CY - 40); ctx.restore(); ctx.textAlign = 'left';
   }
 }
 function drawBarrack() {
@@ -3344,7 +3344,99 @@ function drawMonster(m) {
         ctx.arc(m.x, m.y, sz + 4, 0, Math.PI*2);
         ctx.arc(m.x + sz * 0.45, m.y - sz * 0.15, (sz + 4) * 0.78, 0, Math.PI*2);
         ctx.fill('evenodd'); break;
-      case 13: { // 해 — 체력색 무시, 진짜 태양처럼 주황빛 + 일렁이는 광선
+      case 20: { // ☄️ R10 운석: 울퉁불퉁 바위 + 크레이터 + 마찰열 불꼬리
+        ctx.fillStyle = '#ff7a2e'; // 불꼬리 (좌하단으로 일렁)
+        for (let i = 0; i < 3; i++) {
+          const fl = (sz + 10) * (0.7 + 0.3 * Math.sin(S.time * 9 + i * 2 + m.phase));
+          ctx.globalAlpha = 0.55 - i * 0.14;
+          ctx.beginPath(); ctx.moveTo(m.x - sz * 0.5, m.y + sz * 0.5);
+          ctx.quadraticCurveTo(m.x - fl * 0.9, m.y + fl * 0.5 + i * 4, m.x - fl, m.y + fl * 0.85);
+          ctx.quadraticCurveTo(m.x - fl * 0.55, m.y + fl * 0.5, m.x - sz * 0.15, m.y + sz * 0.75); ctx.closePath(); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#8d7a66'; polyPath(m.x, m.y, 9, sz + 5, m.rot, (sz + 5) * 0.8); ctx.fill(); // 바위 본체
+        ctx.strokeStyle = '#5f5044'; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1;
+        ctx.fillStyle = 'rgba(0,0,0,0.2)'; // 크레이터
+        for (const [dx2, dy2, r2] of [[-0.3, -0.15, 0.2], [0.28, 0.2, 0.16], [0.05, -0.4, 0.12]]) { ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.fill(); }
+        break;
+      }
+      case 21: { // 🌕 R20 보름달: 은은한 달빛 + 크레이터
+        ctx.fillStyle = 'rgba(244,240,214,0.25)';
+        ctx.beginPath(); ctx.arc(m.x, m.y, sz + 10, 0, 6.28); ctx.fill(); // 달무리
+        const mg = ctx.createRadialGradient(m.x - sz * 0.3, m.y - sz * 0.3, 2, m.x, m.y, sz + 4);
+        mg.addColorStop(0, '#fbf8e8'); mg.addColorStop(1, '#d8d2ae');
+        ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(m.x, m.y, sz + 4, 0, 6.28); ctx.fill();
+        ctx.fillStyle = 'rgba(120,115,90,0.3)';
+        for (const [dx2, dy2, r2] of [[-0.35, -0.2, 0.2], [0.3, 0.28, 0.17], [0.12, -0.38, 0.12], [-0.15, 0.35, 0.13]]) { ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.fill(); }
+        break;
+      }
+      case 22: { // ☄️ R30 혜성: 얼음 코어 + 뒤로 길게 뻗는 푸른 꼬리 (천천히 회전)
+        const ta = m.rot * 0.4 + S.time * 0.3, tl = (sz + 6) * 3;
+        const tg = ctx.createLinearGradient(m.x, m.y, m.x + Math.cos(ta) * tl, m.y + Math.sin(ta) * tl);
+        tg.addColorStop(0, 'rgba(190,230,255,0.85)'); tg.addColorStop(1, 'rgba(120,180,255,0)');
+        ctx.fillStyle = tg;
+        const pa = ta + Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(m.x + Math.cos(pa) * sz * 0.7, m.y + Math.sin(pa) * sz * 0.7);
+        ctx.lineTo(m.x + Math.cos(ta) * tl, m.y + Math.sin(ta) * tl);
+        ctx.lineTo(m.x - Math.cos(pa) * sz * 0.7, m.y - Math.sin(pa) * sz * 0.7); ctx.closePath(); ctx.fill();
+        const cg = ctx.createRadialGradient(m.x - sz * 0.25, m.y - sz * 0.25, 1, m.x, m.y, sz + 3);
+        cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.6, '#cfe8ff'); cg.addColorStop(1, '#8fc4f0');
+        ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(m.x, m.y, sz + 3, 0, 6.28); ctx.fill();
+        break;
+      }
+      case 23: { // 🪨 R40 수성: 잿빛 갈색 암석 행성 + 크레이터 + 명암 경계
+        const hg = ctx.createRadialGradient(m.x - sz * 0.35, m.y - sz * 0.3, 2, m.x, m.y, sz + 4);
+        hg.addColorStop(0, '#c2b3a3'); hg.addColorStop(0.7, '#9c8d7f'); hg.addColorStop(1, '#6e6155');
+        ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(m.x, m.y, sz + 4, 0, 6.28); ctx.fill();
+        ctx.fillStyle = 'rgba(60,50,42,0.3)';
+        for (const [dx2, dy2, r2] of [[-0.25, -0.3, 0.16], [0.35, 0.1, 0.2], [-0.1, 0.35, 0.13], [0.1, -0.15, 0.09]]) { ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.fill(); }
+        break;
+      }
+      case 24: { // 🪐 R50 토성: 황토 행성 + 기울어진 고리 (뒤→본체→앞 순서)
+        const R2 = sz + 4;
+        ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(-0.32);
+        ctx.strokeStyle = '#d9c08a'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.ellipse(0, 0, R2 * 1.85, R2 * 0.52, 0, Math.PI, Math.PI * 2); ctx.stroke(); // 고리 뒤쪽
+        const bg2 = ctx.createRadialGradient(-R2 * 0.3, -R2 * 0.3, 2, 0, 0, R2);
+        bg2.addColorStop(0, '#f2dfae'); bg2.addColorStop(1, '#cda45e');
+        ctx.fillStyle = bg2; ctx.beginPath(); ctx.arc(0, 0, R2, 0, 6.28); ctx.fill();
+        ctx.strokeStyle = 'rgba(170,130,70,0.5)'; ctx.lineWidth = 2; // 표면 줄무늬
+        for (const yy of [-0.4, 0, 0.42]) { ctx.beginPath(); ctx.ellipse(0, yy * R2, R2 * Math.sqrt(1 - yy * yy) * 0.96, R2 * 0.16, 0, 0, Math.PI); ctx.stroke(); }
+        ctx.strokeStyle = '#e8cf99'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.ellipse(0, 0, R2 * 1.85, R2 * 0.52, 0, 0, Math.PI); ctx.stroke();   // 고리 앞쪽 (밝게)
+        ctx.strokeStyle = 'rgba(120,90,45,0.65)'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.ellipse(0, 0, R2 * 1.55, R2 * 0.43, 0, 0, Math.PI * 2); ctx.stroke(); // 고리 틈(카시니 간극)
+        ctx.restore(); ctx.lineWidth = 1;
+        break;
+      }
+      case 25: { // 🌕 R60 금성: 크림빛 구름 소용돌이 행성
+        const vg = ctx.createRadialGradient(m.x - sz * 0.3, m.y - sz * 0.3, 2, m.x, m.y, sz + 4);
+        vg.addColorStop(0, '#f7e3ae'); vg.addColorStop(0.7, '#e3bd72'); vg.addColorStop(1, '#c4964a');
+        ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(m.x, m.y, sz + 4, 0, 6.28); ctx.fill();
+        ctx.strokeStyle = 'rgba(200,150,70,0.55)'; ctx.lineWidth = 2.5; // 황산 구름 소용돌이
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath(); ctx.arc(m.x, m.y, (sz + 2) * (0.35 + i * 0.28), S.time * 0.5 + i * 2, S.time * 0.5 + i * 2 + 3.6); ctx.stroke();
+        }
+        ctx.lineWidth = 1;
+        break;
+      }
+      case 26: { // 🟠 R70 목성: 줄무늬 가스 행성 + 대적점
+        const R2 = sz + 5;
+        ctx.save(); ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.clip();
+        const bands = ['#e8c39a', '#cf9a5f', '#e3b587', '#c08748', '#e8c39a', '#d3a068'];
+        for (let i = 0; i < 6; i++) { ctx.fillStyle = bands[i]; ctx.fillRect(m.x - R2, m.y - R2 + i * R2 / 3, R2 * 2, R2 / 3 + 1); }
+        ctx.fillStyle = '#c75b3a'; // 대적점
+        ctx.beginPath(); ctx.ellipse(m.x + R2 * 0.35, m.y + R2 * 0.3, R2 * 0.3, R2 * 0.18, 0, 0, 6.28); ctx.fill();
+        ctx.strokeStyle = '#a34a30'; ctx.lineWidth = 1.4; ctx.stroke();
+        ctx.restore();
+        const jg = ctx.createRadialGradient(m.x - R2 * 0.4, m.y - R2 * 0.4, 2, m.x, m.y, R2); // 입체 음영
+        jg.addColorStop(0, 'rgba(255,255,255,0.25)'); jg.addColorStop(0.7, 'rgba(0,0,0,0)'); jg.addColorStop(1, 'rgba(80,40,10,0.35)');
+        ctx.fillStyle = jg; ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.fill();
+        ctx.lineWidth = 1;
+        break;
+      }
+      case 13: case 27: { // ☀️ R80 태양 (최종 보스) — 체력색 무시, 진짜 태양처럼 주황빛 + 일렁이는 광선
         const flick = 0.7 + 0.3 * Math.sin(S.time * 7 + m.phase);
         ctx.fillStyle = '#ff8a1e';
         for (let i = 0; i < 12; i++) { // 광선 12갈래 (길이 일렁임)
@@ -4707,24 +4799,60 @@ const HAND_GUIDE = [
 // 📖 히든 조합 도감: 발견 전엔 recipe 대신 riddle(hint)을 보여준다 (localStorage dpd_hidden으로 발견 여부 판정)
 const HIDDEN_DEX = [
   { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '주사위를 던져 1~6회 팅기는 공격 + 카지노·복권·교환 행운 +10%',
-    hint: '계단을 오르듯 원1·투2·쓰리3 … 그 순서로 바친 자에게 운명의 주사위가 굴러온다.' },
+    voice: '운이야말로 실력이지. 내 주사위가 몇 번 튕길지는 나도 몰라 🎲', hint: '계단을 오르듯 원1·투2·쓰리3 … 그 순서로 바친 자에게 운명의 주사위가 굴러온다.' },
   { id: 'junk', icon: '💰', name: '고물상', recipe: '하이카드×3 + 원페어×3 + 투페어×3', desc: '가장 가까운 유닛 5기 킬 골드 ×1.2 (지원형)',
-    hint: '하이3·원3·투3 — 하찮은 세 패를 그러모으면 쓰레기 더미에서 금이 반짝인다.' },
+    voice: '버려진 것들 속에 돈이 있다네. 내 곁에서 싸워보게나 💰', hint: '하이3·원3·투3 — 하찮은 세 패를 그러모으면 쓰레기 더미에서 금이 반짝인다.' },
   { id: 'quartet', icon: '📯', name: '콰르텟', recipe: '원페어·투페어·트리플·스트레이트 각 2', desc: '반경 50px 아군 공속 +20% (비중첩)',
-    hint: '원·투·쓰리·스트, 서로 다른 넷을 둘씩 세우면 합주가 시작되고 곁의 손이 빨라진다.' },
+    voice: '넷이 모여야 연주가 시작되지. 내 곁에 서면 손이 빨라질 거야 📯', hint: '원·투·쓰리·스트, 서로 다른 넷을 둘씩 세우면 합주가 시작되고 곁의 손이 빨라진다.' },
   { id: 'guillotine', icon: '⚔️', name: '길로틴', recipe: '원1+투2+트3+포4 (10기)', desc: '체력 15% 이하 즉시 처형',
-    hint: '원1·투2·쓰리3·포4, 열이 줄지어 늘어서는 날 처형대가 세워진다.' },
+    voice: '빈사의 목은 내가 거둔다. 마무리는 맡겨라 ⚔️', hint: '원1·투2·쓰리3·포4, 열이 줄지어 늘어서는 날 처형대가 세워진다.' },
   { id: 'shogun', icon: '🔥', name: '쇼군', recipe: '풀하우스×3 + 플러쉬×3', desc: '참격 무제한 타격 + 화상 도트',
-    hint: '풀3·플3 — 집을 채운 자와 무늬로 물든 자가 셋씩, 여섯이 모이면 불칼을 뽑는다.' },
+    voice: '나를 전장에 보내줘. 다 썰어서 태워주지 🔥', hint: '풀3·플3 — 집을 채운 자와 무늬로 물든 자가 셋씩, 여섯이 모이면 불칼을 뽑는다.' },
   { id: 'chrono', icon: '⏳', name: '시간술사', recipe: '스트레이트×3', desc: '시간 정지 스킬 (쿨 150초)',
-    hint: '스트3 … 끊기지 않은 흐름을 셋 겹치면 세상의 시계가 잠시 숨을 멈춘다.' },
+    voice: '시간아, 잠깐 멈춰라 ⏳', hint: '스트3 … 끊기지 않은 흐름을 셋 겹치면 세상의 시계가 잠시 숨을 멈춘다.' },
   { id: 'slot', icon: '🎰', name: '슬롯머신', recipe: '같은 숫자 트리플×3', desc: '잭팟 폭격 스킬 (쿨 75초)',
-    hint: '같은 숫자 쓰리를 세 벌(×3), 릴이 맞아떨어지면 하늘에서 잭팟이 쏟아진다.' },
+    voice: '릴이 맞아떨어지는 순간… 하늘을 봐 🎰', hint: '같은 숫자 쓰리를 세 벌(×3), 릴이 맞아떨어지면 하늘에서 잭팟이 쏟아진다.' },
   { id: 'joker', icon: '🃏', name: '조커', recipe: '원페어·투페어·트리플 영웅 각 1', desc: '낫으로 베며 몹을 끌어당김 (클럼핑)',
-    hint: '원·투·쓰리 — 영웅 셋이 손을 맞잡으면 광대가 낫을 든다.' },
+    voice: '이리 와~ 같이 놀자고. 도망은 못 가 🃏', hint: '원·투·쓰리 — 영웅 셋이 손을 맞잡으면 광대가 낫을 든다.' },
   { id: 'catapult', icon: '🪨', name: '투석기', recipe: '하이카드 20기 제물(제물대)', desc: '거대한 돌덩이로 소환장 전체 포격 (이동 불가)',
-    hint: '하이 ×20, 홑패를 밑 빠진 독에 붓듯 제물대에 바치면 거대한 바위가 깨어난다.' },
+    voice: '나는 움직이지 않아. 대신 전장이 무너지지 🪨', hint: '하이 ×20, 홑패를 밑 빠진 독에 붓듯 제물대에 바치면 거대한 바위가 깨어난다.' },
 ];
+// ⭐ 강화창 영웅 탭: 보유 영웅 단련 + 히든 영웅 도감 (미발견 = ??? + 대사 힌트 / 발견·미보유 = 회색 + 조합법)
+let castleTab = 'upg';
+const HIDDEN_FLAG = { gambler: 'gamble', junk: 'junk', quartet: 'quartet', guillotine: 'execute', shogun: 'shogun', chrono: 'chrono', slot: 'slot', joker: 'joker', catapult: 'catapult' };
+function shopHeroes() { return S.units.filter(u => u.hero && !isHiddenCombo(u) && !u.clone); }
+function heroSectionHTML() {
+  const heroes = shopHeroes();
+  let html = '<div class="castleColT">⭐ 보유 영웅 단련</div>';
+  if (!heroes.length) html += '<div style="font-size:12px;color:#9a8a60;text-align:center;margin:8px 0">보유한 영웅이 없습니다 — 같은 유닛 5기를 포털에 모아 합성해보세요</div>';
+  heroes.forEach((h, i) => {
+    const lv = h.heroUpLv || 0, cost = heroUpCost(h), maxed = lv >= HERO_UP_MAX, ok = S.gold >= cost;
+    html += `<div class="rpgItem" style="border-left:5px solid #c9971a">
+      <div class="rpgIcon" style="color:#c9971a">⭐</div>
+      <div class="rpgInfo"><b>${h.weapon}</b> <span class="lv">단련 Lv.${lv}</span><br>
+        <span class="desc">${maxed ? '단련 완료 — 총 공격력 ×2.5' : `총 공격력 +${(lv + 1) * 15}%까지 · ${cost.toLocaleString()}G`}</span></div>
+      ${maxed ? '' : `<button class="rpgBuy" data-ht="${i}" ${ok ? '' : 'disabled'}>💰 단련</button>
+      <button class="rpgBuy" data-htg="${i}" ${ok ? '' : 'disabled'} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)">🎰 25%<br>×3</button>`}
+    </div>`;
+  });
+  html += '<div class="castleColT" style="margin-top:14px">🀄 히든 영웅</div>' +
+    HIDDEN_DEX.map(hd => {
+      const owned = S.units.some(u => u[HIDDEN_FLAG[hd.id]]);
+      if (!hiddenSeen(hd.id)) // 미발견: ??? + 정체를 암시하는 대사만
+        return `<div class="rpgItem" style="border-left:5px solid #666"><div class="rpgIcon" style="color:#888">❓</div>
+          <div class="rpgInfo"><b style="color:#888">???</b><br><span class="desc" style="font-style:italic;color:#8a7f68">“${hd.voice}”</span></div></div>`;
+      return `<div class="rpgItem" style="border-left:5px solid ${owned ? '#c9971a' : '#9a9a9a'}${owned ? '' : ';filter:grayscale(1);opacity:0.62'}">
+        <div class="rpgIcon">${hd.icon}</div>
+        <div class="rpgInfo"><b>${hd.name}</b>${owned ? '' : ' <span style="font-size:10px;color:#777">(미보유 — 다시 조합하면 등장)</span>'}<br>
+          <span class="desc">🧩 조합법: <b>${hd.recipe}</b><br>${hd.desc}</span></div></div>`;
+    }).join('');
+  return html;
+}
+function wireHeroSection(el) {
+  const heroes = shopHeroes();
+  el.querySelectorAll('[data-ht]').forEach(b => b.onclick = () => { heroTrain(heroes[+b.dataset.ht], false); renderShop(); });
+  el.querySelectorAll('[data-htg]').forEach(b => b.onclick = () => { heroTrain(heroes[+b.dataset.htg], true); renderShop(); });
+}
 // 🏆 업적 도감: HIDDEN_DEX 9종 발견 업적을 자동 포함
 const ACHV = [
   { id: 'first_hero', icon: '⚡', name: '첫 영웅', desc: '유닛 5기 합성으로 첫 영웅 탄생' },
@@ -4757,7 +4885,7 @@ function upgItemsHTML() {
       <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
         <span class="desc">초당 공격력: 단일 +${(S.upg[i]*3.6).toFixed(0)} · 스플래시 +${(S.upg[i]*0.55).toFixed(1)}/마리 · 전체 +${(S.upg[i]*0.15).toFixed(1)}/마리</span></div>
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
-      <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#8e44ad,#5b2c86);font-size:10px" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎰 25%<br>×3</button>
+      <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎰 25%<br>×3</button>
     </div>`).join('') +
     '<div class="rpgGuide">레벨당: 단일 <b>+3</b> / 스플래쉬 <b>+0.6</b> / 전체타격 <b>+0.3</b>.<br>♠ 에이스는 상위 2종족 합산.<br>🎰 <b>도박 업그레이드</b>: 같은 값, <b>25%</b> 확률로 <b>3레벨</b> — 실패하면 골드만 소멸! (갬블러 보유 시 35%)</div>';
 }
@@ -4838,12 +4966,13 @@ function renderShop() {
   const el = document.getElementById('shopBody');
   const win = document.getElementById('shopWin');
   win.classList.toggle('wide', openShop === 'castle');
-  if (openShop === 'castle') { // 성 클릭: 공격력(좌) + 광부(우) 통합
+  if (openShop === 'castle') { // 성 클릭: 탭 3개 (유닛 업글 / 광부 / 영웅) — 좁은 화면에서 2열이 뭉개지던 문제 해결
     title.textContent = '🏰 강화';
-    el.innerHTML = `<div class="castleCols">
-      <div class="castleCol"><div class="castleColT">⚔️ 공격력 업그레이드</div>${upgItemsHTML()}</div>
-      <div class="castleCol"><div class="castleColT">⛏️ 광부</div>${minerItemsHTML()}</div></div>`;
-    wireUpg(el); wireMiner(el);
+    const tabBtn = (id, label) => `<button class="chipBtn${castleTab === id ? '' : ' sub'}" data-ctab="${id}" style="flex:1;padding:8px 4px;font-size:13px">${label}</button>`;
+    el.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:10px">${tabBtn('upg', '⚔️ 유닛 업글')}${tabBtn('miner', '⛏️ 광부')}${tabBtn('hero', '⭐ 영웅')}</div>` +
+      (castleTab === 'upg' ? upgItemsHTML() : castleTab === 'miner' ? minerItemsHTML() : heroSectionHTML());
+    el.querySelectorAll('[data-ctab]').forEach(b => b.onclick = () => { castleTab = b.dataset.ctab; renderShop(); });
+    if (castleTab === 'upg') wireUpg(el); else if (castleTab === 'miner') wireMiner(el); else wireHeroSection(el);
   } else if (openShop === 'upg') {
     title.textContent = '⚔️ 종족 업그레이드'; el.innerHTML = upgItemsHTML(); wireUpg(el);
   } else if (openShop === 'miner') {
