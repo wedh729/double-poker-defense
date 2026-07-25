@@ -980,8 +980,8 @@ function spawnMonster(hp, isBoss, opt) {
     spin: (Math.random() < 0.5 ? -1 : 1) * (0.15 + Math.random() * 0.35),
     x: opt.x != null ? opt.x : CX, y: opt.y != null ? opt.y : CY, rot: Math.random() * Math.PI,
     hp, max: hp, colorIdx: opt.colorIdx != null ? opt.colorIdx : ci, inc: 0, dead: false,
-    // 보스 사다리: R10 슬라임(shape 14) → R20 성게(10) → R30 별(11) → R40 초승달(12) → R50+ 해(13)
-    shape: isBoss ? (Math.floor(S.round / 10) <= 1 ? 14 : 9 + Math.min(4, Math.floor(S.round / 10) - 1)) : (opt.shape != null ? opt.shape : stageInfo(S.round).si),
+    // 보스 사다리: R10 슬라임(14) → R20 성게(10) → R30 별(11) → R40 초승달(12) → R50~80 해(13, 최종 보스) → 헬 블랙홀(15)
+    shape: isBoss ? (S.round > FINAL_ROUND ? 15 : Math.floor(S.round / 10) <= 1 ? 14 : 9 + Math.min(4, Math.floor(S.round / 10) - 1)) : (opt.shape != null ? opt.shape : stageInfo(S.round).si),
     boss: isBoss, born: opt.child ? 0.35 : 0, hell: opt.hell != null ? opt.hell : S.round > FINAL_ROUND,
     small: !!opt.child, shield: 0, shieldMax: 0, split: false,
     bobP: Math.random() * 6.28, // 공별 바운스 위상 (전원 동기화되면 어색해서 랜덤)
@@ -3357,6 +3357,35 @@ function drawMonster(m) {
         ctx.fillStyle = sg;
         ctx.beginPath(); ctx.arc(m.x, m.y, sz + 2, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = c; break; // 체력색 복구 (얼굴 등 후속 요소용)
+      }
+      case 15: { // 🕳️ 헬 보스: 인터스텔라 가르강튀아 — 사건의 지평선 뒤로 휘어 넘어가는 강착원반
+        const R = sz + 2, t = S.time;
+        ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(0.10); // 살짝 기울인 원반
+        const dop = ctx.createLinearGradient(-R * 2.2, 0, R * 2.2, 0); // 도플러 빔: 왼쪽(다가오는 쪽)이 눈부시게
+        dop.addColorStop(0, 'rgba(255,250,235,0.98)'); dop.addColorStop(0.45, 'rgba(255,183,77,0.9)'); dop.addColorStop(1, 'rgba(230,120,40,0.55)');
+        // ① 원반 뒷부분: 중력렌즈로 지평선 "위로" 휘어 넘어가는 아치 (위쪽 반원 헤일로)
+        ctx.strokeStyle = dop; ctx.lineWidth = R * 0.34;
+        ctx.beginPath(); ctx.arc(0, 0, R * 1.18, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke(); // 윗 아치
+        ctx.lineWidth = R * 0.16;
+        ctx.beginPath(); ctx.arc(0, 0, R * 1.18, Math.PI * 0.06, Math.PI * 0.94); ctx.stroke();  // 아래로 감기는 얇은 렌즈상
+        // ② 수평 강착원반 (뒤쪽 절반 — 지평선 뒤로 지나감)
+        ctx.lineWidth = R * 0.30;
+        ctx.beginPath(); ctx.ellipse(0, 0, R * 2.05, R * 0.34, 0, Math.PI, Math.PI * 2); ctx.stroke();
+        // ③ 사건의 지평선 (완전한 검정 구 + 광자 링)
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(0, 0, R * 0.98, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = `rgba(255,240,210,${(0.75 + 0.25 * Math.sin(t * 4 + m.phase)).toFixed(2)})`; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(0, 0, R * 1.0, 0, Math.PI * 2); ctx.stroke(); // 광자 링 (가늘게 빛나는 테)
+        // ④ 수평 원반 앞부분 (지평선 앞을 가로지름 — 가장 밝음)
+        ctx.strokeStyle = dop; ctx.lineWidth = R * 0.36;
+        ctx.beginPath(); ctx.ellipse(0, 0, R * 2.05, R * 0.34, 0, 0, Math.PI); ctx.stroke();
+        // ⑤ 빨려드는 빛 입자: 원반을 따라 돌다 지평선으로 흡입
+        for (let i = 0; i < 4; i++) {
+          const a = t * 1.6 + i * 1.57, rr = R * (2.0 - ((t * 0.5 + i * 0.25) % 1) * 0.95);
+          ctx.fillStyle = `rgba(255,235,190,${(0.8 * (1 - (rr / (R * 2)))) .toFixed(2)})`;
+          ctx.beginPath(); ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr * 0.17, 1.6, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore(); ctx.lineWidth = 1; ctx.fillStyle = c; break;
       }
       default: { // 14 슬라임 (첫 보스: 젤리 출렁)
         const wob = Math.sin(S.time * 6 + m.phase);
