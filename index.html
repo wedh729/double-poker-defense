@@ -1844,12 +1844,13 @@ function nearestMob(x, y, exclude, rad) {
 function fireAt(u, target) {
   let dmg = effDmg(u);
   let gambleBounce = 0;
-  if (u.gamble) { // 🎲 갬블러: 주사위를 던져 1~6회 팅기는 공격 (6=잭팟 6연타)
-    gambleBounce = 1 + Math.floor(Math.random() * 6);
+  if (u.gamble) { // 🎲 갬블러: 주사위를 던져 1~6회 팅기는 공격 (6=잭팟 / 승급1: 최소2 / 승급2: 잭팟 8연타)
+    gambleBounce = (u.ascend || 0) >= 1 ? 2 + Math.floor(Math.random() * 5) : 1 + Math.floor(Math.random() * 6);
     addFloat(u.x, u.y - 32, gambleBounce === 6 ? '🎲 6! 잭팟!!' : `🎲 ${gambleBounce}`, gambleBounce >= 5 ? '#ffd54f' : gambleBounce === 1 ? '#9e9e9e' : '#fff', gambleBounce === 6 ? 0.9 : 0.6);
     if (gambleBounce === 6) { // 🎲✨ 6 잭팟 시그니처: 화면 전체 골드 플래시 + 반짝이 분수
       sfx('coin'); S.goldFlash = 0.55; S.shake = Math.max(S.shake, 0.1);
       for (let i = 0; i < 20; i++) { const aa = Math.random()*6.28, v = 90 + Math.random()*180; S.parts.push({ x: u.x, y: u.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 40, g: true, t: 0.6, r: 1.6 + Math.random()*2.6, c: i%2 ? '#ffd54f' : '#fff3b0' }); }
+      if ((u.ascend || 0) >= 2) gambleBounce = 8; // 🩸 승급2: 잭팟 8연타
     }
   }
   if (u.execute && target.hp <= target.max * 0.15) { // ⚔️ 길로틴: 체력 15% 이하 즉시 처형
@@ -2003,8 +2004,8 @@ function areaHit(u, x, y, dmg) {
     const ddx = m.x - x, ddy = m.y - y;
     if (ddx * ddx + ddy * ddy <= r2) {
       dealDamage(m, dmg, u);
-      if (u.shogun) { m.burnT = 1.5; m.burnDmg = dmg * 0.2; } // 🔥 화상 도트 (초당 데미지)
-      if (u.joker) { m.pullT = 0.45; m.pullX = u.x; m.pullY = u.y; } // 🃏 낫에 맞은 몹은 조커 쪽으로 끌려간다
+      if (u.shogun) { m.burnT = 1.5; m.burnDmg = dmg * ((u.ascend || 0) >= 1 ? 0.4 : 0.2); } // 🔥 화상 도트 (승급1: 2배)
+      if (u.joker) { m.pullT = (u.ascend || 0) >= 2 ? 0.7 : 0.45; m.pullX = u.x; m.pullY = u.y; } // 🃏 낫에 맞은 몹은 조커 쪽으로 (승급2: 견인 강화)
     }
   }
 }
@@ -2226,6 +2227,46 @@ function spawnSuperMiner() {
   const m = S.units[S.units.length - 1];
   m.sminer = true; // 이동·배달 3배
   addFloat(m.x, m.y - 26, '✨ 슈퍼 광부!', '#ff9800', 2);
+}
+// ==================== 🩸 히든 영웅 제물 승급 (자기 레시피 계열 유닛을 바쳐 강화, 최대 2단계) ====================
+const ASCEND_DEFS = {
+  shogun: [
+    { tier: 6, n: 1, mat: '단검(풀하우스) 1기', desc: '화상 도트 2배' },
+    { tier: 5, n: 2, mat: '플러쉬 2기', desc: '참격 대미지 +30%' },
+  ],
+  joker: [
+    { hero: true, n: 1, mat: '영웅 1기', desc: '낫 대미지 +30%' },
+    { hero: true, n: 2, mat: '영웅 2기', desc: '견인 강화 + 참격 반경 +30%' },
+  ],
+  gamble: [
+    { tier: 3, n: 1, mat: '트리플 1기', desc: '주사위 최소 2 (1 없음)' },
+    { tier: 3, n: 2, mat: '트리플 2기', desc: '6 잭팟 시 8연타' },
+  ],
+};
+function ascendKey(u) { return u.shogun ? 'shogun' : u.joker ? 'joker' : u.gamble ? 'gamble' : null; }
+function ascendCandidates(def) {
+  return S.units.filter(v => !v.miner && !v.item && !v.clone && !isHiddenCombo(v) &&
+    (def.hero ? (v.hero && !v.super) : (v.tier === def.tier && !v.hero)));
+}
+function doAscend(u) {
+  const key = ascendKey(u); if (!key) return;
+  const lv = u.ascend || 0; if (lv >= 2) return;
+  const def = ASCEND_DEFS[key][lv];
+  const cands = ascendCandidates(def);
+  if (cands.length < def.n) return;
+  cands.sort((a, b) => (a.selected ? 1 : 0) - (b.selected ? 1 : 0)); // 선택 안 된 유닛부터 제물로
+  const gone = cands.slice(0, def.n);
+  S.units = S.units.filter(v => !gone.includes(v));
+  u.ascend = lv + 1;
+  // 스탯 직접 반영형 효과
+  if (key === 'shogun' && u.ascend === 2) u.dmg = +(u.dmg * 1.3).toFixed(1);
+  if (key === 'joker' && u.ascend === 1) u.dmg = +(u.dmg * 1.3).toFixed(1);
+  if (key === 'joker' && u.ascend === 2) u.splash = Math.round(u.splash * 1.3);
+  for (const g of gone) { for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 80 + Math.random()*140; S.parts.push({ x: g.x, y: g.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 1.8 + Math.random()*2.4, c: '#c62828' }); } }
+  addFloat(u.x, u.y - 32, `🩸 승급! Lv.${u.ascend} — ${def.desc}`, '#ff6b9d', 2.4);
+  logMsg(`🩸 <b>${u.weapon}</b> 제물 승급 Lv.${u.ascend}! (${def.mat} 소모) — ${def.desc}`);
+  sfx('hero');
+  updateInfoPanel();
 }
 // 가장 강한 몬스터 (보스 최우선, 그다음 현재 체력 최대)
 function strongestMonster() {
@@ -4395,6 +4436,7 @@ function updateInfoPanel() {
   if (u.slot) traits.push('🎰 잭팟 폭격 스킬 (쿨 75초)');
   if (u.joker) traits.push('🃏 타격한 몹을 잠깐 끌어당김 (클럼핑)');
   if (u.catapult) traits.push('🪨 설치형 공성병기 (이동 불가)');
+  if (u.ascend) traits.push(`<b style="color:#ff6b9d">🩸 승급 Lv.${u.ascend}</b>`);
   if (!traits.length) traits.push(u.miner ? '채굴 전용 (전투 불가)' : '단일 공격');
   if (u.forceTarget) traits.push('<b style="color:#e53935">🎯 집중 공격 중</b>');
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
@@ -4420,10 +4462,12 @@ function updateInfoPanel() {
     (u.tier === 6 ? skillRow(u) : '') +
     (u.chrono ? chronoRow(u) : '') +
     (u.slot ? slotRow(u) : '') +
+    (ascendKey(u) ? ascendRow(u) : '') +
     ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier}) <span style="color:${u.hero?'#e57373':'#66bb6a'};font-size:11px">성공률 ${u.hero?50:70}%</span></button>` : '') +
     deselBtnHTML();
   wirePriorityButtons(el);
   wireDesel(el);
+  if (el.querySelector('#ascBtn')) el.querySelector('#ascBtn').onclick = () => doAscend(u);
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
   if (el.querySelector('#chronoBtn')) el.querySelector('#chronoBtn').onclick = () => { activateChrono(u); updateInfoPanel(); };
   if (el.querySelector('#slotBtn')) el.querySelector('#slotBtn').onclick = () => { activateSlot(u); updateInfoPanel(); };
@@ -4434,6 +4478,14 @@ function deselBtnHTML() { return `<button id="deselBtn" title="선택 해제">�
 function wireDesel(el) {
   const b = el.querySelector('#deselBtn');
   if (b) b.onclick = () => { S.units.forEach(u => u.selected = false); updateInfoPanel(); };
+}
+// 🩸 히든 영웅 제물 승급 줄 (쇼군·조커·갬블러)
+function ascendRow(u) {
+  const key = ascendKey(u), lv = u.ascend || 0;
+  if (lv >= 2) return `<br><span style="color:#ff6b9d;font-weight:bold">🩸 승급 완료 (Lv.2/2)</span>`;
+  const def = ASCEND_DEFS[key][lv];
+  const have = ascendCandidates(def).length, ok = have >= def.n;
+  return `<br><button id="ascBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:#ff6b9d;font-weight:bold">🩸 제물 승급 Lv.${lv + 1} — ${def.mat} <span style="font-size:11px;color:${ok ? '#66bb6a' : '#e57373'}">(보유 ${have}/${def.n})</span><br><span style="font-size:11px;color:#c9971a">효과: ${def.desc}</span></button>`;
 }
 function skillRow(u) {
   const active = (u.skillT || 0) > 0, cd = u.skillCd || 0;
@@ -4564,7 +4616,7 @@ const ACHV = [
   { id: 'golden', icon: '✨', name: '황금 사냥꾼', desc: '황금 몬스터 처치' },
   { id: 'revive', icon: '🔄', name: '기사회생', desc: '부활권으로 생환' },
   { id: 'fever', icon: '🎉', name: '피버!', desc: '피버 타임 발동' },
-  { id: 'lotto50', icon: '🎰', name: '대박', desc: '복권 50배 이상 당첨' },
+  { id: 'lotto50', icon: '🎰', name: '대박', desc: '복권 25만 골드 이상 당첨' },
   { id: 'r40', icon: '🏳️', name: '40 라운드', desc: '' },
   { id: 'r80', icon: '👹', name: '헬 게이트', desc: '80 라운드 돌파' },
   { id: 'mondex', icon: '📚', name: '몬스터 박사', desc: '몬스터 도감 14종 완성' },
@@ -4585,8 +4637,9 @@ function upgItemsHTML() {
       <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
         <span class="desc">초당 공격력: 단일 +${(S.upg[i]*3.6).toFixed(0)} · 스플래시 +${(S.upg[i]*0.55).toFixed(1)}/마리 · 전체 +${(S.upg[i]*0.15).toFixed(1)}/마리</span></div>
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
+      <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#8e44ad,#5b2c86);font-size:10px" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎰 25%<br>×3</button>
     </div>`).join('') +
-    '<div class="rpgGuide">레벨당: 단일 <b>+3</b> / 스플래쉬 <b>+0.6</b> / 전체타격 <b>+0.3</b>.<br>♠ 에이스는 상위 2종족 합산.</div>';
+    '<div class="rpgGuide">레벨당: 단일 <b>+3</b> / 스플래쉬 <b>+0.6</b> / 전체타격 <b>+0.3</b>.<br>♠ 에이스는 상위 2종족 합산.<br>🎰 <b>도박 업그레이드</b>: 같은 값, <b>25%</b> 확률로 <b>3레벨</b> — 실패하면 골드만 소멸! (갬블러 보유 시 35%)</div>';
 }
 function wireUpg(el) {
   el.querySelectorAll('[data-upg]').forEach(b => b.onclick = () => {
@@ -4595,6 +4648,23 @@ function wireUpg(el) {
     S.gold -= S.upgCost[i]; S.upg[i]++;
     S.upgCost[i] = Math.floor(S.upgCost[i] * 1.5); // 완만한 증가율 (기존 ×1.6)
     logMsg(`⚔️ ${RACES[i].name} 공격력 Lv.${S.upg[i]}`);
+    renderShop(); updateInfoPanel();
+  });
+  el.querySelectorAll('[data-gupg]').forEach(b => b.onclick = () => { // 🎰 도박 업그레이드: 25%(갬블러 35%)로 3레벨, 실패 시 골드 소멸
+    const i = +b.dataset.gupg;
+    if (S.gold < S.upgCost[i]) return;
+    S.gold -= S.upgCost[i];
+    const p = 0.25 + (S.units.some(u => u.gamble) ? 0.10 : 0);
+    if (Math.random() < p) {
+      S.upg[i] += 3;
+      S.upgCost[i] = Math.floor(S.upgCost[i] * 1.5 * 1.5 * 1.5); // 3레벨 분량만큼 가격도 전진
+      logMsg(`🎰✨ <b>도박 대성공!!</b> ${RACES[i].name} 공격력 +3 → Lv.${S.upg[i]}`);
+      addFloat(PORTAL.x, PORTAL.y - 30, '🎰 업그레이드 ×3!!', '#ffd54f', 2.2);
+      S.goldFlash = 0.55; sfx('jackpot');
+    } else {
+      logMsg(`🎰💨 도박 실패… ${S.upgCost[i]}G만 날렸습니다 (${Math.round(p*100)}%의 벽)`);
+      sfx('leak');
+    }
     renderShop(); updateInfoPanel();
   });
 }
@@ -4773,17 +4843,26 @@ function weightedTier() {
 }
 function gamblerLuck() { return S.units.some(u => u.gamble) ? 1.1 : 1; } // 🎲 도박의 신 가호
 // 🎟️ 복권 보상 롤 (아이콘 + 라벨 + 적용)
+// 🎁 룰렛 아이템 풀 (구 아이템뽑기 통합): 능동/보조 아이템 전부
+const CAS_ITEM_POOL = [ ['reroll',20], ['copier',18], ['timestop',13], ['stimpack',13], ['acid',13], ['bombard',12], ['revive',6], ['plank',5] ];
+function rollCasItem() { let s = CAS_ITEM_POOL.reduce((a,b)=>a+b[1],0), r = Math.random()*s; for (const [k,w] of CAS_ITEM_POOL) { r -= w; if (r < 0) return k; } return 'reroll'; }
 function rollLottery() {
   const L = gamblerLuck();
   const r = Math.random() * 1000;
-  const goldEnd = 1000 - 425 * L;        // 좋은보상(유닛+광부+아이템+영웅=425) ×L, 골드가 흡수
+  const goldEnd = 1000 - 455 * L;        // 좋은보상(유닛220+광부100+아이템70+영웅65=455) ×L, 골드가 흡수
   const smallEnd = goldEnd * (400 / 575); // 골드 소액/뭉치 비율 유지
   if (r < smallEnd) { const g = 100 + Math.floor(Math.random() * 201); return { icon: '💰', label: `골드 +${g}`, apply: () => S.gold += g }; }
   if (r < goldEnd)  { const g = 500 + Math.floor(Math.random() * 301); return { icon: '💰', label: `골드 뭉치 +${g}`, apply: () => S.gold += g }; }
   let acc = goldEnd;
   acc += 220 * L; if (r < acc) { const t = weightedTier(); return { icon: '⚔️', label: `${HAND_NAMES[t]} 유닛`, apply: () => spawnUnit(t, RACE_OF_RANK[t], false, 2 + Math.floor(Math.random() * 13)) }; }
   acc += 100 * L; if (r < acc) return { icon: '⛏️', label: '광부 1명', apply: () => spawnMiner() };
-  acc += 40  * L; if (r < acc) return Math.random() < 0.5 ? { icon: '🎟️', label: '재변경권', apply: () => S.items.reroll++ } : { icon: '📑', label: '복사권', apply: () => S.items.copier++ };
+  acc += 70  * L; if (r < acc) { // 🎁 아이템 (구 아이템뽑기 풀 통합)
+    const key = rollCasItem();
+    if (key === 'reroll') return { icon: '🎟️', label: '재변경권', apply: () => S.items.reroll++ };
+    if (key === 'copier') return { icon: '📑', label: '복사권', apply: () => S.items.copier++ };
+    const meta = ITEM_META[key];
+    return { icon: '🎁', label: `${meta.icon} ${meta.name}`, apply: () => spawnItemUnit(key) };
+  }
   const t = weightedTier();
   return { icon: '⭐', label: `${HAND_NAMES[t]} 영웅!!`, apply: () => spawnHero(t, RACE_OF_RANK[t], PORTAL.x, PORTAL.y + PORTAL.r + 30, 1), rare: true };
 }
@@ -4794,32 +4873,15 @@ function casMenu() {
   CB.innerHTML =
     `<div style="display:flex;flex-direction:column;gap:10px">
       <button class="chipBtn casItem" data-go="roulette" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎡</span> <b style="color:#ffd166">룰렛</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 휠을 돌려 랜덤 보상 (골드·유닛·영웅·광부·아이템)</span></button>
-      <button class="chipBtn casItem" data-go="lotto" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎟️</span> <b style="color:#ffd166">복권</b><br><span style="font-size:11px;color:#c9b8f0">골드 배팅 — 500·1000·3000원권, 하이리스크 하이리턴!</span></button>
-      <button class="chipBtn casItem" data-go="item" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎁</span> <b style="color:#ffd166">아이템뽑기</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 능동/보조 아이템을 랜덤으로 획득</span></button>
+      <button class="chipBtn casItem" data-go="lotto" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎟️</span> <b style="color:#ffd166">복권</b><br><span style="font-size:11px;color:#c9b8f0">5000G + 칩 1개 — 최대 <b>1000만 골드</b>의 꿈!</span></button>
     </div>`;
   CB.querySelector('[data-go="roulette"]').onclick = () => { if (S.chips <= 0) return; casRoulette(); };
   CB.querySelector('[data-go="lotto"]').onclick = () => casLotto();
-  CB.querySelector('[data-go="item"]').onclick = () => { if (S.chips <= 0) return; casItem(); };
-}
-const ITEM_POOL = [ ['reroll',28], ['timestop',14], ['stimpack',14], ['acid',14], ['bombard',13], ['revive',9], ['plank',8] ];
-function rollItem() { let s=ITEM_POOL.reduce((a,b)=>a+b[1],0), r=Math.random()*s; for(const [k,w] of ITEM_POOL){ r-=w; if(r<0) return k; } return 'reroll'; }
-function casItem() {
-  if (S.chips <= 0) return;
-  S.chips--; sfx('coin');
-  const key = rollItem(), meta = ITEM_META[key];
-  if (key === 'reroll') S.items.reroll++; else spawnItemUnit(key);
-  CB.innerHTML = `<span class="back" onclick="casMenu()">‹ 카지노</span><div class="flipWrap"><div class="flipCard" id="flipCard"><div class="flipFace flipFront">🎁</div><div class="flipFace flipBack">${meta.icon}</div></div></div><div class="chipResult" id="itRes">뽑는 중…</div>`;
-  requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('flipCard').classList.add('flipped')));
-  setTimeout(() => {
-    document.getElementById('itRes').innerHTML = `🎉 <span style="color:#ffd166">${meta.icon} ${meta.name}</span> 획득!`;
-    sfx(key === 'revive' ? 'hero' : 'reward'); updateInfoPanel();
-    document.getElementById('itRes').insertAdjacentHTML('afterend', `<div style="margin-top:8px;text-align:center;font-size:11px;color:#c9b8f0">${key === 'reroll' ? '포커에서 사용' : key === 'revive' ? '🪨 죽을 것 같을 때 제물대로! (무사 클리어 시 소멸)' : '🪨 제물대로 옮기면 발동'}</div><div style="margin-top:6px;text-align:center"><button class="chipBtn" onclick="casMenu()">메뉴</button>${S.chips>0?`<button class="chipBtn sub" onclick="casItem()">한 번 더 (칩 ${S.chips})</button>`:''}</div>`);
-  }, 900);
 }
 // --- 🎡 룰렛: 칩 1개 → 휠 돌려 보상 (rollLottery 재사용) ---
 const RCAT = { gs:{icon:'💰',c:'#3a2f52'}, gb:{icon:'💰',c:'#c98a2f'}, u:{icon:'⚔️',c:'#2f9e44'}, mi:{icon:'⛏️',c:'#b8860b'}, it:{icon:'🎁',c:'#8e44ad'}, hero:{icon:'⭐',c:'#e53935'} };
 const RWHEEL = ['gs','u','gs','gb','gs','u','mi','gs','it','gs','u','gb','gs','hero','gs','u','mi','gb']; // 18칸
-function rewardCat(rw) { if (rw.rare) return 'hero'; if (rw.icon === '⚔️') return 'u'; if (rw.icon === '⛏️') return 'mi'; if (rw.icon === '🎟️' || rw.icon === '📑') return 'it'; return (rw.label && rw.label.includes('뭉치')) ? 'gb' : 'gs'; }
+function rewardCat(rw) { if (rw.rare) return 'hero'; if (rw.icon === '⚔️') return 'u'; if (rw.icon === '⛏️') return 'mi'; if (rw.icon === '🎟️' || rw.icon === '📑' || rw.icon === '🎁') return 'it'; return (rw.label && rw.label.includes('뭉치')) ? 'gb' : 'gs'; }
 function casRoulette() {
   S.chips--; sfx('coin');
   const reward = rollLottery(); // gamblerLuck 이미 반영됨
@@ -4844,37 +4906,46 @@ function casRoulette() {
     document.getElementById('rlRes').insertAdjacentHTML('afterend', `<div style="margin-top:8px;text-align:center"><button class="chipBtn" onclick="casMenu()">메뉴</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="casRoulette()">한 번 더 (칩 ${S.chips})</button>` : ''}</div>`);
   }, 5100);
 }
-// --- 🎟️ 복권: 골드 티켓 (HRHR, EV≈0.89). gamblerLuck으로 꽝↓ ---
-const LOTTO_TIERS = [500, 1000, 3000];
-function rollTicket() { // 배수: 꽝62 / 0.5x18 / 1x10 / 2x5 / 5x3 / 10x1.5 / 50x0.4 / 100x0.1 (max 100배)
+// --- 🎟️ 복권: 5000G + 보스 칩 1개 → 긁기 한 장. 확률표 고정, gamblerLuck으로 당첨 밴드 ↑ ---
+const SCRATCH_BANDS = [ // [확률%, 당첨금] — 위에서부터 누적, 나머지는 꽝
+  [0.01, 10000000], [0.1, 1000000], [1, 100000], [10, 10000], [20, 5000], [30, 3000],
+];
+function rollScratch() {
   const L = gamblerLuck();
-  const r = Math.random() * 1000;
-  let lose = 620 - (380 * (L - 1)); // 가호 시 꽝 경계↓ (당첨 확률↑)
-  if (r < lose) return 0;
-  let acc = lose;
-  const bands = [[180,0.5],[100,1],[50,2],[30,5],[15,10],[4,50],[1,100]];
-  for (const b of bands) { acc += b[0] * L; if (r < acc) return b[1]; }
-  return 100;
+  const r = Math.random() * 100;
+  let acc = 0;
+  for (const [p, won] of SCRATCH_BANDS) { acc += p * L; if (r < acc) return won; }
+  return 0; // 꽝 (~38.9%)
 }
+const SCRATCH_COST = 5000;
 function casLotto() {
   const g = Math.floor(S.gold);
   const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 당첨 확률 +10%</div>' : '';
+  const can = S.gold >= SCRATCH_COST && S.chips > 0;
   CB.innerHTML =
     `<span class="back" onclick="casMenu()">‹ 카지노</span>` + luckMsg +
-    `<div style="font-size:12px;color:#c9b8f0;text-align:center;margin-bottom:6px">보유 <b style="color:#ffd166">${g}G</b> — 티켓을 사서 긁어보세요! (최대 <b>100배</b>)</div>` +
-    `<div id="tixRow" style="display:flex;gap:8px;justify-content:center">${LOTTO_TIERS.map(c => `<button class="chipBtn" ${g < c ? 'disabled' : ''} data-tix="${c}" style="flex:1;flex-direction:column">${c}G<br><span style="font-size:10px;color:#c9b8f0">최대 ${(c*100/10000).toFixed(1)}만</span></button>`).join('')}</div>` +
-    `<div class="chipResult" id="ltRes">티켓을 고르세요</div>`;
-  CB.querySelectorAll('[data-tix]').forEach(b => b.onclick = () => {
-    const cost = +b.dataset.tix; if (S.gold < cost) return;
-    S.gold -= cost; sfx('coin');
-    const mult = rollTicket(), won = Math.floor(cost * mult); S.gold += won;
-    if (mult >= 50) markAchv('lotto50');
+    `<div style="font-size:12px;color:#c9b8f0;text-align:center;margin-bottom:6px">보유 <b style="color:#ffd166">${g}G</b> · 칩 <b style="color:#ffd166">${S.chips}</b>개</div>` +
+    `<table style="width:100%;font-size:11px;color:#c9b8f0;border-collapse:collapse;margin-bottom:8px">
+      <tr><td style="color:#ff6b9d;font-weight:bold">💎 1000만G</td><td style="text-align:right">0.01%</td><td style="color:#ffd166;font-weight:bold;padding-left:12px">💰 100만G</td><td style="text-align:right">0.1%</td></tr>
+      <tr><td>💰 10만G</td><td style="text-align:right">1%</td><td style="padding-left:12px">💰 1만G</td><td style="text-align:right">10%</td></tr>
+      <tr><td>💰 5000G</td><td style="text-align:right">20%</td><td style="padding-left:12px">💰 3000G</td><td style="text-align:right">30%</td></tr>
+    </table>` +
+    `<div style="text-align:center"><button class="chipBtn" id="scratchBtn" ${can ? '' : 'disabled'}>🎟️ 복권 긁기 (5000G + 🪙1)</button></div>` +
+    `<div class="chipResult" id="ltRes">${can ? '한 장 긁어보세요!' : (S.chips <= 0 ? '보스 칩이 필요합니다 (보스를 잡으면 획득)' : '골드가 부족합니다 (5000G)')}</div>`;
+  document.getElementById('scratchBtn').onclick = () => {
+    if (S.gold < SCRATCH_COST || S.chips <= 0) return;
+    S.gold -= SCRATCH_COST; S.chips--; sfx('coin');
+    const won = rollScratch(); S.gold += won;
+    if (won >= 250000) markAchv('lotto50');
     updateInfoPanel();
     const el = document.getElementById('ltRes');
-    if (mult === 0) { el.innerHTML = `<span style="color:#e57373">💥 꽝! ${cost}G 잃음</span>`; sfx('leak'); }
-    else { el.innerHTML = `<span style="color:${mult >= 50 ? '#ff6b9d' : '#ffd166'}">🎉 ${mult}배! +${won}G (순익 ${won - cost >= 0 ? '+' : ''}${won - cost}G)</span>`; sfx(mult >= 50 ? 'jackpot' : 'reward'); }
-    document.getElementById('tixRow').querySelectorAll('button').forEach(x => x.disabled = S.gold < +x.dataset.tix);
-  });
+    if (won === 0) { el.innerHTML = `<span style="color:#e57373">💥 꽝! 5000G 날림…</span>`; sfx('leak'); }
+    else if (won >= 100000) { el.innerHTML = `<span style="color:#ff6b9d;font-size:16px">🎆🎆 대박!! +${won.toLocaleString()}G 🎆🎆</span>`; sfx('jackpot'); sfx('hero'); S.goldFlash = 0.55; }
+    else { el.innerHTML = `<span style="color:${won > SCRATCH_COST ? '#ffd166' : '#c9b8f0'}">🎉 +${won.toLocaleString()}G (순익 ${won - SCRATCH_COST >= 0 ? '+' : ''}${won - SCRATCH_COST}G)</span>`; sfx(won > SCRATCH_COST ? 'reward' : 'coin'); }
+    const b = document.getElementById('scratchBtn');
+    b.disabled = S.gold < SCRATCH_COST || S.chips <= 0;
+    b.textContent = `🎟️ 한 장 더 (5000G + 🪙${S.chips})`;
+  };
 }
 
 // 🃏 카드 교환권 (30% 발급 / 40% 칩 환급 / 30% 소멸)
@@ -5050,7 +5121,7 @@ function updateHUD() {
   if (openShop) {
     document.getElementById('shopGold').textContent = Math.floor(S.gold) + 'G';
     document.querySelectorAll('#shopBody button').forEach(b => {
-      const i = b.dataset.upg;
+      const i = b.dataset.upg !== undefined ? b.dataset.upg : b.dataset.gupg;
       if (i !== undefined) b.disabled = S.gold < S.upgCost[+i];
       else if (b.id === 'hireBtn') b.disabled = S.gold < S.minerCost;
       else if (b.id === 'mvBtn') b.disabled = S.minerMoveLv >= MINER_MAX_LV || S.gold < S.minerMoveCost;
