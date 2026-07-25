@@ -637,7 +637,7 @@ function reset() {
 function mineHP(layer) { return Math.floor(2500 * Math.pow(1.4, layer - 1)); } // 한 겹 벗겨질 때마다 배달 골드 +1 (천천히)
 // 광석 체력: 1단계 유지, 2~5단계 = ×2·3·4·5, 6단계부터 직전의 ×3 (기존 ×5는 후반 도달 불가 벽이라 완화)
 function huntHP(stage) {
-  const base = 45000;
+  const base = 63000; // 광물 체력 ×1.4 (45000→63000)
   if (stage <= 5) return base * stage;
   return Math.floor(base * 5 * Math.pow(3, stage - 5));
 }
