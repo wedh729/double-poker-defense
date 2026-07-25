@@ -1164,7 +1164,7 @@ function spawnShogun(x, y) {
     keyRank: 14, keyLabel: '🔥', kills: 0,
     jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
     forceTarget: null, attackMine: false, amove: false, priority: 'near',
-    dmg: 66, cd: 1.1, range: 130, splash: 100, bounce: 0, atk: 'area', proj: null, vis: 'sword', // dmg 95→66 (-30%, 사기 너프)
+    dmg: 66, cd: 1.1, range: 100, splash: 100, bounce: 0, atk: 'area', proj: null, vis: 'sword', // dmg 95→66 (-30%, 사기 너프) · 사거리 130→100
     pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 쇼군', cool: 0, selected: true, walk: 0, speed: 85,
   });
   addFloat(x, y - 30, '🔥 쇼군 강림!! 🔥', '#e53935', 2.8);
@@ -1942,10 +1942,10 @@ function areaHit(u, x, y, dmg) {
     // 실제 대검 참격 (총구=칼끝에서 호를 그린다). 쇼군은 불타는 참격 (fire 플래그)
     const flurry = !u.shogun && !big; // 💎 풀하우스: 초고속 난도질 — 짧게·좌우 교차로 다다닥
     const sdur = flurry ? 0.13 : (big ? 0.42 : 0.22), soff = flurry ? ((u._flur = (u._flur || 0) + 1) % 2 ? 0.55 : -0.55) : 0;
-    S.effects.push({ type:'slash', x, y, r: u.splash * (big ? 1.4 : 1), a: a + soff, t: sdur, dur: sdur, fire: u.shogun }); // 희귀 유닛은 크레센트 1.4배·오래 / 풀하우스는 짧고 교차
-    if (big) S.effects.push({ type:'slash', x, y, r: u.splash * 1.75, a: a + 0.3, t: 0.5, dur: 0.5, fire: u.shogun }); // 뒤따라 번지는 큰 잔광 궤적
+    S.effects.push({ type:'slash', x, y, r: u.splash, a: a + soff, t: sdur, dur: sdur, fire: u.shogun }); // 크레센트 반경 = 실제 타격 반경(splash) — 모션·판정 일치
+    if (big) S.effects.push({ type:'slash', x, y, r: u.splash * 1.1, a: a + 0.3, t: 0.5, dur: 0.5, fire: u.shogun }); // 살짝 번지는 잔광 (타격 반경 근사)
     if (u.shogun) { // 🔥 쇼군: 이도류 X자 이중 참격 — 반박자 늦게 교차 궤적 + 불똥 폭발
-      S.effects.push({ type:'slash', x, y, r: u.splash * 1.3, a: a + 0.55, t: 0.34, dur: 0.34, fire: true });
+      S.effects.push({ type:'slash', x, y, r: u.splash * 0.92, a: a + 0.55, t: 0.34, dur: 0.34, fire: true });
       for (let i = 0; i < 10; i++) { const v = 90 + Math.random()*160, aa = a + (Math.random()-0.5)*1.8; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 30, g: true, t: 0.4, r: 1.5 + Math.random()*2.2, c: i%3 ? '#ff8a3d' : '#ffd54f' }); }
     }
     for (let i = 0; i < 4; i++) { const v = 60 + Math.random()*90, aa = a + (Math.random()-0.5)*1.2; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.22, r: 1.2 + Math.random()*1.6, c: u.shogun ? '#ff8a3d' : '#dbe9ff' }); }
