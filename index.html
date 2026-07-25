@@ -909,11 +909,11 @@ function fuseCount(u) {
   return 1;
 }
 function effDmg(u) {
-  if (u.joker) return u.dmg; // 🃏 조커는 업그레이드 영향 없음 — 고정 공격력 (업글까지 되면 너무 사기)
-  const heroUp = 1 + 0.15 * (u.heroUpLv || 0); // ⭐ 영웅 단련: 레벨당 총 공격력 +15% (기본+업글 가산에 곱연산 — 후반에도 가치 유지)
+  const heroUp = 1 + 0.15 * (u.heroUpLv || 0); // ⭐ 영웅 단련: 히든 영웅 전용 (레벨당 총 공격력 +15%)
+  if (isHiddenCombo(u)) return u.dmg * heroUp; // 히든 영웅은 종족이 없다 — 종족 업글 미적용, 단련(+제물 승급)으로만 성장
   const per = upgPer(u) * fuseCount(u);
-  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return (u.dmg + per * (s[0] + s[1])) * heroUp; } // 에이스·에이스 영웅: 가장 많이 올린 두 종족 합산
-  return (u.dmg + per * S.upg[u.race]) * heroUp;
+  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return u.dmg + per * (s[0] + s[1]); } // 에이스·에이스 영웅: 가장 많이 올린 두 종족 합산
+  return u.dmg + per * S.upg[u.race];
 }
 // 📯 콰르텟 공속 오라 적용된 실제 쿨다운 (spdBuff는 update()에서 매 프레임 갱신)
 function isHiddenCombo(u) { return !!(u.gamble || u.junk || u.quartet || u.execute || u.shogun || u.chrono || u.slot || u.joker || u.catapult); } // 히든 조합 유닛 판별
@@ -1717,6 +1717,15 @@ function update(dt) {
           if (p.boulder) sfx('thud'); // 🪨 투석기: 묵직한 착탄음
           S.effects.push({ type:'boom', x: p.ex, y: p.ey, r: p.splash, t: 0.3 });
           for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 70 + Math.random()*150; S.parts.push({ x: p.ex, y: p.ey, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.32, r: 2 + Math.random()*3, c: '#ff8a3d' }); }
+          if (p.mini) { // 🚀 바주카: 화염 폭발 — 충격파 링 + 위로 확 솟는 불덩이 + 불똥 (발사가 느려서 프레임 부담 없음)
+            S.effects.push({ type:'boom', x: p.ex, y: p.ey, r: p.splash * 1.7, t: 0.2 }); // 바깥 충격파
+            for (let i = 0; i < 9; i++) { // 위로 치솟는 화염 기둥 (fire 파티클 = 진짜 불꽃 모양)
+              const aa = -Math.PI / 2 + (Math.random() - 0.5) * 1.5, sp2 = 55 + Math.random() * 95;
+              S.parts.push({ x: p.ex + (Math.random() - 0.5) * 14, y: p.ey, vx: Math.cos(aa) * sp2, vy: Math.sin(aa) * sp2, t: 0.42 + Math.random() * 0.22, r: 5 + Math.random() * 6, fire: true, spin: Math.random() * 6.28 });
+            }
+            for (let i = 0; i < 6; i++) { const aa = Math.random() * 6.28, v = 130 + Math.random() * 190; S.parts.push({ x: p.ex, y: p.ey, vx: Math.cos(aa) * v, vy: Math.sin(aa) * v - 40, g: true, t: 0.5, r: 1.5 + Math.random() * 2, c: i % 2 ? '#ffd54f' : '#ff5722' }); } // 사방 불똥 (중력)
+            S.shake = Math.max(S.shake, 0.07);
+          }
           const r2 = p.splash * p.splash;
           for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y - p.ey; if (ddx*ddx + ddy*ddy <= r2) dealDamage(m, p.dmg, p.owner); }
         }
@@ -4673,19 +4682,17 @@ function updateInfoPanel() {
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
   const sub = u.miner ? '광부' : isHiddenCombo(u) ? '히든 영웅' : keyTag + HAND_NAMES[u.tier] + (u.hero ? ' 영웅' : '');
   const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = top2[0] + top2[1];
-  const upFlat = u.joker ? 0 : +(((u.hidden || u.ace) ? aceUp : S.upg[u.race]) * upgPer(u) * fuseCount(u)).toFixed(1); // 합성 재료 수만큼 업글 계수 (영웅5·슈퍼25·히든은 레시피 수). 조커는 업글 무효
+  const upFlat = isHiddenCombo(u) ? 0 : +(((u.hidden || u.ace) ? aceUp : S.upg[u.race]) * upgPer(u) * fuseCount(u)).toFixed(1); // 히든 영웅은 종족 업글 미적용 (⭐ 단련으로 성장)
   const hmI = hiddenMeta(u);
-  const raceLine = u.joker
-    ? `종족: <span style="color:#8c5bff">🃏 조커</span> (업그레이드 무효 — 고정 공격력)`
-    : hmI
-    ? `종족: <span style="color:${hmI[2]}">${hmI[0]} ${hmI[1]}</span> (업그레이드: ${RACES[u.race].suit} ${RACES[u.race].name} Lv.${S.upg[u.race]} ×${fuseCount(u)} 적용)`
+  const raceLine = hmI
+    ? `종족: <span style="color:${hmI[2]}">${hmI[0]} ${hmI[1]}</span> (종족 없음 — ⭐ 단련으로 성장)`
     : (u.hidden || u.ace)
     ? `종족: <span style="color:#e91e8c">♠ 에이스</span> (상위 2종족 업그레이드 합산 +${upFlat})`
     : `종족: <span style="color:${RACES[u.race].color}">${RACES[u.race].suit} ${RACES[u.race].name}</span> (업그레이드 Lv.${S.upg[u.race]})`;
   el.innerHTML =
     `<b>${u.hidden ? '♠ ' + u.weapon : u.weapon}</b> (${sub})<br>` +
     raceLine + '<br>' +
-    `공격력: <b>${effDmg(u).toFixed(1)}</b>${u.joker ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
+    `공격력: <b>${effDmg(u).toFixed(1)}</b>${isHiddenCombo(u) ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
     `공속: ${(1/u.cd).toFixed(1)}회/초 · 사거리: ${u.range}<br>` +
     `💀 처치: <b>${u.kills || 0}</b>킬<br>` +
     `특성: ${traits.join(', ')}` +
@@ -4694,7 +4701,7 @@ function updateInfoPanel() {
     (u.chrono ? chronoRow(u) : '') +
     (u.slot ? slotRow(u) : '') +
     (ascendKey(u) ? ascendRow(u) : '') +
-    ((u.hero && !isHiddenCombo(u) && !u.clone) ? heroUpRow(u) : '') +
+    ((isHiddenCombo(u) && !u.clone) ? heroUpRow(u) : '') +
     ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier}) <span style="color:${u.hero?'#e57373':'#66bb6a'};font-size:11px">성공률 ${u.hero?50:70}%</span></button>` : '') +
     deselBtnHTML();
   wirePriorityButtons(el);
@@ -4723,18 +4730,18 @@ function heroUpRow(u) {
   return `<br><button id="heroUpBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:#c9971a;font-weight:bold">⭐ 영웅 단련 Lv.${lv}→${lv + 1} (총 공격력 +15%) — 💰${cost.toLocaleString()}G</button>` +
     `<button id="heroUpGBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:4px;text-align:center;color:#8e44ad;font-weight:bold" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎰 도박 단련 (25% 확률 +3Lv) — 💰${cost}G</button>`;
 }
-function heroTrain(u, gamble) {
+function heroTrain(u, gamble, perfect) {
   const lv = u.heroUpLv || 0;
-  if (lv >= HERO_UP_MAX) return;
+  if (lv >= HERO_UP_MAX) return null;
   const cost = heroUpCost(u);
-  if (S.gold < cost) return;
+  if (S.gold < cost) return null;
   S.gold -= cost;
   if (!gamble) {
     u.heroUpLv = lv + 1;
     logMsg(`⭐ ${u.weapon} 단련 Lv.${u.heroUpLv} (총 공격력 +${u.heroUpLv * 15}%)`);
     addFloat(u.x, u.y - 28, `⭐ 단련 Lv.${u.heroUpLv}!`, '#c9971a', 1.4); sfx('reward');
-  } else { // 🎰 도박 단련: 25%(갬블러 35%)로 +3레벨
-    const p = 0.25 + (S.units.some(v => v.gamble) ? 0.10 : 0);
+  } else { // 🎰 도박 단련: 기본 25% / 타이밍 퍼펙트 50% (+갬블러 10%p)로 +3레벨
+    const p = (perfect ? 0.5 : 0.25) + (S.units.some(v => v.gamble) ? 0.10 : 0);
     if (Math.random() < p) {
       u.heroUpLv = Math.min(HERO_UP_MAX, lv + 3);
       logMsg(`🎰✨ <b>도박 단련 대성공!!</b> ${u.weapon} Lv.${u.heroUpLv} (총 공격력 +${u.heroUpLv * 15}%)`);
@@ -4875,11 +4882,11 @@ const HIDDEN_DEX = [
 // ⭐ 강화창 영웅 탭: 보유 영웅 단련 + 히든 영웅 도감 (미발견 = ??? + 대사 힌트 / 발견·미보유 = 회색 + 조합법)
 let castleTab = 'upg';
 const HIDDEN_FLAG = { gambler: 'gamble', junk: 'junk', quartet: 'quartet', guillotine: 'execute', shogun: 'shogun', chrono: 'chrono', slot: 'slot', joker: 'joker', catapult: 'catapult' };
-function shopHeroes() { return S.units.filter(u => u.hero && !isHiddenCombo(u) && !u.clone); }
+function shopHeroes() { return S.units.filter(u => isHiddenCombo(u) && !u.clone); } // 단련 대상 = 히든 영웅만 (종족 없음 → 별도 성장)
 function heroSectionHTML() {
   const heroes = shopHeroes();
-  let html = '<div class="castleColT">⭐ 보유 영웅 단련</div>';
-  if (!heroes.length) html += '<div style="font-size:12px;color:#9a8a60;text-align:center;margin:8px 0">보유한 영웅이 없습니다 — 같은 유닛 5기를 포털에 모아 합성해보세요</div>';
+  let html = '<div class="castleColT">⭐ 히든 영웅 단련</div>';
+  if (!heroes.length) html += '<div style="font-size:12px;color:#9a8a60;text-align:center;margin:8px 0">보유한 히든 영웅이 없습니다 — 아래 조합법을 발견해보세요</div>';
   heroes.forEach((h, i) => {
     const lv = h.heroUpLv || 0, cost = heroUpCost(h), maxed = lv >= HERO_UP_MAX, ok = S.gold >= cost;
     html += `<div class="rpgItem" style="border-left:5px solid #c9971a">
@@ -4906,7 +4913,19 @@ function heroSectionHTML() {
 function wireHeroSection(el) {
   const heroes = shopHeroes();
   el.querySelectorAll('[data-ht]').forEach(b => b.onclick = () => { heroTrain(heroes[+b.dataset.ht], false); renderShop(); });
-  el.querySelectorAll('[data-htg]').forEach(b => b.onclick = () => { heroTrain(heroes[+b.dataset.htg], true); renderShop(); });
+  el.querySelectorAll('[data-htg]').forEach(b => b.onclick = () => { // 🎰 도박 단련: 타이밍바
+    const h = heroes[+b.dataset.htg];
+    if (S.gold < heroUpCost(h)) return;
+    const host = document.createElement('div');
+    b.closest('.rpgItem').after(host);
+    el.querySelectorAll('button').forEach(x => x.disabled = true);
+    runGambleBar(host, perfect => {
+      const before = h.heroUpLv || 0;
+      heroTrain(h, true, perfect);
+      const win = (h.heroUpLv || 0) > before;
+      showGambleResult(host, perfect, win, win ? `${h.weapon} 단련 Lv.${h.heroUpLv}` : '');
+    });
+  });
 }
 // 🏆 업적 도감: HIDDEN_DEX 9종 발견 업적을 자동 포함
 const ACHV = [
@@ -4942,7 +4961,7 @@ function upgItemsHTML() {
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
       <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎰 25%<br>×3</button>
     </div>`).join('') +
-    '<div class="rpgGuide">레벨당: 단일 <b>+3</b> / 스플래쉬 <b>+0.6</b> / 전체타격 <b>+0.3</b>.<br>♠ 에이스는 상위 2종족 합산.<br>🎰 <b>도박 업그레이드</b>: 같은 값, <b>25%</b> 확률로 <b>3레벨</b> — 실패하면 골드만 소멸! (갬블러 보유 시 35%)</div>';
+    '<div class="rpgGuide">레벨당: 단일 <b>+3</b> / 스플래쉬 <b>+0.6</b> / 전체타격 <b>+0.3</b>.<br>♠ 에이스는 상위 2종족 합산.<br>🎰 <b>도박 업그레이드</b>: 같은 값으로 <b>3레벨</b>에 도전 — 타이밍바 중앙을 맞추면 확률 <b>50%</b>! 실패하면 골드만 소멸.</div>';
 }
 function wireUpg(el) {
   el.querySelectorAll('[data-upg]').forEach(b => b.onclick = () => {
@@ -4953,23 +4972,55 @@ function wireUpg(el) {
     logMsg(`⚔️ ${RACES[i].name} 공격력 Lv.${S.upg[i]}`);
     renderShop(); updateInfoPanel();
   });
-  el.querySelectorAll('[data-gupg]').forEach(b => b.onclick = () => { // 🎰 도박 업그레이드: 25%(갬블러 35%)로 3레벨, 실패 시 골드 소멸
+  el.querySelectorAll('[data-gupg]').forEach(b => b.onclick = () => { // 🎰 도박 업그레이드: 타이밍바 → 중앙 명중 시 50%, 아니면 25% (+갬블러 10%p)
     const i = +b.dataset.gupg;
     if (S.gold < S.upgCost[i]) return;
-    S.gold -= S.upgCost[i];
-    const p = 0.25 + (S.units.some(u => u.gamble) ? 0.10 : 0);
-    if (Math.random() < p) {
-      S.upg[i] += 3;
-      S.upgCost[i] = Math.floor(S.upgCost[i] * 1.5 * 1.5 * 1.5); // 3레벨 분량만큼 가격도 전진
-      logMsg(`🎰✨ <b>도박 대성공!!</b> ${RACES[i].name} 공격력 +3 → Lv.${S.upg[i]}`);
-      addFloat(PORTAL.x, PORTAL.y - 30, '🎰 업그레이드 ×3!!', '#ffd54f', 2.2);
-      S.goldFlash = 0.55; sfx('jackpot');
-    } else {
-      logMsg(`🎰💨 도박 실패… ${S.upgCost[i]}G만 날렸습니다 (${Math.round(p*100)}%의 벽)`);
-      sfx('leak');
-    }
-    renderShop(); updateInfoPanel();
+    const host = document.createElement('div');
+    b.closest('.rpgItem').after(host);
+    el.querySelectorAll('button').forEach(x => x.disabled = true); // 진행 중 다른 버튼 잠금
+    runGambleBar(host, perfect => {
+      if (S.gold < S.upgCost[i]) { renderShop(); return; }
+      S.gold -= S.upgCost[i];
+      const p = (perfect ? 0.5 : 0.25) + (S.units.some(u => u.gamble) ? 0.10 : 0);
+      const win = Math.random() < p;
+      if (win) {
+        S.upg[i] += 3;
+        S.upgCost[i] = Math.floor(S.upgCost[i] * 1.5 * 1.5 * 1.5); // 3레벨 분량만큼 가격도 전진
+        logMsg(`🎰✨ <b>도박 대성공!!</b> ${RACES[i].name} 공격력 +3 → Lv.${S.upg[i]}`);
+        S.goldFlash = 0.55; sfx('jackpot');
+      } else { logMsg(`🎰💨 도박 실패… (${Math.round(p * 100)}%의 벽)`); sfx('leak'); }
+      showGambleResult(host, perfect, win, win ? `${RACES[i].name} 공격력 +3 → Lv.${S.upg[i]}` : '');
+      updateInfoPanel();
+    });
   });
+}
+// 🎰 타이밍바 미니게임: 작대기가 좌우로 빠르게 왕복 — 중앙(===) 명중 시 성공 확률 50%
+function runGambleBar(host, onStop) {
+  host.innerHTML = `<div style="margin:8px 2px;text-align:center">
+    <div style="font-size:11px;color:#9a8a60;margin-bottom:4px">🎯 가운데 노란 존에 맞추면 확률 <b>50%</b>!</div>
+    <div id="gmgTrack" style="position:relative;height:20px;background:#241a3a;border:2px solid #4a3d70;border-radius:10px;overflow:hidden">
+      <div style="position:absolute;left:42%;width:16%;top:0;bottom:0;background:rgba(255,213,79,0.6)"></div>
+      <div id="gmgMk" style="position:absolute;left:0;width:3px;top:0;bottom:0;background:#fff"></div>
+    </div>
+    <button class="chipBtn" id="gmgStop" style="margin-top:8px;padding:8px 22px">🎯 멈춰!!</button></div>`;
+  const mk = host.querySelector('#gmgMk'), t0 = performance.now();
+  let pos = 0, raf = 0;
+  (function tick(now) {
+    const t = ((now || t0) - t0) / 1000;
+    pos = (Math.sin(t * Math.PI * 2 / 0.85 - Math.PI / 2) + 1) / 2 * 100; // 0.85초에 한 왕복 — 빠르다
+    mk.style.left = `calc(${pos}% - 1.5px)`;
+    raf = requestAnimationFrame(tick);
+  })();
+  host.querySelector('#gmgStop').onclick = () => { cancelAnimationFrame(raf); onStop(Math.abs(pos - 50) <= 8); };
+}
+function showGambleResult(host, perfect, win, detail) {
+  host.innerHTML = `<div style="text-align:center;margin:8px 0;font-weight:bold">
+    ${perfect ? '<div style="color:#c9971a;font-size:12px">🎯 퍼펙트! 확률 50% 적용</div>' : '<div style="color:#9a8a60;font-size:12px">타이밍 빗나감 — 기본 확률</div>'}
+    <div style="font-size:17px;color:${win ? '#c9971a' : '#e57373'};margin-top:4px">${win ? '🎰✨ 잭팟!! ×3 강화!!' : '💨 꽝… 골드만 사라졌다'}</div>
+    ${detail ? `<div style="font-size:12px;color:#7a6a52;margin-top:2px">${detail}</div>` : ''}
+    <button class="chipBtn" id="gmgOk" style="margin-top:8px">확인</button></div>`;
+  host.querySelector('#gmgOk').onclick = () => renderShop();
+  if (win) sfx('reward');
 }
 // 광부 업그레이드 항목 HTML + 배선
 function minerItemsHTML() {
@@ -5421,8 +5472,8 @@ function updateHUD() {
     document.getElementById('mtPoker').classList.toggle('alert', S.phase === 'poker' && mobTab === 'battle');
     document.getElementById('mtBattle').classList.toggle('alert', S.phase === 'wave' && mobTab === 'poker');
   }
-  // 상점 버튼 활성화 + 골드 표시 갱신 (열려있을 때만)
-  if (openShop) {
+  // 상점 버튼 활성화 + 골드 표시 갱신 (열려있을 때만, 🎰 타이밍바 진행 중엔 잠금 유지)
+  if (openShop && !document.getElementById('gmgTrack')) {
     document.getElementById('shopGold').textContent = Math.floor(S.gold) + 'G';
     document.querySelectorAll('#shopBody button').forEach(b => {
       const i = b.dataset.upg !== undefined ? b.dataset.upg : b.dataset.gupg;
