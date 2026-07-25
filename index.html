@@ -2505,7 +2505,7 @@ function draw() {
   // 몬스터
   // 공 재질별 움직임 개성: [바운스 높이, 주파수] — 수정구·당구·볼링·쇠구슬은 미끄러지고, 축구공은 통통, 농구공은 높이
   // idx: 0물풍선 1수정구 2축구공 3농구공 4야구공 5당구공 6볼링공 7쇠구슬 8+헬/천체
-  const MAT_BOB = [[2,3],[0,0],[4,7],[8,4.5],[3,8],[0,0],[0,0],[1.2,2.5]];
+  const MAT_BOB = [[3,3],[0,0],[6,7],[12,4.5],[4.5,8],[0,0],[0,0],[1.8,2.5]]; // 바운스 높이 ×1.5 (더 또렷하게)
   for (const m of S.monsters) {
     const bb = (!m.boss && m.mat < 8) ? MAT_BOB[m.mat] : null;
     const bob = bb && bb[0] ? Math.abs(Math.sin(S.time * bb[1] + m.bobP)) * bb[0] * m.born : 0;
@@ -2522,7 +2522,13 @@ function draw() {
   if (S.stimT > 0) { ctx.fillStyle = '#43a047'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign='center'; ctx.fillText(`💉 스팀팩 ${Math.ceil(S.stimT)}초`, CX, 20); ctx.textAlign='left'; }
   // 유닛
   for (const u of S.units) { // 🌀 분신은 반투명 + 보라 잔광으로 본체와 구분
-    if (u.clone) { // 분신: 반투명 + 발밑 보라 링으로 구분 (shadowBlur 없이 저렴하게)
+    const rec = /바주카/.test(u.weapon || '') ? (u.atkAnim || 0) : 0; // 🚀 바주카 반동: 발사 순간 몸이 뒤로 뒤뚱
+    if (rec > 0.05) {
+      const fd = faceDir(u);
+      ctx.save(); ctx.translate(u.x, u.y); ctx.rotate(-fd.dx * rec * 0.1); ctx.translate(-u.x, -u.y); // 살짝 뒤로 기울고
+      ctx.translate(-fd.dx * rec * 4, -fd.dy * rec * 4 + rec * 1.2);                                   // 반대 방향으로 밀림
+      drawUnit(u); ctx.restore();
+    } else if (u.clone) { // 분신: 반투명 + 발밑 보라 링으로 구분 (shadowBlur 없이 저렴하게)
       ctx.strokeStyle = 'rgba(126,87,194,0.6)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(u.x, u.y + 15, 12, 4.5, 0, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1;
       ctx.save(); ctx.globalAlpha = 0.55; drawUnit(u); ctx.restore();
@@ -4186,7 +4192,19 @@ function drawWeapon(u, x, y) {
     ctx.fillStyle = '#37474f'; ctx.beginPath(); ctx.arc(x + 4, y, 5.5, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#ffd54f'; ctx.font = 'bold 7px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('☢', x + 4, y + 2.5); ctx.textAlign = 'left';
-  } else if (has('바주카') || has('미사일')) { // 발사관
+  } else if (has('바주카')) { // 🚀 어깨 견착 바주카 (크게 + 디테일: 튜브·머즐 나팔·후방 배기·탄두·경고 밴드)
+    const by = y - 9; // 어깨 위에 얹은 높이
+    ctx.fillStyle = '#4e5a48'; ctx.fillRect(x - 9, by - 3.5, 24, 7);      // 본체 튜브 (올리브)
+    ctx.fillStyle = '#3a4436'; ctx.fillRect(x - 9, by + 1, 24, 2.5);      // 하부 음영
+    ctx.fillStyle = '#5d6b55';                                             // 앞 머즐 나팔
+    ctx.beginPath(); ctx.moveTo(x + 15, by - 5); ctx.lineTo(x + 20, by - 6.5); ctx.lineTo(x + 20, by + 6.5); ctx.lineTo(x + 15, by + 5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#333c30';                                             // 후방 배기구
+    ctx.beginPath(); ctx.moveTo(x - 9, by - 3.5); ctx.lineTo(x - 14, by - 5.5); ctx.lineTo(x - 14, by + 5.5); ctx.lineTo(x - 9, by + 3.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#e53935'; ctx.beginPath(); ctx.arc(x + 19.5, by, 3.2, -1.35, 1.35); ctx.fill(); // 관 안에 살짝 보이는 빨간 탄두
+    ctx.fillStyle = '#ffca28'; ctx.fillRect(x + 7, by - 3.5, 2.6, 7);      // 노란 경고 밴드
+    ctx.fillStyle = '#2b2b2b'; ctx.fillRect(x - 1, by + 3.5, 2.6, 5.5);    // 그립 (어깨에서 내려오는 손잡이)
+    ctx.fillRect(x + 2.5, by - 7.6, 1.8, 4.2);                             // 가늠쇠
+  } else if (has('미사일')) { // 발사관
     ctx.fillRect(x, y - 3, 13, 5);
     ctx.fillStyle = '#e53935'; ctx.beginPath(); ctx.arc(x + 14, y, 2.4, 0, Math.PI*2); ctx.fill();
   } else if (has('폭탄')) { // 스플래쉬 폭탄
