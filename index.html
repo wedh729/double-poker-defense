@@ -658,9 +658,11 @@ function monsterHP(n) {
   let hp = n <= 30 ? grow(n) : grow(30) * (1 + 0.15 * Math.min(n - 30, 10) + 0.09 * Math.max(0, n - 40)); // 30~40R +15%p/R 선형 → 40R부터 +9%p/R (기울기 40%↓)
   if (n > FINAL_ROUND) hp *= Math.pow(1.5, n - FINAL_ROUND); // 헬(80+): 라운드당 ×2 → ×1.5 완화 (가파르되 맛볼 수 있게)
   // ×0.7 = 전체 난이도 30% 하향 / ×1.6 = 몹 수 절반 보정 (2배가 아닌 이유: 밀도 절반 → 스플래시 효율도 절반이라 2배면 실효 난이도 상승)
-  if (n >= 40) hp *= 1.45; // 일반 몹 분열 제거 보정: 기존 분열(10% 확률·6마리×80%)의 실효 HP ≈ ×1.48을 평탄하게 환산
+  hp *= splitComp(n); // 일반 몹 분열 제거 보정 (R40에 한 번에 곱하면 1.5배 계단벽이 생겨서 R40~R55에 걸쳐 점진 적용)
   return Math.max(1, Math.floor(hp * DIFF_MUL * 0.7 * 1.6));
 }
+// 분열 제거 보정 계수: R39까지 1.0 → R55에서 1.45로 선형 증가 (보스는 분열과 무관하므로 이 값으로 나눠 상쇄한다)
+function splitComp(n) { return 1 + 0.45 * Math.max(0, Math.min(1, (n - 39) / 16)); }
 // 몬스터 수: 렉 저감을 위해 절반 (최대 200) — 대신 개체 HP ×1.6 + 킬 골드 ×2로 보정
 function mobCount(n) {
   const base = Math.min(100, 22 + n * 3);
@@ -1098,7 +1100,7 @@ function clampTargetPos(x, y) {
 }
 // 합성 가능한 그룹 키 (일반=티어+히든, 영웅=티어+영웅). 슈퍼영웅은 합성 대상 아님
 function fuseKey(u) {
-  if (u.miner || u.super || u.item || isHiddenCombo(u)) return null; // 히든 조합 유닛은 합성 재료 아님 (갬블러가 소총영웅 5합성에 잡아먹히던 버그)
+  if (u.miner || u.super || u.item || u.clone || isHiddenCombo(u)) return null; // 히든 조합 유닛은 합성 재료 아님 (갬블러가 소총영웅 5합성에 잡아먹히던 버그) · 분신도 제외 (사라질 분신으로 슈퍼영웅을 뽑는 익스플로잇 차단)
   if (u.hero) return 'S' + u.tier + (u.ace ? 'A' : ''); // 에이스 영웅은 자기들끼리만 (일반 영웅 합성에 섞이면 에이스 특성 소실)
   return u.tier + '_' + (u.superAce ? 'SA' : u.hidden ? 'H' : 'N'); // 슈퍼에이스는 자기들끼리만 합성
 }
@@ -1617,7 +1619,7 @@ function update(dt) {
     if (q.bossLeft > 0 && S.timer < WAVE_TIME - 5) {
       q.bossLeft = 0;
       // 보스 계수: 기본 9.4 / R40+는 mobHP ×1.45(분열 제거 보정)를 상쇄해 6.5 / R80+ 분열 보스는 본체 2.8 (조각 5×30% 포함 실효 ≈ 기존 수준)
-      spawnMonster(q.hp * (S.round >= FINAL_ROUND ? 2.8 : S.round >= 40 ? 6.5 : 9.4), true);
+      spawnMonster(q.hp * (S.round >= FINAL_ROUND ? 2.8 : 9.4 / splitComp(S.round)), true); // 보스는 분열 제거 보정 대상이 아니므로 splitComp를 나눠 상쇄
       logMsg('👹 보스 등장!');
       sfx('boss');
     }
@@ -4895,7 +4897,7 @@ function wirePriorityButtons(el) {
   });
 }
 function copyUnit(u) {
-  if (S.items.copier <= 0 || u.miner) return;
+  if (S.items.copier <= 0 || u.miner || u.clone) return; // 분신은 복사 불가 (곧 사라질 유닛을 영구화하는 익스플로잇 차단)
   if (isHiddenCombo(u)) { addFloat(u.x, u.y - 26, '📑 히든 유닛은 복사 불가!', '#e57373', 1.6); logMsg('📑 히든 조합 유닛은 복사기로 복사할 수 없습니다.'); return; }
   S.items.copier--;
   const rate = u.hero ? 0.5 : 0.7; // 영웅 복사는 더 어렵다
@@ -5197,9 +5199,9 @@ function renderShop() {
       grid('⛏️ 광부', miners) + grid('🎒 아이템 유닛', items) + grid('👹 몬스터 (현재 라운드 HP)', mobs) + grid('🛠️ 기타', misc);
     el.querySelectorAll('[data-sb]').forEach(b => b.onclick = () => {
       const v = b.dataset.sb;
-      if (v.startsWith('mob')) { const m = spawnMonster(mobHP(S.round), false, {}); m.mat = +v.slice(3); m.esc = 0.5; }
-      else if (v === 'boss') spawnMonster(mobHP(S.round) * (S.round >= FINAL_ROUND ? 2.8 : S.round >= 40 ? 6.5 : 9.4), true);
-      else if (v === 'bossS') { const bm = spawnMonster(mobHP(S.round) * 2.8, true); bm.split = true; }
+      if (v.startsWith('mob')) { const m = spawnMonster(monsterHP(S.round), false, {}); m.mat = +v.slice(3); m.esc = 0.5; }
+      else if (v === 'boss') spawnMonster(monsterHP(S.round) * (S.round >= FINAL_ROUND ? 2.8 : 9.4 / splitComp(S.round)), true);
+      else if (v === 'bossS') { const bm = spawnMonster(monsterHP(S.round) * 2.8, true); bm.split = true; }
       else if (v.startsWith('sa')) spawnUnit(+v.slice(2), RACE_OF_RANK[+v.slice(2)], true, 14, true);
       else if (v.startsWith('a')) spawnUnit(+v.slice(1), RACE_OF_RANK[+v.slice(1)], true, 14);
       else if (v.startsWith('sh')) spawnHero(+v.slice(2), RACE_OF_RANK[+v.slice(2)], CX - 40, CY + 150, 1.5, true);
