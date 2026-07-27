@@ -1436,7 +1436,6 @@ function update(dt) {
   // 콤보/흔들림 타이머
   if (S.combo.t > 0) { S.combo.t -= dt; if (S.combo.t <= 0) S.combo.n = 0; }
   S.combo.pop = Math.max(0, S.combo.pop - dt);
-  S.shake = Math.max(0, S.shake - dt);
   // 🐦 힌트 새: 전투 중 가끔 하늘을 가로지른다 (잡으면 미발견 조합 힌트)
   if (S.phase === 'wave') {
     S.birdTimer -= dt;
@@ -1748,7 +1747,6 @@ function update(dt) {
           if (p.kind === 'missile' && !p.mini) { // ☢️ 로얄 미사일: 핵폭발 버섯구름 + 섬광 + 셰이크
             S.effects.push({ type:'mush', x: p.ex, y: p.ey, r: p.splash, t: 1.1, dur: 1.1 });
             S.effects.push({ type:'boom', x: p.ex, y: p.ey, r: p.splash * 1.6, t: 0.22 });
-            S.shake = Math.max(S.shake, 0.14);
           }
           for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 70 + Math.random()*150; S.parts.push({ x: p.ex, y: p.ey, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.32, r: 2 + Math.random()*3, c: '#ff8a3d' }); }
           if (p.mini) { // 🚀 바주카: 화염 폭발 — 충격파 링 + 위로 확 솟는 불덩이 + 불똥 (발사가 느려서 프레임 부담 없음)
@@ -1758,7 +1756,6 @@ function update(dt) {
               S.parts.push({ x: p.ex + (Math.random() - 0.5) * 14, y: p.ey, vx: Math.cos(aa) * sp2, vy: Math.sin(aa) * sp2, t: 0.42 + Math.random() * 0.22, r: 5 + Math.random() * 6, fire: true, spin: Math.random() * 6.28 });
             }
             for (let i = 0; i < 6; i++) { const aa = Math.random() * 6.28, v = 130 + Math.random() * 190; S.parts.push({ x: p.ex, y: p.ey, vx: Math.cos(aa) * v, vy: Math.sin(aa) * v - 40, g: true, t: 0.5, r: 1.5 + Math.random() * 2, c: i % 2 ? '#ffd54f' : '#ff5722' }); } // 사방 불똥 (중력)
-            S.shake = Math.max(S.shake, 0.07);
           }
           const r2 = p.splash * p.splash;
           for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y - p.ey; if (ddx*ddx + ddy*ddy <= r2) dealDamage(m, p.dmg, p.owner); }
@@ -1801,7 +1798,6 @@ function update(dt) {
       if (p.kind === 'brg') { // 탕! — 큰 착탄 + 불똥 사방으로 + 미세 셰이크 → 리듬감
         S.effects.push({ type:'boom', x: t.x, y: t.y, r: 17, t: 0.2 });
         for (let i = 0; i < 3; i++) { const aa = Math.random()*6.28, v = 80 + Math.random()*130; const sc = p.dice ? '#ffd54f' : p.star ? '#e8eefc' : '#ffc27a'; S.parts.push({ x: t.x, y: t.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1.4 + Math.random()*2, c: sc }); }
-        S.shake = Math.max(S.shake, 0.05);
         sfx('boom'); // 팅길 때마다 탕!
       } else S.effects.push({ type:'boom', x: t.x, y: t.y, r: 5, t: 0.1 });
       if (p.onHit === 'shards') spawnShards(p);   // 대왕새총: 파편 튐
@@ -1993,7 +1989,6 @@ function fireAt(u, target) {
 function areaHit(u, x, y, dmg) {
   const vis = u.vis, mz = muzzle(u), a = Math.atan2(y - mz.y, x - mz.x);
   const big = u.hero || u.hidden; // 🎇 희귀 유닛(영웅·히든)은 이펙트를 크고 오래 남게 + 미세 화면 흔들림
-  if (big) S.shake = Math.max(S.shake, 0.06); // 타격 손맛 (max라 누적X, ~1.4px 진동)
   if (vis === 'saw') {
     S.effects.push({ type:'saw', x, y, r: u.splash * (big ? 0.9 : 0.62), t: big ? 0.28 : 0.18 });
     if (big) { S.effects.push({ type:'slash', x, y, r: u.splash * 1.35, a, t: 0.3, dur: 0.3 }); } // 전기톱: 톱날 뒤로 큰 참격 궤적
@@ -2092,7 +2087,7 @@ function deathPop(m) {
   const sz = monSize(m);
   S.effects.push({ type: 'pop', x: m.x, y: m.y, r: Math.max(8, sz), c, t: 0.13, dur: 0.13, burst: false,
     boss: m.boss, dk: m.boss ? 'boss' : MATERIALS[m.mat || 0].death, golden: m.golden });
-  if (m.boss) { S.hitstop = 0.08; S.shake = 0.18; } // 보스 킬: 히트스톱 + 화면 흔들림
+  if (m.boss) S.hitstop = 0.08; // 보스 킬: 히트스톱만 (화면 흔들림은 울렁여서 제거)
 }
 function burstJuice(e) {
   const dk = e.dk, n = e.boss ? 26 : 12;
@@ -2540,7 +2535,7 @@ function drawBackdrop() {
 function draw() {
   ctx.clearRect(0, 0, cv.width, cv.height);
   ctx.save();
-  if (S.shake > 0) ctx.translate((Math.random() - 0.5) * S.shake * 24, (Math.random() - 0.5) * S.shake * 24); // 보스 킬 흔들림
+  // 화면 흔들림 제거 (울렁임 유발) — 타격감은 이펙트·파티클로만 표현
   drawBackdrop(); // 초원 + 스테이지별 하늘
   ctx.drawImage(decalCv, 0, 0); // 죽음 얼룩
   // 중앙 스폰존 표시
@@ -2567,7 +2562,7 @@ function draw() {
   // 몬스터
   // 공 재질별 움직임 개성: [바운스 높이, 주파수] — 수정구·당구·볼링·쇠구슬은 미끄러지고, 축구공은 통통, 농구공은 높이
   // idx: 0물풍선 1수정구 2축구공 3농구공 4야구공 5당구공 6볼링공 7쇠구슬 8+헬/천체
-  const MAT_BOB = [[3,3],[0,0],[6,7],[12,4.5],[4.5,8],[0,0],[0,0],[1.8,2.5]]; // 바운스 높이 ×1.5 (더 또렷하게)
+  const MAT_BOB = [[3,1.5],[0,0],[6,3],[12,2.2],[4.5,3.4],[0,0],[0,0],[1.8,1.2]]; // 높이는 유지, 주파수는 절반 이하 — 정신없는 파르르 대신 느긋한 통~통
   for (const m of S.monsters) {
     const bb = (!m.boss && m.mat < 8) ? MAT_BOB[m.mat] : null;
     const bob = bb && bb[0] ? Math.abs(Math.sin(S.time * bb[1] + m.bobP)) * bb[0] * m.born : 0;
