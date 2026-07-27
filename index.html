@@ -897,7 +897,10 @@ function updateMiner(u, dt) {
 // 업그레이드 레벨당 공격력 보너스 — 다수 타격 유닛은 대폭 축소(밸런스)
 // 단일 +3 / 스플래쉬 +0.6 / 소환장 전체타격(탱크·핵) +0.3
 // 업글 보정(발당) = 계수 × 무기 공속(cd) → 렙당 DPS 증가가 전 무기 동일 (기존 발당 고정은 기관총·표창 등 빠른 무기가 압도적으로 유리했음)
-function upgPer(u) { return (u.atk === 'pen' ? 0.15 : (u.splash > 0 ? 0.55 : 3.6)) * u.cd; }
+function upgPer(u) {
+  const single = u.vis === 'sword' && !u.shogun; // 🗡️ 단검(풀하우스)은 splash 값이 있어도 실제로는 최근접 1마리만 때린다 → 단일 계수
+  return (u.atk === 'pen' ? 0.15 : (!single && u.splash > 0 ? 0.55 : 3.6)) * u.cd;
+}
 // 합성 재료 수 = 업글 계수 (재료 수만큼 업글 보정도 커야 "합치면 손해" 역전이 없다)
 function fuseCount(u) {
   if (u.super) return 25;      // 슈퍼영웅 = 기본 25기분
@@ -1576,7 +1579,7 @@ function update(dt) {
       u.cool -= dt;
       // 광석 방 안이면 광석을 때린다 (정원 내 자격 유닛만). 광산 채굴은 광부 전담 — 전투 유닛은 안 캔다.
       if (!S.hunt.done && S.hunt.hp > 0 && isInRoom(u)) {
-        if (u.oreSlot && u.cool <= 0 && !u.moving) { u.cool = effCd(u); fireAtOre(u); }
+        if (u.oreSlot && u.cool <= 0 && !u.moving && inOreRange(u)) { u.cool = effCd(u); fireAtOre(u); } // 광석도 사거리 판정 (근접 무기는 붙어야 캔다)
       }
     }
     S.pokerTimer -= dt;
@@ -1665,7 +1668,7 @@ function update(dt) {
     }
     // 광석 방 안이면 몬스터 대신 광석을 때린다 (정원 내 자격 유닛만)
     if (!S.hunt.done && S.hunt.hp > 0 && isInRoom(u)) {
-      if (u.oreSlot && u.cool <= 0 && !u.moving) { u.cool = effCd(u); fireAtOre(u); }
+      if (u.oreSlot && u.cool <= 0 && !u.moving && inOreRange(u)) { u.cool = effCd(u); fireAtOre(u); } // 광석도 사거리 판정 (근접 무기는 붙어야 캔다)
       continue;
     }
     if (u.forceTarget && (u.forceTarget.dead || u.forceTarget.hp <= 0)) u.forceTarget = null;
@@ -2189,6 +2192,7 @@ function markMon(i) {
 const OREPOS = { x: ROOM.cx + ROOM.w/2 - 22, y: ROOM.cy }; // 광석을 방 최우측에 고정 (유닛에 안 가려지게)
 const ORE_LINE = OREPOS.x - 34; // 유닛 접근 한계선 — 이 선을 넘으면 광석이 가려지므로 통행 금지
 function isInRoom(u) { return Math.abs(u.x - ROOM.cx) <= ROOM.w/2 && Math.abs(u.y - ROOM.cy) <= ROOM.h/2; }
+function inOreRange(u) { const dx = OREPOS.x - u.x, dy = OREPOS.y - u.y, r = effRange(u) + 18; return dx*dx + dy*dy <= r*r; } // 광석 채굴 사거리
 function oreCap() { return 1 + Math.floor(S.round / 10); }
 // 채굴 자격 배정: 정원 내 가까운 순. 새총(하이카드, tier 0) 계열은 정원 미포함 특혜 — 언제나 채굴 가능
 function assignOreSlots() {
@@ -2212,8 +2216,24 @@ function fireAtOre(u) {
   const m = muzzle(u);
   const wc = u.ace ? '#ffd54f' : (u.hidden ? '#e91e8c' : (RACES[u.race] ? RACES[u.race].color : '#ffca28'));
   const col = ORES[Math.min(9, S.hunt.stage - 1)].col;
-  S.effects.push({ type:'roomshot', x1: m.x, y1: m.y, x2: OREPOS.x, y2: OREPOS.y, t: 0.14, dur: 0.14, color: wc });
-  S.effects.push({ type:'boom', x: m.x, y: m.y, r: 4, t: 0.07 });
+  // 무기별 고유 모션 유지 — 근접 무기는 광선(roomshot)이 아니라 자기 참격/톱날/화염으로 광석을 때린다
+  const ang = Math.atan2(OREPOS.y - m.y, OREPOS.x - m.x);
+  if (u.vis === 'sword') {
+    const flurry = !u.shogun && !u.hero, sdur = flurry ? 0.13 : 0.24;
+    const soff = flurry ? ((u._flur = (u._flur || 0) + 1) % 2 ? 0.55 : -0.55) : 0;
+    S.effects.push({ type:'slash', x: OREPOS.x, y: OREPOS.y, r: u.splash, a: ang + soff, t: sdur, dur: sdur, fire: u.shogun });
+  } else if (u.vis === 'saw') {
+    S.effects.push({ type:'saw', x: OREPOS.x, y: OREPOS.y, r: u.splash * 0.7, t: 0.18 });
+  } else if (u.vis === 'flame') {
+    for (let i = 0; i < (u.hero ? 14 : 9); i++) {
+      const reach = Math.hypot(OREPOS.x - m.x, OREPOS.y - m.y) * (0.6 + Math.random() * 0.5), sp = reach / 0.4;
+      const aa = ang + (Math.random() - 0.5) * 0.5;
+      S.parts.push({ x: m.x, y: m.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, t: 0.4 + Math.random() * 0.25, r: (u.hero ? 7 : 5) + Math.random() * 5, fire: true, spin: Math.random() * 6.28 });
+    }
+  } else { // 원거리 무기: 기존 광선 + 총구 섬광
+    S.effects.push({ type:'roomshot', x1: m.x, y1: m.y, x2: OREPOS.x, y2: OREPOS.y, t: 0.14, dur: 0.14, color: wc });
+    S.effects.push({ type:'boom', x: m.x, y: m.y, r: 4, t: 0.07 });
+  }
   for (let i = 0; i < 6; i++) { const a = Math.random()*6.28, v = 40 + Math.random()*72; S.parts.push({ x: OREPOS.x, y: OREPOS.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 15, t: 0.36, r: 1.5 + Math.random()*1.6, c: col }); }
   S.effects.push({ type:'boom', x: OREPOS.x, y: OREPOS.y, r: 10, t: 0.14 });
   if (S.hunt.hp <= 0) huntBossDown();
@@ -3736,7 +3756,7 @@ function drawUnit(u) {
   if (u.super || u.superAce) { // 슈퍼영웅/슈퍼에이스: 발밑에서 무지개 연기가 스멀스멀 피어오르는 오라 (원형 링 대체)
     const fy = u.y + 15, seed = (u.jx || 0) * 7; // 발 위치 기준, 유닛별 위상
     for (let si = 0; si < 5; si++) {
-      const ph = (S.time * 0.55 + si * 0.2 + seed) % 1;               // 0→1 상승 수명
+      const ph = (((S.time * 0.55 + si * 0.2 + seed) % 1) + 1) % 1;   // 0→1 상승 수명 (seed가 음수여도 항상 0~1 — 음수면 반지름이 음수가 되어 arc()가 예외를 던진다)
       const sx = u.x + Math.sin(S.time * 1.7 + si * 2.1 + seed) * (7 + ph * 6) * (si % 2 ? 1 : -1); // 좌우로 흔들리며
       const sy = fy - ph * 26;                                        // 위로 상승
       const r = 3.2 + ph * 3.5, al = 0.38 * (1 - ph);                 // 커지며 옅어짐
@@ -5666,11 +5686,15 @@ function frame(now) {
     if (S.hitstop > 0) S.hitstop -= dt; // 보스 킬 히트스톱: 잠깐 세상이 멈춘다
     else {
       // 배속은 큰 스텝 1번이 아니라 작은 스텝 여러 번(서브스텝)으로 → 모션 부드럽고 물리 안정
-      for (let i = 0; i < S.speed; i++) update(dt);
+      try { for (let i = 0; i < S.speed; i++) update(dt); }
+      catch (e) { if (!window.__updErr) { window.__updErr = 1; console.error('update error:', e); } }
     }
   }
   const t1 = performance.now();
-  if (!(IS_MOBILE && document.body.dataset.tab === 'poker')) draw(); // 포커 탭 중엔 캔버스 안 보이므로 draw 스킵 (update/HUD는 계속)
+  // 한 프레임에서 예외가 나도 루프가 끊겨 게임이 통째로 멈추지 않도록 방어 (원인은 콘솔에 1회만 기록)
+  try {
+    if (!(IS_MOBILE && document.body.dataset.tab === 'poker')) draw(); // 포커 탭 중엔 캔버스 안 보이므로 draw 스킵 (update/HUD는 계속)
+  } catch (e) { if (!window.__drawErr) { window.__drawErr = 1; console.error('draw error:', e); } }
   if (DEBUG) {
     perfU += t1 - t0; perfD += performance.now() - t1;
     if (++perfN >= 60) {
