@@ -4792,8 +4792,8 @@ function updateInfoPanel() {
     if (S.gold < heroUpCost(u)) return;
     const host = document.createElement('div'); el.appendChild(host);
     el.querySelectorAll('button').forEach(b => b.disabled = true);
-    runGambleBar(host, perfect => { const before = u.heroUpLv || 0; heroTrain(u, true, perfect);
-      showGambleResult(host, perfect, (u.heroUpLv || 0) > before, ''); });
+    runGambleBar(host, perfect => { const before = u.heroUpLv || 0; heroTrain(u, true, perfect, true);
+      showGambleResult(host, perfect, (u.heroUpLv || 0) > before, `${u.weapon} 단련 Lv.${u.heroUpLv || 0}`, updateInfoPanel); });
   };
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
   if (el.querySelector('#chronoBtn')) el.querySelector('#chronoBtn').onclick = () => { activateChrono(u); updateInfoPanel(); };
@@ -4816,7 +4816,7 @@ function heroUpRow(u) {
   return `<br><button id="heroUpBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:#c9971a;font-weight:bold">⭐ 영웅 단련 Lv.${lv}→${lv + 1} (총 공격력 +15%) — 💰${cost.toLocaleString()}G</button>` +
     `<button id="heroUpGBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:4px;text-align:center;color:#8e44ad;font-weight:bold" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎰 도박 단련 (25% 확률 +3Lv) — 💰${cost}G</button>`;
 }
-function heroTrain(u, gamble, perfect) {
+function heroTrain(u, gamble, perfect, skipRefresh) {
   const lv = u.heroUpLv || 0;
   if (lv >= HERO_UP_MAX) return null;
   const cost = heroUpCost(u);
@@ -4837,7 +4837,7 @@ function heroTrain(u, gamble, perfect) {
       addFloat(u.x, u.y - 28, '💨 실패…', '#8d8d8d', 1.2); sfx('leak');
     }
   }
-  updateInfoPanel();
+  if (!skipRefresh) updateInfoPanel(); // 결과창을 띄우는 경로에서는 호출부가 확인 버튼에서 갱신한다 (여기서 갱신하면 결과창이 사라짐)
 }
 // 🩸 히든 영웅 제물 승급 줄 (쇼군·조커·갬블러)
 function ascendRow(u) {
@@ -5100,13 +5100,13 @@ function runGambleBar(host, onStop) {
   })();
   host.querySelector('#gmgStop').onclick = () => { cancelAnimationFrame(raf); onStop(Math.abs(pos - 50) <= 8); };
 }
-function showGambleResult(host, perfect, win, detail) {
+function showGambleResult(host, perfect, win, detail, refresh) {
   host.innerHTML = `<div style="text-align:center;margin:8px 0;font-weight:bold">
     ${perfect ? '<div style="color:#c9971a;font-size:12px">🎯 퍼펙트! 확률 50% 적용</div>' : '<div style="color:#9a8a60;font-size:12px">타이밍 빗나감 — 기본 확률</div>'}
     <div style="font-size:17px;color:${win ? '#c9971a' : '#e57373'};margin-top:4px">${win ? '🎰✨ 잭팟!! ×3 강화!!' : '💨 꽝… 골드만 사라졌다'}</div>
     ${detail ? `<div style="font-size:12px;color:#7a6a52;margin-top:2px">${detail}</div>` : ''}
     <button class="chipBtn" id="gmgOk" style="margin-top:8px">확인</button></div>`;
-  host.querySelector('#gmgOk').onclick = () => renderShop();
+  host.querySelector('#gmgOk').onclick = () => (refresh || renderShop)();
   if (win) sfx('reward');
 }
 // 광부 업그레이드 항목 HTML + 배선
