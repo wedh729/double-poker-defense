@@ -1016,6 +1016,7 @@ function spawnMonster(hp, isBoss, opt) {
   return m;
 }
 function endWave() {
+  S.slotBombs = []; // 잭팟 폭격 잔탄이 다음 웨이브로 넘어가 엉뚱한 좌표에서 터지지 않게
   const bossAlive = S.monsters.some(m => m.boss);
   const leak = S.monsters.length;
   if (bossAlive) {
@@ -1865,7 +1866,7 @@ function update(dt) {
             ang: Math.random()*Math.PI*2, baseR: 6 + Math.random()*30, phase: Math.random()*6.28,
             spin: (Math.random()<0.5?-1:1)*(0.2+Math.random()*0.4), x: m.x, y: m.y, rot: Math.random()*3,
             hp: chp, max: chp, colorIdx: m.colorIdx, inc: 0, dead: false, shape: m.shape,
-            mat: m.mat, esc: m.esc, golden: false,
+            mat: m.boss ? matInfo(S.round).idx : m.mat, esc: m.esc, golden: false, bobP: Math.random() * 6.28, // 보스는 mat 0(물풍선) 고정이라 조각은 현재 라운드 재질로
             boss: false, born: 0.4, hell: m.hell, small: true, shield: 0, shieldMax: 0, split: false, child: true,
           });
         }
@@ -4484,7 +4485,7 @@ const OBJ_INFO = {
   pen: { t: '👹 소환장', d: '몬스터는 이 울타리 밖으로 나오지 못합니다.<br>시간 내에 못 잡으면 남은 수만큼 목숨이 깎여요.',
     tip: '💡 풀하우스(단검)의 🗡️암살 스킬만이 유일하게 소환장 안으로 들어갈 수 있습니다.' },
   altar: { t: '🪨 제물대', d: '<b>하이카드(새총)</b> 유닛을 이 위로 이동시키면 제물로 바쳐집니다.<br><b>20장</b>을 모으면 거대한 <b>공성 투석기</b>가 완성돼요! (이동 불가·소환장 전체 포격)',
-    tip: '💡 포털이 아니라 여기에 바쳐야 합니다 — 덕분에 포털의 하이카드는 고물상(하이3+원페어3)에 쓸 수 있어요.' },
+    tip: '💡 포털이 아니라 여기에 바쳐야 합니다 — 덕분에 포털의 하이카드는 고물상(하이3+원3+투2)에 쓸 수 있어요.' },
 };
 function showObjInfo(k) {
   S.selMon = null; // 건물 정보 표시 중엔 몬스터 실시간 갱신 안 함
@@ -4772,7 +4773,7 @@ function updateInfoPanel() {
     `<b>${u.hidden ? '♠ ' + u.weapon : u.weapon}</b> (${sub})<br>` +
     raceLine + '<br>' +
     `공격력: <b>${effDmg(u).toFixed(1)}</b>${isHiddenCombo(u) ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
-    `공속: ${(1/u.cd).toFixed(1)}회/초 · 사거리: ${u.range}<br>` +
+    `공속: ${(1/effCd(u)).toFixed(1)}회/초 · 사거리: ${Math.round(effRange(u))}<br>` + // 히든 상시 페널티까지 반영된 실제 값
     `💀 처치: <b>${u.kills || 0}</b>킬<br>` +
     `특성: ${traits.join(', ')}` +
     (u.miner ? '' : priorityRow(u.priority || 'near')) +
@@ -4787,7 +4788,13 @@ function updateInfoPanel() {
   wireDesel(el);
   if (el.querySelector('#ascBtn')) el.querySelector('#ascBtn').onclick = () => doAscend(u);
   if (el.querySelector('#heroUpBtn')) el.querySelector('#heroUpBtn').onclick = () => heroTrain(u, false);
-  if (el.querySelector('#heroUpGBtn')) el.querySelector('#heroUpGBtn').onclick = () => heroTrain(u, true);
+  if (el.querySelector('#heroUpGBtn')) el.querySelector('#heroUpGBtn').onclick = () => { // 강화창과 동일하게 타이밍바 경유 (확률 조건 통일)
+    if (S.gold < heroUpCost(u)) return;
+    const host = document.createElement('div'); el.appendChild(host);
+    el.querySelectorAll('button').forEach(b => b.disabled = true);
+    runGambleBar(host, perfect => { const before = u.heroUpLv || 0; heroTrain(u, true, perfect);
+      showGambleResult(host, perfect, (u.heroUpLv || 0) > before, ''); });
+  };
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
   if (el.querySelector('#chronoBtn')) el.querySelector('#chronoBtn').onclick = () => { activateChrono(u); updateInfoPanel(); };
   if (el.querySelector('#slotBtn')) el.querySelector('#slotBtn').onclick = () => { activateSlot(u); updateInfoPanel(); };
@@ -4870,7 +4877,7 @@ function activateSlot(u) {
   if (!u.slot || (u.slotCd || 0) > 0) return;
   u.slotCd = 75;
   const n = 14 + Math.floor(Math.random() * 9); // 14~22
-  const dmg = 60 + S.upg[u.race] * 3;
+  const dmg = 60 * (1 + 0.15 * (u.heroUpLv || 0)); // 히든은 종족 업글 대상이 아니므로 단련 배수로 성장
   for (let i = 0; i < n; i++) {
     const ex = CX + (Math.random() - 0.5) * PEN.w * 0.9, ey = CY + (Math.random() - 0.5) * PEN.h * 0.9;
     S.slotBombs.push({ delay: i * (1.2 / n), ex, ey, dmg, owner: u });
@@ -4939,7 +4946,7 @@ const HAND_GUIDE = [
 ];
 // 📖 히든 조합 도감: 발견 전엔 recipe 대신 riddle(hint)을 보여준다 (localStorage dpd_hidden으로 발견 여부 판정)
 const HIDDEN_DEX = [
-  { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '주사위를 던져 1~6회 팅기는 공격 + 카지노·복권·교환 행운 +10%',
+  { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '주사위를 던져 1~6회 팅기는 공격 + 카지노·복권 행운 +10%',
     voice: '운이야말로 실력이지. 내 주사위가 몇 번 튕길지는 나도 몰라 🎲', hint: '계단을 오르듯 원1·투2·쓰리3 … 그 순서로 바친 자에게 운명의 주사위가 굴러온다.' },
   { id: 'junk', icon: '💰', name: '고물상', recipe: '하이카드×3 + 원페어×3 + 투페어×3', desc: '가장 가까운 유닛 5기 킬 골드 ×1.2 (지원형)',
     voice: '버려진 것들 속에 돈이 있다네. 내 곁에서 싸워보게나 💰', hint: '하이3·원3·투3 — 하찮은 세 패를 그러모으면 쓰레기 더미에서 금이 반짝인다.' },
@@ -5017,7 +5024,7 @@ const ACHV = [
   { id: 'golden', icon: '✨', name: '황금 사냥꾼', desc: '황금 몬스터 처치' },
   { id: 'revive', icon: '🔄', name: '기사회생', desc: '부활권으로 생환' },
   { id: 'fever', icon: '🎉', name: '피버!', desc: '피버 타임 발동' },
-  { id: 'lotto50', icon: '🎰', name: '대박', desc: '복권 25만 골드 이상 당첨' },
+  { id: 'lotto50', icon: '🎰', name: '대박', desc: '복권 100만 골드 이상 당첨' },
   { id: 'r40', icon: '🏳️', name: '40 라운드', desc: '' },
   { id: 'r80', icon: '👹', name: '헬 게이트', desc: '80 라운드 돌파' },
   { id: 'mondex', icon: '📚', name: '몬스터 박사', desc: '몬스터 도감 14종 완성' },
@@ -5040,7 +5047,7 @@ function upgItemsHTML() {
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
       <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎰 25%<br>×3</button>
     </div>`).join('') +
-    '<div class="rpgGuide">레벨당: 단일 <b>+3</b> / 스플래쉬 <b>+0.6</b> / 전체타격 <b>+0.3</b>.<br>♠ 에이스는 상위 2종족 합산.<br>🎰 <b>도박 업그레이드</b>: 같은 값으로 <b>3레벨</b>에 도전 — 타이밍바 중앙을 맞추면 확률 <b>50%</b>! 실패하면 골드만 소멸.</div>';
+    '<div class="rpgGuide">레벨당 <b>초당</b> 공격력: 단일 <b>+3.6</b> / 스플래쉬 <b>+0.55</b>/마리 / 전체타격 <b>+0.15</b>/마리.<br>♠ 에이스는 상위 2종족 합산.<br>🎰 <b>도박 업그레이드</b>: 같은 값으로 <b>3레벨</b>에 도전 — 타이밍바 중앙을 맞추면 확률 <b>50%</b>! 실패하면 골드만 소멸.</div>';
 }
 function wireUpg(el) {
   el.querySelectorAll('[data-upg]').forEach(b => b.onclick = () => {
@@ -5085,6 +5092,7 @@ function runGambleBar(host, onStop) {
   const mk = host.querySelector('#gmgMk'), t0 = performance.now();
   let pos = 0, raf = 0;
   (function tick(now) {
+    if (!mk.isConnected) return; // 상점을 닫거나 화면이 다시 그려지면 루프 종료 (분리된 DOM 상대로 rAF가 영원히 도는 누수 방지)
     const t = ((now || t0) - t0) / 1000;
     pos = (Math.sin(t * Math.PI * 2 / 0.85 - Math.PI / 2) + 1) / 2 * 100; // 0.85초에 한 왕복 — 빠르다
     mk.style.left = `calc(${pos}% - 1.5px)`;
@@ -5339,9 +5347,11 @@ function casRoulette() {
   requestAnimationFrame(() => { wheel.style.transform = `rotate(${360*6 - slice*seg}deg)`; ballTrack.style.transform = 'rotate(-3240deg)'; });
   setTimeout(() => {
     reward.apply(); updateInfoPanel();
-    document.getElementById('rlRes').innerHTML = (reward.rare ? '🌟🌟 ' : '🎉 ') + `<span style="color:${reward.rare ? '#ff6b9d' : '#ffd166'}">${reward.label}</span> 당첨!`;
+    const el = document.getElementById('rlRes');
+    if (!el) { logMsg(`🎡 룰렛 당첨: <b>${reward.label}</b> (창을 닫는 사이 지급되었습니다)`); return; } // 회전 중 창을 닫아도 보상은 지급 — 예전엔 여기서 TypeError
+    el.innerHTML = (reward.rare ? '🌟🌟 ' : '🎉 ') + `<span style="color:${reward.rare ? '#ff6b9d' : '#ffd166'}">${reward.label}</span> 당첨!`;
     if (reward.rare) sfx('hero'); else sfx('reward');
-    document.getElementById('rlRes').insertAdjacentHTML('afterend', `<div style="margin-top:8px;text-align:center"><button class="chipBtn" onclick="casMenu()">메뉴</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="casRoulette()">한 번 더 (칩 ${S.chips})</button>` : ''}</div>`);
+    el.insertAdjacentHTML('afterend', `<div style="margin-top:8px;text-align:center"><button class="chipBtn" onclick="casMenu()">메뉴</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="casRoulette()">한 번 더 (칩 ${S.chips})</button>` : ''}</div>`);
   }, 5100);
 }
 // --- 🎟️ 복권: 5000G + 보스 칩 1개 → 긁기 한 장. 확률표 고정, gamblerLuck으로 당첨 밴드 ↑ ---
@@ -5374,7 +5384,7 @@ function casLotto() {
     if (S.gold < SCRATCH_COST || S.chips <= 0) return;
     S.gold -= SCRATCH_COST; S.chips--; sfx('coin');
     const won = rollScratch(); S.gold += won;
-    if (won >= 250000) markAchv('lotto50');
+    if (won >= 1000000) markAchv('lotto50');
     updateInfoPanel();
     const el = document.getElementById('ltRes');
     if (won === 0) { el.innerHTML = `<span style="color:#e57373">💥 꽝! 5000G 날림…</span>`; sfx('leak'); }
@@ -5401,7 +5411,8 @@ function doExchange() {
   requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('flipCard').classList.add('flipped')));
   setTimeout(() => {
     out.apply(); sfx(out.s); updateInfoPanel();
-    document.getElementById('exRes').innerHTML = out.txt;
+    const exR = document.getElementById('exRes'); if (!exR) return; // 창을 닫으면 보상만 지급하고 종료
+    exR.innerHTML = out.txt;
     document.getElementById('exBtns').innerHTML = `<button class="chipBtn" onclick="closeChip()">확인</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="doExchange()">한 번 더 (칩 ${S.chips})</button>` : ''}`;
   }, 900);
 }
