@@ -492,7 +492,7 @@ const WEAPONS = [
   // 6 풀하우스 — 단검 (암살자: 사거리 짧게 + 초고속 난도질 + 암살 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
   {name:'단검', dmg:26, cd:0.3, range:72, splash:44, bounce:0, atk:'area', vis:'sword', bossCrack:true, // 💎 보석 브레이커 암살자: 단일 타겟·고속 난도질(공속 2/3: 0.2→0.3)·보스 대미지 2배
-   hero:{name:'전기톱', atk:'area', vis:'saw', splash:80, cd:0.24, range:102}}, // range 60×1.7
+   hero:{name:'쌍단검', atk:'area', vis:'twin', splash:80, cd:0.12, range:102}}, // 양손 단검: 전기톱 대비 공속 2배(0.24→0.12), 범위·사거리는 동일
   // 7 포카드 — 바주카포 (5초, 스플래쉬)
   {name:'바주카포', dmg:25, cd:2.5, range:330, splash:52, bounce:0, atk:'area', vis:'rocket', // 공속 2배(5→2.5)·스플래시 반경 절반(104→52)
    hero:{name:'탱크', atk:'pen', vis:'tank', cd:2.0}}, // 소환장 전체 타격
@@ -2006,6 +2006,12 @@ function areaHit(u, x, y, dmg) {
       for (let i = 0; i < 10; i++) { const v = 90 + Math.random()*160, aa = a + (Math.random()-0.5)*1.8; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 30, g: true, t: 0.4, r: 1.5 + Math.random()*2.2, c: i%3 ? '#ff8a3d' : '#ffd54f' }); }
     }
     for (let i = 0; i < 4; i++) { const v = 60 + Math.random()*90, aa = a + (Math.random()-0.5)*1.2; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.22, r: 1.2 + Math.random()*1.6, c: u.shogun ? '#ff8a3d' : '#dbe9ff' }); }
+  } else if (vis === 'twin') { // 🗡️🗡️ 쌍단검: 좌우 칼날이 X자로 엇갈려 베는 짧고 빠른 이도류 참격
+    const d2 = 0.5;
+    S.effects.push({ type:'slash', x, y, r: u.splash, a: a - d2, t: 0.16, dur: 0.16 });
+    S.effects.push({ type:'slash', x, y, r: u.splash * 0.92, a: a + d2, t: 0.2, dur: 0.2 });
+    for (let i = 0; i < 5; i++) { const v = 60 + Math.random()*100, aa = a + (Math.random()-0.5)*1.4;
+      S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.2, r: 1.1 + Math.random()*1.5, c: '#dbe9ff' }); }
   } else if (vis === 'scythe') {
     // 🃏 조커: 대검 크레센트를 재사용하되 보라색 (joker 플래그) + 보라 파티클
     S.effects.push({ type:'slash', x, y, r: u.splash * (big ? 1.45 : 1), a, t: big ? 0.45 : 0.22, dur: big ? 0.45 : 0.22, joker: true }); // 크게·오래
@@ -3753,12 +3759,25 @@ function drawUnit(u) {
     ctx.textAlign = 'left';
   }
   // 오라: 상시 오라는 최종 등급(슈퍼영웅/슈퍼에이스)만. 일반 유닛·영웅·에이스는 5기 합성 대기(fusable) 주황 오라만
-  if (u.junkBuff) { // 💰 고물상 버프: 머리 위에 둥실거리는 금화 (킬 골드 ×1.2 대상 표시)
-    const cy2 = u.y - 30 + Math.sin(S.time * 3 + (u.jx || 0)) * 1.6;
-    ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(u.x, cy2, 4, 0, 6.28); ctx.fill();
-    ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.lineWidth = 1;
-    ctx.fillStyle = '#8d6e2f'; ctx.font = 'bold 6px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('₩', u.x, cy2 + 2.2); ctx.textAlign = 'left';
+  {  // 버프 마커: 머리 위에 둥실 (둘 다 받으면 좌우로 나눠 겹치지 않게)
+    const qBuff = (u.spdBuff || 1) < 1, jBuff = !!u.junkBuff, both = qBuff && jBuff;
+    const bob = Math.sin(S.time * 3 + (u.jx || 0)) * 1.6, my = u.y - 30 + bob;
+    if (jBuff) { // 💰 고물상: 금화 (킬 골드 ↑)
+      const mx = both ? u.x - 6 : u.x;
+      ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(mx, my, 4, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.lineWidth = 1;
+      ctx.fillStyle = '#8d6e2f'; ctx.font = 'bold 6px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('₩', mx, my + 2.2); ctx.textAlign = 'left';
+    }
+    if (qBuff) { // 📯 콰르텟: 쨍한 파란 음표 (공속 ↑)
+      const mx = both ? u.x + 6 : u.x;
+      ctx.fillStyle = 'rgba(0,176,255,0.9)'; ctx.beginPath(); ctx.arc(mx - 1.4, my + 2.4, 2.3, 0, 6.28); ctx.fill(); // 음표 머리
+      ctx.strokeStyle = '#00b0ff'; ctx.lineWidth = 1.5; // 기둥
+      ctx.beginPath(); ctx.moveTo(mx + 0.7, my + 2.4); ctx.lineTo(mx + 0.7, my - 3.6); ctx.stroke();
+      ctx.lineWidth = 1.8; // 깃발
+      ctx.beginPath(); ctx.moveTo(mx + 0.7, my - 3.6); ctx.quadraticCurveTo(mx + 4.2, my - 2.6, mx + 3, my + 0.2); ctx.stroke();
+      ctx.lineWidth = 1;
+    }
   }
   if (u.super || u.superAce) { // 슈퍼영웅/슈퍼에이스: 발밑에서 무지개 연기가 스멀스멀 피어오르는 오라 (원형 링 대체)
     const fy = u.y + 15, seed = (u.jx || 0) * 7; // 발 위치 기준, 유닛별 위상
@@ -3868,8 +3887,8 @@ function drawUnit(u) {
   // 바라보는 방향으로 무기 프레임 회전/반전
   { ctx.translate(u.x, u.y); ctx.rotate(Math.atan2(fd.dy, fd.dx)); if (fd.dx < 0) ctx.scale(1, -1); ctx.translate(-u.x, -u.y); }
   const wx = u.x + B.w/2 + 6, wy = u.y - 3, anim = u.atkAnim || 0;
-  const dagger = u.weapon.includes('단검');
-  const melee = !dagger && /전기톱|쇼군/.test(u.weapon); // 전기톱·쇼군 = 크게 휘두르는 스윙
+  const dagger = u.weapon.includes('단검') && !u.weapon.includes('쌍단검'); // 한손 단검: 찌르기/올려베기
+  const melee = /쌍단검|전기톱|쇼군/.test(u.weapon); // 쌍단검·전기톱·쇼군 = 크게 휘두르는 스윙
   if (melee && anim > 0.05) {
     // 칼 궤적 잔상: 스윙 시작각(0.85) → 현재각까지 부채꼴 (4방향 프레임 안이라 방향 자동 일치)
     const aCur = -1.15 + anim * 2.0;
@@ -4063,6 +4082,26 @@ function drawHeadgear(u, topY) {
     drawCrown(cx, topY, { col:'#ffe082', points:7, h:15, gem:`hsl(${(S.time*120)%360},90%,60%)`, band:'#c9a227', dome:true });
     return;
   }
+  if (u.hero && u.tier === 6 && !isHiddenCombo(u)) { // 🏴‍☠️ 풀하우스 영웅(쌍단검): 해적 모자 — 챙 넓은 삼각모 + 해골 엠블럼 + 붉은 깃털
+      ctx.fillStyle = '#2b2f3a'; // 모자 본체 (삼각모)
+      ctx.beginPath(); ctx.moveTo(cx - 11, topY + 2);
+      ctx.quadraticCurveTo(cx - 9, topY - 9, cx, topY - 10);
+      ctx.quadraticCurveTo(cx + 9, topY - 9, cx + 11, topY + 2);
+      ctx.quadraticCurveTo(cx, topY - 1.5, cx - 11, topY + 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#f5f0e8'; // 챙 하이라이트
+      ctx.beginPath(); ctx.moveTo(cx - 11, topY + 2); ctx.quadraticCurveTo(cx, topY - 0.5, cx + 11, topY + 2);
+      ctx.quadraticCurveTo(cx, topY + 1.2, cx - 11, topY + 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#f5f0e8'; // 해골
+      ctx.beginPath(); ctx.arc(cx, topY - 4.5, 2.6, 0, 6.28); ctx.fill();
+      ctx.fillRect(cx - 1.6, topY - 2.6, 3.2, 1.8);
+      ctx.fillStyle = '#2b2f3a'; // 눈구멍
+      ctx.beginPath(); ctx.arc(cx - 1, topY - 5, 0.8, 0, 6.28); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 1, topY - 5, 0.8, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = '#c62828'; ctx.lineWidth = 1.6; // 붉은 깃털 (살랑)
+      const fw = Math.sin(S.time * 4 + u.jx) * 1.5;
+      ctx.beginPath(); ctx.moveTo(cx + 8, topY - 4); ctx.quadraticCurveTo(cx + 13 + fw, topY - 10, cx + 10 + fw, topY - 14); ctx.stroke();
+      ctx.lineWidth = 1; return;
+  }
   if (u.hero) { drawCrown(cx, topY, { col:'#ffd54f', points:5, h:11, gem:'#e91e8c', band:'#c9a227', dome:true }); return; }
   switch (t) {
     case 9: { // 로얄: 임페리얼 대관 (아치 + 벨벳 + 대형 루비 + 광채)
@@ -4253,6 +4292,18 @@ function drawWeapon(u, x, y) {
     ctx.strokeStyle = '#b0bec5'; ctx.lineWidth = 0.7; ctx.stroke();
     ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1; // 하이라이트
     ctx.beginPath(); ctx.moveTo(x + 0.5, y + 1); ctx.lineTo(x + 8.5, y - 6.5); ctx.stroke();
+    ctx.lineWidth = 1;
+  } else if (has('쌍단검')) { // 🗡️🗡️ 양손 단검 (뒷손 칼은 어둡게, 앞손 칼은 밝게 — 엇갈린 이도류)
+    for (const [ox, oy, blade, edge, sc] of [[-3, 4, '#90a4ae', '#607d8b', 0.85], [1, -2, '#eceff1', '#b0bec5', 1]]) {
+      ctx.strokeStyle = '#4e342e'; ctx.lineWidth = 2 * sc; // 손잡이
+      ctx.beginPath(); ctx.moveTo(x + ox - 3, y + oy + 4); ctx.lineTo(x + ox, y + oy + 1); ctx.stroke();
+      ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 2.2 * sc; // 가드
+      ctx.beginPath(); ctx.moveTo(x + ox - 3, y + oy - 0.5); ctx.lineTo(x + ox + 3, y + oy + 1.5); ctx.stroke();
+      ctx.fillStyle = blade; // 짧은 칼날
+      ctx.beginPath(); ctx.moveTo(x + ox - 0.5, y + oy + 0.5); ctx.lineTo(x + ox + 2.5, y + oy + 2);
+      ctx.lineTo(x + ox + 10 * sc, y + oy - 6 * sc); ctx.lineTo(x + ox + 7.5 * sc, y + oy - 8 * sc); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = edge; ctx.lineWidth = 0.7; ctx.stroke();
+    }
     ctx.lineWidth = 1;
   } else if (has('전기톱')) { // 전기톱 — 리얼 체인소 (주황 엔진 + 상단 손잡이 + 긴 가이드바 + 돌아가는 체인)
     ctx.strokeStyle = '#37474f'; ctx.lineWidth = 2; // 상단 손잡이 아치
@@ -4776,7 +4827,9 @@ function updateInfoPanel() {
     `<b>${u.hidden ? '♠ ' + u.weapon : u.weapon}</b> (${sub})<br>` +
     raceLine + '<br>' +
     `공격력: <b>${effDmg(u).toFixed(1)}</b>${isHiddenCombo(u) ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
-    `공속: ${(1/effCd(u)).toFixed(1)}회/초 · 사거리: ${Math.round(effRange(u))}<br>` + // 히든 상시 페널티까지 반영된 실제 값
+    `공속: ${(u.spdBuff || 1) < 1
+      ? `<b style="color:#00a3ff">${(1/effCd(u)).toFixed(1)}회/초</b> <span style="color:#00a3ff;font-size:10px">📯 +20%</span>`
+      : `${(1/effCd(u)).toFixed(1)}회/초`} · 사거리: ${Math.round(effRange(u))}<br>` + // 콰르텟 버프·히든 페널티 반영된 실제 값
     `💀 처치: <b>${u.kills || 0}</b>킬<br>` +
     `특성: ${traits.join(', ')}` +
     (u.miner ? '' : priorityRow(u.priority || 'near')) +
@@ -5542,7 +5595,15 @@ function fmtTime(s) {
   s = Math.max(0, Math.ceil(s));
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 }
+let __buffSig = '';
+function refreshInfoOnBuffChange() { // 콰르텟/고물상 버프가 붙거나 떨어지면 정보창 수치를 즉시 반영
+  const sel = S.units.filter(u => u.selected);
+  if (!sel.length) { __buffSig = ''; return; }
+  const sig = sel.map(u => `${(u.spdBuff || 1) < 1 ? 1 : 0}${u.junkBuff ? 1 : 0}`).join(',');
+  if (sig !== __buffSig) { __buffSig = sig; updateInfoPanel(); }
+}
 function updateHUD() {
+  refreshInfoOnBuffChange();
   if (S.selMon) { // 🎯 선택한 몬스터 체력 실시간 갱신 (죽거나 사라지면 팝업 닫기)
     if (S.selMon.hp <= 0 || S.selMon.dead || !S.monsters.includes(S.selMon)) hideObjInfo();
     else showMonsterInfo(S.selMon);
