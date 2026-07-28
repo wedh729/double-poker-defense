@@ -492,7 +492,7 @@ const WEAPONS = [
   // 6 풀하우스 — 단검 (암살자: 사거리 짧게 + 초고속 난도질 + 암살 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
   {name:'단검', dmg:26, cd:0.3, range:72, splash:44, bounce:0, atk:'area', vis:'sword', bossCrack:true, // 💎 보석 브레이커 암살자: 단일 타겟·고속 난도질(공속 2/3: 0.2→0.3)·보스 대미지 2배
-   hero:{name:'쌍단검', atk:'area', vis:'twin', splash:80, cd:0.12, range:102}}, // 양손 단검: 전기톱 대비 공속 2배(0.24→0.12), 범위·사거리는 동일
+   hero:{name:'쌍단검', atk:'area', vis:'twin', splash:53, cd:0.12, range:102}}, // 양손 단검: 공속 2배(0.24→0.12), 범위는 일반 단검(44)의 1.2배
   // 7 포카드 — 바주카포 (5초, 스플래쉬)
   {name:'바주카포', dmg:25, cd:2.5, range:330, splash:52, bounce:0, atk:'area', vis:'rocket', // 공속 2배(5→2.5)·스플래시 반경 절반(104→52)
    hero:{name:'탱크', atk:'pen', vis:'tank', cd:2.0}}, // 소환장 전체 타격
@@ -1548,15 +1548,13 @@ function update(dt) {
     if (u.skillCd > 0) u.skillCd = Math.max(0, u.skillCd - dt);
     if (u.skillT > 0) {
       u.skillT -= dt;
-      if (!u.hero) { // 단검 암살: 소환장으로 뛰어들어 가장 강한 몹을 추격
-        u.inPen = true;
-        let tgt = u.assassinTgt;
-        if (!tgt || tgt.hp <= 0) tgt = u.assassinTgt = strongestMonster();
-        if (tgt) { const d = Math.hypot(tgt.x - u.x, tgt.y - u.y); if (d > effRange(u) * 0.7) { u.tx = tgt.x; u.ty = tgt.y; } else { u.tx = u.x; u.ty = u.y; } }
-      }
-      if (u.skillT <= 0) { // 종료 → 복귀
-        u.skillT = 0; u.skillCd = 150;
-        if (!u.hero) { u.inPen = false; u.assassinTgt = null; u.tx = u.homeX != null ? u.homeX : CX - 40; u.ty = u.homeY != null ? u.homeY : CY + 150; }
+      u.inPen = true; // 단검 암살·분신술 모두 소환장 안에서 싸운다
+      let tgt = u.assassinTgt;
+      if (!tgt || tgt.hp <= 0) tgt = u.assassinTgt = strongestMonster();
+      if (tgt) { const d = Math.hypot(tgt.x - u.x, tgt.y - u.y); if (d > effRange(u) * 0.7) { u.tx = tgt.x; u.ty = tgt.y; } else { u.tx = u.x; u.ty = u.y; } }
+      if (u.skillT <= 0) { // 종료 → 원래 자리로 복귀
+        u.skillT = 0; u.skillCd = 150; u.inPen = false; u.assassinTgt = null;
+        u.tx = u.homeX != null ? u.homeX : CX - 40; u.ty = u.homeY != null ? u.homeY : CY + 150;
       }
     }
     if (u.chronoCd > 0) u.chronoCd = Math.max(0, u.chronoCd - dt); // ⏳ 시간술사 스킬 쿨
@@ -1663,7 +1661,7 @@ function update(dt) {
     if (u.miner || u.item) continue; // 광부는 updateMiner에서, 아이템 유닛은 전투 안 함
     u.cool -= dt;
     // 🗡️ 단검 암살 중: 최강 몹만 초고속(공속 2.5배) 난도질. 영웅 분신술은 일반 AI로 진행
-    if (u.skillT > 0 && !u.hero) {
+    if (u.skillT > 0) {
       const tgt = u.assassinTgt;
       if (tgt && tgt.hp > 0 && u.cool <= 0 && !u.moving) {
         const d = Math.hypot(tgt.x - u.x, tgt.y - u.y);
@@ -2231,7 +2229,10 @@ function fireAtOre(u) {
   const col = ORES[Math.min(9, S.hunt.stage - 1)].col;
   // 무기별 고유 모션 유지 — 근접 무기는 광선(roomshot)이 아니라 자기 참격/톱날/화염으로 광석을 때린다
   const ang = Math.atan2(OREPOS.y - m.y, OREPOS.x - m.x);
-  if (u.vis === 'sword') {
+  if (u.vis === 'twin') { // 🗡️🗡️ 쌍단검: 광석도 이도류로 벤다
+    S.effects.push({ type:'slash', x: OREPOS.x, y: OREPOS.y, r: u.splash, a: ang - 0.5, t: 0.16, dur: 0.16 });
+    S.effects.push({ type:'slash', x: OREPOS.x, y: OREPOS.y, r: u.splash * 0.92, a: ang + 0.5, t: 0.2, dur: 0.2 });
+  } else if (u.vis === 'sword') {
     const flurry = !u.shogun && !u.hero, sdur = flurry ? 0.13 : 0.24;
     const soff = flurry ? ((u._flur = (u._flur || 0) + 1) % 2 ? 0.55 : -0.55) : 0;
     S.effects.push({ type:'slash', x: OREPOS.x, y: OREPOS.y, r: u.splash, a: ang + soff, t: sdur, dur: sdur, fire: u.shogun });
@@ -2373,7 +2374,8 @@ function spawnClones(u, count) {
     c.clone = true; c.cloneLife = u.skillT; c.selected = false; c.skillT = 0; c.skillCd = 0;
     c.assassinTgt = null; c.homeX = null; c.homeY = null; c.forceTarget = null; c.hold = false; c.moving = false; c.cool = Math.random() * 0.2;
     c.x = u.x + Math.cos(a) * 28; c.y = u.y + Math.sin(a) * 28;
-    c.amove = true; c.tx = CX + Math.cos(a) * 40; c.ty = CY + Math.sin(a) * 40; // 소환장으로 전진해 교전 (울타리에서 정지 후 사격)
+    c.inPen = true; // 분신도 울타리 안으로 들어가 난전
+    c.amove = false; c.tx = CX + Math.cos(a) * (PEN.w / 4); c.ty = CY + Math.sin(a) * (PEN.h / 4);
     S.units.push(c);
   }
 }
@@ -3829,14 +3831,15 @@ function drawUnit(u) {
   grad.addColorStop(0, shade(base, 18)); grad.addColorStop(1, shade(base, -22));
   ctx.fillStyle = grad; ctx.strokeStyle = raceC; ctx.lineWidth = u.hero ? 3 : 2.5;
   bodyPath(u, B); ctx.fill(); ctx.stroke();
-  if (u.hero && !u.super) { // 🌈 영웅 홀로그램: 종족색 위에 흐르는 은은한 무지개 + 하이라이트 밴드
+  if (u.hero || u.superAce) { // 🌈 영웅 홀로그램: 종족색 위에 흐르는 무지개 + 하이라이트 밴드 (슈퍼는 더 진하고 빠르게)
+    const sup = u.super || u.superAce;
     ctx.save();
     bodyPath(u, B); ctx.clip();
-    const off = (S.time * 55) % 360;
+    const off = (S.time * (sup ? 95 : 55)) % 360;
     const hg = ctx.createLinearGradient(u.x - B.w/2, u.y - B.h/2, u.x + B.w/2, u.y + B.h/2);
-    for (let k = 0; k <= 3; k++) hg.addColorStop(k/3, `hsla(${(off + k*70)%360},85%,65%,0.22)`);
+    for (let k = 0; k <= 3; k++) hg.addColorStop(k/3, `hsla(${(off + k*70)%360},90%,65%,${sup ? 0.42 : 0.22})`);
     ctx.fillStyle = hg; bodyPath(u, B); ctx.fill();
-    const bx = u.x - B.w/2 + ((S.time * 42) % (B.w + 16));
+    const bx = u.x - B.w/2 + ((S.time * (sup ? 70 : 42)) % (B.w + 16));
     const bg = ctx.createLinearGradient(bx - 6, 0, bx + 6, 0);
     bg.addColorStop(0, 'rgba(255,255,255,0)'); bg.addColorStop(0.5, 'rgba(255,255,255,0.4)'); bg.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = bg; bodyPath(u, B); ctx.fill();
@@ -4281,7 +4284,19 @@ function drawWeapon(u, x, y) {
     ctx.restore(); ctx.lineWidth = 1;
     return;
   }
-  if (has('단검')) { // 단검 (암살자: 짧은 손잡이 + 작은 가드 + 짧고 날카로운 날)
+  if (has('쌍단검')) { // 🗡️🗡️ 양손 단검 (뒷손 칼은 어둡게, 앞손 칼은 밝게 — 엇갈린 이도류). '단검'보다 먼저 판정!
+    for (const [ox, oy, blade, edge, sc] of [[-3, 4, '#90a4ae', '#607d8b', 0.85], [1, -2, '#eceff1', '#b0bec5', 1]]) {
+      ctx.strokeStyle = '#4e342e'; ctx.lineWidth = 2 * sc;
+      ctx.beginPath(); ctx.moveTo(x + ox - 3, y + oy + 4); ctx.lineTo(x + ox, y + oy + 1); ctx.stroke();
+      ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 2.2 * sc;
+      ctx.beginPath(); ctx.moveTo(x + ox - 3, y + oy - 0.5); ctx.lineTo(x + ox + 3, y + oy + 1.5); ctx.stroke();
+      ctx.fillStyle = blade;
+      ctx.beginPath(); ctx.moveTo(x + ox - 0.5, y + oy + 0.5); ctx.lineTo(x + ox + 2.5, y + oy + 2);
+      ctx.lineTo(x + ox + 10 * sc, y + oy - 6 * sc); ctx.lineTo(x + ox + 7.5 * sc, y + oy - 8 * sc); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = edge; ctx.lineWidth = 0.7; ctx.stroke();
+    }
+    ctx.lineWidth = 1;
+  } else if (has('단검')) { // 단검 (암살자: 짧은 손잡이 + 작은 가드 + 짧고 날카로운 날)
     ctx.strokeStyle = '#4e342e'; ctx.lineWidth = 2.2; // 손잡이 (짧게)
     ctx.beginPath(); ctx.moveTo(x - 3, y + 5); ctx.lineTo(x, y + 1); ctx.stroke();
     ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 2.4; // 작은 가드
@@ -4292,18 +4307,6 @@ function drawWeapon(u, x, y) {
     ctx.strokeStyle = '#b0bec5'; ctx.lineWidth = 0.7; ctx.stroke();
     ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1; // 하이라이트
     ctx.beginPath(); ctx.moveTo(x + 0.5, y + 1); ctx.lineTo(x + 8.5, y - 6.5); ctx.stroke();
-    ctx.lineWidth = 1;
-  } else if (has('쌍단검')) { // 🗡️🗡️ 양손 단검 (뒷손 칼은 어둡게, 앞손 칼은 밝게 — 엇갈린 이도류)
-    for (const [ox, oy, blade, edge, sc] of [[-3, 4, '#90a4ae', '#607d8b', 0.85], [1, -2, '#eceff1', '#b0bec5', 1]]) {
-      ctx.strokeStyle = '#4e342e'; ctx.lineWidth = 2 * sc; // 손잡이
-      ctx.beginPath(); ctx.moveTo(x + ox - 3, y + oy + 4); ctx.lineTo(x + ox, y + oy + 1); ctx.stroke();
-      ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 2.2 * sc; // 가드
-      ctx.beginPath(); ctx.moveTo(x + ox - 3, y + oy - 0.5); ctx.lineTo(x + ox + 3, y + oy + 1.5); ctx.stroke();
-      ctx.fillStyle = blade; // 짧은 칼날
-      ctx.beginPath(); ctx.moveTo(x + ox - 0.5, y + oy + 0.5); ctx.lineTo(x + ox + 2.5, y + oy + 2);
-      ctx.lineTo(x + ox + 10 * sc, y + oy - 6 * sc); ctx.lineTo(x + ox + 7.5 * sc, y + oy - 8 * sc); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = edge; ctx.lineWidth = 0.7; ctx.stroke();
-    }
     ctx.lineWidth = 1;
   } else if (has('전기톱')) { // 전기톱 — 리얼 체인소 (주황 엔진 + 상단 손잡이 + 긴 가이드바 + 돌아가는 체인)
     ctx.strokeStyle = '#37474f'; ctx.lineWidth = 2; // 상단 손잡이 아치
