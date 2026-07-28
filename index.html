@@ -4783,21 +4783,11 @@ function updateInfoPanel() {
     (u.tier === 6 ? skillRow(u) : '') +
     (u.chrono ? chronoRow(u) : '') +
     (u.slot ? slotRow(u) : '') +
-    (ascendKey(u) ? ascendRow(u) : '') +
-    ((isHiddenCombo(u) && !u.clone) ? heroUpRow(u) : '') +
+    (isHiddenCombo(u) && !u.clone ? `<br><span style="font-size:10.5px;color:#9a8a60">⭐ 단련·🩸 승급은 🏰 성에서</span>` : '') +
     ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier}) <span style="color:${u.hero?'#e57373':'#66bb6a'};font-size:11px">성공률 ${u.hero?50:70}%</span></button>` : '') +
     deselBtnHTML();
   wirePriorityButtons(el);
   wireDesel(el);
-  if (el.querySelector('#ascBtn')) el.querySelector('#ascBtn').onclick = () => doAscend(u);
-  if (el.querySelector('#heroUpBtn')) el.querySelector('#heroUpBtn').onclick = () => heroTrain(u, false);
-  if (el.querySelector('#heroUpGBtn')) el.querySelector('#heroUpGBtn').onclick = () => { // 강화창과 동일하게 타이밍바 경유 (확률 조건 통일)
-    if (S.gold < heroUpCost(u)) return;
-    const host = document.createElement('div'); el.appendChild(host);
-    el.querySelectorAll('button').forEach(b => b.disabled = true);
-    runGambleBar(host, perfect => { const before = u.heroUpLv || 0; heroTrain(u, true, perfect, true);
-      showGambleResult(host, perfect, (u.heroUpLv || 0) > before, `${u.weapon} 단련 Lv.${u.heroUpLv || 0}`, updateInfoPanel); });
-  };
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
   if (el.querySelector('#chronoBtn')) el.querySelector('#chronoBtn').onclick = () => { activateChrono(u); updateInfoPanel(); };
   if (el.querySelector('#slotBtn')) el.querySelector('#slotBtn').onclick = () => { activateSlot(u); updateInfoPanel(); };
@@ -4985,6 +4975,20 @@ function heroSectionHTML() {
       ${maxed ? '' : `<button class="rpgBuy" data-ht="${i}" ${ok ? '' : 'disabled'}>💰 단련</button>
       <button class="rpgBuy" data-htg="${i}" ${ok ? '' : 'disabled'} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)">🎰 25%<br>×3</button>`}
     </div>`;
+    // 🩸 제물 승급 (쇼군·조커·갬블러) — 제단 위 재료를 바쳐 강화
+    const ak = ascendKey(h);
+    if (ak) {
+      const alv = h.ascend || 0;
+      if (alv >= 2) html += `<div class="rpgItem" style="border-left:5px solid #ff6b9d"><div class="rpgIcon">🩸</div>
+        <div class="rpgInfo"><b>${h.weapon}</b> <span class="lv">승급 Lv.2/2</span><br><span class="desc">승급 완료</span></div></div>`;
+      else {
+        const def = ASCEND_DEFS[ak][alv], have = ascendCandidates(def).length, can = have >= def.n;
+        html += `<div class="rpgItem" style="border-left:5px solid #ff6b9d"><div class="rpgIcon">🩸</div>
+          <div class="rpgInfo"><b>${h.weapon}</b> <span class="lv">승급 Lv.${alv}→${alv + 1}</span><br>
+            <span class="desc">제물: <b>${def.mat}</b> <span style="color:${can ? '#66bb6a' : '#e57373'}">(제단 위 ${have}/${def.n})</span><br>효과: ${def.desc}${can ? '' : ' · 제물을 제단으로 옮기세요'}</span></div>
+          <button class="rpgBuy" data-asc="${i}" ${can ? '' : 'disabled'} style="background:linear-gradient(180deg,#ff6b9d,#b02a5b);color:#fff">🩸 승급</button></div>`;
+      }
+    }
   });
   html += '<div class="castleColT" style="margin-top:14px">🀄 히든 영웅</div>' +
     HIDDEN_DEX.map(hd => {
@@ -5002,6 +5006,7 @@ function heroSectionHTML() {
 function wireHeroSection(el) {
   const heroes = shopHeroes();
   el.querySelectorAll('[data-ht]').forEach(b => b.onclick = () => { heroTrain(heroes[+b.dataset.ht], false); renderShop(); });
+  el.querySelectorAll('[data-asc]').forEach(b => b.onclick = () => { doAscend(heroes[+b.dataset.asc]); renderShop(); });
   el.querySelectorAll('[data-htg]').forEach(b => b.onclick = () => { // 🎰 도박 단련: 타이밍바
     const h = heroes[+b.dataset.htg];
     if (S.gold < heroUpCost(h)) return;
