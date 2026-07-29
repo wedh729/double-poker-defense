@@ -903,7 +903,9 @@ function updateMiner(u, dt) {
 function upgPer(u) {
   if (u.catapult) return 0.15 * u.cd; // 🪨 투석기: splash 130이 소환장(264×176)의 대부분을 덮어 실측 발당 76마리 → 스플래시가 아니라 전체타격 계수
   const single = u.vis === 'sword' && !u.shogun; // 🗡️ 단검(풀하우스)은 splash 값이 있어도 실제로는 최근접 1마리만 때린다 → 단일 계수
-  return (u.atk === 'pen' ? 0.15 : (!single && u.splash > 0 ? 0.55 : 3.6)) * u.cd;
+  if (u.atk === 'pen') return 0.15 * u.cd;             // 소환장 전체타격: 타격 수가 많아 공속 비례로 억제
+  if (!single && u.splash > 0) return 0.55 * u.cd;      // 스플래시: 다수 타격이므로 공속 비례로 억제
+  return 2.5; // 단일 공격: 공속과 무관하게 레벨당 동일 상승 (족보가 높아 공속이 빠른 무기가 손해 보지 않도록)
 }
 // 합성 재료 수 = 업글 계수 (재료 수만큼 업글 보정도 커야 "합치면 손해" 역전이 없다)
 function fuseCount(u) {
@@ -1993,6 +1995,15 @@ function areaHit(u, x, y, dmg) {
     S.effects.push({ type:'saw', x, y, r: u.splash * (big ? 0.9 : 0.62), t: big ? 0.28 : 0.18 });
     if (big) { S.effects.push({ type:'slash', x, y, r: u.splash * 1.35, a, t: 0.3, dur: 0.3 }); } // 전기톱: 톱날 뒤로 큰 참격 궤적
     for (let i = 0; i < (big ? 8 : 3); i++) { const v = 40 + Math.random()*90, aa = Math.random()*6.28; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1 + Math.random()*2, c: '#eceff1' }); }
+  } else if (u.shogun) { // 🔥 쇼군: 유닛 중심 '사거리' 안에서만 벤다 (기존엔 타겟 지점 중심 splash라 사거리 밖까지 닿았음)
+    const R = effRange(u), R2 = R * R, ang0 = Math.atan2(y - u.y, x - u.x);
+    S.effects.push({ type:'slash', x: u.x, y: u.y, r: R, a: ang0, t: 0.26, dur: 0.26, fire: true });
+    S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.9, a: ang0 + 0.55, t: 0.34, dur: 0.34, fire: true });
+    for (let i = 0; i < 10; i++) { const v = 90 + Math.random()*160, aa = ang0 + (Math.random()-0.5)*1.8;
+      S.parts.push({ x: u.x, y: u.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 30, g: true, t: 0.4, r: 1.5 + Math.random()*2.2, c: i%3 ? '#ff8a3d' : '#ffd54f' }); }
+    for (const m of S.monsters) { const dx2 = m.x - u.x, dy2 = m.y - u.y;
+      if (dx2*dx2 + dy2*dy2 <= R2) { dealDamage(m, dmg, u); m.burnT = 1.5; m.burnDmg = dmg * ((u.ascend || 0) >= 1 ? 0.4 : 0.2); } }
+    return;
   } else if (vis === 'sword') {
     // 실제 대검 참격 (총구=칼끝에서 호를 그린다). 쇼군은 불타는 참격 (fire 플래그)
     const flurry = !u.shogun && !big; // 💎 풀하우스: 초고속 난도질 — 짧게·좌우 교차로 다다닥
@@ -2245,7 +2256,7 @@ function fireAtOre(u) {
       S.parts.push({ x: m.x, y: m.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, t: 0.4 + Math.random() * 0.25, r: (u.hero ? 7 : 5) + Math.random() * 5, fire: true, spin: Math.random() * 6.28 });
     }
   } else { // 원거리 무기: 기존 광선 + 총구 섬광
-    S.effects.push({ type:'roomshot', x1: m.x, y1: m.y, x2: OREPOS.x, y2: OREPOS.y, t: 0.14, dur: 0.14, color: wc });
+    S.effects.push({ type:'roomshot', x1: m.x, y1: m.y, x2: OREPOS.x, y2: OREPOS.y, t: 0.14, dur: 0.14, color: wc, proj: u.proj || 'pellet' });
     S.effects.push({ type:'boom', x: m.x, y: m.y, r: 4, t: 0.07 });
   }
   for (let i = 0; i < 6; i++) { const a = Math.random()*6.28, v = 40 + Math.random()*72; S.parts.push({ x: OREPOS.x, y: OREPOS.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 15, t: 0.36, r: 1.5 + Math.random()*1.6, c: col }); }
@@ -2719,9 +2730,29 @@ function draw() {
       const pr = 1 - e.t / e.dur;
       const x = e.x1 + (e.x2 - e.x1) * pr, y = e.y1 + (e.y2 - e.y1) * pr;
       const tx = e.x1 + (e.x2 - e.x1) * Math.max(0, pr - 0.3), ty = e.y1 + (e.y2 - e.y1) * Math.max(0, pr - 0.3);
-      ctx.strokeStyle = e.color; ctx.lineWidth = 2;
+      const ang = Math.atan2(e.y2 - e.y1, e.x2 - e.x1), pk = e.proj || 'pellet';
+      ctx.strokeStyle = e.color; ctx.lineWidth = pk === 'mg' ? 1.2 : 2; // 꼬리
       ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(x, y); ctx.stroke(); ctx.lineWidth = 1;
-      ctx.fillStyle = e.color; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
+      ctx.save(); ctx.translate(x, y);
+      if (pk === 'shuriken') { // 표창: 회전하는 4갈래 별
+        ctx.rotate(S.time * 18); ctx.fillStyle = '#455a64';
+        polyPath(0, 0, 4, 6, 0, 2.2); ctx.fill();
+        ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1; ctx.stroke(); ctx.lineWidth = 1;
+      } else if (pk === 'arrow' || pk === 'bolt') { // 화살/볼트: 촉 + 대
+        ctx.rotate(ang); ctx.strokeStyle = '#8d6e63'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(3, 0); ctx.stroke();
+        ctx.fillStyle = '#cfd8dc'; ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(2, -2.4); ctx.lineTo(2, 2.4); ctx.closePath(); ctx.fill();
+        ctx.lineWidth = 1;
+      } else if (pk === 'bullet' || pk === 'mg' || pk === 'sniper') { // 총알: 길쭉한 탄
+        ctx.rotate(ang); ctx.fillStyle = '#ffd54f';
+        ctx.beginPath(); ctx.ellipse(0, 0, pk === 'sniper' ? 5 : 3.4, 1.5, 0, 0, 6.28); ctx.fill();
+      } else if (pk === 'chip') { // 칩
+        ctx.fillStyle = '#fafafa'; ctx.beginPath(); ctx.arc(0, 0, 3.4, 0, 6.28); ctx.fill();
+        ctx.strokeStyle = '#c62828'; ctx.lineWidth = 1.4; ctx.stroke(); ctx.lineWidth = 1;
+      } else { // pellet / rock: 돌멩이
+        ctx.fillStyle = e.color; ctx.beginPath(); ctx.arc(0, 0, 3, 0, 6.28); ctx.fill();
+      }
+      ctx.restore();
     }
   }
   // 투사체
@@ -4115,6 +4146,22 @@ function drawHeadgear(u, topY) {
     }
     case 8: drawCrown(cx, topY, { col:'#e5e9f0', points:5, h:9, gem:'#1e63d6', band:'#b0bec5' }); break; // SF: 은백금 + 사파이어
     case 7: drawCrown(cx, topY, { col:'#ffd54f', points:4, h:6, gem:'#f5f0e8', band:'#c9a227', ermine:true, velvet:'#c62828', arch:true }); break; // 포카드: 영국왕실 (담비 밴드 + 벨벳 + 아치 + 진주)
+    case 5: { // 🔥 플러쉬(화염방사기): 횃불 모자 — 자루 + 일렁이는 불꽃
+      ctx.fillStyle = '#6d4c41'; ctx.fillRect(cx - 1.6, topY - 3, 3.2, 6); // 횃불 자루
+      ctx.fillStyle = '#4e342e'; ctx.fillRect(cx - 3.4, topY - 4.5, 6.8, 2.4); // 컵
+      const fl = Math.sin(S.time * 9 + u.jx) * 1.6, fl2 = Math.cos(S.time * 11 + u.jx) * 1.2;
+      ctx.fillStyle = '#ff5722'; // 바깥 불꽃
+      ctx.beginPath(); ctx.moveTo(cx - 4, topY - 5);
+      ctx.quadraticCurveTo(cx - 5 + fl, topY - 11, cx + fl2, topY - 16 - Math.abs(fl));
+      ctx.quadraticCurveTo(cx + 5 + fl, topY - 11, cx + 4, topY - 5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ffb300'; // 속불꽃
+      ctx.beginPath(); ctx.moveTo(cx - 2.4, topY - 5.5);
+      ctx.quadraticCurveTo(cx - 3 + fl, topY - 9.5, cx + fl2 * 0.6, topY - 13 - Math.abs(fl) * 0.6);
+      ctx.quadraticCurveTo(cx + 3 + fl, topY - 9.5, cx + 2.4, topY - 5.5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff59d'; // 심지 코어
+      ctx.beginPath(); ctx.ellipse(cx + fl2 * 0.4, topY - 7.5, 1.3, 2.2, 0, 0, 6.28); ctx.fill();
+      break;
+    }
     case 6: { // 풀하우스(단검 암살자): 도적 두건 — 어두운 후드 돔 + 뒤로 늘어지는 자락 + 매듭
       ctx.fillStyle = '#3a3f4e'; // 후드 돔 (머리를 폭 감싸게)
       ctx.beginPath(); ctx.moveTo(cx - 7.5, topY + 1.5);
@@ -4343,8 +4390,8 @@ function drawWeapon(u, x, y) {
     ctx.fillRect(x + 2.5, by - 7.6, 1.8, 4.2);                             // 가늠쇠
   } else if (has('미사일')) { // ☢️ 로얄: 미사일 발사 버튼 (사각 케이스 + 가운데 빨간 버튼 — 쏠 때 꾹 눌린다)
     const pr = (u.atkAnim || 0) > 0.5; // 발사 직후 = 버튼 눌린 상태
-    ctx.fillStyle = '#78838f'; roundRect(x - 1, y - 6, 13, 12, 2); ctx.fill(); // 케이스
-    ctx.strokeStyle = '#3d454e'; ctx.lineWidth = 1.4; roundRect(x - 1, y - 6, 13, 12, 2); ctx.stroke();
+    ctx.fillStyle = '#3f464f'; roundRect(x - 1, y - 6.5, 13, 13, 2); ctx.fill(); // 진회색 정사각 케이스
+    ctx.strokeStyle = '#20252b'; ctx.lineWidth = 1.4; roundRect(x - 1, y - 6.5, 13, 13, 2); ctx.stroke();
     ctx.fillStyle = '#ffd54f'; ctx.fillRect(x - 1, y - 6, 13, 2.6); // 상단 경고 스트라이프
     ctx.fillStyle = pr ? '#8e1b1b' : '#e53935'; // 빨간 발사 버튼 (누르면 어둡고 작게)
     ctx.beginPath(); ctx.arc(x + 5.5, y + 1.5, pr ? 2.6 : 3.4, 0, Math.PI * 2); ctx.fill();
@@ -4752,6 +4799,20 @@ cv.addEventListener('touchcancel', e => {
   longPressFired = false;
   drag = null;
 });
+function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 않게 좌/우로 자동 전환
+  const el = document.getElementById('unitInfo');
+  if (!el || el.style.display === 'none') return;
+  const sel = S.units.filter(u => u.selected);
+  if (!sel.length) return;
+  const cv = document.getElementById('cv');
+  const sx = cv.getBoundingClientRect().width / 940;              // 캔버스 좌표 → 화면 배율
+  const avg = sel.reduce((a, u) => a + u.x, 0) / sel.length;
+  const cardW = (el.getBoundingClientRect().width || 220) / (sx || 1);
+  const nearLeft = avg < cardW + 40;                              // 카드(좌측)와 겹칠 만큼 왼쪽에 있나
+  const wantRight = nearLeft;
+  if (wantRight) { el.style.left = 'auto'; el.style.right = '10px'; }
+  else { el.style.right = 'auto'; el.style.left = '10px'; }
+}
 function updateInfoPanel() {
   const el = document.getElementById('unitInfo');
   const sel = S.units.filter(u => u.selected);
@@ -4844,6 +4905,7 @@ function updateInfoPanel() {
     deselBtnHTML();
   wirePriorityButtons(el);
   wireDesel(el);
+  placeInfoPanel();
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
   if (el.querySelector('#chronoBtn')) el.querySelector('#chronoBtn').onclick = () => { activateChrono(u); updateInfoPanel(); };
   if (el.querySelector('#slotBtn')) el.querySelector('#slotBtn').onclick = () => { activateSlot(u); updateInfoPanel(); };
@@ -5107,11 +5169,11 @@ function upgItemsHTML() {
     `<div class="rpgItem" style="border-left:5px solid ${r.color}">
       <div class="rpgIcon" style="color:${r.color}">${r.suit}</div>
       <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
-        <span class="desc">초당 공격력: 단일 +${(S.upg[i]*3.6).toFixed(0)} · 스플래시 +${(S.upg[i]*0.55).toFixed(1)}/마리 · 전체 +${(S.upg[i]*0.15).toFixed(1)}/마리</span></div>
+        <span class="desc">단일 +${(S.upg[i]*2.5).toFixed(1)} · 스플래시 초당 +${(S.upg[i]*0.55).toFixed(1)}/마리 · 전체 초당 +${(S.upg[i]*0.15).toFixed(1)}/마리</span></div>
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
       <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎰 25%<br>×3</button>
     </div>`).join('') +
-    '<div class="rpgGuide">레벨당 <b>초당</b> 공격력: 단일 <b>+3.6</b> / 스플래쉬 <b>+0.55</b>/마리 / 전체타격 <b>+0.15</b>/마리.<br>♠ 에이스는 상위 2종족 합산.<br>🎰 <b>도박 업그레이드</b>: 같은 값으로 <b>3레벨</b>에 도전 — 타이밍바 중앙을 맞추면 확률 <b>50%</b>! 실패하면 골드만 소멸.</div>';
+    '<div class="rpgGuide">레벨당: 단일 공격 <b>+2.5</b> (공속 무관 동일) · 스플래쉬 초당 <b>+0.55</b>/마리 · 전체타격 초당 <b>+0.15</b>/마리.<br>♠ 에이스는 상위 2종족 합산.<br>🎰 <b>도박 업그레이드</b>: 같은 값으로 <b>3레벨</b>에 도전 — 타이밍바 중앙을 맞추면 확률 <b>50%</b>! 실패하면 골드만 소멸.</div>';
 }
 function wireUpg(el) {
   el.querySelectorAll('[data-upg]').forEach(b => b.onclick = () => {
@@ -5607,6 +5669,7 @@ function refreshInfoOnBuffChange() { // 콰르텟/고물상 버프가 붙거나 
 }
 function updateHUD() {
   refreshInfoOnBuffChange();
+  placeInfoPanel(); // 유닛이 카드 쪽으로 이동하면 반대편으로 비켜준다
   if (S.selMon) { // 🎯 선택한 몬스터 체력 실시간 갱신 (죽거나 사라지면 팝업 닫기)
     if (S.selMon.hp <= 0 || S.selMon.dead || !S.monsters.includes(S.selMon)) hideObjInfo();
     else showMonsterInfo(S.selMon);
