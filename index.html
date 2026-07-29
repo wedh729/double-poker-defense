@@ -1746,9 +1746,11 @@ function update(dt) {
         } else { // 범위 폭발
           if (p.boulder) sfx('thud'); // 🪨 투석기: 묵직한 착탄음
           S.effects.push({ type:'boom', x: p.ex, y: p.ey, r: p.splash, t: 0.3 });
-          if (p.kind === 'missile' && !p.mini) { // ☢️ 로얄 미사일: 핵폭발 버섯구름 + 섬광 + 셰이크
+          if (p.kind === 'missile' && !p.mini) { // ☢️ 로얄 미사일: 핵폭발 버섯구름 + 섬광
             S.effects.push({ type:'mush', x: p.ex, y: p.ey, r: p.splash, t: 1.1, dur: 1.1 });
             S.effects.push({ type:'boom', x: p.ex, y: p.ey, r: p.splash * 1.6, t: 0.22 });
+          } else if (p.owner && p.owner.tier === 8) { // ☢️ 스트레이트 플러쉬 폭탄: 같은 버섯구름 (연사라 짧게)
+            S.effects.push({ type:'mush', x: p.ex, y: p.ey, r: p.splash * 0.85, t: 0.6, dur: 0.6 });
           }
           for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 70 + Math.random()*150; S.parts.push({ x: p.ex, y: p.ey, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.32, r: 2 + Math.random()*3, c: '#ff8a3d' }); }
           if (p.mini) { // 🚀 바주카: 화염 폭발 — 충격파 링 + 위로 확 솟는 불덩이 + 불똥 (발사가 느려서 프레임 부담 없음)
@@ -1801,6 +1803,9 @@ function update(dt) {
         S.effects.push({ type:'boom', x: t.x, y: t.y, r: 17, t: 0.2 });
         for (let i = 0; i < 3; i++) { const aa = Math.random()*6.28, v = 80 + Math.random()*130; const sc = p.dice ? '#ffd54f' : p.star ? '#e8eefc' : '#ffc27a'; S.parts.push({ x: t.x, y: t.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1.4 + Math.random()*2, c: sc }); }
         sfx('boom'); // 팅길 때마다 탕!
+      } else if (p.owner && p.owner.tier === 8) { // ☢️ 스트레이트 플러쉬: 표창도 핵처럼 버섯구름 (연사가 빨라 작고 짧게)
+        S.effects.push({ type:'mush', x: t.x, y: t.y, r: 26, t: 0.55, dur: 0.55 });
+        S.effects.push({ type:'boom', x: t.x, y: t.y, r: 30, t: 0.16 });
       } else S.effects.push({ type:'boom', x: t.x, y: t.y, r: 5, t: 0.1 });
       if (p.onHit === 'shards') spawnShards(p);   // 대왕새총: 파편 튐
       if (p.kind === 'brg' && p.left > 0) {
@@ -1950,7 +1955,8 @@ function fireAt(u, target) {
         t: 0, dur: nuke ? 0.75 : 0.5, dmg, spin: 0 });
       break;
     }
-    case 'sniper': { // 저격총: 단일 초강력 (즉시)
+    case 'sniper': { // 저격총: 단일 초강력 (즉시) — 보스에겐 급소 저격으로 2배
+      if (target.boss) { dmg *= 2; addFloat(target.x, target.y - 24, '🎯 급소!! ×2', '#ffd54f', 0.8); }
       dealDamage(target, dmg, u);
       S.effects.push({ type:'tracer', x1: m.x, y1: m.y, x2: target.x, y2: target.y, t: 0.18 });
       S.effects.push({ type:'boom', x: target.x, y: target.y, r: 14, t: 0.2 });
@@ -3846,13 +3852,26 @@ function drawUnit(u) {
       ctx.closePath(); ctx.fill();
     }
   }
-  // 다리 (짧고 단순)
-  const lw = u.moving ? Math.sin(u.walk) * 3 : 0;
-  ctx.strokeStyle = '#454545'; ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(u.x - 4, u.y + B.h/2 - 1); ctx.lineTo(u.x - 4 + lw, u.y + B.h/2 + 4);
-  ctx.moveTo(u.x + 4, u.y + B.h/2 - 1); ctx.lineTo(u.x + 4 - lw, u.y + B.h/2 + 4);
-  ctx.stroke();
+  // 다리 (짧고 단순) — 🛞 탱크(포카드 영웅)는 다리 대신 무한궤도
+  if (u.vis === 'tank') {
+    const ty = u.y + B.h/2 + 1, tw = B.w/2 + 5;
+    ctx.fillStyle = '#37474f'; roundRect(u.x - tw, ty - 3.5, tw * 2, 8, 3.5); ctx.fill(); // 궤도 벨트
+    ctx.strokeStyle = '#20272c'; ctx.lineWidth = 1.2; roundRect(u.x - tw, ty - 3.5, tw * 2, 8, 3.5); ctx.stroke();
+    ctx.fillStyle = '#78838f'; // 바퀴 3개
+    for (const wx of [-tw + 4, 0, tw - 4]) { ctx.beginPath(); ctx.arc(u.x + wx, ty + 0.5, 2.6, 0, 6.28); ctx.fill(); }
+    ctx.strokeStyle = '#263238'; ctx.lineWidth = 1.4; // 트랙 이빨 (이동 시 흐른다)
+    ctx.setLineDash([2.5, 2.5]); ctx.lineDashOffset = -(u.walk || 0) * 3;
+    ctx.beginPath(); ctx.moveTo(u.x - tw + 1, ty - 3.5); ctx.lineTo(u.x + tw - 1, ty - 3.5);
+    ctx.moveTo(u.x - tw + 1, ty + 4.5); ctx.lineTo(u.x + tw - 1, ty + 4.5); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineWidth = 1;
+  } else {
+    const lw = u.moving ? Math.sin(u.walk) * 3 : 0;
+    ctx.strokeStyle = '#454545'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(u.x - 4, u.y + B.h/2 - 1); ctx.lineTo(u.x - 4 + lw, u.y + B.h/2 + 4);
+    ctx.moveTo(u.x + 4, u.y + B.h/2 - 1); ctx.lineTo(u.x + 4 - lw, u.y + B.h/2 + 4);
+    ctx.stroke();
+  }
   // 몸통 (좌우 그라데이션 셰이딩 + 티어별 모양)
   ctx.save();
   if (u.hidden || u.ace) ctx.drawImage(glowSprite('ace', 'rgba(233,30,140,0.45)', 'rgba(233,30,140,0)'), u.x - 24, u.y - 24, 48, 48);
