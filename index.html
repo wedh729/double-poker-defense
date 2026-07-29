@@ -816,8 +816,8 @@ function spawnUnit(rank, race, hidden, keyRank, superAce) {
     jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
     forceTarget: null, attackMine: false, amove: false, priority: 'near',
     // 에이스(히든): 기본 1.5배 / 슈퍼에이스(족보+숫자 일치): 기본 3.0배. 둘 다 + 상위 2종족 업그레이드 합산
-    dmg: w.dmg * (hidden ? (ACE_MUL[rank] || 1.5) * (superAce ? 2 : 1) : keyMul(kr)), // 에이스: 티어별 배수 (원페어 1.5 → 트리플 3.0 → 포카드 8…), 슈퍼 ×2
-    cd: w.cd, range: w.range, splash: w.splash, bounce: w.bounce,
+    dmg: w.dmg * (hidden ? (ACE_MUL[rank] || 1.5) * (superAce ? 3 : 1) : keyMul(kr)), // 에이스: 티어별 배수, 슈퍼에이스 ×2→×3 (뽑기 난도 반영 상향)
+    cd: w.cd / (superAce ? 1.5 : 1), range: w.range, splash: w.splash, bounce: w.bounce, // 슈퍼에이스: 공속도 1.5배
     atk: w.atk, proj: w.proj || null, vis: w.vis || null, pierce: 0, shards: 0, shardFrac: 0,
     weapon: (superAce ? '♠♠ 슈퍼에이스 ' : hidden ? '에이스 ' : '') + w.name,
     cool: 0, selected: false, walk: 0, speed: 85,
@@ -5706,7 +5706,7 @@ const EVENTS = [
   { name: '🌫️ 짙은 안개', desc: '아군 사거리 25% 감소', mods: { rangeMul: 0.75 } },
   { name: '🎁 긴급 보급', desc: '즉시 골드 보너스!', mods: { instantGold: true } },
 ];
-function rollEvent() {
+function rollEvent() { S.event = null; S.eventMods = null; return; // 라운드 이벤트 시스템 비활성 (유저 요청 — 변주 없이 깔끔하게)
   // 6라운드부터, 보스 라운드 제외, 22% 확률로 이벤트 (너무 잦지 않게)
   if (S.round >= 6 && S.round % 10 !== 0 && Math.random() < 0.22) {
     S.event = EVENTS[Math.floor(Math.random() * EVENTS.length)];
