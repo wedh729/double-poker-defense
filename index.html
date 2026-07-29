@@ -3753,6 +3753,7 @@ function drawMonster(m) {
   if (dmgR > 0.2) {
     if (!m.boss && (m.mat === 2 || m.mat === 3 || m.mat === 4)) {
       // ⚽🏀⚾ 축구공·농구공·야구공: 깨지는 게 아니라 한 곳이 터진다 (구멍 + 속이 비져나옴)
+      ctx.save(); ctx.beginPath(); ctx.arc(m.x, m.y, sz * 0.98, 0, 6.28); ctx.clip(); // 몸통 밖으로 안 삐져나가게
       const inner = m.mat === 2 ? '#fffdf2' : m.mat === 3 ? '#3a2a20' : '#f2e3c8'; // 솜 / 고무 안쪽 / 코르크 실뭉치
       const flap = m.mat === 2 ? '#d9d9d9' : m.mat === 3 ? '#b55a1e' : '#d9cdb4';   // 들린 껍질 색
       const nP = 1 + Math.floor(dmgR * 2.3);
@@ -3784,6 +3785,7 @@ function drawMonster(m) {
           }
         }
       }
+      ctx.restore();
     } else if (!m.boss && (m.mat === 5 || m.mat === 6)) {
       // 🎱🎳 당구공/볼링공: 가장자리가 조그맣게 깨져나간다 (밝은 속살 단면)
       const nC = 1 + Math.floor(dmgR * 2.3);
@@ -3796,6 +3798,7 @@ function drawMonster(m) {
       }
     } else if (!m.boss && m.mat === 0) {
       // 🎈 물풍선: 고무라 금이 갈 수 없다 → 만화처럼 회색 쓸린 자국(#) 표시
+      ctx.save(); ctx.beginPath(); ctx.ellipse(m.x, m.y, sz * 0.96, sz * 0.96, 0, 0, 6.28); ctx.clip();
       ctx.strokeStyle = `rgba(120,130,140,${(0.5 + dmgR * 0.4).toFixed(2)})`;
       ctx.lineWidth = 1.3; ctx.lineCap = 'round';
       const nS = dmgR > 0.75 ? 3 : dmgR > 0.45 ? 2 : 1;
@@ -3810,9 +3813,10 @@ function drawMonster(m) {
           ctx.stroke();
         }
       }
-      ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+      ctx.restore(); ctx.lineCap = 'butt'; ctx.lineWidth = 1;
     } else {
       // 기본: 유리가 깨지듯 — 한 충격점에서 가느다란 흰 금이 사방으로 방사된다
+      ctx.save(); ctx.beginPath(); ctx.arc(m.x, m.y, m.boss ? sz + 3 : sz * 0.96, 0, 6.28); ctx.clip(); // 금이 공 밖으로 삐져나가지 않게 몸통 원으로 클립
       const veryLight = false;                                       // (터짐류 재질은 위에서 분기 — 여기는 항상 흰 유리 금)
       const cw = veryLight ? '60,58,66' : '255,255,255';
       const ia = m.phase * 1.9, ir = sz * 0.45;
@@ -3841,7 +3845,7 @@ function drawMonster(m) {
         ctx.beginPath(); ctx.arc(ix, iy, wr, ia + 0.5, ia + 2.6); ctx.stroke();
         if (dmgR > 0.75) { ctx.beginPath(); ctx.arc(ix, iy, wr * 1.9, ia - 2.4, ia - 0.6); ctx.stroke(); }
       }
-      ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+      ctx.restore(); ctx.lineCap = 'butt'; ctx.lineWidth = 1; // 클립 해제
     }
   }
   if (squish) ctx.restore(); // 스쿼시 변환 해제
