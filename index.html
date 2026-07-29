@@ -5140,23 +5140,23 @@ const HAND_GUIDE = [
 // 📖 히든 조합 도감: 발견 전엔 recipe 대신 riddle(hint)을 보여준다 (localStorage dpd_hidden으로 발견 여부 판정)
 const HIDDEN_DEX = [
   { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '주사위를 던져 1~6회 팅기는 공격 + 카지노·복권 행운 +10%',
-    voice: '운이야말로 실력이지. 내 주사위가 몇 번 튕길지는 나도 몰라 🎲', hint: '원페어 하나, 투페어 둘, 트리플 셋. 계단처럼 쌓아 올린 자에게 운명의 주사위가 굴러온다.' },
+    voice: '운이야말로 실력이지. 내 주사위가 몇 번 튕길지는 나도 몰라 🎲', hint: '아래에서 셋째 칸까지 오르는 계단. 각 칸에는 제 번호만큼 세워야 한다.' },
   { id: 'junk', icon: '💰', name: '고물상', recipe: '하이카드×3 + 원페어×3 + 투페어×3', desc: '가장 가까운 유닛 5기 킬 골드 ×1.2 (지원형)',
-    voice: '버려진 것들 속에 돈이 있다네. 내 곁에서 싸워보게나 💰', hint: '하찮은 패도 세 벌씩 모으면 값이 된다. 하이카드 셋, 원페어 셋, 투페어 셋.' },
+    voice: '버려진 것들 속에 돈이 있다네. 내 곁에서 싸워보게나 💰', hint: '가장 낮은 세 족보를, 세 벌씩. 쓰레기 더미에서도 금은 반짝인다.' },
   { id: 'quartet', icon: '📯', name: '콰르텟', recipe: '원페어·투페어·트리플·스트레이트 각 2', desc: '반경 50px 아군 공속 +20% (비중첩)',
-    voice: '넷이 모여야 연주가 시작되지. 내 곁에 서면 손이 빨라질 거야 📯', hint: '원페어·투페어·트리플·스트레이트를 둘씩. 넷이 모여야 합주가 시작된다.' },
+    voice: '넷이 모여야 연주가 시작되지. 내 곁에 서면 손이 빨라질 거야 📯', hint: '사중주에는 넷이 필요하다. 아래에서 넷째 칸까지, 저마다 짝을 지어.' },
   { id: 'guillotine', icon: '⚔️', name: '길로틴', recipe: '원1+투2+트3+포4 (10기)', desc: '체력 15% 이하 즉시 처형',
-    voice: '빈사의 목은 내가 거둔다. 마무리는 맡겨라 ⚔️', hint: '하나, 둘, 셋, 넷. 원페어부터 포카드까지 줄지어 늘어서는 날 처형대가 세워진다.' },
+    voice: '빈사의 목은 내가 거둔다. 마무리는 맡겨라 ⚔️', hint: '넷째 칸까지 오르는 계단. 다만 마지막 칸은 한참 위에 있다.' },
   { id: 'shogun', icon: '🔥', name: '쇼군', recipe: '풀하우스×3 + 플러쉬×3', desc: '참격 무제한 타격 + 화상 도트',
-    voice: '나를 전장에 보내줘. 다 썰어서 태워주지 🔥', hint: '집을 채운 자 셋, 무늬로 물든 자 셋. 여섯이 모이면 불타는 칼을 뽑는다.' },
+    voice: '나를 전장에 보내줘. 다 썰어서 태워주지 🔥', hint: '집을 가득 채운 자와 한 빛깔로 물든 자. 여섯이 모이면 칼에 불이 붙는다.' },
   { id: 'chrono', icon: '⏳', name: '시간술사', recipe: '스트레이트×3', desc: '시간 정지 스킬 (쿨 150초)',
-    voice: '시간아, 잠깐 멈춰라 ⏳', hint: '끊기지 않은 흐름을 셋 겹치면, 세상의 시계가 잠시 숨을 멈춘다.' },
+    voice: '시간아, 잠깐 멈춰라 ⏳', hint: '끊기지 않고 이어지는 다섯 장. 그것을 세 번 겹치면 시계가 숨을 멈춘다.' },
   { id: 'slot', icon: '🎰', name: '슬롯머신', recipe: '같은 숫자 트리플×3', desc: '잭팟 폭격 스킬 (쿨 75초)',
-    voice: '릴이 맞아떨어지는 순간… 하늘을 봐 🎰', hint: '같은 숫자의 트리플을 세 벌 모으면 릴이 맞아떨어지고, 하늘에서 잭팟이 쏟아진다.' },
+    voice: '릴이 맞아떨어지는 순간… 하늘을 봐 🎰', hint: '같은 얼굴 셋이, 다시 세 번. 릴이 맞아떨어지면 하늘이 쏟아진다.' },
   { id: 'joker', icon: '🃏', name: '조커', recipe: '원페어·투페어·트리플 영웅 각 1', desc: '낫으로 베며 몹을 끌어당김 (클럼핑)',
-    voice: '이리 와~ 같이 놀자고. 도망은 못 가 🃏', hint: '원페어·투페어·트리플, 영웅 셋이 손을 맞잡으면 광대가 낫을 든다.' },
+    voice: '이리 와~ 같이 놀자고. 도망은 못 가 🃏', hint: '아래 세 칸의 왕관들이 손을 맞잡을 때, 광대가 낫을 든다.' },
   { id: 'catapult', icon: '🪨', name: '투석기', recipe: '하이카드 20기 제물(제물대)', desc: '거대한 돌덩이로 소환장 전체 포격 (이동 불가)',
-    voice: '나는 움직이지 않아. 대신 전장이 무너지지 🪨', hint: '홑패 스무 장을 제물대에 바쳐라. 밑 빠진 독을 채우면 거대한 바위가 깨어난다.' },
+    voice: '나는 움직이지 않아. 대신 전장이 무너지지 🪨', hint: '가장 하찮은 것을 스무 번. 소용돌이가 아니라 오래된 돌 위에.' },
 ];
 // ⭐ 강화창 영웅 탭: 보유 영웅 단련 + 히든 영웅 도감 (미발견 = ??? + 대사 힌트 / 발견·미보유 = 회색 + 조합법)
 let castleTab = 'upg';
@@ -5294,19 +5294,28 @@ function runGambleBar(host, onStop) {
     <div style="font-size:11px;color:#9a8a60;margin-bottom:4px">🎯 가운데 노란 존에 맞추면 확률 <b>50%</b>!</div>
     <div id="gmgTrack" style="position:relative;height:20px;background:#241a3a;border:2px solid #4a3d70;border-radius:10px;overflow:hidden">
       <div style="position:absolute;left:42%;width:16%;top:0;bottom:0;background:rgba(255,213,79,0.6)"></div>
-      <div id="gmgMk" style="position:absolute;left:0;width:3px;top:0;bottom:0;background:#fff"></div>
+      <div id="gmgMk" style="position:absolute;left:0;width:7px;top:0;bottom:0;background:#fff;border-radius:3px;will-change:transform;box-shadow:0 0 6px rgba(255,255,255,0.8)"></div>
     </div>
-    <button class="chipBtn" id="gmgStop" style="margin-top:8px;padding:8px 22px">🎯 멈춰!!</button></div>`;
-  const mk = host.querySelector('#gmgMk'), t0 = performance.now();
-  let pos = 0, raf = 0;
+    <button class="chipBtn" id="gmgStop" style="margin-top:8px;padding:8px 22px">🎯 멈춰!! <span style="font-size:10px;opacity:.75">(스페이스바)</span></button></div>`;
+  const mk = host.querySelector('#gmgMk'), track = host.querySelector('#gmgTrack'), t0 = performance.now();
+  let pos = 0, raf = 0, done = false;
   (function tick(now) {
-    if (!mk.isConnected) return; // 상점을 닫거나 화면이 다시 그려지면 루프 종료 (분리된 DOM 상대로 rAF가 영원히 도는 누수 방지)
+    if (!mk.isConnected) { window.removeEventListener('keydown', onKey, true); return; } // 창이 닫히면 루프·핸들러 정리
     const t = ((now || t0) - t0) / 1000;
-    pos = (Math.sin(t * Math.PI * 2 / 0.85 - Math.PI / 2) + 1) / 2 * 100; // 0.85초에 한 왕복 — 빠르다
-    mk.style.left = `calc(${pos}% - 1.5px)`;
+    pos = (Math.sin(t * Math.PI * 2 / 0.85 - Math.PI / 2) + 1) / 2 * 100; // 0.85초에 한 왕복 — 속도는 그대로
+    // left(레이아웃 재계산 → 끊김) 대신 transform으로 이동 = GPU 합성이라 매끄럽다
+    const w = track.clientWidth || 300;
+    mk.style.transform = `translateX(${(pos / 100 * (w - 7)).toFixed(2)}px)`;
     raf = requestAnimationFrame(tick);
   })();
-  host.querySelector('#gmgStop').onclick = () => { cancelAnimationFrame(raf); onStop(Math.abs(pos - 50) <= 8); };
+  const stop = () => {
+    if (done) return; done = true;
+    cancelAnimationFrame(raf); window.removeEventListener('keydown', onKey, true);
+    onStop(Math.abs(pos - 50) <= 8);
+  };
+  function onKey(e) { if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); stop(); } }
+  window.addEventListener('keydown', onKey, true); // 스페이스바로도 멈춘다
+  host.querySelector('#gmgStop').onclick = stop;
 }
 function showGambleResult(host, perfect, win, detail, refresh) {
   host.innerHTML = `<div style="text-align:center;margin:8px 0;font-weight:bold">
@@ -5646,8 +5655,8 @@ function rollEvent() {
 function effRange(u) { return u.range * ((S.eventMods && S.eventMods.rangeMul) || 1) * (isHiddenCombo(u) ? 0.8 : 1); } // 히든 조합 유닛 사거리 20%↓
 
 document.getElementById('bSpeed').onclick = () => {
-  S.speed = S.speed >= 3 ? 1 : S.speed + 1;
-  document.getElementById('bSpeed').textContent = ['⏩', '⏩²', '⏩³'][S.speed - 1];
+  S.speed = S.speed >= 2 ? 1 : S.speed + 1; // 최대 2배 (3배는 너무 빨라 조작이 어려움)
+  document.getElementById('bSpeed').textContent = ['⏩', '⏩²'][S.speed - 1];
 };
 document.getElementById('btnRestart').onclick = () => {
   if (confirm('처음부터 다시 시작할까요? 현재 진행 상황은 사라집니다.')) reset();
@@ -5746,7 +5755,9 @@ let __buffSig = '';
 function refreshInfoOnBuffChange() { // 콰르텟/고물상 버프가 붙거나 떨어지면 정보창 수치를 즉시 반영
   const sel = S.units.filter(u => u.selected);
   if (!sel.length) { __buffSig = ''; return; }
-  const sig = sel.map(u => `${(u.spdBuff || 1) < 1 ? 1 : 0}${u.junkBuff ? 1 : 0}`).join(',');
+  // 버프 상태 + 스킬 쿨타임(초 단위) — 쿨이 흐르면 정보창도 같이 갱신되어야 스킬을 제때 쓸 수 있다
+  const sig = sel.map(u => `${(u.spdBuff || 1) < 1 ? 1 : 0}${u.junkBuff ? 1 : 0}` +
+    `|${Math.ceil(u.skillCd || 0)},${Math.ceil(u.skillT || 0)},${Math.ceil(u.chronoCd || 0)},${Math.ceil(u.slotCd || 0)},${Math.ceil(S.freezeT || 0)}`).join(',');
   if (sig !== __buffSig) { __buffSig = sig; updateInfoPanel(); }
 }
 function updateHUD() {
