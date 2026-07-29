@@ -665,7 +665,9 @@ function monsterHP(n) {
   if (n > FINAL_ROUND) hp *= Math.pow(1.5, n - FINAL_ROUND); // 헬(80+): 라운드당 ×2 → ×1.5 완화 (가파르되 맛볼 수 있게)
   // ×0.7 = 전체 난이도 30% 하향 / ×1.6 = 몹 수 절반 보정 (2배가 아닌 이유: 밀도 절반 → 스플래시 효율도 절반이라 2배면 실효 난이도 상승)
   hp *= splitComp(n); // 일반 몹 분열 제거 보정 (R40에 한 번에 곱하면 1.5배 계단벽이 생겨서 R40~R55에 걸쳐 점진 적용)
-  return Math.max(1, Math.floor(hp * DIFF_MUL * 0.7 * 1.6));
+  // 어려움·지옥: 초반 20% 하향, 대신 라운드마다 0.4%p씩 다시 가팔라진다 (R50에서 원래의 96%, R80부터 원래보다 어렵게)
+  const dm = DIFF_MUL > 1 ? DIFF_MUL * 0.8 * (1 + 0.004 * n) : DIFF_MUL;
+  return Math.max(1, Math.floor(hp * dm * 0.7 * 1.6));
 }
 // 분열 제거 보정 계수: R39까지 1.0 → R55에서 1.45로 선형 증가 (보스는 분열과 무관하므로 이 값으로 나눠 상쇄한다)
 function splitComp(n) { return 1 + 0.45 * Math.max(0, Math.min(1, (n - 39) / 16)); }
@@ -1515,17 +1517,19 @@ function update(dt) {
     const sdx = u.tx - u.x, sdy = u.ty - u.y;
     if (sdx * sdx + sdy * sdy <= 64) { u.tx = u.x; u.ty = u.y; }
   }
-  // 📯 콰르텟 공속 오라: 반경 50px 내 아군(비광부) 공속 +20% (비중첩)
-  const quartets = U.filter(u => u.quartet);
+  // 📯 콰르텟 공속 오라: 콰르텟의 사거리 원 안에 있어야 +20% (비중첩)
+  const quartets = U.filter(u => u.quartet).map(q => [q, effRange(q) * effRange(q)]);
   for (const u of U) {
-    u.spdBuff = (!u.miner && quartets.some(q => q !== u && (q.x - u.x) * (q.x - u.x) + (q.y - u.y) * (q.y - u.y) <= 2500)) ? 0.833 : 1;
+    u.spdBuff = (!u.miner && quartets.some(([q, r2]) => q !== u && (q.x - u.x) * (q.x - u.x) + (q.y - u.y) * (q.y - u.y) <= r2)) ? 0.833 : 1;
     u.junkBuff = false;
   }
-  // 💰 고물상: 가장 가까운 전투 유닛 5기에게 킬 골드 ×1.2 버프 (전략적 배치 — 머리 위 💰 표시)
+  // 💰 고물상: 사거리 원 안의 가까운 전투 유닛 5기에게 킬 골드 ×1.2 (범위 밖은 아무리 가까워도 제외)
   for (const j of U) {
     if (!j.junk) continue;
+    const jr = effRange(j);
     U.filter(v => v !== j && !v.miner && !v.item && !v.clone)
       .map(v => [Math.hypot(v.x - j.x, v.y - j.y), v])
+      .filter(([d]) => d <= jr)
       .sort((a, b) => a[0] - b[0])
       .slice(0, 5)
       .forEach(([, v]) => v.junkBuff = true);
@@ -3736,20 +3740,38 @@ function drawMonster(m) {
   // 데미지 표현 (재질별 특성, 몬스터별 고정 시드 — 프레임마다 안 흔들림)
   const dmgR = 1 - Math.max(0, (m.hp + m.shield) / (m.max + (m.shieldMax || 0)));
   if (dmgR > 0.2) {
-    if (!m.boss && m.mat === 2) {
-      // ⚽ 축구공: 부위가 찢어져 안의 솜이 비져나온다 (1~3군데)
+    if (!m.boss && (m.mat === 2 || m.mat === 3 || m.mat === 4)) {
+      // ⚽🏀⚾ 축구공·농구공·야구공: 깨지는 게 아니라 한 곳이 터진다 (구멍 + 속이 비져나옴)
+      const inner = m.mat === 2 ? '#fffdf2' : m.mat === 3 ? '#3a2a20' : '#f2e3c8'; // 솜 / 고무 안쪽 / 코르크 실뭉치
+      const flap = m.mat === 2 ? '#d9d9d9' : m.mat === 3 ? '#b55a1e' : '#d9cdb4';   // 들린 껍질 색
       const nP = 1 + Math.floor(dmgR * 2.3);
       for (let i = 0; i < nP; i++) {
         const a = m.phase * 3 + i * 2.4, r = sz * 0.55;
         const px = m.x + Math.cos(a) * r, py = m.y + Math.sin(a) * r;
-        ctx.fillStyle = 'rgba(55,55,55,0.55)'; // 찢어진 구멍
+        ctx.fillStyle = 'rgba(45,40,38,0.6)'; // 터진 구멍
         ctx.beginPath(); ctx.ellipse(px, py, sz * 0.2, sz * 0.13, a, 0, 6.28); ctx.fill();
-        ctx.fillStyle = '#fffdf2'; // 솜뭉치
-        ctx.beginPath();
-        ctx.arc(px - sz * 0.05, py, sz * 0.1, 0, 6.28);
-        ctx.arc(px + sz * 0.06, py - sz * 0.05, sz * 0.08, 0, 6.28);
-        ctx.arc(px + sz * 0.03, py + sz * 0.07, sz * 0.07, 0, 6.28);
-        ctx.fill();
+        ctx.fillStyle = flap; // 들려 젖혀진 껍질 조각
+        ctx.beginPath(); ctx.moveTo(px + Math.cos(a + 2.4) * sz * 0.16, py + Math.sin(a + 2.4) * sz * 0.16);
+        ctx.quadraticCurveTo(px + Math.cos(a - 0.4) * sz * 0.3, py + Math.sin(a - 0.4) * sz * 0.3,
+          px + Math.cos(a - 1.2) * sz * 0.14, py + Math.sin(a - 1.2) * sz * 0.14);
+        ctx.closePath(); ctx.fill();
+        if (m.mat === 3) { // 🏀 바람 빠진 고무: 구멍 주변 주름 2줄
+          ctx.strokeStyle = 'rgba(90,45,15,0.5)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(px, py, sz * 0.24, a + 0.6, a + 2.2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(px, py, sz * 0.31, a + 0.9, a + 1.9); ctx.stroke();
+        } else { // ⚽⚾ 속이 뭉게뭉게 비져나옴 (솜 / 실·코르크)
+          ctx.fillStyle = inner;
+          ctx.beginPath();
+          ctx.arc(px - sz * 0.05, py, sz * 0.1, 0, 6.28);
+          ctx.arc(px + sz * 0.06, py - sz * 0.05, sz * 0.08, 0, 6.28);
+          ctx.arc(px + sz * 0.03, py + sz * 0.07, sz * 0.07, 0, 6.28);
+          ctx.fill();
+          if (m.mat === 4) { // ⚾ 터진 빨간 실밥이 삐죽
+            ctx.strokeStyle = '#c62828'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(px, py); ctx.quadraticCurveTo(px + sz * 0.16, py - sz * 0.2, px + sz * 0.24, py - sz * 0.16); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(px - sz * 0.04, py + sz * 0.04); ctx.quadraticCurveTo(px - sz * 0.2, py + sz * 0.16, px - sz * 0.26, py + sz * 0.1); ctx.stroke();
+          }
+        }
       }
     } else if (!m.boss && (m.mat === 5 || m.mat === 6)) {
       // 🎱🎳 당구공/볼링공: 가장자리가 조그맣게 깨져나간다 (밝은 속살 단면)
@@ -3780,7 +3802,7 @@ function drawMonster(m) {
       ctx.lineCap = 'butt'; ctx.lineWidth = 1;
     } else {
       // 기본: 유리가 깨지듯 — 한 충격점에서 가느다란 흰 금이 사방으로 방사된다
-      const veryLight = !m.boss && (m.mat === 4);                   // 야구공(크림색)만 흰 금이 안 보여 어두운 금
+      const veryLight = false;                                       // (터짐류 재질은 위에서 분기 — 여기는 항상 흰 유리 금)
       const cw = veryLight ? '60,58,66' : '255,255,255';
       const ia = m.phase * 1.9, ir = sz * 0.45;
       const ix = m.x + Math.cos(ia) * ir, iy = m.y + Math.sin(ia) * ir; // 충격점
@@ -4491,18 +4513,25 @@ function drawWeapon(u, x, y) {
       ctx.strokeStyle = edge; ctx.lineWidth = 0.7; ctx.stroke();
     }
     ctx.lineWidth = 1;
-  } else if (has('단검')) { // 단검 (암살자: 짧은 손잡이 + 작은 가드 + 짧고 날카로운 날)
-    ctx.strokeStyle = '#4e342e'; ctx.lineWidth = 2.2; // 손잡이 (짧게)
-    ctx.beginPath(); ctx.moveTo(x - 3, y + 5); ctx.lineTo(x, y + 1); ctx.stroke();
-    ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 2.4; // 작은 가드
-    ctx.beginPath(); ctx.moveTo(x - 3, y - 0.5); ctx.lineTo(x + 3, y + 1.5); ctx.stroke();
-    // 짧고 날카로운 칼날 (은빛)
-    ctx.fillStyle = '#eceff1';
-    ctx.beginPath(); ctx.moveTo(x - 0.5, y + 0.5); ctx.lineTo(x + 2.5, y + 2); ctx.lineTo(x + 10, y - 6); ctx.lineTo(x + 7.5, y - 8); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#b0bec5'; ctx.lineWidth = 0.7; ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1; // 하이라이트
-    ctx.beginPath(); ctx.moveTo(x + 0.5, y + 1); ctx.lineTo(x + 8.5, y - 6.5); ctx.stroke();
-    ctx.lineWidth = 1;
+  } else if (has('단검')) { // 🗡️ M7 군용단검: 검은 링 그립 + 강철 십자 가드 + 길고 좁게 뻗다 클립 포인트로 확 좁아지는 날
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.62); // 사선 파지
+    ctx.fillStyle = '#23272e'; // 그립 (검정, 끝이 살짝 좁은 사다리꼴)
+    ctx.beginPath(); ctx.moveTo(-7.5, -1.9); ctx.lineTo(-1.5, -2.3); ctx.lineTo(-1.5, 2.3); ctx.lineTo(-7.5, 1.9); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#4a5058'; ctx.lineWidth = 0.8; // 그립 링 홈 3줄
+    for (const gx of [-6.2, -4.6, -3]) { ctx.beginPath(); ctx.moveTo(gx, -2.1); ctx.lineTo(gx, 2.1); ctx.stroke(); }
+    ctx.fillStyle = '#8a939e'; ctx.fillRect(-8.6, -1.6, 1.4, 3.2); // 폼멜
+    ctx.fillStyle = '#9aa3ad'; ctx.fillRect(-1.5, -3.1, 1.7, 6.2);  // 십자 가드
+    // 날: 길고 좁게 뻗다가 끝에서 클립 포인트로 확 좁아진다
+    ctx.fillStyle = '#dfe6ea';
+    ctx.beginPath(); ctx.moveTo(0.2, -1.7); ctx.lineTo(9.5, -1.7);   // 등날 (직선)
+    ctx.lineTo(13.8, -0.1);                                          // 클립 포인트 (끝이 뾰족)
+    ctx.lineTo(9.5, 1.8); ctx.lineTo(0.2, 1.8); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#aab4bc'; ctx.lineWidth = 0.6; ctx.stroke();
+    ctx.strokeStyle = '#b9c2c9'; ctx.lineWidth = 0.7;                 // 피홈 (fuller)
+    ctx.beginPath(); ctx.moveTo(1.2, 0); ctx.lineTo(8.8, 0); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 0.8;  // 날끝 하이라이트
+    ctx.beginPath(); ctx.moveTo(9.5, 1.5); ctx.lineTo(13.6, -0.1); ctx.stroke();
+    ctx.restore(); ctx.lineWidth = 1;
   } else if (has('전기톱')) { // 전기톱 — 리얼 체인소 (주황 엔진 + 상단 손잡이 + 긴 가이드바 + 돌아가는 체인)
     ctx.strokeStyle = '#37474f'; ctx.lineWidth = 2; // 상단 손잡이 아치
     ctx.beginPath(); ctx.arc(x - 1, y - 4, 4, Math.PI, 0); ctx.stroke();
@@ -5844,7 +5873,8 @@ function updateHUD() {
   const hasChip = S.chips > 0;
   document.querySelectorAll('.chipStation').forEach(b => { b.disabled = !hasChip; b.classList.toggle('ready', hasChip); });
   document.getElementById('tRound').textContent = S.round;
-  document.getElementById('tStage').textContent = stageInfo(S.round).name;
+
+  document.getElementById('tStage').textContent = stageInfo(S.round).name + (DIFF_NAME === '보통' ? '' : ` · ${DIFF_NAME === '지옥' ? '💀' : ''}${DIFF_NAME}`); // 재질명 옆에 난이도 상시 표시
   // 원형 시계: 시간이 흐를수록 빨강(전투)/보라(포커)가 시계방향으로 채워진다
   const clock = document.getElementById('clock');
   let frac = 0, col = '#e53935';
