@@ -78,6 +78,11 @@
     border: 3px solid #c9a75a; border-radius: 16px;
     box-shadow: 0 0 0 3px #7a6335, 0 0 0 6px #c9a75a, 0 24px 60px rgba(0,0,0,0.55);
     padding: 20px 26px 30px; text-align: left; }
+  /* 스크롤바가 둥근 테두리를 각지게 잘라 보이던 문제 — 트랙을 투명하게 두고 얇은 둥근 손잡이만 */
+  #shopWin { scrollbar-width: thin; scrollbar-color: #c9a75a transparent; }
+  #shopWin::-webkit-scrollbar { width: 8px; }
+  #shopWin::-webkit-scrollbar-track { background: transparent; margin: 16px 0; }
+  #shopWin::-webkit-scrollbar-thumb { background: #c9a75a; border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
   #shopWin::before, #shopWin::after { content: '❦'; position: absolute; bottom: 8px; font-size: 17px; color: #c9a75a; pointer-events: none; }
   #shopWin::before { left: 14px; } #shopWin::after { right: 14px; transform: scaleX(-1); }
   #shopTitle { text-align: center; font-size: 20px; font-weight: 800; color: #6d5416; letter-spacing: 3px;
@@ -2171,6 +2176,13 @@ function recordBest(stage) {
   return best;
 }
 // 📖 히든 도감 발견 기록: 라운드 재시작해도 유지 (reset()이 건드리지 않음)
+function hintSeen(id) { // 🐦 새를 잡아 들은 소문만 도감에 남는다
+  try { return !!JSON.parse(localStorage.getItem('dpd_hint') || '{}')[id]; } catch (e) { return false; }
+}
+function markHint(id) {
+  if (S && S.sandbox) return;
+  try { const d = JSON.parse(localStorage.getItem('dpd_hint') || '{}'); d[id] = 1; localStorage.setItem('dpd_hint', JSON.stringify(d)); } catch (e) {}
+}
 function hiddenSeen(id) {
   try { return !!JSON.parse(localStorage.getItem('dpd_hidden') || '{}')[id]; } catch (e) { return false; }
 }
@@ -2998,7 +3010,6 @@ function drawPortal() {
   ctx.restore();
   ctx.lineWidth = 1;
   ctx.fillStyle = '#8c5bff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('🌀 강화 포털', p.x, p.y + p.r + 13);
   ctx.textAlign = 'left';
 }
 // 🪨 제물대: 위에 올라온 하이카드(새총)를 제물로 흡수하는 돌 제단
@@ -3151,7 +3162,7 @@ function drawOreRoom() {
   const nMine = S.units.filter(u => u.oreSlot && u.tier !== 0).length;
   ctx.textAlign = 'center';
   ctx.fillStyle = '#7a6f5c'; ctx.font = 'bold 11px sans-serif';
-  ctx.fillText(S.hunt.done ? '💎 광석 방 (완료)' : `💎 ${S.hunt.stage}단계: ${ore.name} · ⛏ ${nMine}/${oreCap()}`, R.cx, y0 - 5);
+  ctx.fillText(S.hunt.done ? '광석 방 (완료)' : `${S.hunt.stage}단계: ${ore.name} · ⛏ ${nMine}/${oreCap()}`, R.cx, y0 - 5);
   ctx.textAlign = 'left';
 }
 // 광산 재질 사다리: 겹이 깎일수록 흙 → 돌 → 철 → 동 → 은 → 금 → 보석 (점점 값비싸 보임)
@@ -3488,20 +3499,24 @@ function drawMonster(m) {
           ctx.quadraticCurveTo(m.x - fl * 0.55, m.y + fl * 0.5, m.x - sz * 0.15, m.y + sz * 0.75); ctx.closePath(); ctx.fill();
         }
         ctx.globalAlpha = 1;
-        ctx.fillStyle = '#8d7a66'; polyPath(m.x, m.y, 9, sz + 5, m.rot, (sz + 5) * 0.8); ctx.fill(); // 바위 본체
+        ctx.fillStyle = '#8d7a66'; polyPath(m.x, m.y, 9, sz + 5, m.rot, (sz + 5) * 0.72); ctx.fill(); // 바위 본체 (요철 강조)
         ctx.strokeStyle = '#5f5044'; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1;
         ctx.fillStyle = 'rgba(0,0,0,0.2)'; // 크레이터
         for (const [dx2, dy2, r2] of [[-0.3, -0.15, 0.2], [0.28, 0.2, 0.16], [0.05, -0.4, 0.12]]) { ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.fill(); }
         break;
       }
-      case 21: { // 🌕 R20 보름달: 은은한 달빛 + 크레이터
-        ctx.fillStyle = 'rgba(244,240,214,0.25)';
-        ctx.beginPath(); ctx.arc(m.x, m.y, sz + 10, 0, 6.28); ctx.fill(); // 달무리
-        const mg = ctx.createRadialGradient(m.x - sz * 0.3, m.y - sz * 0.3, 2, m.x, m.y, sz + 4);
-        mg.addColorStop(0, '#fbf8e8'); mg.addColorStop(1, '#d8d2ae');
-        ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(m.x, m.y, sz + 4, 0, 6.28); ctx.fill();
-        ctx.fillStyle = 'rgba(120,115,90,0.3)';
-        for (const [dx2, dy2, r2] of [[-0.35, -0.2, 0.2], [0.3, 0.28, 0.17], [0.12, -0.38, 0.12], [-0.15, 0.35, 0.13]]) { ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.fill(); }
+      case 21: { // 🌕 R20 보름달: 새하얀 원반 + 크고 진한 크레이터 (한눈에 '달')
+        for (let g = 3; g >= 1; g--) { ctx.fillStyle = `rgba(255,252,225,${0.1 * g})`; // 달무리 3겹
+          ctx.beginPath(); ctx.arc(m.x, m.y, sz + 4 + g * 5, 0, 6.28); ctx.fill(); }
+        ctx.fillStyle = '#fffdf0';
+        ctx.beginPath(); ctx.arc(m.x, m.y, sz + 4, 0, 6.28); ctx.fill();
+        ctx.fillStyle = 'rgba(150,148,128,0.45)'; // 크레이터: 크고 확실하게
+        for (const [dx2, dy2, r2] of [[-0.34, -0.26, 0.3], [0.32, 0.3, 0.24], [0.2, -0.42, 0.16], [-0.2, 0.42, 0.15], [0.46, -0.08, 0.12]]) {
+          ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.fill(); }
+        ctx.strokeStyle = 'rgba(120,118,100,0.35)'; ctx.lineWidth = 1.2; // 크레이터 테두리
+        for (const [dx2, dy2, r2] of [[-0.34, -0.26, 0.3], [0.32, 0.3, 0.24]]) {
+          ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.stroke(); }
+        ctx.lineWidth = 1;
         break;
       }
       case 22: { // ☄️ R30 혜성: 얼음 코어 + 뒤로 길게 뻗는 푸른 꼬리 (천천히 회전)
@@ -3519,12 +3534,18 @@ function drawMonster(m) {
         ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(m.x, m.y, sz + 3, 0, 6.28); ctx.fill();
         break;
       }
-      case 23: { // 🪨 R40 수성: 잿빛 갈색 암석 행성 + 크레이터 + 명암 경계
-        const hg = ctx.createRadialGradient(m.x - sz * 0.35, m.y - sz * 0.3, 2, m.x, m.y, sz + 4);
-        hg.addColorStop(0, '#c2b3a3'); hg.addColorStop(0.7, '#9c8d7f'); hg.addColorStop(1, '#6e6155');
-        ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(m.x, m.y, sz + 4, 0, 6.28); ctx.fill();
-        ctx.fillStyle = 'rgba(60,50,42,0.3)';
-        for (const [dx2, dy2, r2] of [[-0.25, -0.3, 0.16], [0.35, 0.1, 0.2], [-0.1, 0.35, 0.13], [0.1, -0.15, 0.09]]) { ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.fill(); }
+      case 23: { // 🪨 R40 수성: 태양에 반쪽만 그을린 암석 행성 (달과 헷갈리지 않게 명암 대비 강조)
+        const R2 = sz + 4;
+        ctx.fillStyle = '#6b5c4e'; ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.fill(); // 어두운 면
+        ctx.save(); ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.clip();
+        ctx.fillStyle = '#d9a066'; // 햇볕 쪽: 달궈진 주황빛
+        ctx.beginPath(); ctx.ellipse(m.x - R2 * 0.35, m.y - R2 * 0.2, R2 * 0.95, R2 * 0.95, 0, 0, 6.28); ctx.fill();
+        ctx.fillStyle = 'rgba(255,220,150,0.5)';
+        ctx.beginPath(); ctx.arc(m.x - R2 * 0.45, m.y - R2 * 0.35, R2 * 0.5, 0, 6.28); ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = 'rgba(60,45,32,0.42)'; // 크레이터 빽빽
+        for (const [dx2, dy2, r2] of [[-0.3,-0.3,0.2],[0.3,0.12,0.24],[-0.08,0.36,0.16],[0.12,-0.2,0.12],[0.45,-0.3,0.1],[-0.45,0.14,0.11]]) {
+          ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.fill(); }
         break;
       }
       case 24: { // 🪐 R50 토성: 황토 행성 + 기울어진 고리 (뒤→본체→앞 순서)
@@ -3544,15 +3565,25 @@ function drawMonster(m) {
         ctx.restore(); ctx.lineWidth = 1;
         break;
       }
-      case 25: { // 🌕 R60 금성: 크림빛 구름 소용돌이 행성
-        const vg = ctx.createRadialGradient(m.x - sz * 0.3, m.y - sz * 0.3, 2, m.x, m.y, sz + 4);
-        vg.addColorStop(0, '#f7e3ae'); vg.addColorStop(0.7, '#e3bd72'); vg.addColorStop(1, '#c4964a');
-        ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(m.x, m.y, sz + 4, 0, 6.28); ctx.fill();
-        ctx.strokeStyle = 'rgba(200,150,70,0.55)'; ctx.lineWidth = 2.5; // 황산 구름 소용돌이
+      case 25: { // 🌋 R60 금성: 두꺼운 황금 대기 링 + 소용돌이치는 황산 구름
+        const R2 = sz + 4;
+        ctx.fillStyle = 'rgba(255,214,120,0.28)'; // 뿌연 대기층 (밖으로 번짐)
+        ctx.beginPath(); ctx.arc(m.x, m.y, R2 + 7, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#f4d78a';
+        ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.fill();
+        ctx.save(); ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.clip();
+        ctx.strokeStyle = 'rgba(190,120,40,0.6)'; ctx.lineWidth = 3.4; // 굵은 소용돌이 3겹
         for (let i = 0; i < 3; i++) {
-          ctx.beginPath(); ctx.arc(m.x, m.y, (sz + 2) * (0.35 + i * 0.28), S.time * 0.5 + i * 2, S.time * 0.5 + i * 2 + 3.6); ctx.stroke();
+          const t0 = S.time * 0.45 + i * 2.1;
+          ctx.beginPath();
+          for (let k = 0; k <= 22; k++) { const th = t0 + k * 0.26, rr = R2 * (0.14 + k * 0.045);
+            const px = m.x + Math.cos(th) * rr, py = m.y + Math.sin(th) * rr * 0.8;
+            k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+          ctx.stroke();
         }
-        ctx.lineWidth = 1;
+        ctx.fillStyle = 'rgba(255,244,200,0.35)'; // 밝은 하이라이트
+        ctx.beginPath(); ctx.arc(m.x - R2 * 0.35, m.y - R2 * 0.35, R2 * 0.4, 0, 6.28); ctx.fill();
+        ctx.restore(); ctx.lineWidth = 1;
         break;
       }
       case 26: { // 🟠 R70 목성: 줄무늬 가스 행성 + 대적점
@@ -3661,25 +3692,56 @@ function drawMonster(m) {
         polyPath(px, py, 3, sz * (0.11 + dmgR * 0.09), a + i * 1.3); ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 0.8; ctx.stroke(); ctx.lineWidth = 1;
       }
-    } else {
-      // 기본: 가장자리에서 시작해 안쪽으로 짧게 파고드는 균열 1~3개 → 쩌적, 팡
-      const lightCrack = m.boss ? (m.colorIdx >= 4 || m.hell) : (m.mat >= 6 || m.hell || m.golden || (m.esc || 0) > 0.55);
-      ctx.strokeStyle = lightCrack ? `rgba(255,255,255,${(0.35 + dmgR * 0.45).toFixed(2)})` : `rgba(25,28,40,${(0.4 + dmgR * 0.35).toFixed(2)})`;
-      ctx.lineWidth = 1.1;
-      const nCr = dmgR > 0.8 ? 3 : dmgR > 0.55 ? 2 : 1;
-      for (let i = 0; i < nCr; i++) {
-        const a0 = m.phase + i * 2.7;
-        const len = sz * (0.22 + dmgR * 0.5); // 깎일수록 조금 더 깊게
-        let px = m.x + Math.cos(a0) * sz, py = m.y + Math.sin(a0) * sz;
-        ctx.beginPath(); ctx.moveTo(px, py);
-        for (let sg = 1; sg <= 3; sg++) {
-          const aa = a0 + Math.PI + Math.sin(i * 5 + sg * 7) * 0.5; // 중심 방향 + 지그재그
-          px += Math.cos(aa) * len / 3; py += Math.sin(aa) * len / 3;
-          ctx.lineTo(px, py);
+    } else if (!m.boss && m.mat === 0) {
+      // 🎈 물풍선: 고무라 금이 갈 수 없다 → 만화처럼 회색 쓸린 자국(#) 표시
+      ctx.strokeStyle = `rgba(120,130,140,${(0.5 + dmgR * 0.4).toFixed(2)})`;
+      ctx.lineWidth = 1.3; ctx.lineCap = 'round';
+      const nS = dmgR > 0.75 ? 3 : dmgR > 0.45 ? 2 : 1;
+      for (let i = 0; i < nS; i++) {
+        const a0 = m.phase * 1.7 + i * 2.2, cxs = m.x + Math.cos(a0) * sz * 0.42, cys = m.y + Math.sin(a0) * sz * 0.42;
+        const L = sz * 0.34, gap = sz * 0.12, ca = Math.cos(a0 + 1.1), sa = Math.sin(a0 + 1.1);
+        for (const off of [-gap / 2, gap / 2]) {   // 사선 두 줄 = 쓸린 자국
+          const ox = -sa * off, oy = ca * off;
+          ctx.beginPath();
+          ctx.moveTo(cxs + ox - ca * L / 2, cys + oy - sa * L / 2);
+          ctx.lineTo(cxs + ox + ca * L / 2, cys + oy + sa * L / 2);
+          ctx.stroke();
         }
-        ctx.stroke();
       }
-      ctx.lineWidth = 1;
+      ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+    } else {
+      // 기본: 번개처럼 쩌저적 갈라지는 균열 — 가장자리에서 중심으로 뻗으며 가지를 친다
+      const lightCrack = m.boss ? (m.colorIdx >= 4 || m.hell) : (m.mat >= 6 || m.hell || m.golden || (m.esc || 0) > 0.55);
+      const col = a => lightCrack ? `rgba(255,255,255,${a})` : `rgba(20,22,32,${a})`;
+      const nCr = dmgR > 0.8 ? 3 : dmgR > 0.55 ? 2 : 1;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < nCr; i++) {
+        const a0 = m.phase + i * 2.7, len = sz * (0.5 + dmgR * 0.6);
+        // 지그재그 정점을 먼저 만든다 (번개 모양: 각도가 크게 꺾인다)
+        const pts = [[m.x + Math.cos(a0) * sz, m.y + Math.sin(a0) * sz]];
+        let ang = a0 + Math.PI;
+        for (let sg = 1; sg <= 4; sg++) {
+          ang += Math.sin(i * 7.3 + sg * 3.1) * 1.15;             // 크게 꺾이며
+          const step = len / 4 * (0.75 + (sg % 2) * 0.5);
+          pts.push([pts[sg-1][0] + Math.cos(ang) * step, pts[sg-1][1] + Math.sin(ang) * step]);
+        }
+        const draw = (w, a) => { ctx.strokeStyle = col(a); ctx.lineWidth = w;
+          ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+          for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k][0], pts[k][1]);
+          ctx.stroke(); };
+        draw(2.6, (0.18 + dmgR * 0.2).toFixed(2));                 // 바깥 번짐
+        draw(1.1, (0.55 + dmgR * 0.4).toFixed(2));                 // 날카로운 심지
+        if (dmgR > 0.5) { // 가지 균열
+          const bi = 2, [bx, by] = pts[bi];
+          const ba = Math.atan2(pts[bi][1] - pts[bi-1][1], pts[bi][0] - pts[bi-1][0]) + (i % 2 ? 1.0 : -1.0);
+          ctx.strokeStyle = col((0.45 + dmgR * 0.3).toFixed(2)); ctx.lineWidth = 0.9;
+          ctx.beginPath(); ctx.moveTo(bx, by);
+          ctx.lineTo(bx + Math.cos(ba) * len * 0.3, by + Math.sin(ba) * len * 0.3);
+          ctx.lineTo(bx + Math.cos(ba + 0.6) * len * 0.45, by + Math.sin(ba + 0.6) * len * 0.45);
+          ctx.stroke();
+        }
+      }
+      ctx.lineCap = 'butt'; ctx.lineWidth = 1;
     }
   }
   if (squish) ctx.restore(); // 스쿼시 변환 해제
@@ -4571,6 +4633,7 @@ function catchBird() {
   for (let i = 0; i < 6; i++) { const a = Math.random() * 6.28, v = 40 + Math.random() * 70; S.parts.push({ x: b.x, y: b.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0.4, r: 1.5, c: '#ffe082' }); }
   sfx('chirp');
   addFloat(b.x, b.y - 16, '💡 소문!', '#ffe082', 1.2);
+  markHint(h.id); // 들은 소문은 도감에도 남는다
   rewardToast('🐦', h.hint, '#7ec8ff', '새가 소문을 물어왔다!');
   logMsg('🐦 새를 잡았다! ' + h.hint);
 }
@@ -4599,16 +4662,16 @@ cv.addEventListener('mousemove', e => {
 });
 // 건물/오브젝트 설명 + 팁 (아이콘 밑 상시 설명 대신, 클릭하면 보인다)
 const OBJ_INFO = {
-  portal: { t: '🌀 강화 포털', d: '같은 유닛 <b>5기</b>를 포털 안에 모으면 <b>영웅</b>으로 강화!<br>영웅 5기 → 슈퍼영웅 · 에이스 5기 → 에이스 영웅.',
-    tip: '💡 소문: 계단을 오르듯 원1·투2·쓰리3 … 그 순서로 바친 자에게 운명의 주사위가 굴러온다. 🎲' },
+  portal: { t: '🌀 강화 포털', d: '같은 유닛 <b>5기</b>를 포털 안에 모으면 <b>영웅</b>으로 강화!',
+    tip: '💡 소문: 숨겨진 조합을 찾아내 막강한 영웅을 뽑아보세요.' },
   room: { t: '💎 광석 방', d: '유닛을 방 안으로 보내면 광석을 캡니다.<br>채굴 정원 <b>' , d2: '</b>명 — 10라운드마다 +1.<br>단계를 완채할 때마다 확정 보상!',
     tip: '💡 <b>새총(하이카드)</b>은 정원과 무관하게 들어가 캘 수 있는 프리패스. 잡패도 쓸모가 있는 법.' },
-  mine: { t: '⛰️ 광산', d: '광부가 캐서 겹을 벗겨냅니다. 재질이 흙→철→금→보석으로 점점 비싸져요.<br>한 겹 깰 때마다 <b>배달 골드 +1 (영구)</b>.',
-    tip: '💡 광산 채굴은 광부 전담 — 전투 유닛은 광산을 깎지 않습니다.' },
+  mine: { t: '⛰️ 광산', d: '오늘도 곡괭이질, 한 겹만 더 파면 우리 집 마련!',
+    tip: '⛏️ 사장님, 보너스는 언제 나옵니까?' },
   pen: { t: '👹 소환장', d: '몬스터는 이 울타리 밖으로 나오지 못합니다.<br>시간 내에 못 잡으면 남은 수만큼 목숨이 깎여요.',
     tip: '💡 풀하우스(단검)의 🗡️암살 스킬만이 유일하게 소환장 안으로 들어갈 수 있습니다.' },
-  altar: { t: '🪨 제물대', d: '<b>하이카드(새총)</b> 유닛을 이 위로 이동시키면 제물로 바쳐집니다.<br><b>20장</b>을 모으면 거대한 <b>공성 투석기</b>가 완성돼요! (이동 불가·소환장 전체 포격)',
-    tip: '💡 포털이 아니라 여기에 바쳐야 합니다 — 덕분에 포털의 하이카드는 고물상(하이3+원3+투2)에 쓸 수 있어요.' },
+  altar: { t: '🪨 제물대', d: '유닛을 이 위로 이동시키면 <b>제물</b>로 바쳐집니다.',
+    tip: '🪨 오래된 돌 위에 무언가를 충분히 쌓으면… 깨어난다고들 한다.' },
 };
 function showObjInfo(k) {
   S.selMon = null; // 건물 정보 표시 중엔 몬스터 실시간 갱신 안 함
@@ -5077,23 +5140,23 @@ const HAND_GUIDE = [
 // 📖 히든 조합 도감: 발견 전엔 recipe 대신 riddle(hint)을 보여준다 (localStorage dpd_hidden으로 발견 여부 판정)
 const HIDDEN_DEX = [
   { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '주사위를 던져 1~6회 팅기는 공격 + 카지노·복권 행운 +10%',
-    voice: '운이야말로 실력이지. 내 주사위가 몇 번 튕길지는 나도 몰라 🎲', hint: '계단을 오르듯 원1·투2·쓰리3 … 그 순서로 바친 자에게 운명의 주사위가 굴러온다.' },
+    voice: '운이야말로 실력이지. 내 주사위가 몇 번 튕길지는 나도 몰라 🎲', hint: '원페어 하나, 투페어 둘, 트리플 셋. 계단처럼 쌓아 올린 자에게 운명의 주사위가 굴러온다.' },
   { id: 'junk', icon: '💰', name: '고물상', recipe: '하이카드×3 + 원페어×3 + 투페어×3', desc: '가장 가까운 유닛 5기 킬 골드 ×1.2 (지원형)',
-    voice: '버려진 것들 속에 돈이 있다네. 내 곁에서 싸워보게나 💰', hint: '하이3·원3·투3 — 하찮은 세 패를 그러모으면 쓰레기 더미에서 금이 반짝인다.' },
+    voice: '버려진 것들 속에 돈이 있다네. 내 곁에서 싸워보게나 💰', hint: '하찮은 패도 세 벌씩 모으면 값이 된다. 하이카드 셋, 원페어 셋, 투페어 셋.' },
   { id: 'quartet', icon: '📯', name: '콰르텟', recipe: '원페어·투페어·트리플·스트레이트 각 2', desc: '반경 50px 아군 공속 +20% (비중첩)',
-    voice: '넷이 모여야 연주가 시작되지. 내 곁에 서면 손이 빨라질 거야 📯', hint: '원·투·쓰리·스트, 서로 다른 넷을 둘씩 세우면 합주가 시작되고 곁의 손이 빨라진다.' },
+    voice: '넷이 모여야 연주가 시작되지. 내 곁에 서면 손이 빨라질 거야 📯', hint: '원페어·투페어·트리플·스트레이트를 둘씩. 넷이 모여야 합주가 시작된다.' },
   { id: 'guillotine', icon: '⚔️', name: '길로틴', recipe: '원1+투2+트3+포4 (10기)', desc: '체력 15% 이하 즉시 처형',
-    voice: '빈사의 목은 내가 거둔다. 마무리는 맡겨라 ⚔️', hint: '원1·투2·쓰리3·포4, 열이 줄지어 늘어서는 날 처형대가 세워진다.' },
+    voice: '빈사의 목은 내가 거둔다. 마무리는 맡겨라 ⚔️', hint: '하나, 둘, 셋, 넷. 원페어부터 포카드까지 줄지어 늘어서는 날 처형대가 세워진다.' },
   { id: 'shogun', icon: '🔥', name: '쇼군', recipe: '풀하우스×3 + 플러쉬×3', desc: '참격 무제한 타격 + 화상 도트',
-    voice: '나를 전장에 보내줘. 다 썰어서 태워주지 🔥', hint: '풀3·플3 — 집을 채운 자와 무늬로 물든 자가 셋씩, 여섯이 모이면 불칼을 뽑는다.' },
+    voice: '나를 전장에 보내줘. 다 썰어서 태워주지 🔥', hint: '집을 채운 자 셋, 무늬로 물든 자 셋. 여섯이 모이면 불타는 칼을 뽑는다.' },
   { id: 'chrono', icon: '⏳', name: '시간술사', recipe: '스트레이트×3', desc: '시간 정지 스킬 (쿨 150초)',
-    voice: '시간아, 잠깐 멈춰라 ⏳', hint: '스트3 … 끊기지 않은 흐름을 셋 겹치면 세상의 시계가 잠시 숨을 멈춘다.' },
+    voice: '시간아, 잠깐 멈춰라 ⏳', hint: '끊기지 않은 흐름을 셋 겹치면, 세상의 시계가 잠시 숨을 멈춘다.' },
   { id: 'slot', icon: '🎰', name: '슬롯머신', recipe: '같은 숫자 트리플×3', desc: '잭팟 폭격 스킬 (쿨 75초)',
-    voice: '릴이 맞아떨어지는 순간… 하늘을 봐 🎰', hint: '같은 숫자 쓰리를 세 벌(×3), 릴이 맞아떨어지면 하늘에서 잭팟이 쏟아진다.' },
+    voice: '릴이 맞아떨어지는 순간… 하늘을 봐 🎰', hint: '같은 숫자의 트리플을 세 벌 모으면 릴이 맞아떨어지고, 하늘에서 잭팟이 쏟아진다.' },
   { id: 'joker', icon: '🃏', name: '조커', recipe: '원페어·투페어·트리플 영웅 각 1', desc: '낫으로 베며 몹을 끌어당김 (클럼핑)',
-    voice: '이리 와~ 같이 놀자고. 도망은 못 가 🃏', hint: '원·투·쓰리 — 영웅 셋이 손을 맞잡으면 광대가 낫을 든다.' },
+    voice: '이리 와~ 같이 놀자고. 도망은 못 가 🃏', hint: '원페어·투페어·트리플, 영웅 셋이 손을 맞잡으면 광대가 낫을 든다.' },
   { id: 'catapult', icon: '🪨', name: '투석기', recipe: '하이카드 20기 제물(제물대)', desc: '거대한 돌덩이로 소환장 전체 포격 (이동 불가)',
-    voice: '나는 움직이지 않아. 대신 전장이 무너지지 🪨', hint: '하이 ×20, 홑패를 밑 빠진 독에 붓듯 제물대에 바치면 거대한 바위가 깨어난다.' },
+    voice: '나는 움직이지 않아. 대신 전장이 무너지지 🪨', hint: '홑패 스무 장을 제물대에 바쳐라. 밑 빠진 독을 채우면 거대한 바위가 깨어난다.' },
 ];
 // ⭐ 강화창 영웅 탭: 보유 영웅 단련 + 히든 영웅 도감 (미발견 = ??? + 대사 힌트 / 발견·미보유 = 회색 + 조합법)
 let castleTab = 'upg';
@@ -5383,7 +5446,7 @@ function hiddenDexHTML() {
       const seen = hiddenSeen(h.id);
       return `<div class="handRowG"${seen ? '' : ' style="opacity:.6"'}>
         <span class="hname">${seen ? h.icon : '❓'} ${seen ? h.name : '???'}</span>
-        <span class="hdesc">${seen ? `${h.recipe} — ${h.desc}` : h.hint}</span>
+        <span class="hdesc">${seen ? `${h.recipe} — ${h.desc}` : (hintSeen(h.id) ? `🐦 ${h.hint}` : '<span style="color:#a08c7a">🐦 새를 잡아 소문을 들어보세요</span>')}</span>
       </div>`;
     }).join('');
 }
