@@ -4095,13 +4095,13 @@ function drawUnit(u) {
   }
   // 카드 위 머리 장식 (모자/투구/왕관)
   drawHeadgear(u, u.y - B.h/2 - 1);
-  // 팔 + 무기 (4방향: 좌/우/상/하)
+  // 팔 + 무기 (4방향: 좌/우/상/하) — 상완만 몸에 고정, 하완+주먹은 무기 변환을 따라 움직인다
   const fd = faceDir(u);
-  ctx.strokeStyle = '#454545'; ctx.lineWidth = 2;
+  ctx.strokeStyle = '#454545'; ctx.lineWidth = 2; ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(u.x + fd.dx*(B.w/2-1), u.y - 3 + fd.dy*(B.h/2-1));
-  ctx.lineTo(u.x + fd.dx*(B.w/2+4), u.y - 2 + fd.dy*(B.h/2+4));
-  ctx.stroke(); ctx.lineWidth = 1;
+  ctx.moveTo(u.x + fd.dx*(B.w/2-2), u.y - 3 + fd.dy*(B.h/2-2));
+  ctx.lineTo(u.x + fd.dx*(B.w/2+1), u.y - 2.6 + fd.dy*(B.h/2+1));
+  ctx.stroke(); ctx.lineCap = 'butt'; ctx.lineWidth = 1;
   ctx.save();
   // 바라보는 방향으로 무기 프레임 회전/반전
   { ctx.translate(u.x, u.y); ctx.rotate(Math.atan2(fd.dy, fd.dx)); if (fd.dx < 0) ctx.scale(1, -1); ctx.translate(-u.x, -u.y); }
@@ -4149,6 +4149,14 @@ function drawUnit(u) {
     ctx.translate(-anim * 3, anim * 1);
   }
   drawWeapon(u, wx, wy);
+  // 🖐️ 하완 + 주먹: 무기와 같은 변환 프레임 → 스윙·찌르기·반동을 그대로 따라간다 (무기를 쥔 모습으로 위에)
+  if (!u.miner && !u.item && !u.catapult) {
+    ctx.strokeStyle = '#454545'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(wx - 9, wy + 3.5); ctx.lineTo(wx - 2.4, wy + 0.9); ctx.stroke();
+    ctx.lineCap = 'butt';
+    ctx.fillStyle = '#f2c9a0'; ctx.beginPath(); ctx.arc(wx - 1.8, wy + 0.7, 2.4, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = 'rgba(60,40,25,0.5)'; ctx.lineWidth = 0.9; ctx.stroke(); ctx.lineWidth = 1;
+  }
   ctx.restore();
   ctx.restore();
   ctx.textAlign = 'left';
@@ -4528,25 +4536,26 @@ function drawWeapon(u, x, y) {
       ctx.strokeStyle = edge; ctx.lineWidth = 0.7; ctx.stroke();
     }
     ctx.lineWidth = 1;
-  } else if (has('단검')) { // 🗡️ M7 군용단검: 검은 링 그립 + 강철 십자 가드 + 길고 좁게 뻗다 클립 포인트로 확 좁아지는 날
-    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.62); // 사선 파지
-    ctx.fillStyle = '#23272e'; // 그립 (검정, 끝이 살짝 좁은 사다리꼴)
-    ctx.beginPath(); ctx.moveTo(-7.5, -1.9); ctx.lineTo(-1.5, -2.3); ctx.lineTo(-1.5, 2.3); ctx.lineTo(-7.5, 1.9); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#4a5058'; ctx.lineWidth = 0.8; // 그립 링 홈 3줄
-    for (const gx of [-6.2, -4.6, -3]) { ctx.beginPath(); ctx.moveTo(gx, -2.1); ctx.lineTo(gx, 2.1); ctx.stroke(); }
-    ctx.fillStyle = '#8a939e'; ctx.fillRect(-8.6, -1.6, 1.4, 3.2); // 폼멜
-    ctx.fillStyle = '#9aa3ad'; ctx.fillRect(-1.5, -3.1, 1.7, 6.2);  // 십자 가드
-    // 날: 길고 좁게 뻗다가 끝에서 클립 포인트로 확 좁아진다
-    ctx.fillStyle = '#dfe6ea';
-    ctx.beginPath(); ctx.moveTo(0.2, -1.7); ctx.lineTo(9.5, -1.7);   // 등날 (직선)
-    ctx.lineTo(13.8, -0.1);                                          // 클립 포인트 (끝이 뾰족)
-    ctx.lineTo(9.5, 1.8); ctx.lineTo(0.2, 1.8); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#aab4bc'; ctx.lineWidth = 0.6; ctx.stroke();
-    ctx.strokeStyle = '#b9c2c9'; ctx.lineWidth = 0.7;                 // 피홈 (fuller)
-    ctx.beginPath(); ctx.moveTo(1.2, 0); ctx.lineTo(8.8, 0); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 0.8;  // 날끝 하이라이트
-    ctx.beginPath(); ctx.moveTo(9.5, 1.5); ctx.lineTo(13.6, -0.1); ctx.stroke();
-    ctx.restore(); ctx.lineWidth = 1;
+  } else if (has('단검')) { // 🗡️ M7 단검 (카툰): 틀은 그대로 — 링 그립 + 십자 가드 + 클립 포인트, 통통한 비율에 또렷한 외곽선
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.62); ctx.lineJoin = 'round'; // 사선 파지
+    ctx.fillStyle = '#3a4149'; roundRect(-8, -2.7, 6.8, 5.4, 2); ctx.fill();    // 그립 (짙은 남회색, 통통)
+    ctx.strokeStyle = '#22262c'; ctx.lineWidth = 1.2; roundRect(-8, -2.7, 6.8, 5.4, 2); ctx.stroke();
+    ctx.strokeStyle = '#5a636d'; ctx.lineWidth = 1.3;                            // 그립 링 홈 2줄 (단순하게)
+    for (const gx of [-5.9, -3.7]) { ctx.beginPath(); ctx.moveTo(gx, -2.2); ctx.lineTo(gx, 2.2); ctx.stroke(); }
+    ctx.fillStyle = '#aab4bf'; roundRect(-9.8, -2, 2.2, 4, 1); ctx.fill();       // 폼멜 (동글)
+    ctx.strokeStyle = '#22262c'; ctx.lineWidth = 1; roundRect(-9.8, -2, 2.2, 4, 1); ctx.stroke();
+    ctx.fillStyle = '#aab4bf'; roundRect(-1.7, -3.8, 2.2, 7.6, 1); ctx.fill();   // 십자 가드 (동글)
+    ctx.strokeStyle = '#22262c'; roundRect(-1.7, -3.8, 2.2, 7.6, 1); ctx.stroke();
+    ctx.fillStyle = '#eef3f6';                                                    // 날: 통통한 클립 포인트
+    ctx.beginPath(); ctx.moveTo(0.5, -2.2); ctx.lineTo(8.4, -2.2);               // 등날 직선
+    ctx.lineTo(12.6, -0.2);                                                       // 끝은 뾰족하게
+    ctx.lineTo(8.4, 2.4); ctx.lineTo(0.5, 2.4); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#2b3138'; ctx.lineWidth = 1.2; ctx.stroke();               // 만화식 두꺼운 외곽선
+    ctx.strokeStyle = '#c3ccd4'; ctx.lineWidth = 1;                               // 피홈 한 줄
+    ctx.beginPath(); ctx.moveTo(1.8, 0.1); ctx.lineTo(7.6, 0.1); ctx.stroke();
+    ctx.fillStyle = '#fff';                                                       // 반짝 점
+    ctx.beginPath(); ctx.arc(10.2, -0.9, 0.9, 0, 6.28); ctx.fill();
+    ctx.restore(); ctx.lineJoin = 'miter'; ctx.lineWidth = 1;
   } else if (has('전기톱')) { // 전기톱 — 리얼 체인소 (주황 엔진 + 상단 손잡이 + 긴 가이드바 + 돌아가는 체인)
     ctx.strokeStyle = '#37474f'; ctx.lineWidth = 2; // 상단 손잡이 아치
     ctx.beginPath(); ctx.arc(x - 1, y - 4, 4, Math.PI, 0); ctx.stroke();
@@ -5402,7 +5411,7 @@ function runGambleBar(host, onStop) {
   host.innerHTML = `<div style="margin:8px 2px;text-align:center">
     <div style="font-size:11px;color:#9a8a60;margin-bottom:4px">🎯 가운데 노란 존에 맞추면 확률 <b>35%</b>!</div>
     <div id="gmgTrack" style="position:relative;height:20px;background:#241a3a;border:2px solid #4a3d70;border-radius:10px;overflow:hidden">
-      <div style="position:absolute;left:42%;width:16%;top:0;bottom:0;background:rgba(255,213,79,0.6)"></div>
+      <div style="position:absolute;left:47.3%;width:5.4%;top:0;bottom:0;background:rgba(255,213,79,0.75)"></div>
       <div id="gmgMk" style="position:absolute;left:0;width:7px;top:0;bottom:0;background:#fff;border-radius:3px;will-change:transform;box-shadow:0 0 6px rgba(255,255,255,0.8)"></div>
     </div>
     <button class="chipBtn" id="gmgStop" style="margin-top:8px;padding:8px 22px">🎯 멈춰!! <span style="font-size:10px;opacity:.75">(스페이스바)</span></button></div>`;
@@ -5420,7 +5429,7 @@ function runGambleBar(host, onStop) {
   const stop = () => {
     if (done) return; done = true;
     cancelAnimationFrame(raf); window.removeEventListener('keydown', onKey, true);
-    const perfect = Math.abs(pos - 50) <= 8;
+    const perfect = Math.abs(pos - 50) <= 2.7; // 노란존 1/3 축소에 맞춘 판정
     // 멈춘 자리를 그대로 얼려서 보여준다 — 어디에 섰는지 확인할 시간
     mk.style.background = perfect ? '#ffd54f' : '#ff7043';
     mk.style.boxShadow = perfect ? '0 0 10px rgba(255,213,79,0.95)' : '0 0 8px rgba(255,112,67,0.85)';
@@ -5432,6 +5441,7 @@ function runGambleBar(host, onStop) {
   function onKey(e) { if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); stop(); } }
   window.addEventListener('keydown', onKey, true); // 스페이스바로도 멈춘다
   host.querySelector('#gmgStop').onclick = stop;
+  // (판정도 존과 함께 축소: ±8 → ±2.7)
 }
 function showGambleResult(host, perfect, win, detail, refresh) {
   host.innerHTML = `<div style="text-align:center;margin:8px 0;font-weight:bold">
