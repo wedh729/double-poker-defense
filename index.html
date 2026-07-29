@@ -4677,13 +4677,7 @@ function showObjInfo(k) {
   S.selMon = null; // 건물 정보 표시 중엔 몬스터 실시간 갱신 안 함
   const o = OBJ_INFO[k], el = document.getElementById('objInfo');
   const d = k === 'room' ? o.d + oreCap() + o.d2 : o.d;
-  let tip = o.tip;
-  if (k === 'portal') { // 💡 힌트 로테이션: 아직 발견 못 한 히든 조합 중 하나를 무작위로 수수께끼로 보여준다
-    const undiscovered = HIDDEN_DEX.filter(h => !hiddenSeen(h.id));
-    tip = undiscovered.length
-      ? '💡 소문: ' + undiscovered[Math.floor(Math.random() * undiscovered.length)].hint
-      : '💡 포털의 모든 비밀을 밝혀냈다! 🏆';
-  }
+  const tip = o.tip; // 히든 소문은 🐦 새를 잡아야 얻는다 (여기서 공짜로 흘리지 않는다)
   el.innerHTML = `<b>${o.t}</b><br>${d}<span class="tip">${tip}</span>`;
   el.style.display = 'block';
 }
@@ -5020,7 +5014,7 @@ function heroTrain(u, gamble, perfect, skipRefresh) {
     logMsg(`⭐ ${u.weapon} 단련 Lv.${u.heroUpLv} (총 공격력 +${u.heroUpLv * 15}%)`);
     addFloat(u.x, u.y - 28, `⭐ 단련 Lv.${u.heroUpLv}!`, '#c9971a', 1.4); sfx('reward');
   } else { // 🎰 도박 단련: 기본 25% / 타이밍 퍼펙트 50% (+갬블러 10%p)로 +3레벨
-    const p = (perfect ? 0.5 : 0.25) + (S.units.some(v => v.gamble) ? 0.10 : 0);
+    const p = (perfect ? 0.35 : 0.2) + (S.units.some(v => v.gamble) ? 0.10 : 0);
     if (Math.random() < p) {
       u.heroUpLv = Math.min(HERO_UP_MAX, lv + 3);
       logMsg(`🎰✨ <b>도박 단련 대성공!!</b> ${u.weapon} Lv.${u.heroUpLv} (총 공격력 +${u.heroUpLv * 15}%)`);
@@ -5173,7 +5167,7 @@ function heroSectionHTML() {
       <div class="rpgInfo"><b>${h.weapon}</b> <span class="lv">단련 Lv.${lv}</span><br>
         <span class="desc">${maxed ? `단련 완료 — 총 공격력 ×${(1 + 0.15 * HERO_UP_MAX).toFixed(1)}` : `총 공격력 +${(lv + 1) * 15}%까지 · ${cost.toLocaleString()}G`}</span></div>
       ${maxed ? '' : `<button class="rpgBuy" data-ht="${i}" ${ok ? '' : 'disabled'}>💰 단련</button>
-      <button class="rpgBuy" data-htg="${i}" ${ok ? '' : 'disabled'} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)">🎰 25%<br>×3</button>`}
+      <button class="rpgBuy" data-htg="${i}" ${ok ? '' : 'disabled'} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)">🎰 ×3</button>`}
     </div>`;
     // 🩸 제물 승급 (쇼군·조커·갬블러) — 제단 위 재료를 바쳐 강화
     const ak = ascendKey(h);
@@ -5199,6 +5193,7 @@ function heroSectionHTML() {
       return `<div class="rpgItem" style="border-left:5px solid ${owned ? '#c9971a' : '#9a9a9a'}${owned ? '' : ';filter:grayscale(1);opacity:0.62'}">
         <div class="rpgIcon">${hd.icon}</div>
         <div class="rpgInfo"><b>${hd.name}</b>${owned ? '' : ' <span style="font-size:10px;color:#777">(미보유 — 다시 조합하면 등장)</span>'}<br>
+          <span class="desc" style="font-style:italic;color:#8a7f68">“${hd.voice}”</span><br>
           <span class="desc">🧩 조합법: <b>${hd.recipe}</b><br>${hd.desc}</span></div></div>`;
     }).join('');
   return html;
@@ -5253,9 +5248,9 @@ function upgItemsHTML() {
       <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
         <span class="desc">단일 +${(S.upg[i]*2.5).toFixed(1)} · 스플래시 초당 +${(S.upg[i]*0.55).toFixed(1)}/마리 · 전체 초당 +${(S.upg[i]*0.15).toFixed(1)}/마리</span></div>
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
-      <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎰 25%<br>×3</button>
+      <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값으로 3레벨 도전 — 타이밍바 중앙에 맞추면 35%">🎰 ×3</button>
     </div>`).join('') +
-    '<div class="rpgGuide">레벨당: 단일 공격 <b>+2.5</b> (공속 무관 동일) · 스플래쉬 초당 <b>+0.55</b>/마리 · 전체타격 초당 <b>+0.15</b>/마리.<br>♠ 에이스는 상위 2종족 합산.<br>🎰 <b>도박 업그레이드</b>: 같은 값으로 <b>3레벨</b>에 도전 — 타이밍바 중앙을 맞추면 확률 <b>50%</b>! 실패하면 골드만 소멸.</div>';
+    '<div class="rpgGuide">🎰 <b>도박 업그레이드</b>: 같은 값으로 <b>3레벨</b> 업그레이드 도전 — 타이밍바 중앙에 맞추면 확률 <b>35%</b></div>';
 }
 function wireUpg(el) {
   el.querySelectorAll('[data-upg]').forEach(b => b.onclick = () => {
@@ -5275,7 +5270,7 @@ function wireUpg(el) {
     runGambleBar(host, perfect => {
       if (S.gold < S.upgCost[i]) { renderShop(); return; }
       S.gold -= S.upgCost[i];
-      const p = (perfect ? 0.5 : 0.25) + (S.units.some(u => u.gamble) ? 0.10 : 0);
+      const p = (perfect ? 0.35 : 0.2) + (S.units.some(u => u.gamble) ? 0.10 : 0);
       const win = Math.random() < p;
       if (win) {
         S.upg[i] += 3;
@@ -5291,7 +5286,7 @@ function wireUpg(el) {
 // 🎰 타이밍바 미니게임: 작대기가 좌우로 빠르게 왕복 — 중앙(===) 명중 시 성공 확률 50%
 function runGambleBar(host, onStop) {
   host.innerHTML = `<div style="margin:8px 2px;text-align:center">
-    <div style="font-size:11px;color:#9a8a60;margin-bottom:4px">🎯 가운데 노란 존에 맞추면 확률 <b>50%</b>!</div>
+    <div style="font-size:11px;color:#9a8a60;margin-bottom:4px">🎯 가운데 노란 존에 맞추면 확률 <b>35%</b>!</div>
     <div id="gmgTrack" style="position:relative;height:20px;background:#241a3a;border:2px solid #4a3d70;border-radius:10px;overflow:hidden">
       <div style="position:absolute;left:42%;width:16%;top:0;bottom:0;background:rgba(255,213,79,0.6)"></div>
       <div id="gmgMk" style="position:absolute;left:0;width:7px;top:0;bottom:0;background:#fff;border-radius:3px;will-change:transform;box-shadow:0 0 6px rgba(255,255,255,0.8)"></div>
@@ -5319,7 +5314,7 @@ function runGambleBar(host, onStop) {
 }
 function showGambleResult(host, perfect, win, detail, refresh) {
   host.innerHTML = `<div style="text-align:center;margin:8px 0;font-weight:bold">
-    ${perfect ? '<div style="color:#c9971a;font-size:12px">🎯 퍼펙트! 확률 50% 적용</div>' : '<div style="color:#9a8a60;font-size:12px">타이밍 빗나감 — 기본 확률</div>'}
+    ${perfect ? '<div style="color:#c9971a;font-size:12px">🎯 퍼펙트! 확률 35% 적용</div>' : '<div style="color:#9a8a60;font-size:12px">타이밍 빗나감 — 기본 확률</div>'}
     <div style="font-size:17px;color:${win ? '#c9971a' : '#e57373'};margin-top:4px">${win ? '🎰✨ 잭팟!! ×3 강화!!' : '💨 꽝… 골드만 사라졌다'}</div>
     ${detail ? `<div style="font-size:12px;color:#7a6a52;margin-top:2px">${detail}</div>` : ''}
     <button class="chipBtn" id="gmgOk" style="margin-top:8px">확인</button></div>`;
@@ -5333,15 +5328,15 @@ function minerItemsHTML() {
   const mineSec = (MINE_TIME / (1 + 0.25 * S.minerMineLv)).toFixed(1);
   return `
     <div class="rpgItem"><div class="rpgIcon">⛏️</div>
-      <div class="rpgInfo"><b>광부 고용</b> <span class="lv">현재 ${n}명</span><br><span class="desc">캐서 성으로 배달해야 골드</span></div>
+      <div class="rpgInfo"><b>광부 고용</b> <span class="lv">현재 ${n}명</span></div>
       <button class="rpgBuy" id="hireBtn" ${S.gold < S.minerCost ? 'disabled' : ''}>💰 ${S.minerCost}G</button></div>
     <div class="rpgItem"><div class="rpgIcon">🏃</div>
-      <div class="rpgInfo"><b>이동속도</b> <span class="lv">Lv.${S.minerMoveLv}/${MINER_MAX_LV}</span> (${moveSpd})<br><span class="desc">광부 전원 걸음 ↑</span></div>
+      <div class="rpgInfo"><b>이동속도</b> <span class="lv">Lv.${S.minerMoveLv}/${MINER_MAX_LV}</span> (${moveSpd})</div>
       ${S.minerMoveLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mvBtn" ${S.gold < S.minerMoveCost ? 'disabled' : ''}>💰 ${S.minerMoveCost}G</button>`}</div>
     <div class="rpgItem"><div class="rpgIcon">⚒️</div>
-      <div class="rpgInfo"><b>채굴속도</b> <span class="lv">Lv.${S.minerMineLv}/${MINER_MAX_LV}</span> (${mineSec}초)<br><span class="desc">한 번 캐는 시간 ↓</span></div>
+      <div class="rpgInfo"><b>채굴속도</b> <span class="lv">Lv.${S.minerMineLv}/${MINER_MAX_LV}</span> (${mineSec}초)</div>
       ${S.minerMineLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mnBtn" ${S.gold < S.minerMineCost ? 'disabled' : ''}>💰 ${S.minerMineCost}G</button>`}</div>
-    <div class="rpgGuide">배달 1회 = <b>${MINER_LOAD + S.mineBonus}G</b> (기본 ${MINER_LOAD} + 광산겹 ${S.mineBonus}).</div>`;
+    `;
 }
 function wireMiner(el) {
   const wire = (id, fn) => { const b = el.querySelector(id); if (b) b.onclick = fn; };
@@ -5377,9 +5372,9 @@ function renderShop() {
   const win = document.getElementById('shopWin');
   win.classList.toggle('wide', openShop === 'castle');
   if (openShop === 'castle') { // 성 클릭: 탭 3개 (유닛 업글 / 광부 / 영웅) — 좁은 화면에서 2열이 뭉개지던 문제 해결
-    title.textContent = '🏰 강화';
+    title.textContent = '🏰';
     const tabBtn = (id, label) => `<button class="chipBtn${castleTab === id ? '' : ' sub'}" data-ctab="${id}" style="flex:1;padding:8px 4px;font-size:13px">${label}</button>`;
-    el.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:10px">${tabBtn('upg', '⚔️ 유닛 업글')}${tabBtn('miner', '⛏️ 광부')}${tabBtn('hero', '⭐ 영웅')}</div>` +
+    el.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:10px">${tabBtn('upg', '⚔️ 유닛강화')}${tabBtn('miner', '⛏️ 광부')}${tabBtn('hero', '⭐ 영웅')}</div>` +
       (castleTab === 'upg' ? upgItemsHTML() : castleTab === 'miner' ? minerItemsHTML() : heroSectionHTML());
     el.querySelectorAll('[data-ctab]').forEach(b => b.onclick = () => { castleTab = b.dataset.ctab; renderShop(); });
     if (castleTab === 'upg') wireUpg(el); else if (castleTab === 'miner') wireMiner(el); else wireHeroSection(el);
