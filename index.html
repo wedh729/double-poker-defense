@@ -2474,6 +2474,7 @@ function monColor(m) {
 // ==================== 렌더링 ====================
 // 스테이지에 따라 변하는 하늘: 낮(태양) → 노을 → 밤(달) → 붉은 달 → 헬 핏빛 달 (아포칼립스 진행감)
 function skyPhase() {
+  if (DIFF_MUL >= 2) return 5; // 💀 지옥 난이도: 시작부터 불타는 아포칼립스
   const n = S.round;
   return n > FINAL_ROUND ? 4 : n >= 60 ? 3 : n >= 40 ? 2 : n >= 20 ? 1 : 0;
 }
@@ -2483,6 +2484,7 @@ const SKY_TINT = [
   { top: '#e2ecdf', bot: '#ccdcc6', grass: 'rgba(100,140,90,0.6)' },   // 밤: 차분한 어스름
   { top: '#eae2dc', bot: '#d9cbc1', grass: 'rgba(130,130,80,0.55)' },  // 붉은 달: 불길한 기운
   { top: '#eddad4', bot: '#ddc0b6', grass: 'rgba(150,110,70,0.55)' },  // 헬: 핏빛 대지
+  { top: '#1c0b0e', bot: '#7a2410', grass: 'rgba(255,120,40,0.5)' },   // 💀 지옥 난이도: 아포칼립스 (전용 드로우 사용)
 ];
 const GRASS_SPOTS = [[60,180],[150,325],[245,140],[330,462],[425,95],[545,425],[625,185],[700,335],[185,462],[762,472],[520,152],[885,245],[70,300],[890,120]];
 const FLOWER_SPOTS = [[112,252,'#f06292'],[592,302,'#ba68c8'],[825,398,'#f06292']];
@@ -2513,8 +2515,47 @@ function drawBird(b) {
   ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(7.7, -3.6, 0.55, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
+// 💀 지옥 난이도: 검붉은 하늘 + 일식 + 지평선 화염 + 일렁이는 불혀 + 떠오르는 불씨
+function drawHellscape() {
+  const T = S.time;
+  const g = ctx.createLinearGradient(0, 0, 0, cv.height);           // 검붉은 하늘 → 타는 대지
+  g.addColorStop(0, '#200d10'); g.addColorStop(0.5, '#48150f'); g.addColorStop(1, '#772812');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  const hg = ctx.createLinearGradient(0, cv.height - 130, 0, cv.height); // 지평선 화염 글로우 (숨쉬듯)
+  hg.addColorStop(0, 'rgba(255,110,20,0)');
+  hg.addColorStop(1, `rgba(255,120,25,${(0.22 + 0.08 * Math.sin(T * 1.7)).toFixed(2)})`);
+  ctx.fillStyle = hg; ctx.fillRect(0, cv.height - 130, cv.width, 130);
+  // 일식: 검은 태양 + 붉은 코로나
+  const sx = 170, sy = 52;
+  ctx.fillStyle = `rgba(255,60,10,${(0.3 + 0.1 * Math.sin(T * 2.3)).toFixed(2)})`;
+  ctx.beginPath(); ctx.arc(sx, sy, 15, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#ff8a3d'; ctx.beginPath(); ctx.arc(sx, sy, 11, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#12060a'; ctx.beginPath(); ctx.arc(sx, sy, 9.2, 0, 6.28); ctx.fill();
+  // 불혀: 풀 자리에서 화염이 일렁인다 (GRASS_SPOTS 재사용)
+  for (const [gx, gy] of GRASS_SPOTS) {
+    const f1 = Math.sin(T * 6 + gx * 0.7), f2 = Math.cos(T * 8.5 + gx);
+    ctx.fillStyle = `rgba(255,${105 + 40 * f2 | 0},25,0.55)`;
+    ctx.beginPath(); ctx.moveTo(gx - 5, gy);
+    ctx.quadraticCurveTo(gx - 4 + f1 * 2.5, gy - 8, gx + f1 * 3.5, gy - 14 - f2 * 3);
+    ctx.quadraticCurveTo(gx + 4 + f1 * 2.5, gy - 8, gx + 5, gy); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,214,80,0.6)';
+    ctx.beginPath(); ctx.moveTo(gx - 2.4, gy);
+    ctx.quadraticCurveTo(gx + f1 * 2, gy - 6, gx + f1 * 2.2, gy - 8.5);
+    ctx.quadraticCurveTo(gx + 2.4 + f1, gy - 5, gx + 2.4, gy); ctx.closePath(); ctx.fill();
+  }
+  // 떠오르는 불씨: 화면 전체에서 흔들리며 상승 (고정 시드 12개 — 파티클 비용 없음)
+  for (let i = 0; i < 12; i++) {
+    const seed = i * 79.3;
+    const ex = (seed * 7.7) % cv.width + Math.sin(T * 1.3 + i) * 14;
+    const ey = cv.height - ((T * (26 + i * 3.5) + seed) % (cv.height + 40));
+    const a = 0.5 * (0.5 + 0.5 * Math.sin(T * 5 + i * 2));
+    ctx.fillStyle = `rgba(255,${150 + (i % 3) * 40},60,${a.toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(ex, ey, 1.4 + (i % 3) * 0.7, 0, 6.28); ctx.fill();
+  }
+}
 function drawBackdrop() {
   const ph = skyPhase(), t = SKY_TINT[ph];
+  if (ph === 5) { drawHellscape(); return; } // 💀 지옥 난이도 전용 배경
   const g = ctx.createLinearGradient(0, 0, 0, cv.height);
   g.addColorStop(0, t.top); g.addColorStop(1, t.bot);
   ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
@@ -5374,7 +5415,7 @@ function renderShop() {
   if (openShop === 'castle') { // 성 클릭: 탭 3개 (유닛 업글 / 광부 / 영웅) — 좁은 화면에서 2열이 뭉개지던 문제 해결
     title.textContent = '🏰';
     const tabBtn = (id, label) => `<button class="chipBtn${castleTab === id ? '' : ' sub'}" data-ctab="${id}" style="flex:1;padding:8px 4px;font-size:13px">${label}</button>`;
-    el.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:10px">${tabBtn('upg', '⚔️ 유닛강화')}${tabBtn('miner', '⛏️ 광부')}${tabBtn('hero', '⭐ 영웅')}</div>` +
+    el.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:10px">${tabBtn('upg', '⚔️ 강화')}${tabBtn('miner', '⛏️ 광부')}${tabBtn('hero', '⭐ 영웅')}</div>` +
       (castleTab === 'upg' ? upgItemsHTML() : castleTab === 'miner' ? minerItemsHTML() : heroSectionHTML());
     el.querySelectorAll('[data-ctab]').forEach(b => b.onclick = () => { castleTab = b.dataset.ctab; renderShop(); });
     if (castleTab === 'upg') wireUpg(el); else if (castleTab === 'miner') wireMiner(el); else wireHeroSection(el);
