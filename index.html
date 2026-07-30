@@ -1458,7 +1458,9 @@ function update(dt) {
       p.vx += dx / d * 1400 * dt; p.vy += dy / d * 1400 * dt;
       if (d < 26) { addFloat(HOUSE.x, HOUSE.y - 44, '+', '#ffd54f', 0.4); return false; }
     } else if (p.g) p.vy += 320 * dt; // 즙/조각: 중력
-    p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.94; p.vy *= 0.94;
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    const drag = p.fire ? 0.975 : 0.94; // 화염 스트림은 감쇠를 약하게 — 사거리 끝까지 닿아야 판정과 그림이 일치
+    p.vx *= drag; p.vy *= drag;
     if (p.frag) p.spin += dt * 12;
     return p.t > 0;
   });
@@ -2354,7 +2356,7 @@ function assignOreSlots() {
 }
 // 방 안 유닛이 광석을 때린다 (몬스터 공격과 동일 방식, 무기에서 발사)
 function fireAtOre(u) {
-  const dmg = effDmg(u);
+  const dmg = effDmg(u) * (u.atk === 'sniper' ? 2 : 1); // 🎯 저격총: 광물 약점도 정확히 노린다 (×2)
   u.aimX = OREPOS.x; u.aimY = OREPOS.y; u.atkAnim = 1;
   S.hunt.hp -= dmg; S.hunt.lastHitBy = u;
   const m = muzzle(u);
@@ -5444,7 +5446,7 @@ function updateInfoPanel() {
   else if (u.bounce) traits.push(`팅김 ×${u.bounce}`);
   if (u.pierce) traits.push(`관통 ×${u.pierce}`);
   if (u.shards) traits.push(`파편 ${u.shards}개 (${Math.round(u.shardFrac*100)}%)`);
-  if (u.atk === 'sniper') traits.push('단일 초강력 (보스용)');
+  if (u.atk === 'sniper') traits.push('🎯 보스·광물 공격력 ×2');
   if (u.junk) traits.push('💰 가까운 유닛의 킬 골드 상승');
   if (u.quartet) traits.push('📯 주변 아군 공속 상승');
   if (u.execute) traits.push('⚔️ 빈사 몬스터 즉시 처형');
