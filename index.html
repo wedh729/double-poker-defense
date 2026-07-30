@@ -494,7 +494,7 @@ const WEAPONS = [
    hero:{name:'저격총', atk:'sniper', cd:0.8, dmgMul:7, range:470, proj:'sniper'}}, // 속사 저격 (cd 0.8·데미지 하향, DPS 유지 리워크)
   // 5 플러쉬 — 화염방사기 (사거리 80: 소환장 정중앙엔 못 닿음. 사거리 손해분은 dmg↑로 보정)
   //   영웅(대형)은 폭·길이 각 1.5배 → 확실히 강해지고 정중앙까지 태움
-  {name:'화염방사기', dmg:0.24, cd:0.48, range:80, splash:44, bounce:0, atk:'area', vis:'flame',
+  {name:'화염방사기', dmg:0.24, cd:0.24, range:80, splash:44, bounce:0, atk:'area', vis:'flame', // 공속 2배 상향 (0.48→0.24)
    hero:{name:'대형 화염방사기', splash:66, range:120, cd:0.125, dmgMul:3}}, // 공속 8/초 + 데미지 ×3 + 불길 폭 2배(splash 33→66)
   // 6 풀하우스 — 단검 (암살자: 사거리 짧게 + 초고속 난도질 + 암살 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
