@@ -2596,11 +2596,12 @@ function drawSpringscape() {
     ctx.beginPath(); ctx.arc(300, 330, 300 - i * 8, Math.PI * 1.12, Math.PI * 1.72); ctx.stroke(); });
   ctx.lineWidth = 1;
   // 해 (방긋)
-  ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(170, 52, 10, 0, 6.28); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,193,7,0.5)'; ctx.lineWidth = 1.6;
-  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + T * 0.25;
-    ctx.beginPath(); ctx.moveTo(170 + Math.cos(a) * 13, 52 + Math.sin(a) * 13); ctx.lineTo(170 + Math.cos(a) * 18, 52 + Math.sin(a) * 18); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(255,193,7,0.55)'; ctx.lineWidth = 1.6; // 보통 낮 태양과 동일 디자인
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + T * 0.3;
+    ctx.beginPath(); ctx.moveTo(170 + Math.cos(a) * 12, 52 + Math.sin(a) * 12); ctx.lineTo(170 + Math.cos(a) * 17, 52 + Math.sin(a) * 17); ctx.stroke(); }
   ctx.lineWidth = 1;
+  ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(170, 52, 9, 0, 6.28); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(167.5, 49.5, 3, 0, 6.28); ctx.fill();
   // 풀 (밝은 초록, 살랑)
   ctx.strokeStyle = 'rgba(110,190,90,0.65)'; ctx.lineWidth = 1.3;
   for (const [gx, gy] of GRASS_SPOTS) {
@@ -3372,12 +3373,31 @@ function drawEnemyPortal() {
 function drawOreRoom() {
   const R = ROOM, x0 = R.cx - R.w / 2, y0 = R.cy - R.h / 2;
   const anyIn = S.units.some(u => !u.miner && isInRoom(u));
-  // 방 벽/바닥 (유닛이 안에 있으면 강조)
-  ctx.fillStyle = '#f0e9dc';
-  ctx.fillRect(x0, y0, R.w, R.h);
-  ctx.strokeStyle = anyIn ? '#c8752f' : '#b0a48f'; ctx.lineWidth = 2.5;
-  ctx.strokeRect(x0, y0, R.w, R.h);
-  ctx.lineWidth = 1;
+  // 🧱 벽돌 담장 (내부는 배경이 그대로 비친다 — 지옥·폭풍 배경과도 자연스럽게 어울림). 왼쪽 벽 가운데가 입구
+  const BW = 8, gateY0 = R.cy - 20, gateY1 = R.cy + 20; // 담 두께 / 입구 구간
+  ctx.fillStyle = 'rgba(250,245,232,0.10)'; ctx.fillRect(x0, y0, R.w, R.h); // 내부: 아주 옅은 밝음 (게이지 가독용)
+  const brick = (bx, by, horiz, len) => { // 한 변을 벽돌로 채운다
+    const step2 = 16, mortar = anyIn ? '#7a5a40' : '#8a6a52';
+    ctx.fillStyle = mortar;
+    if (horiz) ctx.fillRect(bx, by, len, BW); else ctx.fillRect(bx, by, BW, len);
+    for (let o = 0, row = 0; o < len; o += step2, row++) {
+      const off = (row % 2) * 0; // 줄눈은 교차 배치로
+      const seg = Math.min(step2 - 2, len - o - 2);
+      if (seg <= 0) break;
+      ctx.fillStyle = (row + (horiz ? 0 : 1)) % 2 ? '#c9906a' : '#bd8058';
+      if (horiz) roundRect(bx + o + 1 + off, by + 1.2, seg, BW - 2.4, 2);
+      else roundRect(bx + 1.2, by + o + 1 + off, BW - 2.4, seg, 2);
+      ctx.fill();
+    }
+  };
+  brick(x0 - BW / 2, y0 - BW / 2, true, R.w + BW);            // 윗담
+  brick(x0 - BW / 2, y0 + R.h - BW / 2, true, R.w + BW);      // 아랫담
+  brick(x0 + R.w - BW / 2, y0 + BW / 2, false, R.h - BW);     // 오른담
+  brick(x0 - BW / 2, y0 + BW / 2, false, gateY0 - (y0 + BW / 2));            // 왼담 위쪽 (입구 위)
+  brick(x0 - BW / 2, gateY1, false, (y0 + R.h - BW / 2) - gateY1);           // 왼담 아래쪽 (입구 아래)
+  ctx.fillStyle = anyIn ? '#c8752f' : '#9a7a5e'; // 입구 기둥 머릿돌 2개
+  roundRect(x0 - BW / 2 - 1.5, gateY0 - 4, BW + 3, 5, 2); ctx.fill();
+  roundRect(x0 - BW / 2 - 1.5, gateY1 - 1, BW + 3, 5, 2); ctx.fill();
   const ore = ORES[Math.min(9, S.hunt.stage - 1)];
   const ox = OREPOS.x, oy = OREPOS.y;
   if (S.hunt.done) {
