@@ -4893,7 +4893,14 @@ function drawWeapon(u, x, y) {
     ctx.fillStyle = '#37474f'; ctx.beginPath(); ctx.arc(x + 4, y, 4.5, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = '#ff6d1f'; ctx.beginPath(); ctx.moveTo(x + 6, y - 4); ctx.lineTo(x + 9, y - 7); ctx.stroke();
   } else if (has('표창')) { // 표창 별 (대형 표창은 던진 동안 빈손 — 실시간 조회)
-    if (u.atk === 'boomerang' && S.projs.some(pr => (pr.kind === 'brg' || pr.kind === 'brgret') && pr.owner === u)) { ctx.lineWidth = 1; return; }
+    if (u.atk === 'boomerang') { // 트리플 영웅·슈퍼: 대형 표창
+      if (S.projs.some(pr => (pr.kind === 'brg' || pr.kind === 'brgret') && pr.owner === u)) { ctx.lineWidth = 1; return; }
+      ctx.fillStyle = '#455a64';
+      polyPath(x + 5, y, 4, 9, S.time * 6, 3.2); ctx.fill();
+      ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(x + 5, y, 2.2, 0, 6.28); ctx.fill();
+      ctx.lineWidth = 1; return;
+    }
     polyPath(x + 3, y, 4, 5.5, S.time * 6, 2); ctx.fill();
   } else if (has('저격')) { // 저격총 (긴 총열 + 조준경)
     ctx.fillRect(x, y - 1.5, 16, 3); ctx.fillRect(x + 4, y + 1.5, 2, 4);
@@ -4907,12 +4914,12 @@ function drawWeapon(u, x, y) {
   } else if (has('활')) { // 활
     ctx.beginPath(); ctx.arc(x + 1, y, 6, -Math.PI/2.4, Math.PI/2.4); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(x + 3, y - 5); ctx.lineTo(x + 3, y + 5); ctx.stroke();
-  } else if (has('부메랑')) { // 부메랑: 누운 V자 (던진 동안엔 빈손 — 공중에 내 부메랑이 있는지 실시간 조회)
+  } else if (has('부메랑')) { // 부메랑: 누운 V자 — 주먹 앞쪽에 큼직하게 (던진 동안엔 빈손, 공중 부메랑 실시간 조회)
     if (S.projs.some(pr => (pr.kind === 'brg' || pr.kind === 'brgret') && pr.owner === u)) { ctx.lineWidth = 1; return; }
-    ctx.strokeStyle = '#c8752f'; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(x - 5, y + 4); ctx.lineTo(x + 1.5, y - 3); ctx.lineTo(x + 8, y + 4); ctx.stroke();
-    ctx.strokeStyle = '#e8a56b'; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(x - 3.8, y + 3); ctx.lineTo(x + 1.5, y - 2.2); ctx.lineTo(x + 6.8, y + 3); ctx.stroke();
+    ctx.strokeStyle = '#c8752f'; ctx.lineWidth = 4.6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - 2, y + 5); ctx.lineTo(x + 5.5, y - 4.5); ctx.lineTo(x + 13, y + 5); ctx.stroke();
+    ctx.strokeStyle = '#e8a56b'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(x - 0.6, y + 3.6); ctx.lineTo(x + 5.5, y - 3.4); ctx.lineTo(x + 11.6, y + 3.6); ctx.stroke();
     ctx.lineCap = 'butt'; ctx.lineWidth = 1;
   } else if (has('소총')) { // 소총 (AK47)
     // 개머리판 (뒤, 왼쪽)
