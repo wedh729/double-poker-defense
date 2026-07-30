@@ -1538,22 +1538,25 @@ function update(dt) {
     const sdx = u.tx - u.x, sdy = u.ty - u.y;
     if (sdx * sdx + sdy * sdy <= 64) { u.tx = u.x; u.ty = u.y; }
   }
-  // 📯 콰르텟 공속 오라: 콰르텟의 사거리 원 안에 있어야 +20% (비중첩)
-  const quartets = U.filter(u => u.quartet).map(q => [q, effRange(q) * effRange(q)]);
+  // 📯 콰르텟 공속 오라: 사거리 원 안 +20% (승급2: +30%). 여러 콰르텟이면 가장 강한 것 하나만
+  const quartets = U.filter(u => u.quartet).map(q => [q, effRange(q) * effRange(q), (q.ascend || 0) >= 2 ? 0.769 : 0.833]);
   for (const u of U) {
-    u.spdBuff = (!u.miner && quartets.some(([q, r2]) => q !== u && (q.x - u.x) * (q.x - u.x) + (q.y - u.y) * (q.y - u.y) <= r2)) ? 0.833 : 1;
+    let best = 1;
+    if (!u.miner) for (const [q, r2, f] of quartets)
+      if (q !== u && (q.x - u.x) * (q.x - u.x) + (q.y - u.y) * (q.y - u.y) <= r2) best = Math.min(best, f);
+    u.spdBuff = best;
     u.junkBuff = false;
   }
-  // 💰 고물상: 사거리 원 안의 가까운 전투 유닛 5기에게 킬 골드 ×1.2 (범위 밖은 아무리 가까워도 제외)
+  // 💰 고물상: 사거리 안 가까운 유닛에게 킬 골드 버프 — 승급1: 5→7기, 승급2: ×1.2→×1.35 (junkBuff에 배율 저장)
   for (const j of U) {
     if (!j.junk) continue;
-    const jr = effRange(j);
+    const jr = effRange(j), cap = (j.ascend || 0) >= 1 ? 7 : 5, mul = (j.ascend || 0) >= 2 ? 1.35 : 1.2;
     U.filter(v => v !== j && !v.miner && !v.item && !v.clone)
       .map(v => [Math.hypot(v.x - j.x, v.y - j.y), v])
       .filter(([d]) => d <= jr)
       .sort((a, b) => a[0] - b[0])
-      .slice(0, 5)
-      .forEach(([, v]) => v.junkBuff = true);
+      .slice(0, cap)
+      .forEach(([, v]) => v.junkBuff = Math.max(v.junkBuff || 0, mul));
   }
   updateMutter(dt); // 💬 히든 혼잣말
   updatePortal();
@@ -1738,7 +1741,8 @@ function update(dt) {
       fireAt(u, best);
     }
   }
-  // 투사체 이동/명중
+  // 투사체 이동/명중 (filter 도중 생기는 새 투사체는 큐에 모았다가 뒤에 합류 — filter 반환 배열로 대체되며 유실되던 버그 방지)
+  const projQ = [];
   S.projs = S.projs.filter(p => {
     // 배달형: 포탄(포물선)/미사일(직선)/투척폭탄(포물선) → 착탄 시 폭발
     if (p.kind === 'shell' || p.kind === 'missile' || p.kind === 'bombthrow') {
@@ -1769,13 +1773,23 @@ function update(dt) {
               const a2 = i / 8 * 6.28 + Math.random() * 0.5, rr = 40 + Math.random() * (PEN.w / 2 - 40);
               const fx = Math.max(CX - PEN.w/2 + 14, Math.min(CX + PEN.w/2 - 14, p.ex + Math.cos(a2) * rr));
               const fy = Math.max(CY - PEN.h/2 + 14, Math.min(CY + PEN.h/2 - 14, p.ey + Math.sin(a2) * rr * 0.66));
-              S.projs.push({ kind: 'bombthrow', deliver: 'area', owner: p.owner, mini: true,
+              projQ.push({ kind: 'bombthrow', deliver: 'area', owner: p.owner, mini: true,
                 sx: p.ex, sy: p.ey, x: p.ex, y: p.ey, ex: fx, ey: fy,
                 t: 0, dur: 0.35 + Math.random() * 0.2, dmg: p.dmg * 0.35, splash: 60, spin: 0, ang: 0 });
             }
           }
         } else { // 범위 폭발
           if (p.boulder) sfx('thud'); // 🪨 투석기: 묵직한 착탄음
+          if (p.boulder && !p.frag && p.owner && (p.owner.ascend || 0) >= 1) { // 🪨 승급1: 착탄 시 파편 4방 소형 폭발
+            for (let i = 0; i < 4; i++) {
+              const a2 = i / 4 * 6.28 + Math.random() * 0.6, rr = 34 + Math.random() * 30;
+              const fx = Math.max(CX - PEN.w / 2 + 14, Math.min(CX + PEN.w / 2 - 14, p.ex + Math.cos(a2) * rr));
+              const fy = Math.max(CY - PEN.h / 2 + 14, Math.min(CY + PEN.h / 2 - 14, p.ey + Math.sin(a2) * rr * 0.7));
+              projQ.push({ kind: 'bombthrow', deliver: 'area', owner: p.owner, boulder: true, frag: true, mini: false,
+                sx: p.ex, sy: p.ey, x: p.ex, y: p.ey, ex: fx, ey: fy, t: 0, dur: 0.3 + Math.random() * 0.15,
+                dmg: p.dmg * 0.3, splash: 55, spin: 0, ang: 0 });
+            }
+          }
           S.effects.push({ type:'boom', x: p.ex, y: p.ey, r: p.splash, t: 0.3 });
           if (p.kind === 'missile' && !p.mini) { // ☢️ 로얄 미사일: 핵폭발 버섯구름 + 섬광
             S.effects.push({ type:'mush', x: p.ex, y: p.ey, r: p.splash, t: 1.1, dur: 1.1 });
@@ -1872,6 +1886,7 @@ function update(dt) {
     }
     return true;
   });
+  if (projQ.length) S.projs.push(...projQ); // filter 도중 태어난 투사체 합류 (클러스터 폭탄·투석 파편 — 배열 교체로 유실되던 버그 방지)
   // 사망 처리 + 폭발 (몹 보상: 기존의 1/10로 축소)
   const killGold = Math.max(1, Math.round(S.round * 0.06)) * ((S.eventMods && S.eventMods.killMul) || 1) * (S.feverT > 0 ? 2 : 1); // 몹 절반 보정 ×1.5 (부족분은 광산 상향으로 이전)
   const newborns = [];
@@ -1893,7 +1908,7 @@ function update(dt) {
       if (S.combo.n >= 50) markAchv('combo50');
       if (S.combo.n >= 3) sfx('combo', S.combo.n);
       let g = (m.boss ? killGold * 30 : killGold) + Math.floor(S.combo.n / 10);
-      if (m.lastHitBy && m.lastHitBy.junkBuff) g = Math.round(g * 1.2); // 💰 고물상 버프 유닛의 킬 골드 ×1.2
+      if (m.lastHitBy && m.lastHitBy.junkBuff) g = Math.round(g * m.lastHitBy.junkBuff); // 💰 고물상 버프 (승급 시 ×1.35)
       S.gold += g;
       // 골드 동전이 튀어나와 좌상단 금고로 빨려간다 (시각 연출 — 골드는 즉시 지급됨)
       const ca = Math.random() * 6.28;
@@ -1974,7 +1989,7 @@ function fireAt(u, target) {
       if ((u.ascend || 0) >= 2) gambleBounce = 8; // 🩸 승급2: 잭팟 8연타
     }
   }
-  if (u.execute && target.hp <= target.max * 0.15) { // ⚔️ 길로틴: 체력 15% 이하 즉시 처형
+  if (u.execute && target.hp <= target.max * ((u.ascend || 0) >= 2 ? 0.24 : (u.ascend || 0) >= 1 ? 0.19 : 0.15)) { // ⚔️ 길로틴 처형선: 승급 15→19→24%
     dmg = target.hp + (target.shield || 0);
     addFloat(target.x, target.y - 20, '⚔️ 처형!', '#e53935', 0.8);
   }
@@ -2003,6 +2018,11 @@ function fireAt(u, target) {
           sx: m.x, sy: m.y, x: m.x, y: m.y, ex: target.x, ey: target.y,
           t: 0, dur: arc ? 0.5 : Math.max(0.18, Math.hypot(target.x - m.x, target.y - m.y) / 640),
           dmg, splash: u.splash, spin: 0, ang: Math.atan2(target.y - m.y, target.x - m.x) });
+        if (u.catapult && (u.ascend || 0) >= 2) { // 🪨 승급2: 돌덩이 2발 동시 포격 (두 번째는 랜덤 지점)
+          const ex2 = CX + (Math.random() - 0.5) * PEN.w * 0.85, ey2 = CY + (Math.random() - 0.5) * PEN.h * 0.85;
+          S.projs.push({ kind: 'bombthrow', deliver: 'area', owner: u, boulder: true,
+            sx: m.x, sy: m.y, x: m.x, y: m.y, ex: ex2, ey: ey2, t: 0, dur: 0.55, dmg, splash: u.splash, spin: 0, ang: 0 });
+        }
       } else {
         areaHit(u, target.x, target.y, dmg); // 화염/톱/대검은 즉시
       }
@@ -2060,14 +2080,20 @@ function areaHit(u, x, y, dmg) {
     S.effects.push({ type:'saw', x, y, r: u.splash * (big ? 0.9 : 0.62), t: big ? 0.28 : 0.18 });
     if (big) { S.effects.push({ type:'slash', x, y, r: u.splash * 1.35, a, t: 0.3, dur: 0.3 }); } // 전기톱: 톱날 뒤로 큰 참격 궤적
     for (let i = 0; i < (big ? 8 : 3); i++) { const v = 40 + Math.random()*90, aa = Math.random()*6.28; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1 + Math.random()*2, c: '#eceff1' }); }
-  } else if (u.shogun) { // 🔥 쇼군: 유닛 중심 '사거리' 안에서만 벤다 (기존엔 타겟 지점 중심 splash라 사거리 밖까지 닿았음)
+  } else if (u.shogun) { // 🔥 쇼군: 유닛 중심 '사거리' 안에서만 벤다
     const R = effRange(u), R2 = R * R, ang0 = Math.atan2(y - u.y, x - u.x);
+    const asc = u.ascend || 0, burnT = asc >= 1 ? 3 : 1.5; // 승급1: 화상 도트 2배 + 지속 3초
     S.effects.push({ type:'slash', x: u.x, y: u.y, r: R, a: ang0, t: 0.26, dur: 0.26, fire: true });
     S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.9, a: ang0 + 0.55, t: 0.34, dur: 0.34, fire: true });
     for (let i = 0; i < 10; i++) { const v = 90 + Math.random()*160, aa = ang0 + (Math.random()-0.5)*1.8;
       S.parts.push({ x: u.x, y: u.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 30, g: true, t: 0.4, r: 1.5 + Math.random()*2.2, c: i%3 ? '#ff8a3d' : '#ffd54f' }); }
     for (const m of S.monsters) { const dx2 = m.x - u.x, dy2 = m.y - u.y;
-      if (dx2*dx2 + dy2*dy2 <= R2) { dealDamage(m, dmg, u); m.burnT = 1.5; m.burnDmg = dmg * ((u.ascend || 0) >= 1 ? 0.4 : 0.2); } }
+      if (dx2*dx2 + dy2*dy2 <= R2) { dealDamage(m, dmg, u); m.burnT = burnT; m.burnDmg = dmg * (asc >= 1 ? 0.4 : 0.2); } }
+    if (asc >= 2) { // 🗡️ 승급2 이단 베기: 우로 벤 칼이 좌로 되돌아온다 — 2타는 공격력 50%
+      S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.96, a: ang0 + 0.25, t: 0.30 + 0.16, dur: 0.30, fire: true, rev: true }); // 0.16초 늦게 시작(t>dur 동안 대기), 반대 스윕
+      for (const m of S.monsters) { const dx2 = m.x - u.x, dy2 = m.y - u.y;
+        if (dx2*dx2 + dy2*dy2 <= R2) dealDamage(m, dmg * 0.5, u); }
+    }
     return;
   } else if (vis === 'sword') {
     // 실제 대검 참격 (총구=칼끝에서 호를 그린다). 쇼군은 불타는 참격 (fire 플래그)
@@ -2143,12 +2169,16 @@ function areaHit(u, x, y, dmg) {
       if (u.shogun) { m.burnT = 1.5; m.burnDmg = dmg * ((u.ascend || 0) >= 1 ? 0.4 : 0.2); } // 🔥 화상 도트 (승급1: 2배)
     }
   }
-  if (u.joker) { // 🃏 낫이 닿는 범위(사거리) 안의 몹은 전부 조커 쪽으로 끌려온다 — 피해는 위 splash 판정 그대로
-    const pr = effRange(u), pr2 = pr * pr, pt = (u.ascend || 0) >= 2 ? 0.7 : 0.45;
+  if (u.joker) { // 🃏 낫이 닿는 범위 안의 몹을 조커 쪽으로 견인 — 상한: 승급 0/1/2 = 50/100/200마리 (가까운 순)
+    const pr = effRange(u), pr2 = pr * pr, asc = u.ascend || 0;
+    const pt = asc >= 2 ? 0.7 : 0.45, cap = asc >= 2 ? 200 : asc >= 1 ? 100 : 50;
+    const inR = [];
     for (const m of S.monsters) {
-      const jx = m.x - u.x, jy = m.y - u.y;
-      if (jx * jx + jy * jy <= pr2) { m.pullT = pt; m.pullX = u.x; m.pullY = u.y; }
+      const jx = m.x - u.x, jy = m.y - u.y, d2 = jx * jx + jy * jy;
+      if (d2 <= pr2) inR.push([d2, m]);
     }
+    if (inR.length > cap) inR.sort((a, b) => a[0] - b[0]);
+    for (let i = 0; i < Math.min(cap, inR.length); i++) { const m = inR[i][1]; m.pullT = pt; m.pullX = u.x; m.pullY = u.y; }
   }
 }
 // 파편: 명중 지점에서 돌조각이 사방으로 튀며 주변 몹에 소량 데미지
@@ -2418,41 +2448,73 @@ function spawnSuperMiner() {
   addFloat(m.x, m.y - 26, '✨ 슈퍼 광부!', '#ff9800', 2);
 }
 // ==================== 🩸 히든 영웅 제물 승급 (자기 레시피 계열 유닛을 바쳐 강화, 최대 2단계) ====================
-const ASCEND_DEFS = {
+const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단련 담당) — needs: 제단 위 제물 [{tier, hero?, n}]
+  gamble: [
+    { needs: [{ tier: 3, n: 3 }], mat: '트리플 3기', desc: '주사위 최소 2 (1 없음)' },
+    { needs: [{ tier: 3, hero: true, n: 1 }], mat: '트리플 영웅 1기', desc: '6 잭팟 시 8연타' },
+  ],
+  junk: [
+    { needs: [{ tier: 0, n: 2 }, { tier: 1, n: 2 }, { tier: 2, n: 2 }], mat: '하이·원·투 각 2기', desc: '버프 대상 5기 → 7기' },
+    { needs: [{ tier: 1, hero: true, n: 1 }], mat: '원페어 영웅 1기', desc: '킬 골드 ×1.2 → ×1.35' },
+  ],
+  quartet: [
+    { needs: [{ tier: 4, n: 2 }], mat: '스트레이트 2기', desc: '오라 반경 150 → 190' },
+    { needs: [{ tier: 4, n: 3 }], mat: '스트레이트 3기', desc: '공속 버프 +20% → +30%' },
+  ],
+  execute: [
+    { needs: [{ tier: 7, n: 2 }], mat: '포카드 2기', desc: '처형선 15% → 19%' },
+    { needs: [{ tier: 7, n: 3 }], mat: '포카드 3기', desc: '처형선 19% → 24%' },
+  ],
   shogun: [
-    { tier: 6, n: 1, mat: '단검(풀하우스) 1기', desc: '화상 도트 2배' },
-    { tier: 5, n: 2, mat: '플러쉬 2기', desc: '참격 대미지 +30%' },
+    { needs: [{ tier: 6, n: 2 }], mat: '단검 2기', desc: '화상 도트 2배 + 지속 3초' },
+    { needs: [{ tier: 5, n: 2 }, { tier: 6, n: 2 }], mat: '플러쉬 2기 + 단검 2기', desc: '이단 베기 (반환 참격 50%)' },
+  ],
+  chrono: [
+    { needs: [{ tier: 4, n: 3 }], mat: '스트레이트 3기', desc: '시간 정지 4초 → 6초' },
+    { needs: [{ tier: 4, hero: true, n: 1 }], mat: '스트레이트 영웅 1기', desc: '쿨타임 150초 → 110초' },
+  ],
+  slot: [
+    { needs: [{ tier: 3, n: 3 }], mat: '트리플 3기', desc: '폭탄 14~22 → 20~30개' },
+    { needs: [{ tier: 3, hero: true, n: 1 }], mat: '트리플 영웅 1기', desc: '쿨타임 75초 → 55초' },
   ],
   joker: [
-    { hero: true, n: 1, mat: '영웅 1기', desc: '공속 0.5→0.8회/초 · 사거리 100→125' },
-    { hero: true, n: 2, mat: '영웅 2기', desc: '공속 0.8→1.25회/초 · 사거리 125→150 + 견인 강화' },
+    { needs: [{ hero: true, n: 1 }], mat: '영웅 1기', desc: '공속 0.8회/초 · 사거리 125 · 견인 최대 100마리' },
+    { needs: [{ hero: true, n: 2 }], mat: '영웅 2기', desc: '공속 1.25회/초 · 사거리 150 · 견인 200마리 + 견인 강화' },
   ],
-  gamble: [
-    { tier: 3, n: 1, mat: '트리플 1기', desc: '주사위 최소 2 (1 없음)' },
-    { tier: 3, n: 2, mat: '트리플 2기', desc: '6 잭팟 시 8연타' },
+  catapult: [
+    { needs: [{ tier: 0, n: 10 }], mat: '하이카드 10기', desc: '착탄 시 파편 4방 폭발' },
+    { needs: [{ tier: 0, n: 20 }], mat: '하이카드 20기', desc: '돌덩이 2발 동시 포격' },
   ],
 };
-function ascendKey(u) { return u.shogun ? 'shogun' : u.joker ? 'joker' : u.gamble ? 'gamble' : null; }
+function ascendKey(u) { // 승급 가능한 히든 9종 전부
+  return u.gamble ? 'gamble' : u.junk ? 'junk' : u.quartet ? 'quartet' : u.execute ? 'execute' : u.shogun ? 'shogun'
+    : u.chrono ? 'chrono' : u.slot ? 'slot' : u.joker ? 'joker' : u.catapult ? 'catapult' : null;
+}
 function onAltar(v) { return Math.abs(v.x - ALTAR.x) <= ALTAR.w / 2 + 10 && Math.abs(v.y - ALTAR.y) <= ALTAR.h / 2 + 10; }
-function ascendCandidates(def) {
-  // 🩸 제물은 제단(제물대) 위에 올려둔 유닛만 바칠 수 있다
+function ascendPool(nd) { // 제단 위에서 need 하나에 맞는 후보들
   return S.units.filter(v => !v.miner && !v.item && !v.clone && !isHiddenCombo(v) && onAltar(v) &&
-    (def.hero ? (v.hero && !v.super) : (v.tier === def.tier && !v.hero)));
+    (nd.hero ? (v.hero && !v.super && !v.ace && (nd.tier == null || v.tier === nd.tier)) : (v.tier === nd.tier && !v.hero)));
+}
+function ascendStatus(def) { // 각 need별 보유 현황 — { ok, txt }
+  const parts = def.needs.map(nd => `${ascendPool(nd).length}/${nd.n}`);
+  return { ok: def.needs.every(nd => ascendPool(nd).length >= nd.n), txt: parts.join(' · ') };
 }
 function doAscend(u) {
   const key = ascendKey(u); if (!key) return;
   const lv = u.ascend || 0; if (lv >= 2) return;
   const def = ASCEND_DEFS[key][lv];
-  const cands = ascendCandidates(def);
-  if (cands.length < def.n) return;
-  cands.sort((a, b) => (a.selected ? 1 : 0) - (b.selected ? 1 : 0)); // 선택 안 된 유닛부터 제물로
-  const gone = cands.slice(0, def.n);
+  if (!ascendStatus(def).ok) return;
+  const gone = [];
+  for (const nd of def.needs) { // need별로 제단 위 후보에서 소모 (선택 안 된 유닛부터)
+    const pool = ascendPool(nd).sort((a, b) => (a.selected ? 1 : 0) - (b.selected ? 1 : 0));
+    gone.push(...pool.slice(0, nd.n));
+  }
   S.units = S.units.filter(v => !gone.includes(v));
   u.ascend = lv + 1;
-  // 스탯 직접 반영형 효과
-  if (key === 'shogun' && u.ascend === 2) u.dmg = +(u.dmg * 1.3).toFixed(1);
+  // 스탯 직접 반영형 효과 (고유 능력 — 공격력은 건드리지 않는다)
   if (key === 'joker' && u.ascend === 1) { u.cd = 1.25; u.range = 125; } // 공속 0.8회/초
-  if (key === 'joker' && u.ascend === 2) { u.cd = 0.8; u.range = 150; }  // 공속 1.25회/초 (견인 강화는 areaHit의 ascend>=2)
+  if (key === 'joker' && u.ascend === 2) { u.cd = 0.8; u.range = 150; }  // 공속 1.25회/초
+  if (key === 'quartet' && u.ascend === 1) u.range = 190;                // 오라 반경 (버프 강도는 update에서 ascend 참조)
   for (const g of gone) { for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 80 + Math.random()*140; S.parts.push({ x: g.x, y: g.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 1.8 + Math.random()*2.4, c: '#c62828' }); } }
   addFloat(u.x, u.y - 32, `🩸 승급! Lv.${u.ascend} — ${def.desc}`, '#ff6b9d', 2.4);
   logMsg(`🩸 <b>${u.weapon}</b> 제물 승급 Lv.${u.ascend}! (${def.mat} 소모) — ${def.desc}`);
@@ -3070,9 +3132,10 @@ function draw() {
       ctx.beginPath(); ctx.arc(0, 0, e.r * 0.3, 0, Math.PI*2); ctx.fill();
       ctx.restore(); ctx.globalAlpha = 1;
     } else if (e.type === 'sword' || e.type === 'slash') {
+      if (e.t > e.dur) continue; // 지연 참격(이단 베기 반환타): 아직 시작 전
       // 대검 참격: 초승달 크레센트 3겹 (모션 블러 잔상, 진행에 따라 쓸고 지나감)
       const pr = e.dur ? 1 - e.t / e.dur : 0.5;
-      const sweep = -1.2 + pr * 2.4;
+      const sweep = (e.rev ? 1.2 - pr * 2.4 : -1.2 + pr * 2.4); // rev = 반대 방향으로 되돌아오는 베기
       const al = Math.min(1, e.t * 5);
       ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.a + sweep);
       for (let k = 0; k < 3; k++) {
@@ -5490,8 +5553,8 @@ function skillRow(u) {
 // ⏳ 시간술사: 시간 정지 (4초간 몬스터 스폰·타이머·이동 정지, 아군은 그대로 행동)
 function activateChrono(u) {
   if (!u.chrono || (u.chronoCd || 0) > 0) return;
-  S.freezeT = 4;
-  u.chronoCd = 150;
+  S.freezeT = (u.ascend || 0) >= 1 ? 6 : 4;   // 승급1: 정지 6초
+  u.chronoCd = (u.ascend || 0) >= 2 ? 110 : 150; // 승급2: 쿨 110초
   addFloat(u.x, u.y - 28, '⏳ 시간 정지!', '#42a5f5', 1.6);
   logMsg(`⏳ ${u.weapon} 시간 정지! 4초간 몬스터가 얼어붙습니다.`);
   sfx('reward');
@@ -5505,8 +5568,8 @@ function chronoRow(u) {
 // 🎰 슬롯머신: 잭팟 폭격 (소환장 안 무작위 지점에 14~22개 폭탄이 순차 낙하)
 function activateSlot(u) {
   if (!u.slot || (u.slotCd || 0) > 0) return;
-  u.slotCd = 75;
-  const n = 14 + Math.floor(Math.random() * 9); // 14~22
+  u.slotCd = (u.ascend || 0) >= 2 ? 55 : 75;    // 승급2: 쿨 55초
+  const n = (u.ascend || 0) >= 1 ? 20 + Math.floor(Math.random() * 11) : 14 + Math.floor(Math.random() * 9); // 승급1: 20~30개
   const dmg = 60 * (1 + 0.15 * (u.heroUpLv || 0)); // 히든은 종족 업글 대상이 아니므로 단련 배수로 성장
   for (let i = 0; i < n; i++) {
     const ex = CX + (Math.random() - 0.5) * PEN.w * 0.9, ey = CY + (Math.random() - 0.5) * PEN.h * 0.9;
@@ -5619,10 +5682,10 @@ function heroSectionHTML() {
       if (alv >= 2) html += `<div class="rpgItem" style="border-left:5px solid #ff6b9d"><div class="rpgIcon">🩸</div>
         <div class="rpgInfo"><b>${h.weapon}</b> <span class="lv">승급 Lv.2/2</span><br><span class="desc">승급 완료</span></div></div>`;
       else {
-        const def = ASCEND_DEFS[ak][alv], have = ascendCandidates(def).length, can = have >= def.n;
+        const def = ASCEND_DEFS[ak][alv], st = ascendStatus(def), can = st.ok;
         html += `<div class="rpgItem" style="border-left:5px solid #ff6b9d"><div class="rpgIcon">🩸</div>
           <div class="rpgInfo"><b>${h.weapon}</b> <span class="lv">승급 Lv.${alv}→${alv + 1}</span><br>
-            <span class="desc">제물: <b>${def.mat}</b> <span style="color:${can ? '#66bb6a' : '#e57373'}">(제단 위 ${have}/${def.n})</span><br>효과: ${def.desc}${can ? '' : ' · 제물을 제단으로 옮기세요'}</span></div>
+            <span class="desc">제물: <b>${def.mat}</b> <span style="color:${can ? '#66bb6a' : '#e57373'}">(제단 위 ${st.txt})</span><br>효과: ${def.desc}${can ? '' : ' · 제물을 제단으로 옮기세요'}</span></div>
           <button class="rpgBuy" data-asc="${i}" ${can ? '' : 'disabled'} style="background:linear-gradient(180deg,#ff6b9d,#b02a5b);color:#fff">🩸 승급</button></div>`;
       }
     }
