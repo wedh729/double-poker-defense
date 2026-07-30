@@ -2315,7 +2315,6 @@ function fireAtOre(u) {
   u.aimX = OREPOS.x; u.aimY = OREPOS.y; u.atkAnim = 1;
   S.hunt.hp -= dmg; S.hunt.lastHitBy = u;
   const m = muzzle(u);
-  const wc = u.ace ? '#ffd54f' : (u.hidden ? '#e91e8c' : (RACES[u.race] ? RACES[u.race].color : '#ffca28'));
   const col = ORES[Math.min(9, S.hunt.stage - 1)].col;
   // 무기별 고유 모션 유지 — 근접 무기는 광선(roomshot)이 아니라 자기 참격/톱날/화염으로 광석을 때린다
   const ang = Math.atan2(OREPOS.y - m.y, OREPOS.x - m.x);
@@ -2335,7 +2334,7 @@ function fireAtOre(u) {
       S.parts.push({ x: m.x, y: m.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, t: 0.4 + Math.random() * 0.25, r: (u.hero ? 7 : 5) + Math.random() * 5, fire: true, spin: Math.random() * 6.28 });
     }
   } else { // 원거리 무기: 기존 광선 + 총구 섬광
-    S.effects.push({ type:'roomshot', x1: m.x, y1: m.y, x2: OREPOS.x, y2: OREPOS.y, t: 0.14, dur: 0.14, color: wc, proj: u.proj || 'pellet' });
+    S.effects.push({ type:'roomshot', x1: m.x, y1: m.y, x2: OREPOS.x, y2: OREPOS.y, t: 0.14, dur: 0.14, proj: u.proj || 'pellet' });
     S.effects.push({ type:'boom', x: m.x, y: m.y, r: 4, t: 0.07 });
   }
   for (let i = 0; i < 6; i++) { const a = Math.random()*6.28, v = 40 + Math.random()*72; S.parts.push({ x: OREPOS.x, y: OREPOS.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 15, t: 0.36, r: 1.5 + Math.random()*1.6, c: col }); }
@@ -3021,30 +3020,36 @@ function draw() {
       // 광석 방: 유닛 무기 → 광석으로 날아가는 공격체 + 꼬리
       const pr = 1 - e.t / e.dur;
       const x = e.x1 + (e.x2 - e.x1) * pr, y = e.y1 + (e.y2 - e.y1) * pr;
-      const tx = e.x1 + (e.x2 - e.x1) * Math.max(0, pr - 0.3), ty = e.y1 + (e.y2 - e.y1) * Math.max(0, pr - 0.3);
       const ang = Math.atan2(e.y2 - e.y1, e.x2 - e.x1), pk = e.proj || 'pellet';
-      ctx.strokeStyle = e.color; ctx.lineWidth = pk === 'mg' ? 1.2 : 2; // 꼬리
-      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(x, y); ctx.stroke(); ctx.lineWidth = 1;
-      ctx.save(); ctx.translate(x, y);
-      if (pk === 'shuriken') { // 표창: 회전하는 4갈래 별
-        ctx.rotate(S.time * 18); ctx.fillStyle = '#455a64';
-        polyPath(0, 0, 4, 6, 0, 2.2); ctx.fill();
-        ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1; ctx.stroke(); ctx.lineWidth = 1;
-      } else if (pk === 'arrow' || pk === 'bolt') { // 화살/볼트: 촉 + 대
-        ctx.rotate(ang); ctx.strokeStyle = '#8d6e63'; ctx.lineWidth = 1.6;
-        ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(3, 0); ctx.stroke();
-        ctx.fillStyle = '#cfd8dc'; ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(2, -2.4); ctx.lineTo(2, 2.4); ctx.closePath(); ctx.fill();
+      // 전투 투사체와 완전히 동일한 모양·색 (S.projs 렌더와 1:1 — 광석방이라고 다르게 보이지 않게)
+      if (pk === 'shuriken') { // 표창 (회전하는 별)
+        ctx.save(); ctx.translate(x, y); ctx.rotate(S.time * 30);
+        ctx.fillStyle = '#455a64'; polyPath(0, 0, 4, 6, 0, 2.2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 1.4, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      } else if (pk === 'chip') { // 갬블러 골드 칩
+        ctx.save(); ctx.translate(x, y); ctx.rotate(S.time * 14);
+        ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(0, 0, 3.6, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.strokeStyle = '#fff8e1'; ctx.setLineDash([2, 2.6]); ctx.beginPath(); ctx.arc(0, 0, 2.2, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        ctx.restore(); ctx.lineWidth = 1;
+      } else if (pk === 'arrow' || pk === 'bolt') { // 화살 / 석궁 볼트
+        const c2 = Math.cos(ang), s2 = Math.sin(ang), L = pk === 'arrow' ? 11 : 14;
+        ctx.strokeStyle = pk === 'arrow' ? '#8a5a2b' : '#5d4037'; ctx.lineWidth = pk === 'arrow' ? 2 : 2.5;
+        ctx.beginPath(); ctx.moveTo(x - c2 * L, y - s2 * L); ctx.lineTo(x, y); ctx.stroke();
+        ctx.fillStyle = '#444';
+        ctx.beginPath(); ctx.moveTo(x + c2 * 4, y + s2 * 4);
+        ctx.lineTo(x - s2 * 3, y + c2 * 3); ctx.lineTo(x + s2 * 3, y - c2 * 3); ctx.closePath(); ctx.fill();
         ctx.lineWidth = 1;
-      } else if (pk === 'bullet' || pk === 'mg' || pk === 'sniper') { // 총알: 길쭉한 탄
-        ctx.rotate(ang); ctx.fillStyle = '#ffd54f';
-        ctx.beginPath(); ctx.ellipse(0, 0, pk === 'sniper' ? 5 : 3.4, 1.5, 0, 0, 6.28); ctx.fill();
-      } else if (pk === 'chip') { // 칩
-        ctx.fillStyle = '#fafafa'; ctx.beginPath(); ctx.arc(0, 0, 3.4, 0, 6.28); ctx.fill();
-        ctx.strokeStyle = '#c62828'; ctx.lineWidth = 1.4; ctx.stroke(); ctx.lineWidth = 1;
-      } else { // pellet / rock: 돌멩이
-        ctx.fillStyle = e.color; ctx.beginPath(); ctx.arc(0, 0, 3, 0, 6.28); ctx.fill();
+      } else if (pk === 'bullet' || pk === 'mg' || pk === 'sniper') { // 총알 궤적 (주황)
+        const c2 = Math.cos(ang), s2 = Math.sin(ang), len = pk === 'mg' ? 8 : 11;
+        ctx.strokeStyle = '#f5a623'; ctx.lineWidth = pk === 'mg' ? 1.6 : 2.4;
+        ctx.beginPath(); ctx.moveTo(x - c2 * len, y - s2 * len); ctx.lineTo(x, y); ctx.stroke();
+        ctx.lineWidth = 1;
+      } else { // pellet / rock: 새총 돌멩이 (전투와 같은 갈색)
+        ctx.fillStyle = '#7a6a55';
+        ctx.beginPath(); ctx.arc(x, y, pk === 'rock' ? 4 : 3, 0, Math.PI * 2); ctx.fill();
       }
-      ctx.restore();
     }
   }
   // 투사체
