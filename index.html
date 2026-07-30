@@ -423,6 +423,8 @@
       <button class="diffBtn" data-mul="2" style="background:#b71c1c">💀 지옥</button>
     </div>
     <div style="font-size:12px;color:#8f86b8">몬스터 체력 배수: 쉬움 ×0.7 · 보통 ×1.0 · 어려움 ×1.4 · 지옥 ×2.0</div>
+    <button id="btnDaily" class="diffBtn" style="background:#4a3d8f;font-size:14px">📅 오늘의 시드 <span id="dailyBest" style="font-size:11px;color:#cfc6f5"></span></button>
+    <div style="font-size:11px;color:#8f86b8">매일 모두에게 같은 카드가 옵니다 — 오늘의 덱으로 최고 기록에 도전! (보통 난이도)</div>
   </div>
 </div>
 <div id="shopOverlay"><div id="shopWin">
@@ -678,11 +680,16 @@ function mobCount(n) {
 }
 
 // ==================== 포커 ====================
-function newDeck() {
+// 📅 오늘의 시드: 날짜 기반 시드로 덱 셔플만 결정적 — 모두가 같은 카드 흐름으로 경쟁
+let dailySeed = null; // null = 일반 모드
+function mulberry32(a) { return function() { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function todaySeedNum() { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
+function newDeck(salt) {
   const d = [];
   for (const s of SUITS) for (let r = 2; r <= 14; r++) d.push({r, s});
+  const rnd = dailySeed != null ? mulberry32(dailySeed + S.round * 131 + (salt || 0) * 7919) : Math.random; // 라운드·핸드별 고정 시드 → 리롤 여부와 무관하게 덱 동일
   for (let i = d.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rnd() * (i + 1));
     [d[i], d[j]] = [d[j], d[i]];
   }
   return d;
@@ -696,7 +703,7 @@ function startPoker() {
   // 더블 포커: 두 패를 동시에 펼쳐놓고 서로 비교하며 교환
   S.poker = { hands: [] };
   for (let h = 0; h < (double ? 2 : 1); h++) {
-    const deck = newDeck();
+    const deck = newDeck(h);
     S.poker.hands.push({ deck, cards: deck.splice(0, 5), swapped: [false,false,false,false,false] });
   }
   renderPoker();
@@ -1065,6 +1072,7 @@ function endWave() {
       markAchv('revive');
     } else {
       S.phase = 'gameover';
+      recordDaily(S.round); dailyBestLabel(); // 📅 오늘의 시드 기록
       const best = recordBest(S.round);
       const isNew = S.round >= best;
       const fmt = v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(1)+'k' : Math.round(v);
@@ -1543,6 +1551,7 @@ function update(dt) {
       .slice(0, 5)
       .forEach(([, v]) => v.junkBuff = true);
   }
+  updateMutter(dt); // 💬 히든 혼잣말
   updatePortal();
   updateAltar();
   updateFusableHint();
@@ -2401,6 +2410,51 @@ function doAscend(u) {
   sfx('hero');
   updateInfoPanel();
 }
+// 💬 히든 영웅 혼잣말: 가끔 머리 위 말풍선으로 한 마디 (아기자기 + 캐릭터 애착)
+const MUTTERS = {
+  gamble: ['오늘 손이 좋은데…', '6만 나와라, 6…!', '운도 실력이지 😏'],
+  junk: ['이것도 돈이 되겠구먼~', '버릴 게 하나도 없어', '고철값이 올랐다던데'],
+  quartet: ['하나, 둘, 셋~ 🎵', '오늘 합주는 완벽하군', '박자 놓치지 말라고'],
+  execute: ['다음 목을 가져와라', '날이 녹슬 틈이 없군', '심판의 시간이다'],
+  shogun: ['아직 멀었다', '내 칼은 식지 않는다', '더 강한 놈은 없나'],
+  chrono: ['시간은 내 편이지', '서두를 것 없다…', '똑, 딱, 똑, 딱'],
+  slot: ['릴이 돌아간다~ 착착', '다음 잭팟은 언제쯤?', '7… 7… 7…!'],
+  joker: ['후후, 다들 이리 와~', '오늘도 즐거운 파티군 🎪', '도망은 못 가~'],
+  catapult: ['…(돌 갈리는 소리)', '장전 완료.', '…발사 준비 끝.'],
+};
+let mutter = null, mutterT = 22; // {u, txt, t}
+function updateMutter(dt) {
+  if (mutter) { mutter.t -= dt; if (mutter.t <= 0 || !S.units.includes(mutter.u)) mutter = null; }
+  mutterT -= dt;
+  if (mutterT <= 0) {
+    mutterT = 40 + Math.random() * 30;
+    const hid = S.units.filter(u => isHiddenCombo(u) && !u.clone);
+    if (hid.length && !mutter) {
+      const u = hid[Math.floor(Math.random() * hid.length)];
+      const key = Object.keys(MUTTERS).find(k => u[k]); // MUTTERS 키 = 유닛 플래그명
+      const pool = MUTTERS[key];
+      if (pool) mutter = { u, txt: pool[Math.floor(Math.random() * pool.length)], t: 4 };
+    }
+  }
+}
+function drawMutter() {
+  if (!mutter) return;
+  const u = mutter.u, txt = mutter.txt;
+  const a = Math.min(1, mutter.t * 3, (4 - mutter.t) * 3); // 페이드 인/아웃
+  ctx.save(); ctx.globalAlpha = Math.max(0, a);
+  ctx.font = '10.5px sans-serif';
+  const w = ctx.measureText(txt).width + 14, h = 18;
+  let bx = u.x - w / 2, by = u.y - 52; // 머리 위
+  bx = Math.max(4, Math.min(936 - w, bx)); by = Math.max(4, by);
+  ctx.fillStyle = 'rgba(255,255,255,0.96)';
+  roundRect(bx, by, w, h, 8); ctx.fill();
+  ctx.strokeStyle = 'rgba(80,70,110,0.45)'; ctx.lineWidth = 1; roundRect(bx, by, w, h, 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(u.x - 4, by + h); ctx.lineTo(u.x, by + h + 6); ctx.lineTo(u.x + 4, by + h); ctx.closePath(); // 꼬리
+  ctx.fillStyle = 'rgba(255,255,255,0.96)'; ctx.fill();
+  ctx.fillStyle = '#3c3550'; ctx.textAlign = 'center';
+  ctx.fillText(txt, bx + w / 2, by + 12.5);
+  ctx.textAlign = 'left'; ctx.restore();
+}
 // 가장 강한 몬스터 (보스 최우선, 그다음 현재 체력 최대)
 function strongestMonster() {
   let best = null, bv = -1;
@@ -2692,6 +2746,7 @@ function draw() {
       ctx.save(); ctx.globalAlpha = 0.55; drawUnit(u); ctx.restore();
     } else drawUnit(u);
   }
+  drawMutter(); // 💬 히든 혼잣말 말풍선
   if (S.bird) drawBird(S.bird); // 🐦 힌트 새 (유닛 위에 그려짐)
   // 이펙트
   for (const e of S.effects) {
@@ -6010,16 +6065,41 @@ const BASS =   [146.8,0,0,0, 130.8,0,0,0, 174.6,0,0,0, 146.8,0,0,0];
 // B파트 변주: 같은 D 도리안, 위로 뻗었다 내려오는 프레이즈 (AABA 구성으로 지루함 방지)
 const MELODY_B = [349.2,0,523.3,440, 392,0,349.2,329.6, 293.7,0,440,523.3, 587.3,523.3,440,0];
 const BASS_B =   [174.6,0,0,0, 196,0,0,0, 146.8,0,0,0, 110,0,0,0];
+// 💀 지옥: D 프리지안 (b2가 만드는 불길함) — 낮은 옥타브, 느린 프레이즈
+const MELODY_HELL   = [146.8,0,0,155.6, 146.8,0,116.5,0, 130.8,0,0,146.8, 155.6,0,146.8,0];
+const MELODY_HELL_B = [174.6,0,155.6,0, 146.8,0,0,130.8, 116.5,0,0,110, 146.8,0,0,0];
+const BASS_HELL     = [73.4,0,0,0, 73.4,0,0,0, 65.4,0,0,0, 77.8,0,0,0];
 function startMusic() {
   clearInterval(musicTimer);
   musicTimer = setInterval(() => {
     if (!AC || !musicOn || AC.state === 'suspended') return;
     const i = musicStep % 16;
     const bar = Math.floor(musicStep / 16) % 4;           // 16스텝 마디 기준 A A B A
-    const MEL = bar === 2 ? MELODY_B : MELODY, BS = bar === 2 ? BASS_B : BASS;
-    if (MEL[i]) tone(MEL[i], 0.22, 'triangle', musicGain, 0.5);
-    if (BS[i]) tone(BS[i], 0.42, 'sine', musicGain, 0.6);
-    if (S && S.phase === 'wave' && i % 4 === 2) noiseBurst(0.03, 0.05); // 전투 중엔 은은한 셰이커로 긴장감
+    const hell = DIFF_MUL >= 2 || (S && S.round > FINAL_ROUND); // 💀 지옥 난이도·헬 라운드
+    if (hell) {
+      const MEL = bar === 2 ? MELODY_HELL_B : MELODY_HELL;
+      if (i === 0) { tone(36.7, 4.4, 'sawtooth', musicGain, 0.16); tone(73.4, 4.4, 'sine', musicGain, 0.2); } // 지옥 드론 (D1+D2)
+      if (MEL[i]) { tone(MEL[i], 0.5, 'sawtooth', musicGain, 0.16); tone(MEL[i] / 2, 0.5, 'triangle', musicGain, 0.3); } // 음침한 두 겹
+      if (BASS_HELL[i]) tone(BASS_HELL[i], 0.8, 'sine', musicGain, 0.55);
+      if (i % 8 === 4) { tone(49, 0.35, 'sine', musicGain, 0.5); noiseBurst(0.08, 0.05); } // 멀리서 쿵… 하는 북
+      if (Math.random() < 0.012) tone(58, 1.6, 'sawtooth', musicGain, 0.07); // 가끔 낮은 우르릉
+    } else {
+      // 🏰 중세 판타지: 류트 아르페지오 + 허디거디 드론 + 하프 배음 + 평화로울 땐 새소리
+      const MEL = bar === 2 ? MELODY_B : MELODY, BS = bar === 2 ? BASS_B : BASS;
+      if (i === 0) { tone(73.4, 4.3, 'sine', musicGain, 0.14); tone(110, 4.3, 'sine', musicGain, 0.09); } // 드론 (D2+A2, 백파이프처럼 마디 내내)
+      if (MEL[i]) {
+        tone(MEL[i], 0.22, 'triangle', musicGain, 0.45);                 // 류트 본음
+        tone(MEL[i] * 2, 0.14, 'sine', musicGain, 0.13);                 // 하프 배음 (한 옥타브 위 반짝)
+      }
+      if (BS[i]) tone(BS[i], 0.42, 'sine', musicGain, 0.6);
+      if (i === 8 && bar !== 2) tone(220, 0.3, 'triangle', musicGain, 0.12); // 마디 중간 5도 장식음
+      if (S && S.phase === 'wave' && i % 4 === 2) noiseBurst(0.03, 0.05); // 전투 중엔 은은한 셰이커로 긴장감
+      else if (S && S.phase !== 'wave' && Math.random() < 0.025) {       // 🐦 평화로울 땐 이따금 새가 짹짹
+        const f = 1250 + Math.random() * 650, t0 = AC.currentTime;
+        tone(f, 0.05, 'sine', musicGain, 0.09); tone(f * 1.25, 0.06, 'sine', musicGain, 0.08, t0 + 0.07);
+        if (Math.random() < 0.5) tone(f * 1.1, 0.05, 'sine', musicGain, 0.06, t0 + 0.16);
+      }
+    }
     musicStep++;
   }, 250);
 }
@@ -6099,6 +6179,7 @@ document.getElementById('btnSolo').onclick = () => {
 };
 document.querySelectorAll('.diffBtn').forEach(b => b.onclick = () => {
   if (IS_MOBILE) lockLandscape();
+  dailySeed = null; // 일반 난이도 = 시드 해제
   DIFF_MUL = +b.dataset.mul;
   DIFF_NAME = b.textContent.trim().replace(/^\S+\s/, '');
   document.getElementById('startOverlay').style.display = 'none';
@@ -6107,7 +6188,32 @@ document.querySelectorAll('.diffBtn').forEach(b => b.onclick = () => {
   document.getElementById('bSandbox').style.display = 'none';
   logMsg(`🎮 난이도 [${b.textContent.trim()}] — 몬스터 체력 ×${DIFF_MUL}`);
 });
+document.getElementById('btnDaily').onclick = () => {
+  initAudio();
+  dailySeed = todaySeedNum();
+  DIFF_MUL = 1; DIFF_NAME = '오늘의 시드';
+  document.getElementById('startOverlay').style.display = 'none';
+  reset();
+  S.paused = false;
+  document.getElementById('bSandbox').style.display = 'none';
+  logMsg(`📅 <b>오늘의 시드</b> (${dailySeed}) — 오늘은 모두가 같은 카드를 받습니다. 최고 기록에 도전하세요!`);
+};
+function dailyBestLabel() { // 시작 버튼에 오늘 최고 기록 표시
+  try { const d = JSON.parse(localStorage.getItem('dpd_daily') || 'null');
+    const el = document.getElementById('dailyBest');
+    if (el) el.textContent = (d && d.seed === todaySeedNum()) ? `· 오늘 최고 R${d.best}` : '';
+  } catch (e) {}
+}
+dailyBestLabel();
+function recordDaily(round) { // 오늘의 시드 최고 기록 저장
+  if (dailySeed == null) return;
+  try { const d = JSON.parse(localStorage.getItem('dpd_daily') || 'null');
+    const best = (d && d.seed === dailySeed) ? Math.max(d.best, round) : round;
+    localStorage.setItem('dpd_daily', JSON.stringify({ seed: dailySeed, best }));
+  } catch (e) {}
+}
 document.getElementById('btnSandbox').onclick = () => {
+  dailySeed = null;
   DIFF_MUL = 1; DIFF_NAME = '샌드박스';
   document.getElementById('startOverlay').style.display = 'none';
   reset();
