@@ -2584,6 +2584,103 @@ function drawBird(b) {
   ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(7.7, -3.6, 0.55, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
+// 🌱 쉬움: 봄 소풍 — 파스텔 하늘 + 옅은 무지개 + 꽃밭 + 팔랑이는 나비
+function drawSpringscape() {
+  const T = S.time;
+  const g = ctx.createLinearGradient(0, 0, 0, cv.height);
+  g.addColorStop(0, '#f2fbff'); g.addColorStop(0.5, '#ecfaea'); g.addColorStop(1, '#daf2c6');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  // 옅은 무지개 (좌상단 큰 호)
+  const RB = ['rgba(255,120,120,0.12)', 'rgba(255,200,80,0.12)', 'rgba(120,200,130,0.12)', 'rgba(120,160,255,0.12)'];
+  RB.forEach((col, i) => { ctx.strokeStyle = col; ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.arc(300, 330, 300 - i * 8, Math.PI * 1.12, Math.PI * 1.72); ctx.stroke(); });
+  ctx.lineWidth = 1;
+  // 해 (방긋)
+  ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(170, 52, 10, 0, 6.28); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,193,7,0.5)'; ctx.lineWidth = 1.6;
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + T * 0.25;
+    ctx.beginPath(); ctx.moveTo(170 + Math.cos(a) * 13, 52 + Math.sin(a) * 13); ctx.lineTo(170 + Math.cos(a) * 18, 52 + Math.sin(a) * 18); ctx.stroke(); }
+  ctx.lineWidth = 1;
+  // 풀 (밝은 초록, 살랑)
+  ctx.strokeStyle = 'rgba(110,190,90,0.65)'; ctx.lineWidth = 1.3;
+  for (const [gx, gy] of GRASS_SPOTS) {
+    const sw = Math.sin(T * 1.6 + gx) * 1.2;
+    for (const o of [-3, 0, 3]) { ctx.beginPath(); ctx.moveTo(gx + o, gy);
+      ctx.quadraticCurveTo(gx + o + sw, gy - 5, gx + o * 0.6 + sw, gy - 9 - Math.abs(o)); ctx.stroke(); }
+  }
+  // 꽃 2배 (다양한 색)
+  const SPRING_FLOWERS = [[112,252,'#f06292'],[592,302,'#ba68c8'],[825,398,'#f06292'],[212,388,'#64b5f6'],[482,462,'#fff176'],[672,132,'#ff8a65'],[342,182,'#f8bbd0'],[882,332,'#aed581']];
+  for (const [fx, fy, fc] of SPRING_FLOWERS) {
+    const sw = Math.sin(T * 1.5 + fx) * 1.5;
+    ctx.strokeStyle = 'rgba(110,190,90,0.65)';
+    ctx.beginPath(); ctx.moveTo(fx, fy + 10); ctx.quadraticCurveTo(fx + sw * 0.6, fy + 4, fx + sw, fy); ctx.stroke();
+    ctx.fillStyle = fc;
+    for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5 + sw * 0.1;
+      ctx.beginPath(); ctx.ellipse(fx + sw + Math.cos(a) * 3.2, fy + Math.sin(a) * 3.2, 2.4, 1.5, a, 0, 6.28); ctx.fill(); }
+    ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(fx + sw, fy, 1.9, 0, 6.28); ctx.fill();
+  }
+  // 🦋 나비 3마리: 8자 궤도로 팔랑팔랑
+  const BFLY = [['#fff176', 250, 210, 1.0], ['#f8bbd0', 620, 360, 1.35], ['#b39ddb', 800, 170, 0.8]];
+  for (const [col, bx0, by0, sp] of BFLY) {
+    const bx = bx0 + Math.sin(T * 0.7 * sp) * 46, by = by0 + Math.sin(T * 1.4 * sp + 1) * 20;
+    const flap = Math.abs(Math.sin(T * 14 * sp)) * 0.8 + 0.2; // 날개 접힘
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.ellipse(bx - 2.6 * flap, by - 1, 3 * flap, 2.2, -0.5, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(bx + 2.6 * flap, by - 1, 3 * flap, 2.2, 0.5, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#5d4037'; ctx.fillRect(bx - 0.6, by - 2.4, 1.2, 4.4); // 몸통
+  }
+}
+// 🔥 어려움: 폭풍 전야 — 회보라 하늘 + 흐르는 먹구름 + 눕는 풀·낙엽 + 멀리 번개 + 까마귀
+function drawStormscape() {
+  const T = S.time;
+  const lightning = ((T * 0.9 + 3) % 8) < 0.14; // ~9초에 한 번, 0.15초 번쩍
+  const g = ctx.createLinearGradient(0, 0, 0, cv.height);
+  g.addColorStop(0, lightning ? '#8f8da6' : '#7d7b93');
+  g.addColorStop(0.55, '#a39aa2'); g.addColorStop(1, '#bdb098');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  // 먹구름 2덩이 (천천히 흐름)
+  ctx.fillStyle = 'rgba(70,66,86,0.5)';
+  for (const [seed, y0, k] of [[0, 46, 1], [560, 84, 0.72]]) {
+    const cx2 = ((T * 9 + seed) % 1150) - 105;
+    ctx.beginPath();
+    for (const [ox, oy, r] of [[0, 0, 34], [30, -8, 26], [-30, -5, 24], [58, 4, 20], [-56, 6, 18]])
+      { ctx.moveTo(cx2 + ox * k + r * k, y0 + oy * k); ctx.arc(cx2 + ox * k, y0 + oy * k, r * k, 0, 6.28); }
+    ctx.fill();
+  }
+  if (lightning) { // ⚡ 번개: 하늘이 살짝 밝아지고 지그재그 한 줄기
+    ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(0, 0, cv.width, cv.height);
+    const lx = 180 + (((T / 8) | 0) * 367) % 600;
+    ctx.strokeStyle = 'rgba(255,250,220,0.9)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(lx, 0);
+    ctx.lineTo(lx - 14, 34); ctx.lineTo(lx + 8, 52); ctx.lineTo(lx - 10, 88); ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+  // 풀: 바람에 크게 한쪽으로 눕는다
+  ctx.strokeStyle = 'rgba(120,130,80,0.6)'; ctx.lineWidth = 1.3;
+  for (const [gx, gy] of GRASS_SPOTS) {
+    const sw = 4.5 + Math.sin(T * 3.2 + gx) * 2.2; // 항상 +x 로 (강풍)
+    for (const o of [-3, 0, 3]) { ctx.beginPath(); ctx.moveTo(gx + o, gy);
+      ctx.quadraticCurveTo(gx + o + sw * 0.7, gy - 4, gx + o * 0.4 + sw, gy - 7 - Math.abs(o) * 0.6); ctx.stroke(); }
+  }
+  // 🍂 낙엽 8장: 바람 타고 오른쪽으로
+  for (let i = 0; i < 8; i++) {
+    const seed = i * 137.5;
+    const lx2 = ((T * (55 + i * 9) + seed * 3) % (cv.width + 60)) - 30;
+    const ly = 60 + (seed % 380) + Math.sin(T * 2.4 + i) * 16;
+    ctx.save(); ctx.translate(lx2, ly); ctx.rotate(T * (2 + i * 0.4));
+    ctx.fillStyle = i % 2 ? 'rgba(160,110,50,0.7)' : 'rgba(190,140,60,0.65)';
+    ctx.beginPath(); ctx.ellipse(0, 0, 3.4, 1.9, 0, 0, 6.28); ctx.fill();
+    ctx.restore();
+  }
+  // 🐦‍⬛ 까마귀 1마리: 이따금 하늘을 가로지른다
+  const crowX = ((T * 34) % 1600) - 260;
+  if (crowX > -40 && crowX < 980) {
+    const cy2 = 74 + Math.sin(T * 1.1) * 8, fl = Math.sin(T * 10) * 4;
+    ctx.strokeStyle = '#2b2b33'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(crowX - 7, cy2 - fl); ctx.quadraticCurveTo(crowX, cy2 + 2, crowX + 7, cy2 - fl); ctx.stroke();
+    ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+  }
+}
 // 💀 지옥 난이도: 검붉은 하늘 + 일식 + 지평선 화염 + 일렁이는 불혀 + 떠오르는 불씨
 function drawHellscape() {
   const T = S.time;
@@ -2624,7 +2721,9 @@ function drawHellscape() {
 }
 function drawBackdrop() {
   const ph = skyPhase(), t = SKY_TINT[ph];
-  if (ph === 5) { drawHellscape(); return; } // 💀 지옥 난이도 전용 배경
+  if (ph === 5) { drawHellscape(); return; }        // 💀 지옥: 아포칼립스
+  if (DIFF_MUL === 1.4) { drawStormscape(); return; } // 🔥 어려움: 폭풍 전야
+  if (DIFF_MUL === 0.7) { drawSpringscape(); return; } // 🌱 쉬움: 봄 소풍
   const g = ctx.createLinearGradient(0, 0, 0, cv.height);
   g.addColorStop(0, t.top); g.addColorStop(1, t.bot);
   ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
