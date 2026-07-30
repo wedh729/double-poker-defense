@@ -1813,25 +1813,28 @@ function update(dt) {
       }
       return p.dist < p.maxDist && p.x > -20 && p.x < 960 && p.y > -20 && p.y < 520;
     }
-    let t = p.tgt;
-    if (t.dead || t.hp <= 0) {
-      t.inc -= p.dmg;
-      if (p.kind !== 'brg') return false;
-      // 부메랑은 목표가 사라지면 근처의 다른 몹으로 방향을 튼다
-      const nt = nearestMob(p.x, p.y, p.hitList, 240);
-      if (!nt) return false;
-      p.tgt = t = nt; t.inc += p.dmg; p.hitList.push(nt); p.hopD0 = Math.hypot(nt.x - p.x, nt.y - p.y);
-    }
-    if (p.kind === 'brgret') { // 🪃 복귀: 주인 손을 향해 회전하며 날아와 착 — 잡히면 다시 손에 쥔다
+    if (p.kind === 'brgret') { // 🪃 복귀: 주인 손을 향해 회전하며 날아와 착 (몬스터가 아닌 주인 추적 — 타겟 사망 체크보다 먼저)
       p.spin += dt * 26;
       const o = p.owner;
       if (!o || !S.units.includes(o)) return false;
       const hx = o.x + 8, hy = o.y - 3;
       const rdx = hx - p.x, rdy = hy - p.y, rd = Math.hypot(rdx, rdy);
       const rstep = p.speed * dt;
-      if (rd <= rstep + 5) { o.brgOut = Math.max(0, (o.brgOut || 1) - 1); return false; }
+      if (rd <= rstep + 5) return false; // 착 — 손 렌더는 공중 부메랑 실시간 조회라 자동으로 다시 쥔다
       p.x += rdx / rd * rstep; p.y += rdy / rd * rstep;
       return true;
+    }
+    let t = p.tgt;
+    if (t.dead || t.hp <= 0) {
+      t.inc -= p.dmg;
+      if (p.kind !== 'brg') return false;
+      // 부메랑은 목표가 사라지면 근처의 다른 몹으로 방향을 튼다
+      const nt = nearestMob(p.x, p.y, p.hitList, 240);
+      if (!nt) { // 몹이 아예 없으면 소멸하지 말고 주인에게 복귀
+        if (!p.dice && p.owner && S.units.includes(p.owner)) { p.kind = 'brgret'; p.speed = 480; p.trail = null; p.hopY = 0; return true; }
+        return false;
+      }
+      p.tgt = t = nt; t.inc += p.dmg; p.hitList.push(nt); p.hopD0 = Math.hypot(nt.x - p.x, nt.y - p.y);
     }
     if (p.kind === 'brg') {
       p.spin += dt * (p.pause > 0 ? 34 : 22);
@@ -1974,7 +1977,6 @@ function fireAt(u, target) {
   }
   switch (u.atk) {
     case 'boomerang': { // 부메랑: 날아가 연쇄로 팅긴다 (한 방씩 탕—탕—탕 리듬, 영웅은 표창 모양)
-      if (!u.gamble) u.brgOut = (u.brgOut || 0) + 1; // 손에서 떠난다 (복귀하면 다시 쥔다)
       target.inc += dmg;
       S.projs.push({ x: m.x, y: m.y, tgt: target, dmg, speed: 240, kind: 'brg', owner: u,
         left: (u.gamble ? gambleBounce : u.bounce) - 1, hitList: [target], spin: 0, ang: 0, pause: 0, star: u.hero && !u.gamble, dice: !!u.gamble, hopD0: Math.hypot(target.x - m.x, target.y - m.y), hopY: 0 });
@@ -4813,8 +4815,8 @@ function drawWeapon(u, x, y) {
   } else if (has('폭탄')) { // 스플래쉬 폭탄
     ctx.fillStyle = '#37474f'; ctx.beginPath(); ctx.arc(x + 4, y, 4.5, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = '#ff6d1f'; ctx.beginPath(); ctx.moveTo(x + 6, y - 4); ctx.lineTo(x + 9, y - 7); ctx.stroke();
-  } else if (has('표창')) { // 표창 별 (대형 표창은 던진 동안 빈손)
-    if (u.atk === 'boomerang' && (u.brgOut || 0) > 0) { ctx.lineWidth = 1; return; }
+  } else if (has('표창')) { // 표창 별 (대형 표창은 던진 동안 빈손 — 실시간 조회)
+    if (u.atk === 'boomerang' && S.projs.some(pr => (pr.kind === 'brg' || pr.kind === 'brgret') && pr.owner === u)) { ctx.lineWidth = 1; return; }
     polyPath(x + 3, y, 4, 5.5, S.time * 6, 2); ctx.fill();
   } else if (has('저격')) { // 저격총 (긴 총열 + 조준경)
     ctx.fillRect(x, y - 1.5, 16, 3); ctx.fillRect(x + 4, y + 1.5, 2, 4);
@@ -4828,8 +4830,8 @@ function drawWeapon(u, x, y) {
   } else if (has('활')) { // 활
     ctx.beginPath(); ctx.arc(x + 1, y, 6, -Math.PI/2.4, Math.PI/2.4); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(x + 3, y - 5); ctx.lineTo(x + 3, y + 5); ctx.stroke();
-  } else if (has('부메랑')) { // 부메랑: 누운 V자 (던진 동안엔 빈손)
-    if ((u.brgOut || 0) > 0) { ctx.lineWidth = 1; return; }
+  } else if (has('부메랑')) { // 부메랑: 누운 V자 (던진 동안엔 빈손 — 공중에 내 부메랑이 있는지 실시간 조회)
+    if (S.projs.some(pr => (pr.kind === 'brg' || pr.kind === 'brgret') && pr.owner === u)) { ctx.lineWidth = 1; return; }
     ctx.strokeStyle = '#c8752f'; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(x - 5, y + 4); ctx.lineTo(x + 1.5, y - 3); ctx.lineTo(x + 8, y + 4); ctx.stroke();
     ctx.strokeStyle = '#e8a56b'; ctx.lineWidth = 1.2;
