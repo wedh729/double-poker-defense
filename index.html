@@ -1489,6 +1489,7 @@ function update(dt) {
   for (const u of S.units) {
     u.swing = Math.max(0, (u.swing || 0) - dt);
     u.atkAnim = Math.max(0, (u.atkAnim || 0) - dt * 6);
+    u.px = u.x; u.py = u.y; // 담장 통과 판정용 이동 전 위치
     const dx = u.tx - u.x, dy = u.ty - u.y, d = Math.hypot(dx, dy);
     if (d > 3) {
       const spd = (u.skillT > 0 && !u.hero) ? u.speed * 2.4 : u.speed; // 🗡️ 암살 급습 대시
@@ -1508,6 +1509,7 @@ function update(dt) {
       }
     } else { u.moving = false; u.stuckT = 0; u.nearT = 0; u.lastD = undefined; }
     pushOutOfPen(u);
+    blockRoomWalls(u); // 🧱 광석방 담장: 입구 외에는 못 넘는다
     if (isInRoom(u) && u.x > ORE_LINE) { u.x = ORE_LINE; if (u.tx > ORE_LINE) u.tx = ORE_LINE; } // 💎 광석 앞 통행 금지선 — 광석이 유닛에 가려지지 않게
   }
   // 유닛 분리: 경계가 명확하도록 (간격 20px, 2회 반복 — 살짝 낑기는 것까지만 허용)
@@ -1527,7 +1529,7 @@ function update(dt) {
       }
     }
   }
-  for (const u of U) { pushOutOfPen(u); if (isInRoom(u) && u.x > ORE_LINE) u.x = ORE_LINE; }
+  for (const u of U) { pushOutOfPen(u); blockRoomWalls(u); if (isInRoom(u) && u.x > ORE_LINE) u.x = ORE_LINE; }
   // 재정착: 목표 8px 이내면 현재 위치를 목표로 스냅 — 밀려난 유닛이 되돌아가려고 미세 진동하는 것 방지
   for (const u of U) {
     if (u.miner) continue;
@@ -2256,6 +2258,25 @@ function markMon(i) {
 const OREPOS = { x: ROOM.cx + ROOM.w/2 - 22, y: ROOM.cy }; // 광석을 방 최우측에 고정 (유닛에 안 가려지게)
 const ORE_LINE = OREPOS.x - 34; // 유닛 접근 한계선 — 이 선을 넘으면 광석이 가려지므로 통행 금지
 function isInRoom(u) { return Math.abs(u.x - ROOM.cx) <= ROOM.w/2 && Math.abs(u.y - ROOM.cy) <= ROOM.h/2; }
+const ROOM_GATE = 40; // 🧱 입구 반높이 (왼쪽 벽 가운데) — 담장 통과는 여기로만
+function blockRoomWalls(u) { // 이동 전 위치(u.px,u.py)와 비교해 담장을 가로질렀으면 그 축만 되돌린다 (벽 따라 미끄러져 입구를 찾게)
+  const x0 = ROOM.cx - ROOM.w / 2, x1 = ROOM.cx + ROOM.w / 2, y0 = ROOM.cy - ROOM.h / 2, y1 = ROOM.cy + ROOM.h / 2;
+  const gy0 = ROOM.cy - ROOM_GATE, gy1 = ROOM.cy + ROOM_GATE;
+  const px = u.px != null ? u.px : u.x, py = u.py != null ? u.py : u.y;
+  const crossV = (xw, hasGate) => {
+    if ((px - xw) * (u.x - xw) < 0) {
+      const t2 = (xw - px) / (u.x - px), cy2 = py + (u.y - py) * t2;
+      if (cy2 > y0 - 2 && cy2 < y1 + 2 && !(hasGate && cy2 > gy0 && cy2 < gy1)) u.x = xw + Math.sign(px - xw) * 2;
+    }
+  };
+  const crossH = (yw) => {
+    if ((py - yw) * (u.y - yw) < 0) {
+      const t2 = (yw - py) / (u.y - py), cx2 = px + (u.x - px) * t2;
+      if (cx2 > x0 - 2 && cx2 < x1 + 2) u.y = yw + Math.sign(py - yw) * 2;
+    }
+  };
+  crossV(x0, true); crossV(x1, false); crossH(y0); crossH(y1);
+}
 function inOreRange(u) { const dx = OREPOS.x - u.x, dy = OREPOS.y - u.y, r = effRange(u) + 18; return dx*dx + dy*dy <= r*r; } // 광석 채굴 사거리
 function oreCap() { return 1 + Math.floor(S.round / 10); }
 // 채굴 자격 배정: 정원 내 가까운 순. 새총(하이카드, tier 0) 계열은 정원 미포함 특혜 — 언제나 채굴 가능
@@ -3374,7 +3395,7 @@ function drawOreRoom() {
   const R = ROOM, x0 = R.cx - R.w / 2, y0 = R.cy - R.h / 2;
   const anyIn = S.units.some(u => !u.miner && isInRoom(u));
   // 🧱 벽돌 담장 (내부는 배경이 그대로 비친다 — 지옥·폭풍 배경과도 자연스럽게 어울림). 왼쪽 벽 가운데가 입구
-  const BW = 8, gateY0 = R.cy - 20, gateY1 = R.cy + 20; // 담 두께 / 입구 구간
+  const BW = 8, gateY0 = R.cy - ROOM_GATE, gateY1 = R.cy + ROOM_GATE; // 담 두께 / 입구 구간 (충돌 판정과 공유)
   ctx.fillStyle = 'rgba(250,245,232,0.10)'; ctx.fillRect(x0, y0, R.w, R.h); // 내부: 아주 옅은 밝음 (게이지 가독용)
   const brick = (bx, by, horiz, len) => { // 한 변을 벽돌로 채운다
     const step2 = 16, mortar = anyIn ? '#7a5a40' : '#8a6a52';
@@ -4710,26 +4731,21 @@ function drawWeapon(u, x, y) {
       ctx.strokeStyle = edge; ctx.lineWidth = 0.7; ctx.stroke();
     }
     ctx.lineWidth = 1;
-  } else if (has('단검')) { // 🗡️ M7 단검 (카툰): 틀은 그대로 — 링 그립 + 십자 가드 + 클립 포인트, 통통한 비율에 또렷한 외곽선
-    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.62); ctx.lineJoin = 'round'; // 사선 파지
-    ctx.fillStyle = '#3a4149'; roundRect(-8, -2.7, 6.8, 5.4, 2); ctx.fill();    // 그립 (짙은 남회색, 통통)
-    ctx.strokeStyle = '#22262c'; ctx.lineWidth = 1.2; roundRect(-8, -2.7, 6.8, 5.4, 2); ctx.stroke();
-    ctx.strokeStyle = '#5a636d'; ctx.lineWidth = 1.3;                            // 그립 링 홈 2줄 (단순하게)
-    for (const gx of [-5.9, -3.7]) { ctx.beginPath(); ctx.moveTo(gx, -2.2); ctx.lineTo(gx, 2.2); ctx.stroke(); }
-    ctx.fillStyle = '#aab4bf'; roundRect(-9.8, -2, 2.2, 4, 1); ctx.fill();       // 폼멜 (동글)
-    ctx.strokeStyle = '#22262c'; ctx.lineWidth = 1; roundRect(-9.8, -2, 2.2, 4, 1); ctx.stroke();
-    ctx.fillStyle = '#aab4bf'; roundRect(-1.7, -3.8, 2.2, 7.6, 1); ctx.fill();   // 십자 가드 (동글)
-    ctx.strokeStyle = '#22262c'; roundRect(-1.7, -3.8, 2.2, 7.6, 1); ctx.stroke();
-    ctx.fillStyle = '#eef3f6';                                                    // 날: 통통한 클립 포인트
-    ctx.beginPath(); ctx.moveTo(0.5, -2.2); ctx.lineTo(8.4, -2.2);               // 등날 직선
-    ctx.lineTo(12.6, -0.2);                                                       // 끝은 뾰족하게
-    ctx.lineTo(8.4, 2.4); ctx.lineTo(0.5, 2.4); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#2b3138'; ctx.lineWidth = 1.2; ctx.stroke();               // 만화식 두꺼운 외곽선
-    ctx.strokeStyle = '#c3ccd4'; ctx.lineWidth = 1;                               // 피홈 한 줄
-    ctx.beginPath(); ctx.moveTo(1.8, 0.1); ctx.lineTo(7.6, 0.1); ctx.stroke();
-    ctx.fillStyle = '#fff';                                                       // 반짝 점
-    ctx.beginPath(); ctx.arc(10.2, -0.9, 0.9, 0, 6.28); ctx.fill();
-    ctx.restore(); ctx.lineJoin = 'miter'; ctx.lineWidth = 1;
+  } else if (has('단검')) { // 🗡️ M7 단검: 틀만 유지(링 그립·가드·클립 포인트) — 다른 무기들과 같은 플랫 단색 질감
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.62); // 사선 파지
+    ctx.fillStyle = '#37474f'; ctx.fillRect(-8, -2.2, 6.6, 4.4);        // 그립 (단색)
+    ctx.fillStyle = '#546e7a';                                           // 링 2줄
+    ctx.fillRect(-6.3, -2.2, 1.1, 4.4); ctx.fillRect(-4.3, -2.2, 1.1, 4.4);
+    ctx.fillStyle = '#90a4ae';
+    ctx.fillRect(-9.6, -1.7, 1.7, 3.4);                                  // 폼멜
+    ctx.fillRect(-1.6, -3.4, 1.8, 6.8);                                  // 십자 가드
+    ctx.fillStyle = '#cfd8dc';                                           // 날 (대검 시절과 같은 플랫 은색)
+    ctx.beginPath(); ctx.moveTo(0.2, -2); ctx.lineTo(8.4, -2);
+    ctx.lineTo(12.4, -0.2); ctx.lineTo(8.4, 2.2); ctx.lineTo(0.2, 2.2); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#90a4ae'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1;        // 하이라이트 한 줄 (게임 공통 문법)
+    ctx.beginPath(); ctx.moveTo(1.5, 1.3); ctx.lineTo(11.2, -0.2); ctx.stroke();
+    ctx.restore(); ctx.lineWidth = 1;
   } else if (has('전기톱')) { // 전기톱 — 리얼 체인소 (주황 엔진 + 상단 손잡이 + 긴 가이드바 + 돌아가는 체인)
     ctx.strokeStyle = '#37474f'; ctx.lineWidth = 2; // 상단 손잡이 아치
     ctx.beginPath(); ctx.arc(x - 1, y - 4, 4, Math.PI, 0); ctx.stroke();
