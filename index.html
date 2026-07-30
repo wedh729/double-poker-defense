@@ -5131,11 +5131,24 @@ function monsterAt(x, y) {
   }
   return best;
 }
+// 👹 보스 도감: shape별 이름 + 위트 한 줄
+const BOSS_INFO = {
+  20: ['☄️ 운석', '지구 옆을 지나가다 잠시 들렀다. 어쩌다 보니 눌러앉게 됐다.'],
+  21: ['🌕 보름달', '소원을 빌어도 소용없다. 오늘은 근무일이라서.'],
+  22: ['💫 혜성', '76년에 한 번 오는 몸인데 하필 오늘 너를 만났다.'],
+  23: ['🪨 수성', '태양 바로 옆집에 살다 보니 성격이 좀 많이 탔다.'],
+  24: ['🪐 토성', '고리는 무기가 아니라 장식이다. …아직까지는.'],
+  25: ['🌋 금성', '샛별이라고 예쁘게 불러줘도, 실은 태양계에서 제일 뜨거운 성격이다.'],
+  26: ['🟠 목성', '태양계 최대 몸집. 다이어트는 4억 년 전에 포기했다.'],
+  27: ['☀️ 태양', '지금 보이는 건 8분 전의 나다. 즉, 이미 늦었다.'],
+  15: ['🕳️ 블랙홀', '들어온 손님은 많은데 후기가 하나도 없다. 이유는 묻지 마라.'],
+};
 function showMonsterInfo(m) {
   const el = document.getElementById('objInfo');
   const mat = MATERIALS[m.mat] || { name: '수수께끼 공' };
-  const name = m.boss ? '👹 보스' : mat.name + (m.golden ? ' ✨' : '');
-  const desc = m.boss ? '거대하고 위협적인 보스! 시간 내에 못 잡으면 즉사… 💀' : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…');
+  const bi = m.boss ? (BOSS_INFO[m.shape] || ['👹 보스', '정체불명. 아무튼 세다.']) : null;
+  const name = m.boss ? bi[0] + ' (보스)' : mat.name + (m.golden ? ' ✨' : '');
+  const desc = m.boss ? `<i style="color:#7a6a58">“${bi[1]}”</i><br><span style="font-size:11px;color:#a04030">시간 내에 못 잡으면 즉사 💀</span>` : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…');
   const hp = Math.max(0, Math.ceil(m.hp)), max = Math.max(1, Math.ceil(m.max));
   const pct = Math.max(0, Math.min(1, m.hp / m.max));
   const col = pct > 0.5 ? '#43a047' : pct > 0.25 ? '#ff9800' : '#e53935';
