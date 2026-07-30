@@ -569,7 +569,9 @@ const PLANK_W = 48, PLANK_DEPTH = 12; // 🪵 나무판자: 소환장 중앙 하
 function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > CY + PEN.h/2 - PLANK_DEPTH - 26 && y < CY + PEN.h/2 + 16; }
 // 몬스터 크기 (2배 스케일) — drawMonster/deathPop 공용
 // 크기: 밴드 진행도(esc)만큼 커진다 (③ 시각적 난이도 신호)
-function monSize(m) { return (m.boss ? 52 : 19) * (m.small ? 0.6 : 1) * (1 + (m.esc || 0) * 0.32); }
+// 재질별 크기 배율: 실제 공 크기 싱크 (야구공 작게 ~ 농구공 크게). 천체는 웅장하게
+const MAT_SIZE = [0.9, 0.95, 1.12, 1.18, 0.8, 0.85, 1.1, 0.9, 0.9, 1.2, 1.15, 1.25, 1.3, 1.1];
+function monSize(m) { return (m.boss ? 52 : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + (m.esc || 0) * 0.32); }
 const PORTAL = { x: 80, y: 78, r: 34 }; // 강화 포털: 같은 유닛 5기를 넣으면 영웅
 const WAVE_TIME = 90, POKER_TIME = 60;
 const FINAL_ROUND = 80; // 이후는 헬모드
@@ -2671,50 +2673,72 @@ function drawSpringscape() {
 }
 // 🔥 어려움: 폭풍 전야 — 회보라 하늘 + 흐르는 먹구름 + 눕는 풀·낙엽 + 멀리 번개 + 까마귀
 function drawStormscape() {
-  const T = S.time;
-  const lightning = ((T * 0.9 + 3) % 8) < 0.14; // ~9초에 한 번, 0.15초 번쩍
+  const T = S.time, k = Math.min(1, S.round / 80); // 진행도: 갈수록 세계가 무너진다
+  const period = 8 - 5 * k;                         // 번개 간격 8초 → 3초
+  const lightning = ((T * 0.9 + 3) % period) < 0.14;
   const g = ctx.createLinearGradient(0, 0, 0, cv.height);
   g.addColorStop(0, lightning ? '#8f8da6' : '#7d7b93');
   g.addColorStop(0.55, '#a39aa2'); g.addColorStop(1, '#bdb098');
   ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
-  // 먹구름 2덩이 (천천히 흐름)
-  ctx.fillStyle = 'rgba(70,66,86,0.5)';
-  for (const [seed, y0, k] of [[0, 46, 1], [560, 84, 0.72]]) {
-    const cx2 = ((T * 9 + seed) % 1150) - 105;
+  if (k > 0.05) { ctx.fillStyle = `rgba(28,26,44,${(0.22 * k).toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height); } // 점점 잿빛으로
+  if (k > 0.8) { // 말기: 지평선에 스미는 붉은 기운 — 전쟁이 다가온다
+    const rg = ctx.createLinearGradient(0, cv.height - 90, 0, cv.height);
+    rg.addColorStop(0, 'rgba(180,40,20,0)'); rg.addColorStop(1, `rgba(180,40,20,${((k - 0.8) * 0.9).toFixed(2)})`);
+    ctx.fillStyle = rg; ctx.fillRect(0, cv.height - 90, cv.width, 90);
+  }
+  // 먹구름: 2덩이 → 후반 4덩이, 점점 낮게 깔린다
+  ctx.fillStyle = `rgba(70,66,86,${(0.5 + 0.2 * k).toFixed(2)})`;
+  const clouds = [[0, 46, 1], [560, 84, 0.72]];
+  if (k > 0.35) clouds.push([290, 120, 0.85]);
+  if (k > 0.65) clouds.push([780, 62, 0.9]);
+  for (const [seed, y00, kk] of clouds) {
+    const cx2 = ((T * (9 + k * 5) + seed) % 1150) - 105, y0c = y00 + k * 18;
     ctx.beginPath();
     for (const [ox, oy, r] of [[0, 0, 34], [30, -8, 26], [-30, -5, 24], [58, 4, 20], [-56, 6, 18]])
-      { ctx.moveTo(cx2 + ox * k + r * k, y0 + oy * k); ctx.arc(cx2 + ox * k, y0 + oy * k, r * k, 0, 6.28); }
+      { ctx.moveTo(cx2 + ox * kk + r * kk, y0c + oy * kk); ctx.arc(cx2 + ox * kk, y0c + oy * kk, r * kk, 0, 6.28); }
     ctx.fill();
   }
-  if (lightning) { // ⚡ 번개: 하늘이 살짝 밝아지고 지그재그 한 줄기
-    ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(0, 0, cv.width, cv.height);
-    const lx = 180 + (((T / 8) | 0) * 367) % 600;
-    ctx.strokeStyle = 'rgba(255,250,220,0.9)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(lx, 0);
-    ctx.lineTo(lx - 14, 34); ctx.lineTo(lx + 8, 52); ctx.lineTo(lx - 10, 88); ctx.stroke();
-    ctx.lineWidth = 1;
+  if (lightning) { // ⚡ 번개: 후반엔 가끔 두 줄기
+    ctx.fillStyle = `rgba(255,255,255,${(0.10 + 0.05 * k).toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height);
+    const strikes = k > 0.7 && ((T / period) | 0) % 3 === 0 ? 2 : 1;
+    for (let si = 0; si < strikes; si++) {
+      const lx = 180 + (((T / period) | 0) * 367 + si * 251) % 600;
+      ctx.strokeStyle = 'rgba(255,250,220,0.9)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(lx, 0);
+      ctx.lineTo(lx - 14, 34); ctx.lineTo(lx + 8, 52); ctx.lineTo(lx - 10, 88 + k * 40); ctx.stroke();
+      ctx.lineWidth = 1;
+    }
   }
-  // 풀: 바람에 크게 한쪽으로 눕는다
+  if (k > 0.55) { // 🌧️ 가는 빗줄기 (후반)
+    ctx.strokeStyle = `rgba(200,205,225,${((k - 0.55) * 0.5).toFixed(2)})`; ctx.lineWidth = 1;
+    for (let i = 0; i < 14; i++) {
+      const rx = ((i * 149.3 + T * 300) % (cv.width + 80)) - 40, ry = (i * 83.7 + T * 560) % cv.height;
+      ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 5, ry + 13); ctx.stroke();
+    }
+  }
+  // 풀: 바람이 갈수록 세다
   ctx.strokeStyle = 'rgba(120,130,80,0.6)'; ctx.lineWidth = 1.3;
   for (const [gx, gy] of GRASS_SPOTS) {
-    const sw = 4.5 + Math.sin(T * 3.2 + gx) * 2.2; // 항상 +x 로 (강풍)
+    const sw = 4.5 + 3 * k + Math.sin(T * (3.2 + k * 2) + gx) * 2.2;
     for (const o of [-3, 0, 3]) { ctx.beginPath(); ctx.moveTo(gx + o, gy);
       ctx.quadraticCurveTo(gx + o + sw * 0.7, gy - 4, gx + o * 0.4 + sw, gy - 7 - Math.abs(o) * 0.6); ctx.stroke(); }
   }
-  // 🍂 낙엽 8장: 바람 타고 오른쪽으로
+  // 🍂 낙엽: 갈수록 빨리 날아간다
   for (let i = 0; i < 8; i++) {
     const seed = i * 137.5;
-    const lx2 = ((T * (55 + i * 9) + seed * 3) % (cv.width + 60)) - 30;
+    const lx2 = ((T * (55 + i * 9) * (1 + 0.8 * k) + seed * 3) % (cv.width + 60)) - 30;
     const ly = 60 + (seed % 380) + Math.sin(T * 2.4 + i) * 16;
     ctx.save(); ctx.translate(lx2, ly); ctx.rotate(T * (2 + i * 0.4));
     ctx.fillStyle = i % 2 ? 'rgba(160,110,50,0.7)' : 'rgba(190,140,60,0.65)';
     ctx.beginPath(); ctx.ellipse(0, 0, 3.4, 1.9, 0, 0, 6.28); ctx.fill();
     ctx.restore();
   }
-  // 🐦‍⬛ 까마귀 1마리: 이따금 하늘을 가로지른다
-  const crowX = ((T * 34) % 1600) - 260;
-  if (crowX > -40 && crowX < 980) {
-    const cy2 = 74 + Math.sin(T * 1.1) * 8, fl = Math.sin(T * 10) * 4;
+  // 까마귀: 후반엔 떼로 몰려온다
+  const nCrow = 1 + (k > 0.6 ? 2 : 0) + (k > 0.85 ? 2 : 0);
+  for (let ci = 0; ci < nCrow; ci++) {
+    const crowX = ((T * (34 + ci * 6) + ci * 500) % 1600) - 260;
+    if (crowX < -40 || crowX > 980) continue;
+    const cy2 = 60 + ci * 16 + Math.sin(T * 1.1 + ci * 2) * 8, fl = Math.sin(T * 10 + ci * 3) * 4;
     ctx.strokeStyle = '#2b2b33'; ctx.lineWidth = 2; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(crowX - 7, cy2 - fl); ctx.quadraticCurveTo(crowX, cy2 + 2, crowX + 7, cy2 - fl); ctx.stroke();
     ctx.lineCap = 'butt'; ctx.lineWidth = 1;
@@ -2722,40 +2746,93 @@ function drawStormscape() {
 }
 // 💀 지옥 난이도: 검붉은 하늘 + 일식 + 지평선 화염 + 일렁이는 불혀 + 떠오르는 불씨
 function drawHellscape() {
-  const T = S.time;
-  const g = ctx.createLinearGradient(0, 0, 0, cv.height);           // 검붉은 하늘 → 타는 대지
-  g.addColorStop(0, '#200d10'); g.addColorStop(0.5, '#48150f'); g.addColorStop(1, '#772812');
+  const T = S.time, hk = Math.min(1, S.round / 80), hell2 = Math.max(0, Math.min(1, (S.round - FINAL_ROUND) / 40)); // 진행도 / 헬 심화
+  const g = ctx.createLinearGradient(0, 0, 0, cv.height);           // 검붉은 하늘 → 타는 대지 (갈수록 더 검게)
+  g.addColorStop(0, hell2 > 0 ? '#140609' : '#200d10'); g.addColorStop(0.5, '#48150f'); g.addColorStop(1, '#772812');
   ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
-  const hg = ctx.createLinearGradient(0, cv.height - 130, 0, cv.height); // 지평선 화염 글로우 (숨쉬듯)
+  const hg = ctx.createLinearGradient(0, cv.height - 130, 0, cv.height); // 지평선 화염 글로우 (갈수록 강하게)
   hg.addColorStop(0, 'rgba(255,110,20,0)');
-  hg.addColorStop(1, `rgba(255,120,25,${(0.22 + 0.08 * Math.sin(T * 1.7)).toFixed(2)})`);
+  hg.addColorStop(1, `rgba(255,120,25,${(0.22 + 0.15 * hk + 0.08 * Math.sin(T * 1.7)).toFixed(2)})`);
   ctx.fillStyle = hg; ctx.fillRect(0, cv.height - 130, cv.width, 130);
-  // 일식: 검은 태양 + 붉은 코로나
-  const sx = 170, sy = 52;
-  ctx.fillStyle = `rgba(255,60,10,${(0.3 + 0.1 * Math.sin(T * 2.3)).toFixed(2)})`;
-  ctx.beginPath(); ctx.arc(sx, sy, 15, 0, 6.28); ctx.fill();
-  ctx.fillStyle = '#ff8a3d'; ctx.beginPath(); ctx.arc(sx, sy, 11, 0, 6.28); ctx.fill();
-  ctx.fillStyle = '#12060a'; ctx.beginPath(); ctx.arc(sx, sy, 9.2, 0, 6.28); ctx.fill();
-  // 불혀: 풀 자리에서 화염이 일렁인다 (GRASS_SPOTS 재사용)
+  // 하늘의 붉은 균열 (헬 진입 후): 세계가 갈라진다
+  if (hell2 > 0) {
+    const nCr = 1 + Math.floor(hell2 * 3.5);
+    for (let i = 0; i < nCr; i++) {
+      const seed = i * 271.7, x0c = 90 + (seed % 760), y0c = 14 + (seed % 60);
+      const pulse = 0.5 + 0.35 * Math.sin(T * 2.2 + i * 2);
+      ctx.strokeStyle = `rgba(255,60,40,${(pulse * (0.4 + hell2 * 0.4)).toFixed(2)})`; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(x0c, y0c);
+      let px2 = x0c, py2 = y0c, ang2 = 1.2 + Math.sin(seed) * 0.4;
+      for (let sg = 1; sg <= 4; sg++) { ang2 += Math.sin(seed + sg * 3.7) * 0.8;
+        px2 += Math.cos(ang2) * 16; py2 += Math.abs(Math.sin(ang2)) * 13; ctx.lineTo(px2, py2); }
+      ctx.stroke(); ctx.lineWidth = 1;
+    }
+  }
+  // 유성 (R90+): ~11초마다 하나 떨어지며 섬광
+  if (S.round >= 90) {
+    const mt = (T * 0.7 + 2) % 11;
+    if (mt < 0.5) {
+      const pr2 = mt / 0.5, mseed = ((T / 11) | 0) * 313;
+      const mx = 120 + (mseed % 640) + pr2 * 160, my = -10 + pr2 * 230;
+      ctx.strokeStyle = `rgba(255,190,120,${(0.85 * (1 - pr2 * 0.5)).toFixed(2)})`; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(mx - 34, my - 46); ctx.lineTo(mx, my); ctx.stroke();
+      ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+      ctx.fillStyle = '#fff3d0'; ctx.beginPath(); ctx.arc(mx, my, 2.6, 0, 6.28); ctx.fill();
+      if (pr2 > 0.9) { ctx.fillStyle = 'rgba(255,200,120,0.08)'; ctx.fillRect(0, 0, cv.width, cv.height); }
+    }
+  }
+  // 일식: 갈수록 코로나가 커지고 붉어진다
+  const sx = 170, sy = 52, cor = 15 + 6 * hk;
+  ctx.fillStyle = `rgba(255,${60 - 25 * hk | 0},10,${(0.3 + 0.15 * hk + 0.1 * Math.sin(T * 2.3)).toFixed(2)})`;
+  ctx.beginPath(); ctx.arc(sx, sy, cor, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#ff8a3d'; ctx.beginPath(); ctx.arc(sx, sy, 11 + 2 * hk, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#12060a'; ctx.beginPath(); ctx.arc(sx, sy, 9.2 + 1.6 * hk, 0, 6.28); ctx.fill();
+  // 지평선 검은 연기 기둥 (후반): 세계가 탄다
+  if (hk > 0.5) {
+    const nP = 1 + (hk > 0.75 ? 1 : 0) + (hell2 > 0.3 ? 1 : 0);
+    for (let i = 0; i < nP; i++) {
+      const bx = 150 + i * 330 + (i * 97 % 120), by = cv.height - 96;
+      ctx.fillStyle = `rgba(25,18,16,${(0.34 + 0.2 * hk).toFixed(2)})`;
+      ctx.beginPath(); ctx.moveTo(bx - 7, by + 96);
+      for (let sg = 0; sg <= 6; sg++) { const yy = by + 96 - sg * 30, wob = Math.sin(T * 1.4 + i * 2 + sg) * (5 + sg * 2.6);
+        ctx.lineTo(bx + wob - 8 - sg * 2.2, yy); }
+      for (let sg = 6; sg >= 0; sg--) { const yy = by + 96 - sg * 30, wob = Math.sin(T * 1.4 + i * 2 + sg) * (5 + sg * 2.6);
+        ctx.lineTo(bx + wob + 8 + sg * 2.2, yy); }
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  // 불혀: 풀 자리에서 화염이 일렁인다 (갈수록 크게)
+  const fscale = 1 + 0.35 * hk;
   for (const [gx, gy] of GRASS_SPOTS) {
     const f1 = Math.sin(T * 6 + gx * 0.7), f2 = Math.cos(T * 8.5 + gx);
     ctx.fillStyle = `rgba(255,${105 + 40 * f2 | 0},25,0.55)`;
     ctx.beginPath(); ctx.moveTo(gx - 5, gy);
-    ctx.quadraticCurveTo(gx - 4 + f1 * 2.5, gy - 8, gx + f1 * 3.5, gy - 14 - f2 * 3);
-    ctx.quadraticCurveTo(gx + 4 + f1 * 2.5, gy - 8, gx + 5, gy); ctx.closePath(); ctx.fill();
+    ctx.quadraticCurveTo(gx - 4 + f1 * 2.5, gy - 8 * fscale, gx + f1 * 3.5, gy - (14 + f2 * 3) * fscale);
+    ctx.quadraticCurveTo(gx + 4 + f1 * 2.5, gy - 8 * fscale, gx + 5, gy); ctx.closePath(); ctx.fill();
     ctx.fillStyle = 'rgba(255,214,80,0.6)';
     ctx.beginPath(); ctx.moveTo(gx - 2.4, gy);
     ctx.quadraticCurveTo(gx + f1 * 2, gy - 6, gx + f1 * 2.2, gy - 8.5);
     ctx.quadraticCurveTo(gx + 2.4 + f1, gy - 5, gx + 2.4, gy); ctx.closePath(); ctx.fill();
   }
-  // 떠오르는 불씨: 화면 전체에서 흔들리며 상승 (고정 시드 12개 — 파티클 비용 없음)
-  for (let i = 0; i < 12; i++) {
+  // 떠오르는 불씨 (갈수록 많이) + 내리는 잿가루 (후반)
+  const nE = 12 + Math.round(10 * hk);
+  for (let i = 0; i < nE; i++) {
     const seed = i * 79.3;
     const ex = (seed * 7.7) % cv.width + Math.sin(T * 1.3 + i) * 14;
     const ey = cv.height - ((T * (26 + i * 3.5) + seed) % (cv.height + 40));
     const a = 0.5 * (0.5 + 0.5 * Math.sin(T * 5 + i * 2));
     ctx.fillStyle = `rgba(255,${150 + (i % 3) * 40},60,${a.toFixed(2)})`;
     ctx.beginPath(); ctx.arc(ex, ey, 1.4 + (i % 3) * 0.7, 0, 6.28); ctx.fill();
+  }
+  if (hk > 0.5) { // 잿가루: 눈처럼 천천히 내린다 (불씨와 반대 방향 — 대비)
+    const nA = Math.round(12 * (hk - 0.4));
+    ctx.fillStyle = 'rgba(185,178,172,0.4)';
+    for (let i = 0; i < nA; i++) {
+      const seed = i * 211.4;
+      const ax = (seed * 3.3) % cv.width + Math.sin(T * 0.8 + i * 1.7) * 22;
+      const ay = ((T * (14 + i * 2) + seed) % (cv.height + 30)) - 15;
+      ctx.beginPath(); ctx.arc(ax, ay, 1.1 + (i % 2) * 0.6, 0, 6.28); ctx.fill();
+    }
   }
 }
 function drawBackdrop() {
