@@ -1832,8 +1832,8 @@ function update(dt) {
       if (p.kind !== 'brg') return false;
       // 부메랑은 목표가 사라지면 근처의 다른 몹으로 방향을 튼다
       const nt = nearestMob(p.x, p.y, p.hitList, 240);
-      if (!nt) { // 몹이 아예 없으면 소멸하지 말고 주인에게 복귀
-        if (!p.dice && p.owner && S.units.includes(p.owner)) { p.kind = 'brgret'; p.speed = 480; p.trail = null; p.hopY = 0; return true; }
+      if (!nt) { // 몹이 아예 없으면 — 부메랑은 주인에게 복귀, 표창은 소멸
+        if (!p.dice && !p.star && p.owner && S.units.includes(p.owner)) { p.kind = 'brgret'; p.speed = 480; p.trail = null; p.hopY = 0; return true; }
         return false;
       }
       p.tgt = t = nt; t.inc += p.dmg; p.hitList.push(nt); p.hopD0 = Math.hypot(nt.x - p.x, nt.y - p.y);
@@ -1856,10 +1856,10 @@ function update(dt) {
       } else S.effects.push({ type:'boom', x: t.x, y: t.y, r: 5, t: 0.1 });
       if (p.onHit === 'shards') spawnShards(p);   // 대왕새총: 파편 튐
       if (p.kind === 'brg' && p.left > 0) {
-        const nt = nearestMob(t.x, t.y, p.hitList, 180);
+        const nt = p.star ? farthestMob(t.x, t.y, p.hitList, 260) : nearestMob(t.x, t.y, p.hitList, 180); // 대형 표창: 멀리멀리 — 7번 팅기는 게 눈에 보이게
         if (nt) { p.left--; p.tgt = nt; nt.inc += p.dmg; p.hitList.push(nt); p.pause = 0.06; p.hopD0 = Math.hypot(nt.x - t.x, nt.y - t.y); p.speed = Math.min(520, p.speed + 70); return true; } // 짧게 끊어 탕-탕-탕 (머무름 X, 튕길수록 가속)
       }
-      if (p.kind === 'brg' && !p.dice && p.owner && S.units.includes(p.owner)) { // 🪃 팅김 끝 → 주인 손으로 되돌아간다
+      if (p.kind === 'brg' && !p.dice && !p.star && p.owner && S.units.includes(p.owner)) { // 🪃 팅김 끝 → 주인 손으로 (부메랑만 — 표창은 소모품)
         p.kind = 'brgret'; p.speed = 480; p.trail = null; p.hopY = 0; return true;
       }
       return false;
@@ -1943,6 +1943,15 @@ function dealDamage(m, dmg, owner) {
   } else {
     m.hp -= dmg;
   }
+}
+function farthestMob(x, y, exclude, rad) { // 반경 안에서 가장 먼 몹 — 대형 표창이 시원하게 가로지르며 팅긴다
+  let best = null, bd = -1;
+  for (const m of S.monsters) {
+    if (m.hp <= 0 || m.dead || (exclude && exclude.includes(m))) continue;
+    const d = Math.hypot(m.x - x, m.y - y);
+    if (d <= rad && d > bd) { bd = d; best = m; }
+  }
+  return best;
 }
 function nearestMob(x, y, exclude, rad) {
   let best = null, bd = rad;
@@ -4893,8 +4902,7 @@ function drawWeapon(u, x, y) {
     ctx.fillStyle = '#37474f'; ctx.beginPath(); ctx.arc(x + 4, y, 4.5, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = '#ff6d1f'; ctx.beginPath(); ctx.moveTo(x + 6, y - 4); ctx.lineTo(x + 9, y - 7); ctx.stroke();
   } else if (has('표창')) { // 표창 별 (대형 표창은 던진 동안 빈손 — 실시간 조회)
-    if (u.atk === 'boomerang') { // 트리플 영웅·슈퍼: 대형 표창
-      if (S.projs.some(pr => (pr.kind === 'brg' || pr.kind === 'brgret') && pr.owner === u)) { ctx.lineWidth = 1; return; }
+    if (u.atk === 'boomerang') { // 트리플 영웅·슈퍼: 대형 표창 (소모품 — 던져도 다음 표창을 바로 쥔다)
       ctx.fillStyle = '#455a64';
       polyPath(x + 5, y, 4, 9, S.time * 6, 3.2); ctx.fill();
       ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.4; ctx.stroke();
