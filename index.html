@@ -494,8 +494,8 @@ const WEAPONS = [
    hero:{name:'저격총', atk:'sniper', cd:0.8, dmgMul:7, range:470, proj:'sniper'}}, // 속사 저격 (cd 0.8·데미지 하향, DPS 유지 리워크)
   // 5 플러쉬 — 화염방사기 (사거리 80: 소환장 정중앙엔 못 닿음. 사거리 손해분은 dmg↑로 보정)
   //   영웅(대형)은 폭·길이 각 1.5배 → 확실히 강해지고 정중앙까지 태움
-  {name:'화염방사기', dmg:0.24, cd:0.24, range:96, splash:44, bounce:0, atk:'area', vis:'flame', // 공속 2배(0.48→0.24)·사거리 1.2배(80→96)
-   hero:{name:'대형 화염방사기', splash:66, range:120, cd:0.125, dmgMul:3}}, // 공속 8/초 + 데미지 ×3 + 불길 폭 2배(splash 33→66)
+  {name:'화염방사기', dmg:1.0, cd:0.24, range:96, splash:44, bounce:0, atk:'area', vis:'flame', // dmg 0.24→1.0 — 딜 대부분이 업글 가산이라 기본치를 크게 올려야 티어5 자리 (실측 74→~105)
+   hero:{name:'대형 화염방사기', splash:66, range:120, cd:0.125, dmgMul:2.5}}, // 공속 8/초 + 데미지 ×2.5 + 불길 폭 2배 (기본 dmg 인상분 반영해 3→2.5, 밀집 ~1.6k = 티어 5.5 자리)
   // 6 풀하우스 — 단검 (암살자: 사거리 짧게 + 초고속 난도질 + 암살 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
   {name:'단검', dmg:26, cd:0.3, range:72, splash:44, bounce:0, atk:'area', vis:'sword', bossCrack:true, // 💎 보석 브레이커 암살자: 단일 타겟·고속 난도질(공속 2/3: 0.2→0.3)·보스 대미지 2배
@@ -936,13 +936,16 @@ function fuseCount(u) {
   if (u.hero) return 5;        // 영웅 = 기본 5기분
   return 1;
 }
+// 종족 업글 유효치: Lv.20까지 선형, 그 뒤는 초과분이 제곱으로 가속 (Lv25→27, Lv30→38, Lv35→53, Lv40→72)
+// 후반(헬)에서 업글 벽을 뚫고 '아슬아슬하게 버티며 크는' 곡선
+function upgEff(lv) { return lv <= 20 ? lv : lv + (lv - 20) * (lv - 20) * 0.08; }
 function effDmg(u) {
   const heroUp = 1 + 0.15 * (u.heroUpLv || 0); // ⭐ 영웅 단련: 히든 영웅 전용 (레벨당 총 공격력 +15%)
   if (u.catapult) return (u.dmg + upgPer(u) * 8 * S.upg[0]) * heroUp; // 🪨 투석기: ♦ 다이아 업글 적용. 전체타격 계수 × 8 → 렙당 실효 DPS ≈ 91 (영웅 탱크 75보다 약간 위, 하이카드 20기 값어치)
   if (isHiddenCombo(u)) return u.dmg * heroUp; // 히든 영웅은 종족이 없다 — 종족 업글 미적용, 단련(+제물 승급)으로만 성장
   const per = upgPer(u) * fuseCount(u);
-  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return u.dmg + per * (s[0] + s[1]); } // 에이스·에이스 영웅: 가장 많이 올린 두 종족 합산
-  return u.dmg + per * S.upg[u.race];
+  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return u.dmg + per * (upgEff(s[0]) + upgEff(s[1])); } // 에이스: 상위 2종족 합산 (가속 반영)
+  return u.dmg + per * upgEff(S.upg[u.race]);
 }
 // 📯 콰르텟 공속 오라 적용된 실제 쿨다운 (spdBuff는 update()에서 매 프레임 갱신)
 function isHiddenCombo(u) { return !!(u.gamble || u.junk || u.quartet || u.execute || u.shogun || u.chrono || u.slot || u.joker || u.catapult); } // 히든 조합 유닛 판별
@@ -5467,8 +5470,8 @@ function updateInfoPanel() {
   if (u.forceTarget) traits.push('<b style="color:#e53935">🎯 집중 공격 중</b>');
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
   const sub = u.miner ? '광부' : isHiddenCombo(u) ? '히든 영웅' : keyTag + HAND_NAMES[u.tier] + (u.hero ? ' 영웅' : '');
-  const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = top2[0] + top2[1];
-  const upFlat = isHiddenCombo(u) ? 0 : +(((u.hidden || u.ace) ? aceUp : S.upg[u.race]) * upgPer(u) * fuseCount(u)).toFixed(1); // 히든 영웅은 종족 업글 미적용 (⭐ 단련으로 성장)
+  const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = upgEff(top2[0]) + upgEff(top2[1]);
+  const upFlat = isHiddenCombo(u) ? 0 : +(((u.hidden || u.ace) ? aceUp : upgEff(S.upg[u.race])) * upgPer(u) * fuseCount(u)).toFixed(1); // 히든 영웅은 종족 업글 미적용 (⭐ 단련으로 성장)
   const hmI = hiddenMeta(u);
   const raceLine = u.catapult
     ? `종족: <span style="color:${RACES[0].color}">♦ 다이아</span> (하이카드 20기 제물 — 다이아 업그레이드 적용)`
@@ -5760,7 +5763,7 @@ function upgItemsHTML() {
     `<div class="rpgItem" style="border-left:5px solid ${r.color}">
       <div class="rpgIcon" style="color:${r.color}">${r.suit}</div>
       <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
-        <span class="desc">단일 +${(S.upg[i]*2.5).toFixed(1)} · 스플래시 초당 +${(S.upg[i]*0.55).toFixed(1)}/마리 · 전체 초당 +${(S.upg[i]*0.15).toFixed(1)}/마리</span></div>
+        <span class="desc">단일 +${(upgEff(S.upg[i])*2.5).toFixed(1)} · 스플래시 초당 +${(upgEff(S.upg[i])*0.55).toFixed(1)}/마리 · 전체 초당 +${(upgEff(S.upg[i])*0.15).toFixed(1)}/마리${S.upg[i] > 20 ? ' <b style="color:#c9971a">⚡가속!</b>' : ''}</span></div>
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
       <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값으로 3레벨 도전 — 타이밍바 중앙에 맞추면 35%">🎰 ×3</button>
     </div>`).join('') +
@@ -5771,7 +5774,7 @@ function wireUpg(el) {
     const i = +b.dataset.upg;
     if (S.gold < S.upgCost[i]) return;
     S.gold -= S.upgCost[i]; S.upg[i]++;
-    S.upgCost[i] = Math.floor(S.upgCost[i] * 1.5); // 완만한 증가율 (기존 ×1.6)
+    S.upgCost[i] = Math.floor(S.upgCost[i] * 1.45); // 후반 벽 완화 (1.5 → 1.45)
     logMsg(`⚔️ ${RACES[i].name} 공격력 Lv.${S.upg[i]}`);
     renderShop(); updateInfoPanel();
   });
@@ -5788,7 +5791,7 @@ function wireUpg(el) {
       const win = Math.random() < p;
       if (win) {
         S.upg[i] += 3;
-        S.upgCost[i] = Math.floor(S.upgCost[i] * 1.5 * 1.5 * 1.5); // 3레벨 분량만큼 가격도 전진
+        S.upgCost[i] = Math.floor(S.upgCost[i] * 1.45 * 1.45 * 1.45); // 3레벨 분량만큼 가격도 전진
         logMsg(`🎰✨ <b>도박 대성공!!</b> ${RACES[i].name} 공격력 +3 → Lv.${S.upg[i]}`);
         S.goldFlash = 0.55; sfx('jackpot');
       } else { logMsg(`🎰💨 도박 실패… (${Math.round(p * 100)}%의 벽)`); sfx('leak'); }
