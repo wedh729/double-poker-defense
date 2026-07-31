@@ -453,9 +453,15 @@
 </div>
 <div id="winOverlay" style="position:fixed;inset:0;background:rgba(20,20,30,0.88);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:10;color:#fff">
   <h2 style="font-size:36px;color:#ffd166">🎉 80라운드 클리어! 🎉</h2>
-  <p style="font-size:17px">전설의 1%가 되신 것을 축하합니다.<br>하지만... 여기서부터가 진짜입니다.</p>
+  <p style="font-size:17px">전설의 1%가 되신 것을 축하합니다.<br>하지만... 하늘의 태양이, 점점 다가오고 있습니다.</p>
   <button style="font-size:17px;padding:12px 34px;border-radius:10px;border:none;background:#c0392b;color:#fff;cursor:pointer"
     onclick="S.paused=false;document.getElementById('winOverlay').style.display='none'">🔥 헬모드 진입</button>
+</div>
+<div id="hellOverlay" style="position:fixed;inset:0;background:rgba(12,6,10,0.93);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:10;color:#fff;text-align:center">
+  <h2 style="font-size:38px;color:#ff8a3d">🌋 헬모드 클리어!!! 🌋</h2>
+  <p style="font-size:17px;line-height:1.75">아포칼립스 태양이 무너졌습니다.<br>세계는 구원받았고, 당신의 이름은 전설이 되었습니다.<br><span style="color:#ffd166">이 순간을 본 사람은, 전 우주에 몇 없습니다.</span></p>
+  <button style="font-size:17px;padding:12px 34px;border-radius:10px;border:none;background:#2e7d32;color:#fff;cursor:pointer"
+    onclick="S.paused=false;document.getElementById('hellOverlay').style.display='none'">🌅 구원된 세계에서 계속하기</button>
 </div>
 
 <script>
@@ -571,10 +577,11 @@ function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > C
 // 크기: 밴드 진행도(esc)만큼 커진다 (③ 시각적 난이도 신호)
 // 재질별 크기 배율: 실제 공 크기 싱크 (야구공 작게 ~ 농구공 크게). 천체는 웅장하게
 const MAT_SIZE = [0.9, 0.95, 1.12, 1.18, 0.8, 0.85, 1.1, 0.9, 0.9, 1.2, 1.15, 1.25, 1.3, 1.1];
-function monSize(m) { return (m.boss ? 52 : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + (m.esc || 0) * 0.32); }
+function monSize(m) { return (m.boss ? (m.sunBoss ? 104 : 52) : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + (m.esc || 0) * 0.32); } // 🌞 태양 = 보스 2배
 const PORTAL = { x: 80, y: 78, r: 34 }; // 강화 포털: 같은 유닛 5기를 넣으면 영웅
 const WAVE_TIME = 90, POKER_TIME = 60;
 const FINAL_ROUND = 80; // 이후는 헬모드
+const SUN_ROUND = 150;  // 🌞 아포칼립스 태양 강림 — 헬모드 최종장 (처치 시 헬모드 클리어)
 
 const cv = document.getElementById('cv');
 let ctx = cv.getContext('2d'); // 스프라이트 캐시 빌드 시 임시 스왑 가능하도록 let
@@ -633,6 +640,7 @@ function reset() {
     stats: {}, // 🏆 무기별 딜/킬 통계 (게임오버 화면용)
     tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 20기 → 완성, 라운드 재시작 시 리셋)
     bird: null, birdTimer: 250 + Math.random() * 200, // 🐦 힌트 새 / 다음 스폰까지 남은 초
+    hellCleared: false, hellClearT: 0, // 🌞 아포칼립스 태양 격파 여부 / 클리어 화면까지 여운 타이머
     sandbox: false,
   };
   dctx.clearRect(0, 0, 940, 500); // 이전 판 얼룩 제거
@@ -642,6 +650,7 @@ function reset() {
   // 광부 없이 시작 — 첫 광부(80G)를 언제 고용할지가 초반 첫 의사결정
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('winOverlay').style.display = 'none';
+  document.getElementById('hellOverlay').style.display = 'none';
   document.getElementById('log').innerHTML = '';
   logMsg('게임 시작! 드래그로 부대지정, 우클릭 이동, A키+클릭으로 공격 지정!');
   startPoker();
@@ -660,13 +669,14 @@ function stageInfo(n) {
   return { ci, si, hell, name: (hell ? '🔥헬 ' : '') + MATERIALS[matInfo(n).idx].name };
 }
 // 난이도 곡선: 1~3스테이지는 완만(10% 복리) → 4스테이지부터 대폭 상향(×1.5 점프 + 15% 복리)
-// → 50라운드부터 가속(+5% 복리) → 80라운드 이후 헬모드(2배 복리)
+// → 50라운드부터 가속(+5% 복리) → 80라운드 이후 헬모드(진입 슬랩 후 완만한 조임 — 150R 태양전까지 도달 가능하되 극악)
 let DIFF_MUL = 1, DIFF_NAME = '보통'; // 시작 화면에서 선택 (쉬움 0.7 / 보통 1.0 / 어려움 1.4 / 지옥 2.0)
 function monsterHP(n) {
   // ~30R: 기존 복리 곡선 유지 / 30R 이후: 복리 → 선형 증가 (후반 기하급수 벽 제거 — 업글 화력도 선형이라 결이 맞음)
   const grow = m => m <= 3 ? 14 * Math.pow(1.10, m - 1) : 14 * Math.pow(1.10, 2) * 1.42 * Math.pow(1.15, m - 3);
   let hp = n <= 30 ? grow(n) : grow(30) * (1 + 0.15 * Math.min(n - 30, 10) + 0.09 * Math.max(0, n - 40)); // 30~40R +15%p/R 선형 → 40R부터 +9%p/R (기울기 40%↓)
-  if (n > FINAL_ROUND) hp *= Math.pow(1.5, n - FINAL_ROUND); // 헬(80+): 라운드당 ×2 → ×1.5 완화 (가파르되 맛볼 수 있게)
+  // 헬(80+): 기존 ×1.5 복리는 수학적 즉사벽(R150 도달 불가) → 진입 4라운드 ×1.25 슬랩 + 이후 +1.2%/R 조임 (선형 base 성장과 합쳐 R150 요구 화력 ≈ R80의 ~11배 — 신급 빌드만 태양전 자격)
+  if (n > FINAL_ROUND) hp *= Math.pow(1.25, Math.min(n - FINAL_ROUND, 4)) * Math.pow(1.012, Math.max(0, n - FINAL_ROUND - 4));
   // ×0.7 = 전체 난이도 30% 하향 / ×1.6 = 몹 수 절반 보정 (2배가 아닌 이유: 밀도 절반 → 스플래시 효율도 절반이라 2배면 실효 난이도 상승)
   hp *= splitComp(n); // 일반 몹 분열 제거 보정 (R40에 한 번에 곱하면 1.5배 계단벽이 생겨서 R40~R55에 걸쳐 점진 적용)
   // 어려움·지옥: 초반 20% 하향, 대신 라운드마다 0.4%p씩 다시 가팔라진다 (R50에서 원래의 96%, R80부터 원래보다 어렵게)
@@ -990,6 +1000,18 @@ function startWave() {
   S.phase = 'wave';
   S.timer = WAVE_TIME;
   S.feverUsed = false;
+  if (S.round === SUN_ROUND && !S.hellCleared) { // 🌞 최종장: 하늘의 태양이 강림한다 — 잡몹 없는 독대
+    S.spawnQueue = { left: 0, hp: 0, interval: 1, acc: 0, bossLeft: 0 };
+    const sun = spawnMonster(Math.floor(monsterHP(S.round) * 140), true); // ⚠️ 극악 튜닝 노브: ×140 (일반몹 대비) — "1000판에 1번" 목표치
+    sun.sunBoss = true; sun.shape = 28; sun.split = false; sun.mat = 0;
+    sun.entering = true; sun.fallT = 0; sun.born = 1; sun.baseR = 6;
+    sun.x = CX; sun.y = 82; // 하늘에 떠 있던 바로 그 자리에서 이어져 내려온다
+    renderPoker();
+    logMsg('🌞🌞 하늘이 무너진다... 아포칼립스 태양 강림!! 🌞🌞');
+    sfx('boss');
+    if (IS_MOBILE) setMobTab('battle');
+    return;
+  }
   const em = S.eventMods || {};
   const hp = Math.max(1, Math.floor(monsterHP(S.round) * (em.hpMul || 1)));
   const count = Math.max(1, Math.floor(mobCount(S.round) * (em.countMul || 1)));
@@ -1447,6 +1469,10 @@ function updateAltar() {
 // ==================== 게임 루프 ====================
 function update(dt) {
   S.time += dt;
+  if (S.hellClearT > 0) { // 🌋 태양 격파 여운 → 클리어 화면 (포커 전환 후에도 이어서 카운트)
+    S.hellClearT -= dt;
+    if (S.hellClearT <= 0) { S.hellClearT = 0; S.paused = true; document.getElementById('hellOverlay').style.display = 'flex'; }
+  }
   S.effects = S.effects.filter(e => {
     e.t -= dt;
     if (e.type === 'pop' && !e.burst && e.t <= 0.02) { e.burst = true; burstJuice(e); } // 부풀기 끝 → 팡!
@@ -1671,6 +1697,24 @@ function update(dt) {
   for (const m of S.monsters) {
     m.hitT = Math.max(0, (m.hitT || 0) - dt);
     if (m.burnT > 0) { m.burnT -= dt; m.hp -= m.burnDmg * dt; } // 🔥 쇼군 화상 도트 (얼어붙어도 계속 탄다)
+    if (m.entering) { // 🌞 태양 강림: 하늘에서 소환장 중앙으로 유유히 내려온다 (시간정지도 종말은 못 막는다)
+      m.fallT += dt;
+      const fp = Math.min(1, m.fallT / 2.4);
+      const ep = fp < 0.5 ? 4 * fp * fp * fp : 1 - Math.pow(-2 * fp + 2, 3) / 2; // easeInOutCubic — 부드럽게 뚝
+      m.y = 82 + (CY - 82) * ep;
+      if (Math.random() < 0.5) S.parts.push({ x: m.x + (Math.random() - 0.5) * 170, y: m.y - 50 - Math.random() * 70, vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 45, t: 0.5 + Math.random() * 0.3, r: 4 + Math.random() * 5, fire: true, spin: Math.random() * 6.28 }); // 낙하 열기 트레일
+      if (fp >= 1) { // 착지: 대지가 운다
+        m.entering = false;
+        m.returnT = 2; // 오빗 자리로 스냅하지 않고 느긋하게 미끄러져 합류 (연출 이음새 제거)
+        S.hitstop = 0.12; sfx('bigboom');
+        S.effects.push({ type: 'boom', x: CX, y: CY, r: 170, t: 0.5 });
+        for (let i = 0; i < 26; i++) { const aa = Math.random() * 6.28, v = 120 + Math.random() * 220;
+          S.parts.push({ x: CX, y: CY + 40, vx: Math.cos(aa) * v, vy: Math.sin(aa) * v - 50, g: true, t: 0.55, r: 1.6 + Math.random() * 2.4, c: i % 2 ? '#ffd54f' : '#ff5722' }); }
+        addFloat(CX, CY - 130, '🌞 아포칼립스 태양 강림!!', '#ff6a1e', 3);
+        logMsg('🌞 태양이 대지에 내려앉았다... 시간 안에 쓰러뜨리지 못하면 종말이다!!');
+      }
+      continue;
+    }
     if (S.freezeT > 0) continue; // 시간 정지 중엔 위치 갱신 없이 제자리
     m.born = Math.min(1, m.born + dt * 2.5);
     m.ang += m.spin * dt;
@@ -1731,7 +1775,7 @@ function update(dt) {
     let best = null, bestScore = Infinity, anyInRange = false;
     const r2 = effRange(u) * effRange(u);
     for (const m of S.monsters) {
-      if (m.hp + m.shield - m.inc <= 0) continue;
+      if (m.entering || m.hp + m.shield - m.inc <= 0) continue; // 강림 중인 태양은 조준 불가
       const ddx = m.x - u.x, ddy = m.y - u.y, d2 = ddx * ddx + ddy * ddy;
       if (d2 > r2) continue;
       anyInRange = true;
@@ -1923,6 +1967,15 @@ function update(dt) {
         addFloat(m.x, m.y - 26, `✨✨ 황금!! +${bonus}G`, '#ffd54f', 2.4); sfx('jackpot');
         markAchv('golden');
       }
+      if (m.sunBoss) { // 🌋 아포칼립스 태양 격파 — 헬모드 클리어!!!
+        S.hellCleared = true; S.hellClearT = 2.2; // 폭발의 여운을 감상한 뒤 클리어 화면
+        S.hitstop = 0.4; sfx('jackpot'); sfx('clear');
+        markAchv('hellclear');
+        S.effects.push({ type: 'boom', x: m.x, y: m.y, r: 230, t: 0.7 });
+        for (let i = 0; i < 40; i++) { const aa = Math.random() * 6.28, v = 100 + Math.random() * 300;
+          S.parts.push({ x: m.x, y: m.y, vx: Math.cos(aa) * v, vy: Math.sin(aa) * v - 60, g: true, t: 0.8 + Math.random() * 0.5, r: 2 + Math.random() * 3, c: ['#ffd54f', '#ff5722', '#fff6c8'][i % 3] }); }
+        logMsg('🌋🌋🌋 아포칼립스 태양 격파!! 헬모드 클리어!!! 🌋🌋🌋');
+      }
       if (m.boss) {
         S.chips++; // 보스 처치 → 카지노 칩 지급
         logMsg(`👹 보스 처치! +${g}G · 🎰 칩 +1 (좌측 카지노에서 사용!)`);
@@ -1954,6 +2007,7 @@ function update(dt) {
 
 // 데미지 적용: 쉴드가 있으면 쉴드부터 깎고, 넘치면 체력으로 (모든 공격이 이 함수를 거침)
 function dealDamage(m, dmg, owner) {
+  if (m.entering) return; // 🌞 강림 중엔 무적 (연출 보호 — 염산·폭격 포함 전 데미지가 이 함수를 거친다)
   if (owner) m.lastHitBy = owner;
   if (owner && owner.weapon) { const st = S.stats[owner.weapon] = S.stats[owner.weapon] || { dmg: 0, kills: 0 }; st.dmg += dmg; }
   m.hitT = 0.09; // 피격 리액션 (스쿼시 + 놀란 표정)
@@ -2581,7 +2635,7 @@ function drawMutter() {
 function strongestMonster() {
   let best = null, bv = -1;
   for (const m of S.monsters) {
-    if (m.hp <= 0) continue;
+    if (m.hp <= 0 || m.entering) continue;
     const v = (m.boss ? 1e9 : 0) + m.hp + (m.shield || 0);
     if (v > bv) { bv = v; best = m; }
   }
@@ -2706,24 +2760,192 @@ function drawBird(b) {
   ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(7.7, -3.6, 0.55, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
+// ==================== 🌞 아포칼립스 태양 + 생지옥화 (헬모드 공통 연출) ====================
+// 진행도: 헬모드 진입(81R)부터 태양 강림(150R)까지 0→1. 격파 후엔 0 (세계 구원 — 하늘이 돌아온다)
+function apocK() {
+  if (S.hellCleared) return 0;
+  return Math.max(0, Math.min(1, (S.round - FINAL_ROUND) / (SUN_ROUND - FINAL_ROUND)));
+}
+// 태양 본체 (하늘·보스 공용): 붉은 코로나 + 화염 갈래 + 프로미넌스 + 검붉은 심장. 마지막 패스 = 본체 원 (보스 외곽선 재사용)
+function drawApocSunBody(x, y, r, T, ph) {
+  const cor = r * (1.55 + 0.1 * Math.sin(T * 2.3 + ph)); // 맥동하는 코로나
+  const cg = ctx.createRadialGradient(x, y, r * 0.5, x, y, cor);
+  cg.addColorStop(0, 'rgba(255,90,20,0.5)'); cg.addColorStop(0.7, 'rgba(230,40,15,0.22)'); cg.addColorStop(1, 'rgba(200,20,10,0)');
+  ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(x, y, cor, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#ff6a1e'; // 화염 갈래 14개 (일렁)
+  for (let i = 0; i < 14; i++) {
+    const a = T * 0.25 + i * 6.28 / 14, fl = 0.65 + 0.35 * Math.sin(T * 6 + i * 2.4);
+    const rl = r * (1.16 + (i % 2 ? 0.10 : 0.22) * fl);
+    polyPath(x + Math.cos(a) * rl, y + Math.sin(a) * rl, 3, Math.max(3.5, r * 0.12), a + Math.PI / 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(255,140,40,0.75)'; ctx.lineWidth = Math.max(1.6, r * 0.06); ctx.lineCap = 'round'; // 프로미넌스: 가장자리에서 말려 올라가는 불꽃 혀
+  for (let i = 0; i < 3; i++) {
+    const a = T * 0.4 + i * 2.09, wob = Math.sin(T * 3 + i * 2);
+    const bx = x + Math.cos(a) * r, by = y + Math.sin(a) * r;
+    ctx.beginPath(); ctx.moveTo(bx, by);
+    ctx.quadraticCurveTo(x + Math.cos(a + 0.45) * r * 1.42, y + Math.sin(a + 0.45) * r * 1.42,
+      x + Math.cos(a + 0.75 + wob * 0.1) * r * 1.12, y + Math.sin(a + 0.75 + wob * 0.1) * r * 1.12);
+    ctx.stroke();
+  }
+  ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+  const bg = ctx.createRadialGradient(x, y, r * 0.2, x, y, r); // 타는 테두리 → 검붉은 심장 (일식의 정체성)
+  bg.addColorStop(0, '#57120b'); bg.addColorStop(0.55, '#8a1f0e'); bg.addColorStop(0.85, '#d84315'); bg.addColorStop(1, '#ff8a26');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.28); ctx.fill();
+  if (r > 30) { ctx.fillStyle = 'rgba(30,6,4,0.5)'; // 가까워져야 보이는 흑점
+    for (const [dx2, dy2, rr] of [[-0.3, -0.2, 0.14], [0.25, 0.3, 0.1], [0.1, -0.35, 0.08]]) {
+      ctx.beginPath(); ctx.arc(x + dx2 * r, y + dy2 * r, rr * r, 0, 6.28); ctx.fill(); }
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.28); // 본체 원 패스 복구 (보스 외곽선용)
+  }
+}
+// 하늘의 태양: 좌상단에서 소환장 상공으로 다가오며 커진다 (최종 = 보스 2배 = 반경 104)
+function drawApocSun() {
+  const k = apocK(); if (k <= 0) return;
+  if (S.round >= SUN_ROUND && S.phase === 'wave') return; // 강림했다 — 하늘엔 없다 (보스로 전투 중)
+  const T = S.time, e = k * k; // 다가올수록 가속 (원근감)
+  const x = 170 + (CX - 170) * e, y = 52 + 30 * e, r = 11 + 93 * Math.pow(k, 1.6);
+  const nH = 2 + Math.round(k * 5); // 🌫️ 아지랑이: 열기가 스멀스멀 피어오른다 (다가올수록 짙고 크게)
+  ctx.lineWidth = 1.4;
+  for (let i = 0; i < nH; i++) {
+    const ha = i * 2.4 + 0.6;
+    const hx = x + Math.cos(ha) * r * (0.55 + (i % 3) * 0.28), hy0 = y - r * 0.5 - (i % 2) * r * 0.3;
+    const rise = (T * (16 + i * 4) + i * 53) % 46;
+    const al = (0.06 + 0.16 * k) * (1 - rise / 46);
+    ctx.strokeStyle = `rgba(255,120,50,${al.toFixed(2)})`;
+    ctx.beginPath();
+    for (let sg = 0; sg <= 5; sg++) {
+      const yy = hy0 - rise - sg * 7, xx = hx + Math.sin(T * 2.6 + i * 2 + sg * 1.1) * (2.5 + k * 3.5);
+      sg ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+    }
+    ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+  drawApocSunBody(x, y, r, T, 0);
+}
+// --- 생지옥 요소 (지옥 배경과 생지옥화 오버레이가 공유) ---
+function drawSkyCracks(nCr, baseA) { // 하늘의 붉은 균열: 세계가 갈라진다
+  const T = S.time;
+  for (let i = 0; i < nCr; i++) {
+    const seed = i * 271.7, x0c = 90 + (seed % 760), y0c = 14 + (seed % 60);
+    const pulse = 0.5 + 0.35 * Math.sin(T * 2.2 + i * 2);
+    ctx.strokeStyle = `rgba(255,60,40,${(pulse * baseA).toFixed(2)})`; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(x0c, y0c);
+    let px2 = x0c, py2 = y0c, ang2 = 1.2 + Math.sin(seed) * 0.4;
+    for (let sg = 1; sg <= 4; sg++) { ang2 += Math.sin(seed + sg * 3.7) * 0.8;
+      px2 += Math.cos(ang2) * 16; py2 += Math.abs(Math.sin(ang2)) * 13; ctx.lineTo(px2, py2); }
+    ctx.stroke(); ctx.lineWidth = 1;
+  }
+}
+function drawFlameTongues(fscale, count, aMul) { // 불혀: 풀 자리에서 화염이 일렁인다
+  const T = S.time;
+  ctx.globalAlpha = aMul;
+  for (let gi = 0; gi < Math.min(count, GRASS_SPOTS.length); gi++) {
+    const [gx, gy] = GRASS_SPOTS[gi];
+    const f1 = Math.sin(T * 6 + gx * 0.7), f2 = Math.cos(T * 8.5 + gx);
+    ctx.fillStyle = `rgba(255,${105 + 40 * f2 | 0},25,0.55)`;
+    ctx.beginPath(); ctx.moveTo(gx - 5, gy);
+    ctx.quadraticCurveTo(gx - 4 + f1 * 2.5, gy - 8 * fscale, gx + f1 * 3.5, gy - (14 + f2 * 3) * fscale);
+    ctx.quadraticCurveTo(gx + 4 + f1 * 2.5, gy - 8 * fscale, gx + 5, gy); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,214,80,0.6)';
+    ctx.beginPath(); ctx.moveTo(gx - 2.4, gy);
+    ctx.quadraticCurveTo(gx + f1 * 2, gy - 6, gx + f1 * 2.2, gy - 8.5);
+    ctx.quadraticCurveTo(gx + 2.4 + f1, gy - 5, gx + 2.4, gy); ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawEmbers(nE, aMul) { // 떠오르는 불씨
+  const T = S.time;
+  for (let i = 0; i < nE; i++) {
+    const seed = i * 79.3;
+    const ex = (seed * 7.7) % cv.width + Math.sin(T * 1.3 + i) * 14;
+    const ey = cv.height - ((T * (26 + i * 3.5) + seed) % (cv.height + 40));
+    const a = 0.5 * (0.5 + 0.5 * Math.sin(T * 5 + i * 2)) * aMul;
+    ctx.fillStyle = `rgba(255,${150 + (i % 3) * 40},60,${a.toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(ex, ey, 1.4 + (i % 3) * 0.7, 0, 6.28); ctx.fill();
+  }
+}
+function drawAshFall(nA, aMul) { // 잿가루: 눈처럼 천천히 내린다
+  const T = S.time;
+  ctx.fillStyle = `rgba(185,178,172,${(0.4 * aMul).toFixed(2)})`;
+  for (let i = 0; i < nA; i++) {
+    const seed = i * 211.4;
+    const ax = (seed * 3.3) % cv.width + Math.sin(T * 0.8 + i * 1.7) * 22;
+    const ay = ((T * (14 + i * 2) + seed) % (cv.height + 30)) - 15;
+    ctx.beginPath(); ctx.arc(ax, ay, 1.1 + (i % 2) * 0.6, 0, 6.28); ctx.fill();
+  }
+}
+function drawSmokeColumns(nP, baseA) { // 지평선 검은 연기 기둥: 세계가 탄다
+  const T = S.time;
+  for (let i = 0; i < nP; i++) {
+    const bx = 150 + i * 330 + (i * 97 % 120), by = cv.height - 96;
+    ctx.fillStyle = `rgba(25,18,16,${baseA.toFixed(2)})`;
+    ctx.beginPath(); ctx.moveTo(bx - 7, by + 96);
+    for (let sg = 0; sg <= 6; sg++) { const yy = by + 96 - sg * 30, wob = Math.sin(T * 1.4 + i * 2 + sg) * (5 + sg * 2.6);
+      ctx.lineTo(bx + wob - 8 - sg * 2.2, yy); }
+    for (let sg = 6; sg >= 0; sg--) { const yy = by + 96 - sg * 30, wob = Math.sin(T * 1.4 + i * 2 + sg) * (5 + sg * 2.6);
+      ctx.lineTo(bx + wob + 8 + sg * 2.2, yy); }
+    ctx.closePath(); ctx.fill();
+  }
+}
+// 🔥 생지옥화 오버레이: 태양이 다가올수록 모든 난이도의 세계가 그을리고 불탄다 (지옥 난이도는 전용 배경이 이미 지옥이라 제외)
+function drawHellCreep() {
+  const k = apocK(); if (k <= 0) return;
+  ctx.fillStyle = `rgba(64,10,6,${(0.07 + 0.38 * k).toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height); // 세계가 그을린다
+  const hg = ctx.createLinearGradient(0, cv.height - 130, 0, cv.height); // 지평선이 타오른다
+  hg.addColorStop(0, 'rgba(255,110,20,0)');
+  hg.addColorStop(1, `rgba(255,120,25,${(0.30 * k + 0.06 * Math.sin(S.time * 1.7)).toFixed(2)})`);
+  ctx.fillStyle = hg; ctx.fillRect(0, cv.height - 130, cv.width, 130);
+  drawSkyCracks(Math.ceil(k * 4), 0.35 + 0.45 * k);
+  drawFlameTongues(0.7 + 0.5 * k, Math.ceil(GRASS_SPOTS.length * Math.min(1, k * 1.3)), Math.min(1, 0.35 + k)); // 풀밭이 한 포기씩 불붙는다
+  drawEmbers(4 + Math.round(18 * k), Math.min(1, 0.4 + k));
+  if (k > 0.45) drawSmokeColumns(1 + (k > 0.75 ? 1 : 0), 0.3 + 0.3 * k);
+  if (k > 0.55) drawAshFall(Math.round(12 * (k - 0.4)), 1);
+}
 // 🌱 쉬움: 봄 소풍 — 파스텔 하늘 + 옅은 무지개 + 꽃밭 + 팔랑이는 나비
 function drawSpringscape() {
   const T = S.time;
   const g = ctx.createLinearGradient(0, 0, 0, cv.height);
   g.addColorStop(0, '#f2fbff'); g.addColorStop(0.5, '#ecfaea'); g.addColorStop(1, '#daf2c6');
   ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
-  // 옅은 무지개 (좌상단 큰 호)
-  const RB = ['rgba(255,120,120,0.12)', 'rgba(255,200,80,0.12)', 'rgba(120,200,130,0.12)', 'rgba(120,160,255,0.12)'];
-  RB.forEach((col, i) => { ctx.strokeStyle = col; ctx.lineWidth = 7;
-    ctx.beginPath(); ctx.arc(300, 330, 300 - i * 8, Math.PI * 1.12, Math.PI * 1.72); ctx.stroke(); });
-  ctx.lineWidth = 1;
-  // 해 (방긋)
-  ctx.strokeStyle = 'rgba(255,193,7,0.55)'; ctx.lineWidth = 1.6; // 보통 낮 태양과 동일 디자인
-  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + T * 0.3;
-    ctx.beginPath(); ctx.moveTo(170 + Math.cos(a) * 12, 52 + Math.sin(a) * 12); ctx.lineTo(170 + Math.cos(a) * 17, 52 + Math.sin(a) * 17); ctx.stroke(); }
-  ctx.lineWidth = 1;
-  ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(170, 52, 9, 0, 6.28); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(167.5, 49.5, 3, 0, 6.28); ctx.fill();
+  // 옅은 무지개 (좌상단 큰 호) — 끝자락은 하늘에 녹아들듯 옅어지며 빛 알갱이로 흩어진다
+  const rbFade = Math.max(0, 1 - apocK() * 1.6); // 태양이 다가오면 무지개도 바랜다
+  if (rbFade > 0.01) {
+    const RB = ['255,120,120', '255,200,80', '120,200,130', '120,160,255'];
+    const A0 = Math.PI * 1.09, A1 = Math.PI * 1.75, SEG = 26, FADE = 0.2; // 양끝 20% 구간이 서서히 옅어짐
+    ctx.lineWidth = 7;
+    RB.forEach((col, i) => {
+      const rr = 300 - i * 8;
+      for (let sg = 0; sg < SEG; sg++) {
+        const tm = (sg + 0.5) / SEG;
+        const ed = Math.min(1, Math.min(tm, 1 - tm) / FADE);
+        const al = 0.12 * ed * ed * rbFade;
+        if (al < 0.005) continue;
+        ctx.strokeStyle = `rgba(${col},${al.toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(300, 330, rr, A0 + (A1 - A0) * sg / SEG, A0 + (A1 - A0) * (sg + 1) / SEG + 0.003); ctx.stroke();
+      }
+      for (const end of [0, 1]) { // 끝 너머로 흩어지는 빛 알갱이 (살랑살랑 떠다님)
+        for (let d = 0; d < 4; d++) {
+          const ja = (end ? A1 : A0) + (end ? 1 : -1) * (d + 1) * 0.021 + Math.sin(i * 7 + d * 13) * 0.012;
+          const jr = rr + Math.sin(d * 5.3 + i * 2.1) * 6;
+          const px = 300 + Math.cos(ja) * jr + Math.sin(T * 1.1 + d * 2 + i) * 2.5;
+          const py = 330 + Math.sin(ja) * jr + Math.cos(T * 0.9 + d * 1.7 + i) * 2;
+          ctx.fillStyle = `rgba(${col},${(0.1 * (1 - d * 0.2) * rbFade).toFixed(3)})`;
+          ctx.beginPath(); ctx.arc(px, py, 2.2 + (d % 3) * 0.9, 0, 6.28); ctx.fill();
+        }
+      }
+    });
+    ctx.lineWidth = 1;
+  }
+  if (apocK() > 0) { drawApocSun(); } // 🌞 헬모드: 방긋 해 자리에 아포칼립스 태양이 떠오른다
+  else {
+    // 해 (방긋)
+    ctx.strokeStyle = 'rgba(255,193,7,0.55)'; ctx.lineWidth = 1.6; // 보통 낮 태양과 동일 디자인
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + T * 0.3;
+      ctx.beginPath(); ctx.moveTo(170 + Math.cos(a) * 12, 52 + Math.sin(a) * 12); ctx.lineTo(170 + Math.cos(a) * 17, 52 + Math.sin(a) * 17); ctx.stroke(); }
+    ctx.lineWidth = 1;
+    ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(170, 52, 9, 0, 6.28); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(167.5, 49.5, 3, 0, 6.28); ctx.fill();
+  }
   // 풀 (밝은 초록, 살랑)
   ctx.strokeStyle = 'rgba(110,190,90,0.65)'; ctx.lineWidth = 1.3;
   for (const [gx, gy] of GRASS_SPOTS) {
@@ -2768,6 +2990,7 @@ function drawStormscape() {
     rg.addColorStop(0, 'rgba(180,40,20,0)'); rg.addColorStop(1, `rgba(180,40,20,${((k - 0.8) * 0.9).toFixed(2)})`);
     ctx.fillStyle = rg; ctx.fillRect(0, cv.height - 90, cv.width, 90);
   }
+  drawApocSun(); // 🌞 헬모드: 먹구름 뒤에서 태양이 다가온다 (구름에 반쯤 가려 더 불길하게)
   // 먹구름: 2덩이 → 후반 4덩이, 점점 낮게 깔린다
   ctx.fillStyle = `rgba(70,66,86,${(0.5 + 0.2 * k).toFixed(2)})`;
   const clouds = [[0, 46, 1], [560, 84, 0.72]];
@@ -2837,19 +3060,7 @@ function drawHellscape() {
   hg.addColorStop(1, `rgba(255,120,25,${(0.22 + 0.15 * hk + 0.08 * Math.sin(T * 1.7)).toFixed(2)})`);
   ctx.fillStyle = hg; ctx.fillRect(0, cv.height - 130, cv.width, 130);
   // 하늘의 붉은 균열 (헬 진입 후): 세계가 갈라진다
-  if (hell2 > 0) {
-    const nCr = 1 + Math.floor(hell2 * 3.5);
-    for (let i = 0; i < nCr; i++) {
-      const seed = i * 271.7, x0c = 90 + (seed % 760), y0c = 14 + (seed % 60);
-      const pulse = 0.5 + 0.35 * Math.sin(T * 2.2 + i * 2);
-      ctx.strokeStyle = `rgba(255,60,40,${(pulse * (0.4 + hell2 * 0.4)).toFixed(2)})`; ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.moveTo(x0c, y0c);
-      let px2 = x0c, py2 = y0c, ang2 = 1.2 + Math.sin(seed) * 0.4;
-      for (let sg = 1; sg <= 4; sg++) { ang2 += Math.sin(seed + sg * 3.7) * 0.8;
-        px2 += Math.cos(ang2) * 16; py2 += Math.abs(Math.sin(ang2)) * 13; ctx.lineTo(px2, py2); }
-      ctx.stroke(); ctx.lineWidth = 1;
-    }
-  }
+  if (hell2 > 0) drawSkyCracks(1 + Math.floor(hell2 * 3.5), 0.4 + hell2 * 0.4);
   // 유성 (R90+): ~11초마다 하나 떨어지며 섬광
   if (S.round >= 90) {
     const mt = (T * 0.7 + 2) % 11;
@@ -2863,65 +3074,28 @@ function drawHellscape() {
       if (pr2 > 0.9) { ctx.fillStyle = 'rgba(255,200,120,0.08)'; ctx.fillRect(0, 0, cv.width, cv.height); }
     }
   }
-  // 일식: 갈수록 코로나가 커지고 붉어진다
-  const sx = 170, sy = 52, cor = 15 + 6 * hk;
-  ctx.fillStyle = `rgba(255,${60 - 25 * hk | 0},10,${(0.3 + 0.15 * hk + 0.1 * Math.sin(T * 2.3)).toFixed(2)})`;
-  ctx.beginPath(); ctx.arc(sx, sy, cor, 0, 6.28); ctx.fill();
-  ctx.fillStyle = '#ff8a3d'; ctx.beginPath(); ctx.arc(sx, sy, 11 + 2 * hk, 0, 6.28); ctx.fill();
-  ctx.fillStyle = '#12060a'; ctx.beginPath(); ctx.arc(sx, sy, 9.2 + 1.6 * hk, 0, 6.28); ctx.fill();
+  // 일식: 갈수록 코로나가 커지고 붉어진다 → 헬모드부터는 다가오는 진짜 태양으로 교체
+  if (apocK() > 0) drawApocSun();
+  else {
+    const sx = 170, sy = 52, cor = 15 + 6 * hk;
+    ctx.fillStyle = `rgba(255,${60 - 25 * hk | 0},10,${(0.3 + 0.15 * hk + 0.1 * Math.sin(T * 2.3)).toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(sx, sy, cor, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#ff8a3d'; ctx.beginPath(); ctx.arc(sx, sy, 11 + 2 * hk, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#12060a'; ctx.beginPath(); ctx.arc(sx, sy, 9.2 + 1.6 * hk, 0, 6.28); ctx.fill();
+  }
   // 지평선 검은 연기 기둥 (후반): 세계가 탄다
-  if (hk > 0.5) {
-    const nP = 1 + (hk > 0.75 ? 1 : 0) + (hell2 > 0.3 ? 1 : 0);
-    for (let i = 0; i < nP; i++) {
-      const bx = 150 + i * 330 + (i * 97 % 120), by = cv.height - 96;
-      ctx.fillStyle = `rgba(25,18,16,${(0.34 + 0.2 * hk).toFixed(2)})`;
-      ctx.beginPath(); ctx.moveTo(bx - 7, by + 96);
-      for (let sg = 0; sg <= 6; sg++) { const yy = by + 96 - sg * 30, wob = Math.sin(T * 1.4 + i * 2 + sg) * (5 + sg * 2.6);
-        ctx.lineTo(bx + wob - 8 - sg * 2.2, yy); }
-      for (let sg = 6; sg >= 0; sg--) { const yy = by + 96 - sg * 30, wob = Math.sin(T * 1.4 + i * 2 + sg) * (5 + sg * 2.6);
-        ctx.lineTo(bx + wob + 8 + sg * 2.2, yy); }
-      ctx.closePath(); ctx.fill();
-    }
-  }
+  if (hk > 0.5) drawSmokeColumns(1 + (hk > 0.75 ? 1 : 0) + (hell2 > 0.3 ? 1 : 0), 0.34 + 0.2 * hk);
   // 불혀: 풀 자리에서 화염이 일렁인다 (갈수록 크게)
-  const fscale = 1 + 0.35 * hk;
-  for (const [gx, gy] of GRASS_SPOTS) {
-    const f1 = Math.sin(T * 6 + gx * 0.7), f2 = Math.cos(T * 8.5 + gx);
-    ctx.fillStyle = `rgba(255,${105 + 40 * f2 | 0},25,0.55)`;
-    ctx.beginPath(); ctx.moveTo(gx - 5, gy);
-    ctx.quadraticCurveTo(gx - 4 + f1 * 2.5, gy - 8 * fscale, gx + f1 * 3.5, gy - (14 + f2 * 3) * fscale);
-    ctx.quadraticCurveTo(gx + 4 + f1 * 2.5, gy - 8 * fscale, gx + 5, gy); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = 'rgba(255,214,80,0.6)';
-    ctx.beginPath(); ctx.moveTo(gx - 2.4, gy);
-    ctx.quadraticCurveTo(gx + f1 * 2, gy - 6, gx + f1 * 2.2, gy - 8.5);
-    ctx.quadraticCurveTo(gx + 2.4 + f1, gy - 5, gx + 2.4, gy); ctx.closePath(); ctx.fill();
-  }
+  drawFlameTongues(1 + 0.35 * hk, GRASS_SPOTS.length, 1);
   // 떠오르는 불씨 (갈수록 많이) + 내리는 잿가루 (후반)
-  const nE = 12 + Math.round(10 * hk);
-  for (let i = 0; i < nE; i++) {
-    const seed = i * 79.3;
-    const ex = (seed * 7.7) % cv.width + Math.sin(T * 1.3 + i) * 14;
-    const ey = cv.height - ((T * (26 + i * 3.5) + seed) % (cv.height + 40));
-    const a = 0.5 * (0.5 + 0.5 * Math.sin(T * 5 + i * 2));
-    ctx.fillStyle = `rgba(255,${150 + (i % 3) * 40},60,${a.toFixed(2)})`;
-    ctx.beginPath(); ctx.arc(ex, ey, 1.4 + (i % 3) * 0.7, 0, 6.28); ctx.fill();
-  }
-  if (hk > 0.5) { // 잿가루: 눈처럼 천천히 내린다 (불씨와 반대 방향 — 대비)
-    const nA = Math.round(12 * (hk - 0.4));
-    ctx.fillStyle = 'rgba(185,178,172,0.4)';
-    for (let i = 0; i < nA; i++) {
-      const seed = i * 211.4;
-      const ax = (seed * 3.3) % cv.width + Math.sin(T * 0.8 + i * 1.7) * 22;
-      const ay = ((T * (14 + i * 2) + seed) % (cv.height + 30)) - 15;
-      ctx.beginPath(); ctx.arc(ax, ay, 1.1 + (i % 2) * 0.6, 0, 6.28); ctx.fill();
-    }
-  }
+  drawEmbers(12 + Math.round(10 * hk), 1);
+  if (hk > 0.5) drawAshFall(Math.round(12 * (hk - 0.4)), 1); // 불씨와 반대 방향 — 대비
 }
 function drawBackdrop() {
   const ph = skyPhase(), t = SKY_TINT[ph];
-  if (ph === 5) { drawHellscape(); return; }        // 💀 지옥: 아포칼립스
-  if (DIFF_MUL === 1.4) { drawStormscape(); return; } // 🔥 어려움: 폭풍 전야
-  if (DIFF_MUL === 0.7) { drawSpringscape(); return; } // 🌱 쉬움: 봄 소풍
+  if (ph === 5) { drawHellscape(); return; }        // 💀 지옥: 아포칼립스 (이미 지옥이라 생지옥화 오버레이 불필요)
+  if (DIFF_MUL === 1.4) { drawStormscape(); drawHellCreep(); return; } // 🔥 어려움: 폭풍 전야
+  if (DIFF_MUL === 0.7) { drawSpringscape(); drawHellCreep(); return; } // 🌱 쉬움: 봄 소풍
   const g = ctx.createLinearGradient(0, 0, 0, cv.height);
   g.addColorStop(0, t.top); g.addColorStop(1, t.bot);
   ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
@@ -2971,6 +3145,8 @@ function drawBackdrop() {
       ctx.arc(sx, sy, 10, 0, Math.PI*2);
       ctx.arc(sx + 4.5, sy - 1.5, 8.5, 0, Math.PI*2);
       ctx.fill('evenodd');
+    } else if (apocK() > 0) { // 🌞 헬모드: 핏빛 달 자리에 다가오는 아포칼립스 태양
+      drawApocSun();
     } else { // 붉은 달 / 헬 핏빛 달 (보름 + 글로우 + 크레이터)
       const mr = ph === 4 ? 12 : 10;
       ctx.drawImage(glowSprite('moon' + ph, ph === 4 ? 'rgba(255,40,20,0.5)' : 'rgba(225,80,55,0.35)', 'rgba(255,40,20,0)'),
@@ -2983,6 +3159,7 @@ function drawBackdrop() {
       ctx.beginPath(); ctx.arc(sx + 1, sy - 4.5, 1.2, 0, Math.PI*2); ctx.fill();
     }
   }
+  drawHellCreep(); // 🔥 보통 난이도도 헬모드부터는 세계가 불탄다
 }
 function draw() {
   ctx.clearRect(0, 0, cv.width, cv.height);
@@ -4077,6 +4254,10 @@ function drawMonster(m) {
         ctx.beginPath(); ctx.arc(m.x, m.y, sz + 2, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = c; break; // 체력색 복구 (얼굴 등 후속 요소용)
       }
+      case 28: { // 🌞 R150 아포칼립스 태양 — 하늘에서 내려온 종말 그 자체 (보스 2배 크기)
+        drawApocSunBody(m.x, m.y, sz, S.time, m.phase);
+        ctx.fillStyle = c; break;
+      }
       case 15: { // 🕳️ 헬 보스: 인터스텔라 가르강튀아 — 사건의 지평선 뒤로 휘어 넘어가는 강착원반
         const R = sz + 2, t = S.time;
         ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(0.10); // 살짝 기울인 원반
@@ -4248,7 +4429,7 @@ function drawMonster(m) {
     ctx.fillStyle = 'rgba(150,220,255,0.12)'; ctx.beginPath(); ctx.arc(m.x, m.y, sr, 0, Math.PI*2); ctx.fill();
     ctx.lineWidth = 1;
   }
-  if (m.boss) drawBar(m.x - 38, m.y - sz - 18, 76, m.hp / m.max, c);
+  if (m.boss && !m.entering) drawBar(m.x - (m.sunBoss ? 76 : 38), m.y - sz - 18, m.sunBoss ? 152 : 76, m.hp / m.max, c); // 태양은 체력바도 2배 (강림 중엔 숨김)
 }
 function drawBossFace(m, sz) {
   // 표정 단계: 0 순둥이(슬라임) / 1 뚱함(성게) / 2~3 성남(별·초승달) / 4 극대노(해)
@@ -5102,7 +5283,8 @@ function issueAttack(px, py) {
   // 몬스터 클릭 → 집중 공격 (보스 저격)
   let hitM = null;
   for (const m of S.monsters) {
-    if (Math.hypot(m.x - px, m.y - py) < (m.boss ? (IS_MOBILE ? 48 : 32) : (IS_MOBILE ? 30 : 15))) { hitM = m; break; }
+    if (m.entering) continue; // 강림 중엔 지정 불가
+    if (Math.hypot(m.x - px, m.y - py) < (m.sunBoss ? 95 : m.boss ? (IS_MOBILE ? 48 : 32) : (IS_MOBILE ? 30 : 15))) { hitM = m; break; }
   }
   if (hitM) {
     sel.forEach(u => { if (u.miner) return; u.forceTarget = hitM; u.attackMine = false; u.amove = false; u.hold = false; });
@@ -5224,6 +5406,7 @@ const BOSS_INFO = {
   26: ['🟠 목성', '태양계 최대 몸집. 다이어트는 4억 년 전에 포기했다.'],
   27: ['☀️ 태양', '지금 보이는 건 8분 전의 나다. 즉, 이미 늦었다.'],
   15: ['🕳️ 블랙홀', '들어온 손님은 많은데 후기가 하나도 없다. 이유는 묻지 마라.'],
+  28: ['🌞 아포칼립스 태양', '80라운드에 본 그 태양? 내 그림자였다. 이제 진짜가 왔다.'],
 };
 function showMonsterInfo(m) {
   const el = document.getElementById('objInfo');
@@ -5747,6 +5930,7 @@ const ACHV = [
   { id: 'lotto50', icon: '🎰', name: '대박', desc: '복권 100만 골드 이상 당첨' },
   { id: 'r40', icon: '🏳️', name: '40 라운드', desc: '' },
   { id: 'r80', icon: '👹', name: '헬 게이트', desc: '80 라운드 돌파' },
+  { id: 'hellclear', icon: '🌋', name: '태양 파괴자', desc: '아포칼립스 태양 격파 — 헬모드 클리어' },
   { id: 'mondex', icon: '📚', name: '몬스터 박사', desc: '몬스터 도감 14종 완성' },
   { id: 'hidden_all', icon: '🀄', name: '비밀의 끝', desc: '히든 조합 9종 모두 발견' },
   ...HIDDEN_DEX.map(h => ({ id: 'h_' + h.id, icon: h.icon, name: '히든: ' + h.name, desc: h.recipe })),
