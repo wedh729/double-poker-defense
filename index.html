@@ -1034,7 +1034,7 @@ function spawnMonster(hp, isBoss, opt) {
     spin: (Math.random() < 0.5 ? -1 : 1) * (0.15 + Math.random() * 0.35),
     x: opt.x != null ? opt.x : CX, y: opt.y != null ? opt.y : CY, rot: Math.random() * Math.PI,
     hp, max: hp, colorIdx: opt.colorIdx != null ? opt.colorIdx : ci, inc: 0, dead: false,
-    // 보스 사다리(우주): R10 운석(20) → R20 보름달(21) → R30 혜성(22) → R40 수성(23) → R50 토성(24) → R60 금성(25) → R70 목성(26) → R80 태양(27, 최종) → 헬 블랙홀(15)
+    // 보스 사다리(태양계 여행): R10 달(20) → R20 수성(21) → R30 금성(22) → R40 지구(23) → R50 화성(24) → R60 목성(25) → R70 토성(26) → R80 태양(27) → 헬 블랙홀(15) → R150 아포칼립스 태양(28)
     shape: isBoss ? (S.round > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(S.round / 10))) : (opt.shape != null ? opt.shape : stageInfo(S.round).si),
     boss: isBoss, born: opt.child ? 0.35 : 0, hell: opt.hell != null ? opt.hell : S.round > FINAL_ROUND,
     small: !!opt.child, shield: 0, shieldMax: 0, split: false,
@@ -4131,23 +4131,7 @@ function drawMonster(m) {
         ctx.arc(m.x, m.y, sz + 4, 0, Math.PI*2);
         ctx.arc(m.x + sz * 0.45, m.y - sz * 0.15, (sz + 4) * 0.78, 0, Math.PI*2);
         ctx.fill('evenodd'); break;
-      case 20: { // ☄️ R10 운석: 울퉁불퉁 바위 + 크레이터 + 마찰열 불꼬리
-        ctx.fillStyle = '#ff7a2e'; // 불꼬리 (좌하단으로 일렁)
-        for (let i = 0; i < 3; i++) {
-          const fl = (sz + 10) * (0.7 + 0.3 * Math.sin(S.time * 9 + i * 2 + m.phase));
-          ctx.globalAlpha = 0.55 - i * 0.14;
-          ctx.beginPath(); ctx.moveTo(m.x - sz * 0.5, m.y + sz * 0.5);
-          ctx.quadraticCurveTo(m.x - fl * 0.9, m.y + fl * 0.5 + i * 4, m.x - fl, m.y + fl * 0.85);
-          ctx.quadraticCurveTo(m.x - fl * 0.55, m.y + fl * 0.5, m.x - sz * 0.15, m.y + sz * 0.75); ctx.closePath(); ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#8d7a66'; polyPath(m.x, m.y, 9, sz + 5, m.rot, (sz + 5) * 0.72); ctx.fill(); // 바위 본체 (요철 강조)
-        ctx.strokeStyle = '#5f5044'; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1;
-        ctx.fillStyle = 'rgba(0,0,0,0.2)'; // 크레이터
-        for (const [dx2, dy2, r2] of [[-0.3, -0.15, 0.2], [0.28, 0.2, 0.16], [0.05, -0.4, 0.12]]) { ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.fill(); }
-        break;
-      }
-      case 21: { // 🌕 R20 보름달: 새하얀 원반 + 크고 진한 크레이터 (한눈에 '달')
+      case 20: { // 🌕 R10 달: 새하얀 원반 + 크고 진한 크레이터 (한눈에 '달')
         for (let g = 3; g >= 1; g--) { ctx.fillStyle = `rgba(255,252,225,${0.1 * g})`; // 달무리 3겹
           ctx.beginPath(); ctx.arc(m.x, m.y, sz + 4 + g * 5, 0, 6.28); ctx.fill(); }
         ctx.fillStyle = '#fffdf0';
@@ -4161,22 +4145,7 @@ function drawMonster(m) {
         ctx.lineWidth = 1;
         break;
       }
-      case 22: { // ☄️ R30 혜성: 얼음 코어 + 뒤로 길게 뻗는 푸른 꼬리 (천천히 회전)
-        const ta = m.rot * 0.4 + S.time * 0.3, tl = (sz + 6) * 3;
-        const tg = ctx.createLinearGradient(m.x, m.y, m.x + Math.cos(ta) * tl, m.y + Math.sin(ta) * tl);
-        tg.addColorStop(0, 'rgba(190,230,255,0.85)'); tg.addColorStop(1, 'rgba(120,180,255,0)');
-        ctx.fillStyle = tg;
-        const pa = ta + Math.PI / 2;
-        ctx.beginPath();
-        ctx.moveTo(m.x + Math.cos(pa) * sz * 0.7, m.y + Math.sin(pa) * sz * 0.7);
-        ctx.lineTo(m.x + Math.cos(ta) * tl, m.y + Math.sin(ta) * tl);
-        ctx.lineTo(m.x - Math.cos(pa) * sz * 0.7, m.y - Math.sin(pa) * sz * 0.7); ctx.closePath(); ctx.fill();
-        const cg = ctx.createRadialGradient(m.x - sz * 0.25, m.y - sz * 0.25, 1, m.x, m.y, sz + 3);
-        cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.6, '#cfe8ff'); cg.addColorStop(1, '#8fc4f0');
-        ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(m.x, m.y, sz + 3, 0, 6.28); ctx.fill();
-        break;
-      }
-      case 23: { // 🪨 R40 수성: 태양에 반쪽만 그을린 암석 행성 (달과 헷갈리지 않게 명암 대비 강조)
+      case 21: { // 🪨 R20 수성: 태양에 반쪽만 그을린 암석 행성 (달과 헷갈리지 않게 명암 대비 강조)
         const R2 = sz + 4;
         ctx.fillStyle = '#6b5c4e'; ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.fill(); // 어두운 면
         ctx.save(); ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.clip();
@@ -4190,24 +4159,7 @@ function drawMonster(m) {
           ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.fill(); }
         break;
       }
-      case 24: { // 🪐 R50 토성: 황토 행성 + 기울어진 고리 (뒤→본체→앞 순서)
-        const R2 = sz + 4;
-        ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(-0.32);
-        ctx.strokeStyle = '#d9c08a'; ctx.lineWidth = 5;
-        ctx.beginPath(); ctx.ellipse(0, 0, R2 * 1.85, R2 * 0.52, 0, Math.PI, Math.PI * 2); ctx.stroke(); // 고리 뒤쪽
-        const bg2 = ctx.createRadialGradient(-R2 * 0.3, -R2 * 0.3, 2, 0, 0, R2);
-        bg2.addColorStop(0, '#f2dfae'); bg2.addColorStop(1, '#cda45e');
-        ctx.fillStyle = bg2; ctx.beginPath(); ctx.arc(0, 0, R2, 0, 6.28); ctx.fill();
-        ctx.strokeStyle = 'rgba(170,130,70,0.5)'; ctx.lineWidth = 2; // 표면 줄무늬
-        for (const yy of [-0.4, 0, 0.42]) { ctx.beginPath(); ctx.ellipse(0, yy * R2, R2 * Math.sqrt(1 - yy * yy) * 0.96, R2 * 0.16, 0, 0, Math.PI); ctx.stroke(); }
-        ctx.strokeStyle = '#e8cf99'; ctx.lineWidth = 5;
-        ctx.beginPath(); ctx.ellipse(0, 0, R2 * 1.85, R2 * 0.52, 0, 0, Math.PI); ctx.stroke();   // 고리 앞쪽 (밝게)
-        ctx.strokeStyle = 'rgba(120,90,45,0.65)'; ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.ellipse(0, 0, R2 * 1.55, R2 * 0.43, 0, 0, Math.PI * 2); ctx.stroke(); // 고리 틈(카시니 간극)
-        ctx.restore(); ctx.lineWidth = 1;
-        break;
-      }
-      case 25: { // 🌋 R60 금성: 두꺼운 황금 대기 링 + 소용돌이치는 황산 구름
+      case 22: { // 🌋 R30 금성: 두꺼운 황금 대기 링 + 소용돌이치는 황산 구름
         const R2 = sz + 4;
         ctx.fillStyle = 'rgba(255,214,120,0.28)'; // 뿌연 대기층 (밖으로 번짐)
         ctx.beginPath(); ctx.arc(m.x, m.y, R2 + 7, 0, 6.28); ctx.fill();
@@ -4228,7 +4180,46 @@ function drawMonster(m) {
         ctx.restore(); ctx.lineWidth = 1;
         break;
       }
-      case 26: { // 🟠 R70 목성: 줄무늬 가스 행성 + 대적점
+      case 23: { // 🌍 R40 지구: 푸른 바다 + 초록 대륙 + 흐르는 구름 (몹 '지구' 디자인의 보스판)
+        const R2 = sz + 4;
+        ctx.fillStyle = 'rgba(120,190,255,0.30)'; // 하늘색 대기 글로우
+        ctx.beginPath(); ctx.arc(m.x, m.y, R2 + 6, 0, 6.28); ctx.fill();
+        const og = ctx.createRadialGradient(m.x - R2 * 0.3, m.y - R2 * 0.3, 2, m.x, m.y, R2);
+        og.addColorStop(0, '#4f9fe8'); og.addColorStop(0.7, '#2f74d0'); og.addColorStop(1, '#1d4f9e');
+        ctx.fillStyle = og; ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.fill();
+        ctx.save(); ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.clip();
+        ctx.fillStyle = '#2e9e5b'; // 대륙 (몹 지구와 같은 톤, 큼직하게)
+        ctx.beginPath(); ctx.ellipse(m.x - R2 * 0.35, m.y - R2 * 0.25, R2 * 0.5, R2 * 0.34, 0.5, 0, 6.28); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(m.x + R2 * 0.42, m.y + R2 * 0.3, R2 * 0.34, R2 * 0.24, -0.4, 0, 6.28); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(m.x + R2 * 0.15, m.y - R2 * 0.55, R2 * 0.22, R2 * 0.13, 0.2, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#3db974'; // 대륙 입체 하이라이트
+        ctx.beginPath(); ctx.ellipse(m.x - R2 * 0.4, m.y - R2 * 0.32, R2 * 0.3, R2 * 0.18, 0.5, 0, 6.28); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'; // 흐르는 구름 — 살아있는 별
+        for (let i = 0; i < 3; i++) {
+          const ca = S.time * 0.12 + i * 2.1, cx2 = m.x + Math.cos(ca) * R2 * 0.55, cy2 = m.y + (i - 1) * R2 * 0.42;
+          ctx.beginPath(); ctx.ellipse(cx2, cy2, R2 * 0.4, R2 * 0.11, (i - 1) * 0.2, 0, 6.28); ctx.fill();
+        }
+        ctx.restore();
+        break;
+      }
+      case 24: { // 🔴 R50 화성: 붉은 사막 + 하얀 극관 + 짙은 지형 얼룩 (이주 계획은 취소됐다)
+        const R2 = sz + 4;
+        const mg = ctx.createRadialGradient(m.x - R2 * 0.3, m.y - R2 * 0.3, 2, m.x, m.y, R2);
+        mg.addColorStop(0, '#e8703a'); mg.addColorStop(0.65, '#c1440e'); mg.addColorStop(1, '#8f2f08');
+        ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.fill();
+        ctx.save(); ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.clip();
+        ctx.fillStyle = 'rgba(90,35,12,0.5)'; // 짙은 지형 얼룩 (시르티스 대평원)
+        ctx.beginPath(); ctx.ellipse(m.x + R2 * 0.25, m.y + R2 * 0.05, R2 * 0.42, R2 * 0.22, -0.3, 0, 6.28); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(m.x - R2 * 0.4, m.y + R2 * 0.35, R2 * 0.26, R2 * 0.15, 0.4, 0, 6.28); ctx.fill();
+        ctx.fillStyle = 'rgba(60,25,10,0.35)'; // 크레이터
+        for (const [dx2, dy2, r2] of [[-0.2, -0.1, 0.11], [0.45, -0.3, 0.09], [0.05, 0.42, 0.08]]) {
+          ctx.beginPath(); ctx.arc(m.x + dx2 * sz, m.y + dy2 * sz, r2 * sz, 0, 6.28); ctx.fill(); }
+        ctx.fillStyle = '#f4ece2'; // 극관 (북극 얼음 모자)
+        ctx.beginPath(); ctx.ellipse(m.x, m.y - R2 * 0.88, R2 * 0.5, R2 * 0.22, 0, 0, 6.28); ctx.fill();
+        ctx.restore();
+        break;
+      }
+      case 25: { // 🟠 R60 목성: 줄무늬 가스 행성 + 대적점
         const R2 = sz + 5;
         ctx.save(); ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.clip();
         const bands = ['#e8c39a', '#cf9a5f', '#e3b587', '#c08748', '#e8c39a', '#d3a068'];
@@ -4241,6 +4232,23 @@ function drawMonster(m) {
         jg.addColorStop(0, 'rgba(255,255,255,0.25)'); jg.addColorStop(0.7, 'rgba(0,0,0,0)'); jg.addColorStop(1, 'rgba(80,40,10,0.35)');
         ctx.fillStyle = jg; ctx.beginPath(); ctx.arc(m.x, m.y, R2, 0, 6.28); ctx.fill();
         ctx.lineWidth = 1;
+        break;
+      }
+      case 26: { // 🪐 R70 토성: 황토 행성 + 기울어진 고리 (뒤→본체→앞 순서)
+        const R2 = sz + 4;
+        ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(-0.32);
+        ctx.strokeStyle = '#d9c08a'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.ellipse(0, 0, R2 * 1.85, R2 * 0.52, 0, Math.PI, Math.PI * 2); ctx.stroke(); // 고리 뒤쪽
+        const bg2 = ctx.createRadialGradient(-R2 * 0.3, -R2 * 0.3, 2, 0, 0, R2);
+        bg2.addColorStop(0, '#f2dfae'); bg2.addColorStop(1, '#cda45e');
+        ctx.fillStyle = bg2; ctx.beginPath(); ctx.arc(0, 0, R2, 0, 6.28); ctx.fill();
+        ctx.strokeStyle = 'rgba(170,130,70,0.5)'; ctx.lineWidth = 2; // 표면 줄무늬
+        for (const yy of [-0.4, 0, 0.42]) { ctx.beginPath(); ctx.ellipse(0, yy * R2, R2 * Math.sqrt(1 - yy * yy) * 0.96, R2 * 0.16, 0, 0, Math.PI); ctx.stroke(); }
+        ctx.strokeStyle = '#e8cf99'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.ellipse(0, 0, R2 * 1.85, R2 * 0.52, 0, 0, Math.PI); ctx.stroke();   // 고리 앞쪽 (밝게)
+        ctx.strokeStyle = 'rgba(120,90,45,0.65)'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.ellipse(0, 0, R2 * 1.55, R2 * 0.43, 0, 0, Math.PI * 2); ctx.stroke(); // 고리 틈(카시니 간극)
+        ctx.restore(); ctx.lineWidth = 1;
         break;
       }
       case 13: case 27: { // ☀️ R80 태양 (최종 보스) — 체력색 무시, 진짜 태양처럼 주황빛 + 일렁이는 광선
@@ -5400,13 +5408,13 @@ function monsterAt(x, y) {
 }
 // 👹 보스 도감: shape별 이름 + 위트 한 줄
 const BOSS_INFO = {
-  20: ['☄️ 운석', '지구 옆을 지나가다 잠시 들렀다. 어쩌다 보니 눌러앉게 됐다.'],
-  21: ['🌕 보름달', '소원을 빌어도 소용없다. 오늘은 근무일이라서.'],
-  22: ['💫 혜성', '76년에 한 번 오는 몸인데 하필 오늘 너를 만났다.'],
-  23: ['🪨 수성', '태양 바로 옆집에 살다 보니 성격이 좀 많이 탔다.'],
-  24: ['🪐 토성', '고리는 무기가 아니라 장식이다. …아직까지는.'],
-  25: ['🌋 금성', '샛별이라고 예쁘게 불러줘도, 실은 태양계에서 제일 뜨거운 성격이다.'],
-  26: ['🟠 목성', '태양계 최대 몸집. 다이어트는 4억 년 전에 포기했다.'],
+  20: ['🌕 달', '소원을 빌어도 소용없다. 오늘은 근무일이라서.'],
+  21: ['🪨 수성', '태양 바로 옆집에 살다 보니 성격이 좀 많이 탔다.'],
+  22: ['🌋 금성', '샛별이라고 예쁘게 불러줘도, 실은 태양계에서 제일 뜨거운 성격이다.'],
+  23: ['🌍 지구', '환경 파괴 청구서를 직접 들고 왔다. 연체료 포함이다.'],
+  24: ['🔴 화성', '이주 온다는 소문을 듣고 마중 나왔다. 편도였길 바란다.'],
+  25: ['🟠 목성', '태양계 최대 몸집. 다이어트는 4억 년 전에 포기했다.'],
+  26: ['🪐 토성', '고리는 무기가 아니라 장식이다. …아직까지는.'],
   27: ['☀️ 태양', '지금 보이는 건 8분 전의 나다. 즉, 이미 늦었다.'],
   15: ['🕳️ 블랙홀', '들어온 손님은 많은데 후기가 하나도 없다. 이유는 묻지 마라.'],
   28: ['🌞 아포칼립스 태양', '80라운드에 본 그 태양? 내 그림자였다. 이제 진짜가 왔다.'],
