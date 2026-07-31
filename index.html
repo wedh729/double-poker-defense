@@ -499,7 +499,7 @@ const WEAPONS = [
   // 6 풀하우스 — 단검 (암살자: 사거리 짧게 + 초고속 난도질 + 암살 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
   {name:'단검', dmg:26, cd:0.3, range:72, splash:44, bounce:0, atk:'area', vis:'sword', bossCrack:true, // 💎 보석 브레이커 암살자: 단일 타겟·고속 난도질(공속 2/3: 0.2→0.3)·보스 대미지 2배
-   hero:{name:'쌍단검', atk:'area', vis:'twin', splash:40, cd:0.12, range:102, dmgMul:0.6}}, // 양손 단검: 초고속 연타 정체성 유지, 범위 53→40·타당 배율 0.6로 밀집 DPS 7.8k→~1.9k (포카드 영웅 라인)
+   hero:{name:'쌍단검', atk:'area', vis:'twin', splash:0, cd:0.12, range:102}}, // 양손 단검: 초고속 연타 단일 브레이커 (스플래시 없음 — 풀하우스 라인 정체성)
   // 7 포카드 — 바주카포 (5초, 스플래쉬)
   {name:'바주카포', dmg:38, cd:2.5, range:330, splash:78, bounce:0, atk:'area', vis:'rocket', // 공격력 1.5배(25→38)·폭발 반경 1.5배(52→78)
    hero:{name:'탱크', atk:'pen', vis:'tank', cd:2.0}}, // 소환장 전체 타격
@@ -918,7 +918,7 @@ function updateMiner(u, dt) {
 // 업글 보정(발당) = 계수 × 무기 공속(cd) → 렙당 DPS 증가가 전 무기 동일 (기존 발당 고정은 기관총·표창 등 빠른 무기가 압도적으로 유리했음)
 function upgPer(u) {
   if (u.catapult) return 0.15 * u.cd; // 🪨 투석기: splash 130이 소환장(264×176)의 대부분을 덮어 실측 발당 76마리 → 스플래시가 아니라 전체타격 계수
-  const single = u.vis === 'sword' && !u.shogun; // 🗡️ 단검(풀하우스)은 splash 값이 있어도 실제로는 최근접 1마리만 때린다 → 단일 계수
+  const single = (u.vis === 'sword' || u.vis === 'twin') && !u.shogun; // 🗡️ 풀하우스 라인(단검·쌍단검)은 단일 타격 → 단일 계수
   if (u.atk === 'pen') return 0.15 * u.cd;             // 소환장 전체타격: 타격 수가 많아 공속 비례로 억제
   if (!single && u.splash > 0) return 0.55 * u.cd;      // 스플래시: 다수 타격이므로 공속 비례로 억제
   return 2.5; // 단일 공격: 공속과 무관하게 레벨당 동일 상승 (족보가 높아 공속이 빠른 무기가 손해 보지 않도록)
@@ -2105,12 +2105,20 @@ function areaHit(u, x, y, dmg) {
     S.effects.push({ type:'slash', x: u.x, y: u.y, r: R, a: ang0 + soff, t: sdur, dur: sdur, fire: u.shogun });
     if (big) S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.9, a: ang0 + 0.3, t: 0.5, dur: 0.5, fire: u.shogun });
     for (let i = 0; i < 4; i++) { const v = 60 + Math.random()*90, aa = a + (Math.random()-0.5)*1.2; S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.22, r: 1.2 + Math.random()*1.6, c: '#dbe9ff' }); }
-  } else if (vis === 'twin') { // 🗡️🗡️ 쌍단검: 유닛 중심 X자 이도류 — 참격 최대 = 사거리
+  } else if (vis === 'twin') { // 🗡️🗡️ 쌍단검: 유닛 중심 X자 이도류 — 풀하우스 라인은 스플래시 없음, 단일 타겟 + 보스 ×2
     const R = effRange(u), ang0 = Math.atan2(y - u.y, x - u.x), d2 = 0.5;
     S.effects.push({ type:'slash', x: u.x, y: u.y, r: R, a: ang0 - d2, t: 0.16, dur: 0.16 });
     S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.92, a: ang0 + d2, t: 0.2, dur: 0.2 });
     for (let i = 0; i < 5; i++) { const v = 60 + Math.random()*100, aa = a + (Math.random()-0.5)*1.4;
       S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.2, r: 1.1 + Math.random()*1.5, c: '#dbe9ff' }); }
+    let best = null, bd = 1e12;
+    for (const m2 of S.monsters) { const ddx = m2.x - x, ddy = m2.y - y, dd = ddx * ddx + ddy * ddy;
+      if (dd < bd) { bd = dd; best = m2; } }
+    if (best) {
+      dealDamage(best, dmg * (best.boss ? 2 : 1), u);
+      if (best.boss) addFloat(best.x, best.y - 24, '💎 CRACK! ×2', '#7ab8ff', 0.7);
+    }
+    return;
   } else if (vis === 'scythe') {
     // 🃏 조커: 유닛 중심으로 낫이 사거리 안을 쓸어담는다 — 이펙트 최대 반경 = 사거리 (견인 범위와 일치, 밖으로 안 삐져나감)
     const R = effRange(u), ang0 = Math.atan2(y - u.y, x - u.x);
@@ -5438,7 +5446,7 @@ function updateInfoPanel() {
   const traits = [];
   if (u.atk === 'pen') traits.push('<b style="color:#d32f2f">소환장 전체 타격</b>');
   else if (u.vis === 'flame') traits.push(`화염 스트림 (불길 두께 ${u.splash * 2})`);
-  else if (u.vis === 'sword' && !u.shogun) traits.push('단일 공격');
+  else if ((u.vis === 'sword' || u.vis === 'twin') && !u.shogun) traits.push('단일 공격');
   else if (u.splash) traits.push(`스플래쉬 반경 ${u.splash}`);
   if (u.gamble) traits.push('🎲 주사위만큼 1~6회 랜덤 팅김');
   else if (u.bounce) traits.push(`팅김 ×${u.bounce}`);
