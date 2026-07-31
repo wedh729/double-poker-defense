@@ -499,7 +499,7 @@ const WEAPONS = [
   // 6 풀하우스 — 단검 (암살자: 사거리 짧게 + 초고속 난도질 + 암살 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
   {name:'단검', dmg:26, cd:0.3, range:72, splash:44, bounce:0, atk:'area', vis:'sword', bossCrack:true, // 💎 보석 브레이커 암살자: 단일 타겟·고속 난도질(공속 2/3: 0.2→0.3)·보스 대미지 2배
-   hero:{name:'쌍단검', atk:'area', vis:'twin', splash:53, cd:0.12, range:102}}, // 양손 단검: 공속 2배(0.24→0.12), 범위는 일반 단검(44)의 1.2배
+   hero:{name:'쌍단검', atk:'area', vis:'twin', splash:40, cd:0.12, range:102, dmgMul:0.6}}, // 양손 단검: 초고속 연타 정체성 유지, 범위 53→40·타당 배율 0.6로 밀집 DPS 7.8k→~1.9k (포카드 영웅 라인)
   // 7 포카드 — 바주카포 (5초, 스플래쉬)
   {name:'바주카포', dmg:38, cd:2.5, range:330, splash:78, bounce:0, atk:'area', vis:'rocket', // 공격력 1.5배(25→38)·폭발 반경 1.5배(52→78)
    hero:{name:'탱크', atk:'pen', vis:'tank', cd:2.0}}, // 소환장 전체 타격
