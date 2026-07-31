@@ -1059,6 +1059,8 @@ function spawnMonster(hp, isBoss, opt) {
   S.monsters.push(m);
   return m;
 }
+// ⏱️ 스피드 보너스: 남은 시간 × (1 + 라운드×0.25)G/초 — 같은 시간 광산을 돌리는 것보단 달게, 킬 수입보단 작게 (HUD 실시간 표시와 정산이 같은 공식을 쓴다)
+function speedBonus() { return S.timer > 1 ? Math.round(S.timer * (1 + S.round * 0.25)) : 0; }
 function endWave() {
   S.slotBombs = []; // 잭팟 폭격 잔탄이 다음 웨이브로 넘어가 엉뚱한 좌표에서 터지지 않게
   const bossAlive = S.monsters.some(m => m.boss);
@@ -1077,16 +1079,17 @@ function endWave() {
   } else {
     const bonus = 30 + S.round * 8;
     S.gold += bonus;
-    // ⏱️ 스피드 보너스: 남은 시간 × (1 + 라운드×0.25)G/초 — 같은 시간 광산을 돌리는 것보단 달게, 킬 수입보단 작게
-    const tb = S.timer > 1 ? Math.round(S.timer * (1 + S.round * 0.25)) : 0;
+    const tb = speedBonus();
     if (tb > 0) {
       S.gold += tb;
       logMsg(`✅ 스테이지 클리어! 보너스 +${bonus}G · ⏱️ ${Math.ceil(S.timer)}초 남김 → 스피드 보너스 +${tb}G`);
       addFloat(CX, CY, `클리어 +${bonus}G`, '#43a047', 2);
       addFloat(CX, CY - 26, `⏱️ 스피드 +${tb}G!`, '#ffd54f', 2.2);
+      rewardToast('⏱️', `스피드 +${tb}G · 클리어 +${bonus}G`, '#c9971a', `${Math.ceil(S.timer)}초 남기고 전멸!`); // 짜잔 결산 — 포커로 넘어가도 보인다
     } else {
       logMsg(`✅ 스테이지 클리어! 보너스 +${bonus}G`);
       addFloat(CX, CY, `클리어 +${bonus}G`, '#43a047', 2);
+      rewardToast('✅', `클리어 +${bonus}G`, '#2e7d32', '스테이지 클리어');
     }
     sfx('clear');
   }
@@ -6486,7 +6489,9 @@ function updateHUD() {
   let frac = 0, col = '#e53935';
   if (S.phase === 'wave') {
     frac = 1 - S.timer / WAVE_TIME; col = '#e53935';
-    document.getElementById('tPhase').textContent = '⚔️ 전투 (몹 ' + S.monsters.length + ')';
+    const tb = speedBonus(); // ⏱️ 실시간 예고: 눈앞에서 줄어드는 보상 — 빨리 잡을수록 이득임이 와닿게
+    document.getElementById('tPhase').innerHTML = '⚔️ 전투 (몹 ' + S.monsters.length + ')' +
+      (tb > 0 ? ' · <span style="color:#c9a227" title="지금 전멸시키면 받는 스피드 보너스">⏱️+' + tb + 'G</span>' : '');
   } else if (S.phase === 'poker') {
     frac = 1 - S.pokerTimer / POKER_TIME; col = '#8c5bff';
     document.getElementById('tPhase').textContent = '🃏 포커 페이즈';
