@@ -564,7 +564,7 @@ function matInfo(n) {
 const BOSS_NAMES = ['슬라임','성게 어뢰','별','초승달','해'];
 
 const CX = 440, CY = 250;
-const MINE_POS = {x: 858, y: 380};
+const MINE_POS = {x: 880, y: 448}; // 우하단 구석 — 광부 동선(하단 갓길)이 부대 주둔지를 관통하지 않게 (x880: 최우측 봉우리가 캔버스 안에 들게)
 const HOUSE = {x: 96, y: 428};    // 좌측 최하단 성 — 광부가 광물을 배달해야 골드가 쌓인다
 const ROOM = {cx: 772, cy: 100, w: 196, h: 150}; // 우측 상단 광석 방 (2배 크기) — 유닛 1기가 광석을 공격해 캔다
 // 10단계 광석 (이름·색·컷 모양)
@@ -852,7 +852,7 @@ function confirmHand() {
 // ==================== 유닛 ====================
 function spawnUnit(rank, race, hidden, keyRank, superAce) {
   const i = S.units.length;
-  const x = CX + (i % 8 - 3.5) * 34, y = Math.min(CY + 130 + Math.floor(i / 8) * 30, 462); // y 클램프: 유닛 많아져도 캔버스(500) 아래로 안 숨음
+  const x = CX + (i % 8 - 3.5) * 34, y = Math.min(CY + 130 + Math.floor(i / 8) * 30, 440); // y 클램프 440: 캔버스 아래로 안 숨고, 광부 갓길(상단 모서리 y≈465)도 발끝이 안 닿는다
   const w = WEAPONS[rank];
   const kr = keyRank || 14;
   S.units.push({
@@ -915,7 +915,7 @@ function updateMiner(u, dt) {
   const mineMul = u.sminer ? 3 : 1; // 슈퍼광부는 채굴도 3배 빠름
   u.speed = MINER_SPEED * (1 + 0.25 * S.minerMoveLv) * spdMul;
   if (u.mjob === 'toMine') {
-    u.tx = MINE_POS.x + u.jx; u.ty = MINE_POS.y + 44 + u.jy * 0.7;
+    u.tx = MINE_POS.x - 36 + u.jx * 0.35; u.ty = MINE_POS.y + 26 + u.jy * 0.2; // 광산 서쪽 갓길에 선다 (y≈474 도로 위)
     // 도착 판정 74: 개별 오프셋(jy ±20 + 세로 40) 최대 대각 ~63px + 유닛 분리 밀림 여유
     // (58이던 시절 오프셋이 큰 광부는 목표에 서고도 채굴을 시작 못 하고 영영 멈춰 있었다)
     if (Math.hypot(MINE_POS.x - u.x, MINE_POS.y - u.y) < 74) {
@@ -936,8 +936,8 @@ function updateMiner(u, dt) {
     if (S.mineHp <= 0) mineReward();
     u.mtimer -= dt;
     if (u.mtimer <= 0) { u.carry = true; u.mjob = 'toHouse'; }
-  } else { // toHouse (넓게 흩어져 배달 — 겹침 방지)
-    u.tx = HOUSE.x + 26 + u.jx * 0.6; u.ty = HOUSE.y + 20 + u.jy * 0.55;
+  } else { // toHouse (하단 갓길을 따라 배달 — 부대와 동선 분리)
+    u.tx = HOUSE.x + 26 + u.jx * 0.5; u.ty = HOUSE.y + 42 + u.jy * 0.25;
     if (Math.hypot(HOUSE.x - u.x, HOUSE.y - u.y) < 60) { // 유닛 분리로 밀려도 배달되도록 여유
       const dep = (MINER_LOAD + S.mineBonus) * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1);
       S.gold += dep;
@@ -1585,6 +1585,7 @@ function update(dt) {
       const a = U[i];
       for (let j = i + 1; j < U.length; j++) {
         const b = U[j];
+        if (a.miner !== b.miner) continue; // ⛏️ 광부↔전투유닛은 서로 유령 통과 (충돌 제거 — 동선은 갓길로 분리)
         let dx = b.x - a.x, dy = b.y - a.y;
         if (dx * dx + dy * dy < MINSEP * MINSEP) {
           let d = Math.hypot(dx, dy);
@@ -3341,6 +3342,7 @@ function draw() {
   grad.addColorStop(1, 'rgba(140,120,220,0)');
   ctx.fillStyle = grad;
   ctx.beginPath(); ctx.arc(CX, CY, 280, 0, Math.PI*2); ctx.fill();
+  drawMinerRoad(); // 광부 갓길 (건물들보다 아래 레이어)
   drawCastle();
   drawMine();
   drawOreRoom();
@@ -3983,6 +3985,22 @@ const MINE_TIERS = [
   { light:'#f2c14e', dark:'#b8860b', cap:'#ffe9ad', ore:'#e0a828', vein:'#fff2c0', spark:true },     // 6 금
   { light:'#6fa8e8', dark:'#3f6fc0', cap:'#bfe0ff', ore:'#5a8fd8', spark:true, gem:true },           // 7+ 보석
 ];
+// ⛏️ 광부 갓길: 성 ↔ 광산 하단 전용 흙길 (부대 주둔지 아래로 동선 분리 — 시각적으로도 "광부의 길"임을 읽게)
+function drawMinerRoad() {
+  const x0 = HOUSE.x + 24, y0 = 468, cx1 = 470, cy1 = 478, x1 = MINE_POS.x - 34, y1 = MINE_POS.y + 26;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#cdb489'; ctx.lineWidth = 20;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx1, cy1, x1, y1); ctx.stroke();
+  ctx.strokeStyle = 'rgba(160,130,84,0.5)'; ctx.lineWidth = 13;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx1, cy1, x1, y1); ctx.stroke();
+  ctx.lineWidth = 1; ctx.lineCap = 'butt';
+  ctx.fillStyle = 'rgba(120,98,60,0.4)'; // 발자국·자갈 점점이
+  for (let i = 0; i < 14; i++) {
+    const t = (i + 0.5) / 14, mt2 = 1 - t;
+    const xx = x0 * mt2 * mt2 + 2 * mt2 * t * cx1 + t * t * x1, yy = y0 * mt2 * mt2 + 2 * mt2 * t * cy1 + t * t * y1;
+    ctx.beginPath(); ctx.arc(xx + Math.sin(i * 7) * 5, yy + Math.cos(i * 3) * 3.5, 1.5 + (i % 3) * 0.7, 0, 6.28); ctx.fill();
+  }
+}
 function drawMine() {
   const p = MINE_POS, x = p.x, y = p.y;
   const T = MINE_TIERS[Math.min(S.mineLayer - 1, MINE_TIERS.length - 1)];
@@ -4050,9 +4068,9 @@ function drawMine() {
   ctx.fillStyle = '#2b2b2b';
   ctx.beginPath(); ctx.arc(x - 21, y + 37, 2, 0, Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.arc(x - 16, y + 37, 2, 0, Math.PI*2); ctx.fill();
-  drawBar(x - 30, y + 46, 60, S.mineHp / S.mineMax, T.dark); // 겹 진행 바
+  drawBar(x - 30, y - 48, 60, S.mineHp / S.mineMax, T.dark); // 겹 진행 바 (산 위 — 광산이 캔버스 구석이라 아래는 잘린다)
   ctx.fillStyle = labelCol('#7a6a52'); ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText(`⛏️ ${S.mineLayer}단계`, x, y + 62); ctx.textAlign = 'left'; // 현재 겹(단계) 표시
+  ctx.fillText(`⛏️ ${S.mineLayer}단계`, x, y - 56); ctx.textAlign = 'left'; // 현재 겹(단계) 표시
 }
 function polyPath(x, y, n, r, rot, r2) {
   ctx.beginPath();
@@ -5632,8 +5650,9 @@ function pressEnd() {
     S.units.forEach(u => u.selected = (u.x >= x0 && u.x <= x1 && u.y >= y0 && u.y <= y1));
     hideObjInfo();
   } else {
-    let hit = null;
-    for (const u of S.units) if (Math.hypot(u.x - drag.x0, u.y - drag.y0) < HIT_R) { hit = u; break; }
+    let hit = null; // 전투 유닛 우선, 없으면 광부 — 유령 통과로 겹쳤을 때 광부가 클릭을 가로채지 않게
+    for (const u of S.units) if (!u.miner && Math.hypot(u.x - drag.x0, u.y - drag.y0) < HIT_R) { hit = u; break; }
+    if (!hit) for (const u of S.units) if (u.miner && Math.hypot(u.x - drag.x0, u.y - drag.y0) < HIT_R) { hit = u; break; }
     S.units.forEach(u => u.selected = false);
     if (hit) { hit.selected = true; hideObjInfo(); }
     else {
@@ -6944,7 +6963,7 @@ function startMapTest() {
   [0, 1, 3, 4, 6].forEach(t => spawnUnit(t, RACE_OF_RANK[t], false, 10));
   spawnHero(4, RACE_OF_RANK[4], CX + 96, CY + 156, 1);
   const [ox, oy] = MT.ORIGIN[0];
-  for (const u of S.units) { u.x += ox; u.y += oy; u.tx = u.x; u.ty = u.y; u.cool = Math.random() * 0.5; u.selected = false; u.aimX = ox + CX; u.aimY = oy + CY; } // 기본 조준 = 내 소환장 (안 그러면 월드 원점을 본다)
+  for (const u of S.units) { u._mt = true; u.x += ox; u.y += oy; u.tx = u.x; u.ty = u.y; u.cool = Math.random() * 0.5; u.selected = false; u.aimX = ox + CX; u.aimY = oy + CY; } // 기본 조준 = 내 소환장 (안 그러면 월드 원점을 본다)
   MT.raider = { x: 1005, y: 60, dir: 1 };
   MT.boss = { x: 1965, y: 565, dir: -1 };
   MT.cam.x = Math.max(0, Math.min(MT.W - 940, ox + CX - 470));
@@ -6969,6 +6988,13 @@ function mtOnDeck(x, y) { // 다리 상판 위 (유닛 시점 — 건너는 중)
   }
   return false;
 }
+function mtDeckLift(x, y) { // 상판 위 부양 높이 = 아치 곡률 (중앙에서 가장 높이 뜬다)
+  for (const b of MT.BRIDGES) {
+    if (b.vert) { if (Math.abs(x - b.x) < 88 && Math.abs(y - b.y) < 27) { const t = (x - b.x) / 88; return 5 + 9 * (1 - t * t); } }
+    else if (Math.abs(y - b.y) < 88 && Math.abs(x - b.x) < 27) { const t = (y - b.y) / 88; return 5 + 9 * (1 - t * t); }
+  }
+  return 0;
+}
 function updateMapTest(dt) {
   MT.time += dt;
   S.time += dt; // 재사용하는 기존 드로우(포털 회전·유닛 오라·광산 반짝임)가 S.time 기준으로 움직인다
@@ -6981,11 +7007,40 @@ function updateMapTest(dt) {
     if (MT.mouse.y < E) MT.cam.y -= spd; if (MT.mouse.y > 500 - E) MT.cam.y += spd;
   }
   mtClampCam();
+  for (const u of S.units) if (!u._mt) { // 미리보기 중 상점 등에서 새로 생긴 유닛: 로컬 좌표 → P1 사분면으로 이송
+    u._mt = true;
+    u.x += MT.ORIGIN[0][0]; u.y += MT.ORIGIN[0][1]; u.tx = u.x; u.ty = u.y;
+    u.aimX = MT.ORIGIN[0][0] + CX; u.aimY = MT.ORIGIN[0][1] + CY;
+  }
   const r = MT.raider; r.y += 55 * dt * r.dir; if (r.y > 440) r.dir = -1; else if (r.y < 60) r.dir = 1; // 12시 레인 왕복
   const b = MT.boss; b.x += 24 * dt * b.dir; if (b.x < 1190) b.dir = 1; else if (b.x > 1965) b.dir = -1; // 3시 레인 왕복 (아주 느림)
   for (const u of S.units) { // 간이 이동 + LoS 사격 데모
     const dx = u.tx - u.x, dy = u.ty - u.y, d = Math.hypot(dx, dy);
-    if (d > 3) { const st = Math.min(d, 70 * dt); u.x += dx / d * st; u.y += dy / d * st; u.moving = true; u.walk = (u.walk || 0) + dt; }
+    if (d > 3) {
+      const px_ = u.x, py_ = u.y;
+      const st = Math.min(d, 70 * dt); u.x += dx / d * st; u.y += dy / d * st; u.moving = true; u.walk = (u.walk || 0) + dt;
+      // 🚧 레인 = 파인 수로: 다리 상판·중앙 광장(계단)으로만 건넌다
+      const inV = u.x > 932 && u.x < 1078, inH = u.y > 492 && u.y < 638;
+      const kr = Math.hypot(u.x - MT.KING.x, u.y - MT.KING.y);
+      const ka = Math.atan2(u.y - MT.KING.y, u.x - MT.KING.x);
+      const inGateSector = Math.abs(((ka % (Math.PI / 4)) + Math.PI / 4 + Math.PI / 8) % (Math.PI / 4) - Math.PI / 8) < 0.3; // 레인 4 + 대각 계단 4 방향
+      const allowed = mtOnDeck(u.x, u.y) || kr < 132 || (kr < 152 && inGateSector); // 광장 내부는 자유, 성곽 링은 개구 8곳으로만
+      if ((inV || inH) && !allowed) { u.x = px_; u.y = py_; u.tx = u.x; u.ty = u.y; u.moving = false; } // 벽 앞에서 멈춤
+      for (const [qox, qoy] of MT.ORIGIN) { // 사분면 내부 경계: 소환장 밀어내기 + 광석방 담장 (기존 충돌을 로컬 좌표로 재사용)
+        if (u.x > qox && u.x < qox + 940 && u.y > qoy && u.y < qoy + 500) {
+          u.x -= qox; u.y -= qoy; u.px = px_ - qox; u.py = py_ - qoy;
+          pushOutOfPen(u); blockRoomWalls(u);
+          u.x += qox; u.y += qoy; u.px = u.py = null;
+          break;
+        }
+      }
+      if (Math.abs(u.x - MT.KING.x) < 70 && Math.abs(u.y - MT.KING.y) < 72) { // 왕국 킵은 단단한 건물
+        const kx = u.x - MT.KING.x, ky = u.y - MT.KING.y;
+        if (Math.abs(kx) > Math.abs(ky)) u.x = MT.KING.x + (kx >= 0 ? 70 : -70);
+        else u.y = MT.KING.y + (ky >= 0 ? 72 : -72);
+      }
+      if (Math.hypot(u.x - px_, u.y - py_) < 0.1) { u.tx = u.x; u.ty = u.y; u.moving = false; } // 어떤 경계든 완전히 막혔으면 명령 취소 — 제자리걸음·사격 정지 방지
+    }
     else u.moving = false;
     u.cool = (u.cool || 0) - dt;
     if (u.atkAnim > 0) u.atkAnim = Math.max(0, u.atkAnim - dt * 5);
@@ -7020,71 +7075,152 @@ function mtGate(x, y, i) { // 게이트: 석재 프레임 + 마계 소용돌이 
   ctx.beginPath(); ctx.arc(0, 8, 13 + Math.sin(MT.time * 2) * 3, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); ctx.lineWidth = 1;
   ctx.restore();
 }
-function mtKingdom(P) { // 중앙 왕국: 석판 광장 + 성곽 링 + 벽돌 킵 + 타워 + 공유 HP
+function mtKingdom(P) { // 중앙 왕국 (¾ 시점): 낮은 광장 + 높이 있는 성곽 + 전면 벽·지붕이 보이는 킵 + 원기둥 타워
   const { x, y } = MT.KING;
+  // ── 광장 (저지대)
   ctx.fillStyle = P.plaza; ctx.beginPath(); ctx.arc(x, y, 148, 0, 6.28); ctx.fill();
+  ctx.fillStyle = 'rgba(35,28,16,0.12)'; ctx.beginPath(); ctx.arc(x, y, 148, 0, 6.28); ctx.fill();
   ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 148, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1;
-  ctx.strokeStyle = '#7d7468'; ctx.lineWidth = 10; // 성곽 링 (레인 방향 4곳 개구)
-  for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(x, y, 128, k * 1.5708 + 0.34, (k + 1) * 1.5708 - 0.34); ctx.stroke(); }
-  ctx.lineWidth = 1;
-  ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(x + 6, y + 66, 66, 14, 0, 0, 6.28); ctx.fill(); // 킵 그림자
-  ctx.fillStyle = P.brick; ctx.fillRect(x - 58, y - 58, 116, 116); // 킵 (벽돌)
-  ctx.strokeStyle = '#4a443c'; ctx.lineWidth = 2.5; ctx.strokeRect(x - 58, y - 58, 116, 116); ctx.lineWidth = 1;
-  ctx.fillStyle = '#7d7468';
-  for (let i = 0; i < 7; i++) ctx.fillRect(x - 58 + i * 17.4, y - 67, 10, 10); // 총안
-  for (const [tx, ty] of [[-58, -58], [58, -58], [-58, 58], [58, 58]]) { // 코너 타워 + 고깔
-    ctx.fillStyle = '#9c948a'; ctx.beginPath(); ctx.arc(x + tx, y + ty, 17, 0, 6.28); ctx.fill();
-    ctx.strokeStyle = '#4a443c'; ctx.stroke();
-    ctx.fillStyle = '#a34a30';
-    ctx.beginPath(); ctx.moveTo(x + tx - 15, y + ty - 3); ctx.lineTo(x + tx, y + ty - 27); ctx.lineTo(x + tx + 15, y + ty - 3); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(90,80,60,0.7)'; ctx.lineWidth = 2; // 4모서리 계단 (물리 개구 섹터 ±0.3과 정합)
+  for (const a0 of [0.785, 2.356, 3.927, 5.498]) for (let s = 0; s < 3; s++) {
+    ctx.beginPath(); ctx.arc(x, y, 130 + s * 8, a0 - 0.26, a0 + 0.26); ctx.stroke();
   }
-  ctx.fillStyle = '#3d2f1e'; ctx.beginPath(); ctx.arc(x, y + 44, 15, Math.PI, 0); ctx.fill(); ctx.fillRect(x - 15, y + 44, 30, 14); // 대문
-  ctx.fillStyle = 'rgba(255,220,140,0.75)'; ctx.beginPath(); ctx.arc(x, y + 46, 9, Math.PI, 0); ctx.fill(); ctx.fillRect(x - 9, y + 46, 18, 11);
-  ctx.strokeStyle = '#4a443c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - 67); ctx.lineTo(x, y - 94); ctx.stroke(); ctx.lineWidth = 1; // 깃대
+  ctx.lineWidth = 1;
+  // ── 성곽 링: 레인 4곳(±0.28) + 대각 계단 4곳(±0.24) 개구 — 벽 세그먼트가 '벽'으로 읽히게 개구는 좁게, 물리(±0.3)는 살짝 관대하게
+  ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 8;
+  for (const [a0, a1] of [[Math.PI + 0.28, 3.927 - 0.24], [3.927 + 0.24, Math.PI * 1.5 - 0.28], [Math.PI * 1.5 + 0.28, 5.498 - 0.24], [5.498 + 0.24, 6.28 - 0.28]]) {
+    ctx.beginPath(); ctx.arc(x, y, 128, a0, a1); ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+  for (const [a0, a1] of [[0.28, 0.785 - 0.24], [0.785 + 0.24, 1.5708 - 0.28], [1.5708 + 0.28, 2.356 - 0.24], [2.356 + 0.24, Math.PI - 0.28]]) {
+    ctx.fillStyle = '#6d6458'; // 남쪽 벽면 (아래로 13px)
+    ctx.beginPath();
+    for (let a = a0; a <= a1 + 0.001; a += 0.06) ctx.lineTo(x + Math.cos(a) * 128, y + Math.sin(a) * 128);
+    for (let a = a1; a >= a0 - 0.001; a -= 0.06) ctx.lineTo(x + Math.cos(a) * 128, y + Math.sin(a) * 128 + 13);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#9c948a'; ctx.lineWidth = 4; // 벽 윗선 (밝게)
+    ctx.beginPath(); ctx.arc(x, y, 128, a0, a1); ctx.stroke(); ctx.lineWidth = 1;
+    ctx.fillStyle = '#8d8478'; // 총안 이빨
+    for (let a = a0 + 0.06; a < a1; a += 0.15) ctx.fillRect(x + Math.cos(a) * 128 - 3, y + Math.sin(a) * 128 - 7, 6, 7);
+  }
+  // ── 킵: 전면 벽(벽돌 면) + 지붕면 + 그림자 (¾ 시점)
+  ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(x + 8, y + 62, 72, 13, 0, 0, 6.28); ctx.fill();
+  ctx.fillStyle = P.brick; ctx.fillRect(x - 56, y - 30, 112, 88); // 전면 벽 (높이감의 본체)
+  const kg = ctx.createLinearGradient(0, y + 26, 0, y + 58);
+  kg.addColorStop(0, 'rgba(0,0,0,0)'); kg.addColorStop(1, 'rgba(0,0,0,0.32)');
+  ctx.fillStyle = kg; ctx.fillRect(x - 56, y + 26, 112, 32); // 벽 하단 접지 어둠
+  ctx.fillStyle = P.plaza; ctx.fillRect(x - 56, y - 56, 112, 26); // 지붕면 (밝은 석판 — 위에서 본 면)
+  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(x - 56, y - 56, 112, 5);
+  ctx.strokeStyle = '#4a443c'; ctx.lineWidth = 2.2;
+  ctx.strokeRect(x - 56, y - 56, 112, 114); ctx.beginPath(); ctx.moveTo(x - 56, y - 30); ctx.lineTo(x + 56, y - 30); ctx.stroke(); ctx.lineWidth = 1; // 지붕/벽 경계선
+  ctx.fillStyle = '#7d7468'; // 지붕 앞단 총안
+  for (let i = 0; i < 7; i++) ctx.fillRect(x - 54 + i * 16.6, y - 38, 9, 8);
+  ctx.fillStyle = '#3d2f1e'; // 대문 (전면 벽 하단, 아치)
+  ctx.beginPath(); ctx.arc(x, y + 26, 14, Math.PI, 0); ctx.fill(); ctx.fillRect(x - 14, y + 26, 28, 32);
+  ctx.fillStyle = 'rgba(255,220,140,0.7)'; // 문틈 불빛
+  ctx.beginPath(); ctx.arc(x, y + 30, 8, Math.PI, 0); ctx.fill(); ctx.fillRect(x - 8, y + 30, 16, 28);
+  ctx.strokeStyle = '#241c12'; ctx.lineWidth = 1.4; // 문살
+  ctx.beginPath(); ctx.moveTo(x, y + 14); ctx.lineTo(x, y + 58); ctx.moveTo(x - 8, y + 22); ctx.lineTo(x - 8, y + 58); ctx.moveTo(x + 8, y + 22); ctx.lineTo(x + 8, y + 58); ctx.stroke(); ctx.lineWidth = 1;
+  // ── 타워 4: 원기둥 (앞쪽 2개 크게, 뒤쪽 2개 작게 — 원근)
+  for (const [tx, ty, big] of [[-62, -52, 0], [62, -52, 0], [-62, 34, 1], [62, 34, 1]]) {
+    const w = big ? 15 : 11, h = big ? 52 : 38, px2 = x + tx, py2 = y + ty;
+    const tg = ctx.createLinearGradient(px2 - w, 0, px2 + w, 0); // 원기둥 명암
+    tg.addColorStop(0, '#7d7468'); tg.addColorStop(0.4, '#a89f92'); tg.addColorStop(1, '#6d6458');
+    ctx.fillStyle = tg; ctx.fillRect(px2 - w, py2 - h, w * 2, h);
+    ctx.beginPath(); ctx.ellipse(px2, py2, w, w * 0.4, 0, 0, Math.PI); ctx.fill(); // 발치 곡면
+    ctx.fillStyle = '#a34a30'; // 고깔 지붕
+    ctx.beginPath(); ctx.moveTo(px2 - w - 3, py2 - h + 2); ctx.lineTo(px2, py2 - h - (big ? 24 : 17)); ctx.lineTo(px2 + w + 3, py2 - h + 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; // 지붕 하이라이트
+    ctx.beginPath(); ctx.moveTo(px2 - w - 3, py2 - h + 2); ctx.lineTo(px2, py2 - h - (big ? 24 : 17)); ctx.lineTo(px2 - 1, py2 - h + 2); ctx.closePath(); ctx.fill();
+  }
+  ctx.strokeStyle = '#4a443c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - 56); ctx.lineTo(x, y - 88); ctx.stroke(); ctx.lineWidth = 1; // 깃대
   ctx.fillStyle = '#8c5bff';
-  ctx.beginPath(); ctx.moveTo(x, y - 94); ctx.lineTo(x + 24 + Math.sin(MT.time * 3) * 3, y - 87); ctx.lineTo(x, y - 80); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x, y - 88); ctx.lineTo(x + 24 + Math.sin(MT.time * 3) * 3, y - 81); ctx.lineTo(x, y - 74); ctx.closePath(); ctx.fill();
   ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('❤️❤️❤️❤️❤️', x, y - 104); // 공유 HP 5 (모형)
+  ctx.fillText('❤️❤️❤️❤️❤️', x, y - 100);
   ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#5d4a80';
-  ctx.fillText('🏰 왕국 — 같이 지킨다', x, y + 88); ctx.textAlign = 'left';
+  ctx.fillText('🏰 왕국 — 같이 지킨다', x, y + 92); ctx.textAlign = 'left';
 }
 function mtBridgeShadow(b) { // 상판이 레인에 드리우는 그림자 (입체감의 핵심)
   ctx.fillStyle = 'rgba(30,22,14,0.32)';
   if (b.vert) ctx.fillRect(944, b.y - 31, 122, 62);
   else ctx.fillRect(b.x - 31, 504, 62, 122);
 }
-function mtBridge(b, P) { // 돌다리: 벽돌 상판 + 밝은 보행로 + 원근 난간 + 남면 아치 2개
+const mtArch = t => -9 * (1 - (t / 88) ** 2); // 다리 상판 곡률: 중앙이 9px 솟는다
+function mtBand(y0, y1, fill) { // 아치 곡률을 따라가는 곡면 밴드
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  for (let t = -88; t <= 88; t += 11) ctx.lineTo(t, y0 + mtArch(t));
+  for (let t = 88; t >= -88; t -= 11) ctx.lineTo(t, y1 + mtArch(t));
+  ctx.closePath(); ctx.fill();
+}
+function mtBridge(b, P) { // 아치 돌다리: 솟은 상판 + 밑이 파인 큰 아치 + 원근 난간
   ctx.save(); ctx.translate(b.x, b.y);
   if (!b.vert) ctx.rotate(Math.PI / 2);
-  ctx.fillStyle = P.brick; ctx.fillRect(-88, -26, 176, 52); // 상판 (벽돌)
-  ctx.strokeStyle = '#4a443c'; ctx.lineWidth = 2; ctx.strokeRect(-88, -26, 176, 52); ctx.lineWidth = 1;
-  ctx.fillStyle = 'rgba(224,216,198,0.92)'; ctx.fillRect(-88, -12, 176, 24); // 보행로 석판
-  ctx.strokeStyle = 'rgba(120,110,92,0.5)';
-  for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * 25, -12); ctx.lineTo(i * 25, 12); ctx.stroke(); }
-  ctx.fillStyle = '#6d6458'; ctx.fillRect(-88, -31, 176, 6); // 북쪽 난간 (얇게 — 원근)
-  ctx.fillStyle = '#7d7468'; ctx.fillRect(-88, 24, 176, 9);  // 남쪽 난간 (두껍게)
+  // ① 남면 벽체: 상판 아래 곡선 ~ 지면(46) 사이, 가운데는 큰 아치로 뚫림 (밑이 파인 실루엣)
+  ctx.fillStyle = '#5d5448';
+  ctx.beginPath();
+  ctx.moveTo(-88, 27 + mtArch(-88));
+  for (let t = -88; t <= 88; t += 11) ctx.lineTo(t, 27 + mtArch(t)); // 상판 하단 곡선
+  ctx.lineTo(88, 46); ctx.lineTo(62, 46);
+  ctx.quadraticCurveTo(0, 6, -62, 46); // 큰 아치 개구 (위로 파인다)
+  ctx.lineTo(-88, 46); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#3a342c'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(62, 46); ctx.quadraticCurveTo(0, 6, -62, 46); ctx.stroke(); // 아치 테두리 (홍예석 라인)
+  ctx.fillStyle = 'rgba(12,8,4,0.5)'; // 아치 안 어둠 (레인이 비쳐 보이되 그늘지게)
+  ctx.beginPath(); ctx.moveTo(62, 46); ctx.quadraticCurveTo(0, 10, -62, 46); ctx.closePath(); ctx.fill();
+  // ② 상판 (벽돌, 곡면) + 보행로
+  mtBand(-26, 27, P.brick);
+  mtBand(-12, 12, 'rgba(224,216,198,0.92)');
+  ctx.strokeStyle = 'rgba(120,110,92,0.5)'; // 보행로 석판 줄눈 (곡률 따라)
+  for (let i = -3; i <= 3; i++) { const t = i * 25; ctx.beginPath(); ctx.moveTo(t, -12 + mtArch(t)); ctx.lineTo(t, 12 + mtArch(t)); ctx.stroke(); }
+  // ③ 난간 (북쪽 얇게 / 남쪽 두껍게 — 원근) + 기둥
+  mtBand(-31, -25, '#6d6458');
+  mtBand(24, 33, '#7d7468');
   ctx.fillStyle = '#8d8478';
-  for (let i = 0; i < 8; i++) { ctx.fillRect(-84 + i * 23, -33, 6, 8); ctx.fillRect(-84 + i * 23, 22, 7, 12); }
-  ctx.fillStyle = '#5d5448'; ctx.fillRect(-88, 33, 176, 9); // 남면 벽체 (아래로 살짝 보임)
-  ctx.fillStyle = '#241c12'; // 남면 아치 개구 2개 — 이 밑으로 몹이 지나간다
-  ctx.beginPath(); ctx.arc(-36, 42, 20, Math.PI, 0); ctx.fill();
-  ctx.beginPath(); ctx.arc(36, 42, 20, Math.PI, 0); ctx.fill();
-  ctx.fillStyle = '#6d6458'; ctx.fillRect(-9, 33, 18, 9); // 중앙 교각
+  for (let i = 0; i < 8; i++) { const t = -84 + i * 23;
+    ctx.fillRect(t, -33 + mtArch(t), 6, 8); ctx.fillRect(t, 21 + mtArch(t), 7, 13); }
+  // ④ 양끝 교대(다리 발) — 지면과 만나는 받침돌
+  ctx.fillStyle = '#6d6458'; ctx.fillRect(-92, 24, 12, 22); ctx.fillRect(80, 24, 12, 22);
+  ctx.strokeStyle = '#4a443c'; ctx.lineWidth = 1; ctx.strokeRect(-92, 24, 12, 22); ctx.strokeRect(80, 24, 12, 22);
   ctx.restore();
 }
-function mtRaiderDraw(r) { // 습격대 모형: 점액에 엉겨 붙은 알들 (꿈틀)
+function mtRaiderDraw(r) { // 습격대: 점액 덩어리에 몹 알들이 덕지덕지 '박혀' 융합된 괴물 (설계: 맞을 때마다 한 알씩 뜯겨 팡)
   const t = MT.time;
-  ctx.fillStyle = 'rgba(120,180,60,0.35)';
-  ctx.beginPath(); ctx.ellipse(r.x, r.y + 4, 30 + Math.sin(t * 3) * 2, 22, 0, 0, 6.28); ctx.fill();
-  const cols = ['#3fa9e8', '#b07de0', '#e07322', '#c62828', '#f2f2f2', '#1c1c26', '#9aa3af'];
-  for (let i = 0; i < 7; i++) {
-    const a = i * 0.897, rr = i ? 13 + (i % 3) * 4 : 0;
-    const bx = r.x + Math.cos(a) * rr * 1.15, by = r.y + Math.sin(a) * rr * 0.8 + Math.sin(t * 3 + i * 2) * 1.5;
-    ctx.fillStyle = cols[i]; ctx.beginPath(); ctx.arc(bx, by, 9 - (i % 3), 0, 6.28); ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.stroke();
+  const sq = 1 + Math.sin(t * 4 + 1) * 0.045; // 숨 쉬는 스쿼시
+  ctx.save(); ctx.translate(r.x, r.y); ctx.scale(sq * 1.12, (2 - sq) * 0.88);
+  ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(2, 26, 26, 7, 0, 0, 6.28); ctx.fill(); // 접지 그림자
+  ctx.fillStyle = 'rgba(124,179,66,0.62)'; // ① 울퉁불퉁 점액 몸통 (한 덩어리)
+  ctx.beginPath();
+  for (let i = 0; i <= 22; i++) {
+    const a = i / 22 * 6.28;
+    const rr = 26 + Math.sin(a * 3 + t * 2) * 4 + Math.sin(a * 5 - t * 2.6) * 2.5;
+    i ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.9) : ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.9);
   }
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(78,120,34,0.85)'; ctx.lineWidth = 2.2; ctx.stroke(); ctx.lineWidth = 1;
+  const mats = [2, 0, 5, 1, 3, 6, 4]; // ② 몹 알들: 서로 파고들 만큼 빽빽하게 겹쳐 박힘 (진짜 재질 렌더)
+  for (let i = 0; i < 7; i++) {
+    const a = i * 2.42, rr = i ? 8 + (i % 3) * 4.5 : 0;
+    const bx = Math.cos(a) * rr, by = Math.sin(a) * rr * 0.7 + Math.sin(t * 3 + i * 2) * 1.1;
+    drawMatStatic(bx, by, 8.5 + (i % 3) * 1.5, mats[i], 0, MATERIALS[mats[i]].col);
+  }
+  ctx.fillStyle = 'rgba(124,179,66,0.42)'; // ③ 점액 덮개: 알들이 반쯤 '잠겨' 보이게
+  ctx.beginPath(); ctx.ellipse(-6, 4, 23, 13, 0.3, 0, 6.28); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(11, -6, 15, 10, -0.4, 0, 6.28); ctx.fill();
+  ctx.fillStyle = 'rgba(150,200,90,0.5)'; // 기포
+  for (let i = 0; i < 4; i++) { const bt = (t * 0.8 + i * 0.7) % 1;
+    ctx.beginPath(); ctx.arc(-14 + i * 9, 6 - bt * 16, 1.6 + (i % 2), 0, 6.28); ctx.fill(); }
+  ctx.fillStyle = 'rgba(255,255,255,0.28)'; // 젖은 광택
+  ctx.beginPath(); ctx.ellipse(-9, -12, 9, 4.5, 0.5, 0, 6.28); ctx.fill();
+  ctx.fillStyle = 'rgba(105,158,50,0.8)'; // ④ 뚝뚝 흘러내리는 점액
+  for (let i = 0; i < 3; i++) {
+    const dx = -15 + i * 14, dl = (t * (16 + i * 7)) % 15;
+    ctx.beginPath(); ctx.ellipse(dx, 19 + dl, 2, 3 + dl * 0.18, 0, 0, 6.28); ctx.fill();
+  }
+  ctx.restore();
   ctx.fillStyle = '#4a6a1e'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('습격대 (데모)', r.x, r.y - 28); ctx.textAlign = 'left';
+  ctx.fillText('습격대 (데모)', r.x, r.y - 34); ctx.textAlign = 'left';
 }
 function mtBossDraw(b) {
   const bob = Math.sin(MT.time * 1.6) * 2;
@@ -7124,10 +7260,27 @@ function drawMapTest() {
       const j = Math.sin(gx * 12.9898 + gy * 78.233) * 43758.5453, f = j - Math.floor(j);
       ctx.beginPath(); ctx.arc(gx + f * 60, gy + (((j * 7) % 1 + 1) % 1) * 60, 1.6 + f * 1.6, 0, 6.28); ctx.fill();
     }
-  ctx.fillStyle = P.cobble; // 십자 레인 (돌길)
+  ctx.fillStyle = P.cobble; // 십자 레인 (파인 수로 — 몹의 길, 유닛은 다리·광장 계단으로만)
   ctx.fillRect(940, 0, 130, MT.H); ctx.fillRect(0, 500, MT.W, 130);
-  ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 3;
-  ctx.strokeRect(940, -4, 130, MT.H + 8); ctx.strokeRect(-4, 500, MT.W + 8, 130); ctx.lineWidth = 1;
+  ctx.fillStyle = 'rgba(35,28,16,0.18)'; // 수로 바닥은 지면보다 한 단계 어둡다 (파임)
+  ctx.fillRect(940, 0, 130, MT.H); ctx.fillRect(0, 500, MT.W, 130);
+  let wg = ctx.createLinearGradient(0, 500, 0, 518); // 북쪽 내벽: 깊은 그림자
+  wg.addColorStop(0, 'rgba(15,11,6,0.55)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
+  ctx.fillStyle = wg; ctx.fillRect(0, 500, MT.W, 18);
+  wg = ctx.createLinearGradient(0, 630, 0, 616); // 남쪽 내벽: 얕은 그림자 (원근)
+  wg.addColorStop(0, 'rgba(15,11,6,0.3)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
+  ctx.fillStyle = wg; ctx.fillRect(0, 616, MT.W, 14);
+  wg = ctx.createLinearGradient(940, 0, 958, 0); // 서쪽 내벽
+  wg.addColorStop(0, 'rgba(15,11,6,0.55)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
+  ctx.fillStyle = wg; ctx.fillRect(940, 0, 18, MT.H);
+  wg = ctx.createLinearGradient(1070, 0, 1056, 0); // 동쪽 내벽
+  wg.addColorStop(0, 'rgba(15,11,6,0.3)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
+  ctx.fillStyle = wg; ctx.fillRect(1056, 0, 14, MT.H);
+  ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 3; // 연석
+  ctx.strokeRect(940, -4, 130, MT.H + 8); ctx.strokeRect(-4, 500, MT.W + 8, 130);
+  ctx.strokeStyle = 'rgba(255,255,240,0.30)'; ctx.lineWidth = 1.5; // 바깥 잔디 턱 하이라이트 (윗면 모서리)
+  ctx.beginPath(); ctx.moveTo(938, 0); ctx.lineTo(938, MT.H); ctx.moveTo(1072, 0); ctx.lineTo(1072, MT.H);
+  ctx.moveTo(0, 498); ctx.lineTo(MT.W, 498); ctx.moveTo(0, 632); ctx.lineTo(MT.W, 632); ctx.stroke(); ctx.lineWidth = 1;
   MT.ORIGIN.forEach(([ox, oy], i) => { // 사분면 경계 + 이름표
     if (ox > vx1 || oy > vy1 || ox + 940 < vx0 || oy + 500 < vy0) return;
     ctx.strokeStyle = MT.PCOLS[i] + '44'; ctx.lineWidth = 3; ctx.strokeRect(ox + 3, oy + 3, 934, 494); ctx.lineWidth = 1;
@@ -7137,7 +7290,7 @@ function drawMapTest() {
   MT.ORIGIN.forEach(([ox, oy]) => { // 사분면 기지 = 현 싱글맵 건물 전부 (컬링)
     if (ox > vx1 || oy > vy1 || ox + 940 < vx0 || oy + 500 < vy0) return;
     ctx.save(); ctx.translate(ox, oy);
-    drawCastle(); drawMine(); drawOreRoom(); drawBarrack(); drawEnemyPortal(); drawPortal(); drawAltar(); drawArena();
+    drawMinerRoad(); drawCastle(); drawMine(); drawOreRoom(); drawBarrack(); drawEnemyPortal(); drawPortal(); drawAltar(); drawArena();
     ctx.restore();
   });
   mtGate(1005, 26, 0); mtGate(1984, 565, 1); mtGate(1005, 1104, 2); mtGate(26, 565, 3);
@@ -7146,18 +7299,20 @@ function drawMapTest() {
   mtRaiderDraw(MT.raider); // 데모 개체 — 다리 밑을 지나며 가려진다
   mtBossDraw(MT.boss);
   for (const b of MT.BRIDGES) mtBridge(b, P);
-  for (const u of S.units) { // 유닛 (다리 위는 살짝 떠서 + 상판에 그림자)
-    const onDeck = mtOnDeck(u.x, u.y);
+  for (const u of S.units) { // 유닛 (다리 위는 아치 곡률만큼 떠서 + 상판에 그림자)
+    const lift = mtDeckLift(u.x, u.y);
     if (u.selected) { ctx.strokeStyle = '#43a047'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(u.x, u.y + 16, 16, 7, 0, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1; }
-    if (onDeck) {
+    if (lift > 0) {
       ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 13, 13, 5, 0, 0, 6.28); ctx.fill();
-      ctx.save(); ctx.translate(0, -7);
+      ctx.save(); ctx.translate(0, -lift);
     }
     drawUnit(u);
-    if (onDeck) ctx.restore();
+    if (lift > 0) ctx.restore();
   }
-  for (const e of MT.effects) { // 사격 빔·명중 링
-    if (e.boom) { ctx.strokeStyle = `rgba(255,170,60,${Math.min(1, e.t * 5).toFixed(2)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r * (1.7 - e.t * 4.5), 0, 6.28); ctx.stroke(); ctx.lineWidth = 1; }
+  for (const e of MT.effects) { // 사격 빔·명중 링·텍스트 플로트
+    if (e.txt) { ctx.globalAlpha = Math.min(1, e.t); ctx.fillStyle = '#ffd166'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(e.txt, e.x, e.y - (1.2 - e.t) * 16); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }
+    else if (e.boom) { ctx.strokeStyle = `rgba(255,170,60,${Math.min(1, e.t * 5).toFixed(2)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r * (1.7 - e.t * 4.5), 0, 6.28); ctx.stroke(); ctx.lineWidth = 1; }
     else { ctx.strokeStyle = `rgba(255,230,150,${Math.min(1, e.t * 6).toFixed(2)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(e.x1, e.y1); ctx.lineTo(e.x2, e.y2); ctx.stroke(); ctx.lineWidth = 1; }
   }
   if (MT.drag && MT.drag.moved) {
@@ -7215,6 +7370,22 @@ window.addEventListener('mouseup', e => {
     for (const u of S.units) { const dd = (u.x - d.x0) ** 2 + (u.y - d.y0) ** 2; if (dd < bd) { bd = dd; best = u; } }
     for (const u of S.units) u.selected = false;
     if (best) best.selected = true;
+    else { // 건물 클릭: 사분면 로컬 좌표로 objAt 재사용 — 내 성은 강화창, 나머지는 정보 팝업
+      let handled = false;
+      for (let qi = 0; qi < 4; qi++) {
+        const [qox, qoy] = MT.ORIGIN[qi];
+        if (d.x0 > qox && d.x0 < qox + 940 && d.y0 > qoy && d.y0 < qoy + 500) {
+          const k = objAt(d.x0 - qox, d.y0 - qoy);
+          if (k === 'castle') {
+            if (qi === 0) toggleShop('castle'); // 실게임과 동일한 통합 강화창
+            else MT.effects.push({ txt: '🔒 남의 진영', x: d.x0, y: d.y0 - 24, t: 1.2 });
+            handled = true;
+          } else if (k && OBJ_INFO[k]) { showObjInfo(k); handled = true; }
+          break;
+        }
+      }
+      if (!handled) hideObjInfo();
+    }
   }
 }, true);
 cv.addEventListener('contextmenu', e => {
@@ -7228,6 +7399,7 @@ cv.addEventListener('contextmenu', e => {
 }, true);
 window.addEventListener('keydown', e => {
   if (!S || !S.mapTest) return;
+  if (document.getElementById('gmgStop')) return; // 강화 ×3 타이밍 미니게임이 열려 있으면 Space를 미니게임에 양보
   e.stopImmediatePropagation();
   const c = e.code; // e.key는 한글 IME에서 ㅈ/ㅁ/ㄴ/ㅇ이 되어 WASD가 죽는다 — 물리 키 기준
   if (c === 'ArrowLeft' || c === 'KeyA') { MT.keys.l = true; e.preventDefault(); }
@@ -7235,6 +7407,7 @@ window.addEventListener('keydown', e => {
   if (c === 'ArrowUp' || c === 'KeyW') { MT.keys.u = true; e.preventDefault(); }
   if (c === 'ArrowDown' || c === 'KeyS') { MT.keys.d = true; e.preventDefault(); }
   if (c === 'Space') { const [ox, oy] = MT.ORIGIN[0]; MT.cam.x = ox + CX - 470; MT.cam.y = oy + CY - 250; mtClampCam(); e.preventDefault(); }
+  if (c === 'Escape') { if (openShop) closeShop(); else hideObjInfo(); }
 }, true);
 window.addEventListener('keyup', e => {
   if (!S || !S.mapTest) return;
