@@ -337,6 +337,7 @@
   .mobile .card.sm { width: 48px; height: 68px; }
   .mobile #startOverlay h2 { font-size: 26px; }
   .mobile #modeRow { flex-direction: column; }
+  .mobile #coopRow { flex-direction: column; }
   .mobile #diffBtnRow { flex-wrap: wrap; justify-content: center; }
   .mobile #unitInfo { max-width: 38vw; font-size: 10px; bottom: 6px; left: 6px; max-height: 168px; }
   .mobile #objInfo { max-width: 46vw; font-size: 11px; }
@@ -422,8 +423,13 @@
   <div class="mobHint">📱 가로 모드가 더 쾌적해요!</div>
   <div id="modeRow" style="display:flex;gap:16px">
     <button class="modeBtn" id="btnSolo">🎮 혼자하기</button>
-    <button class="modeBtn" disabled title="멀티플레이는 준비 중입니다!">👥 같이하기 (준비 중)</button>
+    <button class="modeBtn" id="btnCoop">👥 같이하기</button>
     <button class="modeBtn" id="btnSandbox" style="background:#4a3d70">🧪 샌드박스<br><small style="font-size:11px">모든 유닛 실험</small></button>
+  </div>
+  <div id="coopRow" style="display:none;gap:12px">
+    <button class="modeBtn" id="btnMapTest">🏗️ 멀티맵 미리보기<br><small style="font-size:11px">혼자 둘러보기</small></button>
+    <button class="modeBtn" disabled title="온라인 멀티는 준비 중입니다!">🌐 온라인 (준비 중)</button>
+    <button class="modeBtn" id="btnCoopBack" style="background:#3a3350">‹ 뒤로</button>
   </div>
   <div id="diffRow" style="display:none;flex-direction:column;align-items:center;gap:12px">
     <div style="font-size:15px;color:#d9d2f5">난이도를 선택하세요</div>
@@ -444,6 +450,7 @@
   <div id="shopGoldRow">💰 <b id="shopGold"></b></div>
   <div id="shopBody"></div>
 </div></div>
+<button id="mtExit" style="display:none;position:fixed;top:8px;right:8px;z-index:30;padding:8px 14px;border-radius:8px;border:1px solid #5a5278;background:#2a2340;color:#e8def8;cursor:pointer;font-size:13px" onclick="location.reload()">← 미리보기 나가기</button>
 <!-- 광석 채굴 보상 팝업 (짜잔!) -->
 <div id="rewardToast"><div id="rtInner">
   <div id="rtBurst">🎉</div>
@@ -2396,7 +2403,7 @@ function achvSeen(id) {
   try { return !!JSON.parse(localStorage.getItem('dpd_achv') || '{}')[id]; } catch (e) { return false; }
 }
 function markAchv(id) {
-  if (S && S.sandbox) return;
+  if (S && (S.sandbox || S.mapTest)) return; // 샌드박스·멀티맵 미리보기는 업적 미기록 (localStorage 오염 방지)
   try {
     const d = JSON.parse(localStorage.getItem('dpd_achv') || '{}');
     if (!d[id]) {
@@ -6880,12 +6887,402 @@ document.getElementById('bSfx').textContent = sfxOn ? '🔊' : '🔇';
 // ==================== 메인 루프 ====================
 // 성능 측정: ?debug=1 로 열면 캔버스 좌상단에 update/draw 평균 ms 표시
 const DEBUG = location.search.indexOf('debug=1') >= 0;
+// ==================== 🏗️ P2-b 멀티맵 미리보기 (무인 모형 — 네트워크 없음) ====================
+// 4인 월드: 십자 레인이 4사분면(각자 현 싱글맵 전체)을 나누고 중앙에 왕국. RTS 카메라+미니맵+돌다리 LoS 데모.
+// 실게임과 완전 격리: S.mapTest 중엔 frame()이 updateMapTest/drawMapTest만 돌리고, 입력은 캡처 단계에서 가로챈다.
+const MT = {
+  W: 2010, H: 1130, // 사분면 940×500 ×4 + 십자 레인 130
+  ORIGIN: [[1070, 0], [1070, 630], [0, 630], [0, 0]], // P1(1시)·P2(5시)·P3(7시)·P4(11시)
+  PNAMES: ['P1 · 내 진영', 'P2', 'P3', 'P4'],
+  PCOLS: ['#1D9E75', '#378ADD', '#D4537E', '#BA7517'],
+  KING: { x: 1005, y: 565 },
+  BRIDGES: [{ x: 1005, y: 250, vert: true }, { x: 1005, y: 880, vert: true }, { x: 470, y: 565, vert: false }, { x: 1540, y: 565, vert: false }],
+  MM: { w: 190, h: 107, x: 940 - 198, y: 500 - 115 }, // 미니맵 (우하단)
+  cam: { x: 1070, y: 0 }, keys: {}, mouse: { x: 470, y: 250, in: false },
+  mmDrag: false, drag: null, time: 0, effects: [], raider: null, boss: null,
+};
+let mtPats = null; // 질감 패턴 캐시 (돌길·벽돌·석판)
+function mtPatterns() {
+  if (mtPats) return mtPats;
+  const mk = (w, h, fn) => { const c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); return ctx.createPattern(c, 'repeat'); };
+  mtPats = {
+    cobble: mk(46, 46, g => { // 돌길: 둥근 자갈 + 줄눈
+      g.fillStyle = '#b8b0a0'; g.fillRect(0, 0, 46, 46);
+      [[4, 4, 17, 13], [24, 3, 18, 14], [2, 20, 13, 11], [18, 19, 14, 12], [35, 20, 9, 11], [6, 34, 16, 9], [26, 34, 16, 9]].forEach(([x, y, rw, rh], i) => {
+        g.fillStyle = i % 3 ? '#a9a191' : '#c4bcab';
+        g.beginPath(); g.ellipse(x + rw / 2, y + rh / 2, rw / 2, rh / 2, 0, 0, 6.28); g.fill();
+        g.strokeStyle = 'rgba(90,82,70,0.5)'; g.lineWidth = 1; g.stroke();
+      });
+    }),
+    brick: mk(44, 24, g => { // 벽돌: 어긋난 두 줄 + 회반죽 줄눈 + 상단 하이라이트
+      g.fillStyle = '#7f766a'; g.fillRect(0, 0, 44, 24);
+      g.fillStyle = '#9c948a'; g.fillRect(1, 1, 20, 10); g.fillRect(23, 1, 20, 10);
+      g.fillStyle = '#968d80'; g.fillRect(-10, 13, 20, 10); g.fillRect(12, 13, 20, 10); g.fillRect(34, 13, 20, 10);
+      g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(0, 0, 44, 2);
+    }),
+    plaza: mk(52, 52, g => { // 왕국 광장 석판
+      g.fillStyle = '#cfc7b4'; g.fillRect(0, 0, 52, 52);
+      g.strokeStyle = 'rgba(120,110,92,0.55)'; g.lineWidth = 1.5;
+      g.strokeRect(1, 1, 24, 24); g.strokeRect(27, 1, 24, 24); g.strokeRect(1, 27, 24, 24); g.strokeRect(27, 27, 24, 24);
+      g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(2, 2, 23, 3);
+    }),
+  };
+  return mtPats;
+}
+function startMapTest() {
+  reset();
+  S.mapTest = true; S.paused = true;
+  document.getElementById('startOverlay').style.display = 'none';
+  document.getElementById('pokerPanel').style.display = 'none';
+  document.getElementById('mtExit').style.display = 'block';
+  document.getElementById('clock').style.display = 'none';   // 실게임 HUD 잔재 정리 (나가기 = reload라 복원 불필요)
+  document.getElementById('chipBar').style.display = 'none';
+  document.getElementById('log').style.display = 'none';
+  if (IS_MOBILE) setMobTab('battle'); // reset()→startPoker()가 포커 탭으로 보내 캔버스가 숨는 문제 방지 (Opus P0)
+  S.units = []; S.monsters = []; S.projs = []; S.effects = []; S.parts = []; S.floats = [];
+  S.upg = [10, 10, 10]; // 시찰 부대: 사거리 체감용 (새총·원페어·기관총·스트레이트·풀하우스 + 저격 영웅)
+  [0, 1, 3, 4, 6].forEach(t => spawnUnit(t, RACE_OF_RANK[t], false, 10));
+  spawnHero(4, RACE_OF_RANK[4], CX + 96, CY + 156, 1);
+  const [ox, oy] = MT.ORIGIN[0];
+  for (const u of S.units) { u.x += ox; u.y += oy; u.tx = u.x; u.ty = u.y; u.cool = Math.random() * 0.5; u.selected = false; u.aimX = ox + CX; u.aimY = oy + CY; } // 기본 조준 = 내 소환장 (안 그러면 월드 원점을 본다)
+  MT.raider = { x: 1005, y: 60, dir: 1 };
+  MT.boss = { x: 1965, y: 565, dir: -1 };
+  MT.cam.x = Math.max(0, Math.min(MT.W - 940, ox + CX - 470));
+  MT.cam.y = Math.max(0, Math.min(MT.H - 500, oy + CY - 250));
+  MT.time = 0; MT.effects = []; MT.drag = null; MT.mmDrag = false; MT.keys = {};
+}
+function mtClampCam() {
+  MT.cam.x = Math.max(0, Math.min(MT.W - 940, MT.cam.x));
+  MT.cam.y = Math.max(0, Math.min(MT.H - 500, MT.cam.y));
+}
+function mtOccluded(x, y) { // 다리 상판 밑 = 조준 불가 (몹 시점)
+  for (const b of MT.BRIDGES) {
+    if (b.vert) { if (Math.abs(x - b.x) < 66 && Math.abs(y - b.y) < 27 ) return true; }
+    else if (Math.abs(y - b.y) < 66 && Math.abs(x - b.x) < 27) return true;
+  }
+  return false;
+}
+function mtOnDeck(x, y) { // 다리 상판 위 (유닛 시점 — 건너는 중)
+  for (const b of MT.BRIDGES) {
+    if (b.vert) { if (Math.abs(x - b.x) < 88 && Math.abs(y - b.y) < 27) return true; }
+    else if (Math.abs(y - b.y) < 88 && Math.abs(x - b.x) < 27) return true;
+  }
+  return false;
+}
+function updateMapTest(dt) {
+  MT.time += dt;
+  S.time += dt; // 재사용하는 기존 드로우(포털 회전·유닛 오라·광산 반짝임)가 S.time 기준으로 움직인다
+  const spd = 640 * dt;
+  if (MT.keys.l) MT.cam.x -= spd; if (MT.keys.r) MT.cam.x += spd;
+  if (MT.keys.u) MT.cam.y -= spd; if (MT.keys.d) MT.cam.y += spd;
+  if (MT.mouse.in && !MT.mmDrag && !MT.drag) { // 화면 가장자리 스크롤
+    const E = 26;
+    if (MT.mouse.x < E) MT.cam.x -= spd; if (MT.mouse.x > 940 - E) MT.cam.x += spd;
+    if (MT.mouse.y < E) MT.cam.y -= spd; if (MT.mouse.y > 500 - E) MT.cam.y += spd;
+  }
+  mtClampCam();
+  const r = MT.raider; r.y += 55 * dt * r.dir; if (r.y > 440) r.dir = -1; else if (r.y < 60) r.dir = 1; // 12시 레인 왕복
+  const b = MT.boss; b.x += 24 * dt * b.dir; if (b.x < 1190) b.dir = 1; else if (b.x > 1965) b.dir = -1; // 3시 레인 왕복 (아주 느림)
+  for (const u of S.units) { // 간이 이동 + LoS 사격 데모
+    const dx = u.tx - u.x, dy = u.ty - u.y, d = Math.hypot(dx, dy);
+    if (d > 3) { const st = Math.min(d, 70 * dt); u.x += dx / d * st; u.y += dy / d * st; u.moving = true; u.walk = (u.walk || 0) + dt; }
+    else u.moving = false;
+    u.cool = (u.cool || 0) - dt;
+    if (u.atkAnim > 0) u.atkAnim = Math.max(0, u.atkAnim - dt * 5);
+    if (u.cool <= 0 && !u.moving) {
+      const R2 = effRange(u) * effRange(u);
+      let hit = null, bd = R2;
+      for (const t of [r, MT.boss]) {
+        if (mtOccluded(t.x, t.y)) continue; // 🌉 가려짐 — 조준 불가
+        const dd = (t.x - u.x) ** 2 + (t.y - u.y) ** 2;
+        if (dd <= bd) { bd = dd; hit = t; }
+      }
+      if (hit) {
+        u.cool = Math.max(0.4, effCd(u)); u.aimX = hit.x; u.aimY = hit.y; u.atkAnim = 1;
+        const m = muzzle(u);
+        MT.effects.push({ x1: m.x, y1: m.y, x2: hit.x, y2: hit.y, t: 0.13 });
+        MT.effects.push({ boom: true, x: hit.x, y: hit.y, r: 9, t: 0.18 });
+      }
+    }
+  }
+  MT.effects = MT.effects.filter(e => (e.t -= dt) > 0);
+}
+function mtGate(x, y, i) { // 게이트: 석재 프레임 + 마계 소용돌이 문
+  ctx.save(); ctx.translate(x, y); ctx.rotate([Math.PI, -Math.PI / 2, 0, Math.PI / 2][i]); // 입구가 레인(성 방향)을 보게 — 아치는 로컬 -y를 향하므로 12시=π 반전
+  ctx.fillStyle = '#5d5468'; ctx.fillRect(-50, -16, 100, 26);
+  ctx.fillStyle = '#6d6478'; ctx.fillRect(-50, -24, 14, 40); ctx.fillRect(36, -24, 14, 40);
+  ctx.fillStyle = '#4a4456'; ctx.fillRect(-53, -28, 20, 8); ctx.fillRect(33, -28, 20, 8);
+  ctx.fillStyle = '#3a3344'; ctx.beginPath(); ctx.arc(0, 10, 32, Math.PI, 0); ctx.fill();
+  const g = ctx.createRadialGradient(0, 10, 3, 0, 10, 25);
+  g.addColorStop(0, '#c04adb'); g.addColorStop(0.7, '#5c2a8a'); g.addColorStop(1, '#2a1040');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 10, 24, Math.PI, 0); ctx.fill();
+  ctx.strokeStyle = 'rgba(220,140,255,0.5)'; ctx.lineWidth = 1.5; // 소용돌이 결
+  ctx.beginPath(); ctx.arc(0, 8, 13 + Math.sin(MT.time * 2) * 3, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); ctx.lineWidth = 1;
+  ctx.restore();
+}
+function mtKingdom(P) { // 중앙 왕국: 석판 광장 + 성곽 링 + 벽돌 킵 + 타워 + 공유 HP
+  const { x, y } = MT.KING;
+  ctx.fillStyle = P.plaza; ctx.beginPath(); ctx.arc(x, y, 148, 0, 6.28); ctx.fill();
+  ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 148, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1;
+  ctx.strokeStyle = '#7d7468'; ctx.lineWidth = 10; // 성곽 링 (레인 방향 4곳 개구)
+  for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(x, y, 128, k * 1.5708 + 0.34, (k + 1) * 1.5708 - 0.34); ctx.stroke(); }
+  ctx.lineWidth = 1;
+  ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(x + 6, y + 66, 66, 14, 0, 0, 6.28); ctx.fill(); // 킵 그림자
+  ctx.fillStyle = P.brick; ctx.fillRect(x - 58, y - 58, 116, 116); // 킵 (벽돌)
+  ctx.strokeStyle = '#4a443c'; ctx.lineWidth = 2.5; ctx.strokeRect(x - 58, y - 58, 116, 116); ctx.lineWidth = 1;
+  ctx.fillStyle = '#7d7468';
+  for (let i = 0; i < 7; i++) ctx.fillRect(x - 58 + i * 17.4, y - 67, 10, 10); // 총안
+  for (const [tx, ty] of [[-58, -58], [58, -58], [-58, 58], [58, 58]]) { // 코너 타워 + 고깔
+    ctx.fillStyle = '#9c948a'; ctx.beginPath(); ctx.arc(x + tx, y + ty, 17, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = '#4a443c'; ctx.stroke();
+    ctx.fillStyle = '#a34a30';
+    ctx.beginPath(); ctx.moveTo(x + tx - 15, y + ty - 3); ctx.lineTo(x + tx, y + ty - 27); ctx.lineTo(x + tx + 15, y + ty - 3); ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = '#3d2f1e'; ctx.beginPath(); ctx.arc(x, y + 44, 15, Math.PI, 0); ctx.fill(); ctx.fillRect(x - 15, y + 44, 30, 14); // 대문
+  ctx.fillStyle = 'rgba(255,220,140,0.75)'; ctx.beginPath(); ctx.arc(x, y + 46, 9, Math.PI, 0); ctx.fill(); ctx.fillRect(x - 9, y + 46, 18, 11);
+  ctx.strokeStyle = '#4a443c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - 67); ctx.lineTo(x, y - 94); ctx.stroke(); ctx.lineWidth = 1; // 깃대
+  ctx.fillStyle = '#8c5bff';
+  ctx.beginPath(); ctx.moveTo(x, y - 94); ctx.lineTo(x + 24 + Math.sin(MT.time * 3) * 3, y - 87); ctx.lineTo(x, y - 80); ctx.closePath(); ctx.fill();
+  ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('❤️❤️❤️❤️❤️', x, y - 104); // 공유 HP 5 (모형)
+  ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#5d4a80';
+  ctx.fillText('🏰 왕국 — 같이 지킨다', x, y + 88); ctx.textAlign = 'left';
+}
+function mtBridgeShadow(b) { // 상판이 레인에 드리우는 그림자 (입체감의 핵심)
+  ctx.fillStyle = 'rgba(30,22,14,0.32)';
+  if (b.vert) ctx.fillRect(944, b.y - 31, 122, 62);
+  else ctx.fillRect(b.x - 31, 504, 62, 122);
+}
+function mtBridge(b, P) { // 돌다리: 벽돌 상판 + 밝은 보행로 + 원근 난간 + 남면 아치 2개
+  ctx.save(); ctx.translate(b.x, b.y);
+  if (!b.vert) ctx.rotate(Math.PI / 2);
+  ctx.fillStyle = P.brick; ctx.fillRect(-88, -26, 176, 52); // 상판 (벽돌)
+  ctx.strokeStyle = '#4a443c'; ctx.lineWidth = 2; ctx.strokeRect(-88, -26, 176, 52); ctx.lineWidth = 1;
+  ctx.fillStyle = 'rgba(224,216,198,0.92)'; ctx.fillRect(-88, -12, 176, 24); // 보행로 석판
+  ctx.strokeStyle = 'rgba(120,110,92,0.5)';
+  for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * 25, -12); ctx.lineTo(i * 25, 12); ctx.stroke(); }
+  ctx.fillStyle = '#6d6458'; ctx.fillRect(-88, -31, 176, 6); // 북쪽 난간 (얇게 — 원근)
+  ctx.fillStyle = '#7d7468'; ctx.fillRect(-88, 24, 176, 9);  // 남쪽 난간 (두껍게)
+  ctx.fillStyle = '#8d8478';
+  for (let i = 0; i < 8; i++) { ctx.fillRect(-84 + i * 23, -33, 6, 8); ctx.fillRect(-84 + i * 23, 22, 7, 12); }
+  ctx.fillStyle = '#5d5448'; ctx.fillRect(-88, 33, 176, 9); // 남면 벽체 (아래로 살짝 보임)
+  ctx.fillStyle = '#241c12'; // 남면 아치 개구 2개 — 이 밑으로 몹이 지나간다
+  ctx.beginPath(); ctx.arc(-36, 42, 20, Math.PI, 0); ctx.fill();
+  ctx.beginPath(); ctx.arc(36, 42, 20, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#6d6458'; ctx.fillRect(-9, 33, 18, 9); // 중앙 교각
+  ctx.restore();
+}
+function mtRaiderDraw(r) { // 습격대 모형: 점액에 엉겨 붙은 알들 (꿈틀)
+  const t = MT.time;
+  ctx.fillStyle = 'rgba(120,180,60,0.35)';
+  ctx.beginPath(); ctx.ellipse(r.x, r.y + 4, 30 + Math.sin(t * 3) * 2, 22, 0, 0, 6.28); ctx.fill();
+  const cols = ['#3fa9e8', '#b07de0', '#e07322', '#c62828', '#f2f2f2', '#1c1c26', '#9aa3af'];
+  for (let i = 0; i < 7; i++) {
+    const a = i * 0.897, rr = i ? 13 + (i % 3) * 4 : 0;
+    const bx = r.x + Math.cos(a) * rr * 1.15, by = r.y + Math.sin(a) * rr * 0.8 + Math.sin(t * 3 + i * 2) * 1.5;
+    ctx.fillStyle = cols[i]; ctx.beginPath(); ctx.arc(bx, by, 9 - (i % 3), 0, 6.28); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.stroke();
+  }
+  ctx.fillStyle = '#4a6a1e'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('습격대 (데모)', r.x, r.y - 28); ctx.textAlign = 'left';
+}
+function mtBossDraw(b) {
+  const bob = Math.sin(MT.time * 1.6) * 2;
+  ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(b.x, b.y + 30, 26, 8, 0, 0, 6.28); ctx.fill();
+  drawMatStatic(b.x, b.y + bob, 28, 11, 0, MATERIALS[11].col); // 목성 (재질 렌더 재사용)
+  ctx.fillStyle = '#8a2f1d'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('보스 (데모 · 아주 느림)', b.x, b.y - 40); ctx.textAlign = 'left';
+  drawBar(b.x - 30, b.y - 36, 60, 0.8, '#e05a2b');
+}
+function mtMinimap() {
+  const M = MT.MM, s = M.w / MT.W;
+  ctx.fillStyle = 'rgba(14,10,26,0.88)'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.fill();
+  ctx.strokeStyle = '#5a5278'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.stroke();
+  MT.ORIGIN.forEach(([ox, oy], i) => { ctx.fillStyle = MT.PCOLS[i] + (i ? '30' : '55'); ctx.fillRect(M.x + ox * s, M.y + oy * s, 940 * s, 500 * s); });
+  ctx.fillStyle = 'rgba(200,190,170,0.75)';
+  ctx.fillRect(M.x + 940 * s, M.y, 130 * s, M.h); ctx.fillRect(M.x, M.y + 500 * s, M.w, 130 * s);
+  ctx.fillStyle = '#EF9F27';
+  for (const b of MT.BRIDGES) ctx.fillRect(M.x + (b.x - 22) * s, M.y + (b.y - 22) * s, 44 * s, 44 * s);
+  ctx.fillStyle = '#8c5bff'; ctx.fillRect(M.x + (MT.KING.x - 32) * s, M.y + (MT.KING.y - 32) * s, 64 * s, 64 * s);
+  ctx.fillStyle = '#ff5252';
+  ctx.fillRect(M.x + MT.raider.x * s - 2, M.y + MT.raider.y * s - 2, 4, 4);
+  ctx.fillRect(M.x + MT.boss.x * s - 2.5, M.y + MT.boss.y * s - 2.5, 5, 5);
+  ctx.fillStyle = '#43e0a0';
+  for (const u of S.units) ctx.fillRect(M.x + u.x * s - 1.5, M.y + u.y * s - 1.5, 3, 3);
+  ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(M.x + MT.cam.x * s, M.y + MT.cam.y * s, 940 * s, 500 * s); ctx.lineWidth = 1;
+}
+function drawMapTest() {
+  const P = mtPatterns(), cam = MT.cam;
+  ctx.clearRect(0, 0, 940, 500);
+  ctx.save(); ctx.translate(-cam.x, -cam.y);
+  const vx0 = cam.x, vy0 = cam.y, vx1 = cam.x + 940, vy1 = cam.y + 500;
+  ctx.fillStyle = '#d9edc4'; ctx.fillRect(vx0, vy0, 940, 500); // 대지 (보이는 영역만)
+  ctx.fillStyle = 'rgba(110,180,90,0.35)'; // 풀 점 (결정적 랜덤)
+  for (let gx = Math.floor(vx0 / 90) * 90; gx < vx1 + 90; gx += 90)
+    for (let gy = Math.floor(vy0 / 90) * 90; gy < vy1 + 90; gy += 90) {
+      const j = Math.sin(gx * 12.9898 + gy * 78.233) * 43758.5453, f = j - Math.floor(j);
+      ctx.beginPath(); ctx.arc(gx + f * 60, gy + (((j * 7) % 1 + 1) % 1) * 60, 1.6 + f * 1.6, 0, 6.28); ctx.fill();
+    }
+  ctx.fillStyle = P.cobble; // 십자 레인 (돌길)
+  ctx.fillRect(940, 0, 130, MT.H); ctx.fillRect(0, 500, MT.W, 130);
+  ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 3;
+  ctx.strokeRect(940, -4, 130, MT.H + 8); ctx.strokeRect(-4, 500, MT.W + 8, 130); ctx.lineWidth = 1;
+  MT.ORIGIN.forEach(([ox, oy], i) => { // 사분면 경계 + 이름표
+    if (ox > vx1 || oy > vy1 || ox + 940 < vx0 || oy + 500 < vy0) return;
+    ctx.strokeStyle = MT.PCOLS[i] + '44'; ctx.lineWidth = 3; ctx.strokeRect(ox + 3, oy + 3, 934, 494); ctx.lineWidth = 1;
+    ctx.fillStyle = MT.PCOLS[i]; ctx.font = 'bold 15px sans-serif';
+    ctx.fillText(MT.PNAMES[i], ox + 14, oy + 26);
+  });
+  MT.ORIGIN.forEach(([ox, oy]) => { // 사분면 기지 = 현 싱글맵 건물 전부 (컬링)
+    if (ox > vx1 || oy > vy1 || ox + 940 < vx0 || oy + 500 < vy0) return;
+    ctx.save(); ctx.translate(ox, oy);
+    drawCastle(); drawMine(); drawOreRoom(); drawBarrack(); drawEnemyPortal(); drawPortal(); drawAltar(); drawArena();
+    ctx.restore();
+  });
+  mtGate(1005, 26, 0); mtGate(1984, 565, 1); mtGate(1005, 1104, 2); mtGate(26, 565, 3);
+  mtKingdom(P);
+  for (const b of MT.BRIDGES) mtBridgeShadow(b);
+  mtRaiderDraw(MT.raider); // 데모 개체 — 다리 밑을 지나며 가려진다
+  mtBossDraw(MT.boss);
+  for (const b of MT.BRIDGES) mtBridge(b, P);
+  for (const u of S.units) { // 유닛 (다리 위는 살짝 떠서 + 상판에 그림자)
+    const onDeck = mtOnDeck(u.x, u.y);
+    if (u.selected) { ctx.strokeStyle = '#43a047'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(u.x, u.y + 16, 16, 7, 0, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1; }
+    if (onDeck) {
+      ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 13, 13, 5, 0, 0, 6.28); ctx.fill();
+      ctx.save(); ctx.translate(0, -7);
+    }
+    drawUnit(u);
+    if (onDeck) ctx.restore();
+  }
+  for (const e of MT.effects) { // 사격 빔·명중 링
+    if (e.boom) { ctx.strokeStyle = `rgba(255,170,60,${Math.min(1, e.t * 5).toFixed(2)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r * (1.7 - e.t * 4.5), 0, 6.28); ctx.stroke(); ctx.lineWidth = 1; }
+    else { ctx.strokeStyle = `rgba(255,230,150,${Math.min(1, e.t * 6).toFixed(2)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(e.x1, e.y1); ctx.lineTo(e.x2, e.y2); ctx.stroke(); ctx.lineWidth = 1; }
+  }
+  if (MT.drag && MT.drag.moved) {
+    ctx.strokeStyle = '#43a047'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(Math.min(MT.drag.x0, MT.drag.x1), Math.min(MT.drag.y0, MT.drag.y1), Math.abs(MT.drag.x1 - MT.drag.x0), Math.abs(MT.drag.y1 - MT.drag.y0));
+    ctx.lineWidth = 1;
+  }
+  ctx.restore();
+  mtMinimap();
+  ctx.fillStyle = 'rgba(20,16,34,0.75)'; roundRect(210, 6, 520, 22, 8); ctx.fill();
+  ctx.fillStyle = '#e8def8'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('🏗️ 미리보기 — WASD·미니맵·화면 가장자리 = 카메라 · Space = 내 진영 · 드래그 = 부대 · 우클릭 = 이동', 470, 21);
+  ctx.textAlign = 'left';
+}
+// --- 미리보기 입력: 캡처 단계에서 가로채 기존 게임 입력과 완전 분리 ---
+function mtScreenToWorld(p) { return { x: p.x + MT.cam.x, y: p.y + MT.cam.y }; }
+function mtInMM(p) { const M = MT.MM; return p.x >= M.x - 4 && p.x <= M.x + M.w + 4 && p.y >= M.y - 4 && p.y <= M.y + M.h + 4; }
+function mtMMJump(p) {
+  const M = MT.MM, s = M.w / MT.W;
+  MT.cam.x = (p.x - M.x) / s - 470; MT.cam.y = (p.y - M.y) / s - 250;
+  mtClampCam();
+}
+cv.addEventListener('mousedown', e => {
+  if (!S || !S.mapTest) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  if (e.button !== 0) return;
+  const p = mpos(e);
+  if (mtInMM(p)) { MT.mmDrag = true; mtMMJump(p); return; }
+  const w = mtScreenToWorld(p);
+  MT.drag = { x0: w.x, y0: w.y, x1: w.x, y1: w.y, moved: false };
+}, true);
+cv.addEventListener('mousemove', e => {
+  if (!S || !S.mapTest) return;
+  const p = mpos(e);
+  MT.mouse = { x: p.x, y: p.y, in: true };
+  if (MT.mmDrag) { mtMMJump(p); return; }
+  if (MT.drag) {
+    const w = mtScreenToWorld(p);
+    MT.drag.x1 = w.x; MT.drag.y1 = w.y;
+    if (Math.hypot(w.x - MT.drag.x0, w.y - MT.drag.y0) > 6) MT.drag.moved = true;
+  }
+}, true);
+cv.addEventListener('mouseleave', () => { if (S && S.mapTest) MT.mouse.in = false; });
+window.addEventListener('mouseup', e => {
+  if (!S || !S.mapTest) return;
+  e.stopImmediatePropagation();
+  if (MT.mmDrag) { MT.mmDrag = false; return; }
+  const d = MT.drag; MT.drag = null;
+  if (!d) return;
+  if (d.moved) {
+    const x0 = Math.min(d.x0, d.x1), x1 = Math.max(d.x0, d.x1), y0 = Math.min(d.y0, d.y1), y1 = Math.max(d.y0, d.y1);
+    for (const u of S.units) u.selected = u.x >= x0 && u.x <= x1 && u.y >= y0 && u.y <= y1;
+  } else {
+    let best = null, bd = 28 * 28;
+    for (const u of S.units) { const dd = (u.x - d.x0) ** 2 + (u.y - d.y0) ** 2; if (dd < bd) { bd = dd; best = u; } }
+    for (const u of S.units) u.selected = false;
+    if (best) best.selected = true;
+  }
+}, true);
+cv.addEventListener('contextmenu', e => {
+  if (!S || !S.mapTest) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const w = mtScreenToWorld(mpos(e));
+  const sel = S.units.filter(u => u.selected);
+  sel.forEach((u, i) => { const a = i * 2.4, rr = i ? 16 + 9 * Math.sqrt(i) : 0;
+    u.tx = w.x + Math.cos(a) * rr; u.ty = w.y + Math.sin(a) * rr; });
+  if (sel.length) MT.effects.push({ boom: true, x: w.x, y: w.y, r: 13, t: 0.25 });
+}, true);
+window.addEventListener('keydown', e => {
+  if (!S || !S.mapTest) return;
+  e.stopImmediatePropagation();
+  const c = e.code; // e.key는 한글 IME에서 ㅈ/ㅁ/ㄴ/ㅇ이 되어 WASD가 죽는다 — 물리 키 기준
+  if (c === 'ArrowLeft' || c === 'KeyA') { MT.keys.l = true; e.preventDefault(); }
+  if (c === 'ArrowRight' || c === 'KeyD') { MT.keys.r = true; e.preventDefault(); }
+  if (c === 'ArrowUp' || c === 'KeyW') { MT.keys.u = true; e.preventDefault(); }
+  if (c === 'ArrowDown' || c === 'KeyS') { MT.keys.d = true; e.preventDefault(); }
+  if (c === 'Space') { const [ox, oy] = MT.ORIGIN[0]; MT.cam.x = ox + CX - 470; MT.cam.y = oy + CY - 250; mtClampCam(); e.preventDefault(); }
+}, true);
+window.addEventListener('keyup', e => {
+  if (!S || !S.mapTest) return;
+  const c = e.code;
+  if (c === 'ArrowLeft' || c === 'KeyA') MT.keys.l = false;
+  if (c === 'ArrowRight' || c === 'KeyD') MT.keys.r = false;
+  if (c === 'ArrowUp' || c === 'KeyW') MT.keys.u = false;
+  if (c === 'ArrowDown' || c === 'KeyS') MT.keys.d = false;
+}, true);
+window.addEventListener('blur', () => { if (S && S.mapTest) MT.keys = {}; }); // alt-tab 중 keyup 유실로 카메라가 흐르는 것 방지
+cv.addEventListener('dblclick', e => { if (S && S.mapTest) { e.stopImmediatePropagation(); e.preventDefault(); } }, true); // 더블클릭 같은종류 선택(화면좌표 기반)이 미리보기에 새지 않게
+cv.addEventListener('touchcancel', e => { if (S && S.mapTest) { e.stopImmediatePropagation(); MT.mmDrag = false; } }, true);
+cv.addEventListener('touchstart', e => { // 모바일: 미니맵 드래그로 카메라 (v1)
+  if (!S || !S.mapTest) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  const t = e.touches[0], r = cv.getBoundingClientRect();
+  const p = { x: (t.clientX - r.left) * cv.width / r.width, y: (t.clientY - r.top) * cv.height / r.height };
+  if (mtInMM(p)) { MT.mmDrag = true; mtMMJump(p); }
+}, { capture: true, passive: false });
+cv.addEventListener('touchmove', e => {
+  if (!S || !S.mapTest) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  if (!MT.mmDrag) return;
+  const t = e.touches[0], r = cv.getBoundingClientRect();
+  mtMMJump({ x: (t.clientX - r.left) * cv.width / r.width, y: (t.clientY - r.top) * cv.height / r.height });
+}, { capture: true, passive: false });
+cv.addEventListener('touchend', e => { if (S && S.mapTest) { e.stopImmediatePropagation(); MT.mmDrag = false; } }, true);
+document.getElementById('btnCoop').onclick = () => {
+  document.getElementById('modeRow').style.display = 'none';
+  document.getElementById('coopRow').style.display = 'flex';
+};
+document.getElementById('btnCoopBack').onclick = () => {
+  document.getElementById('coopRow').style.display = 'none';
+  document.getElementById('modeRow').style.display = 'flex';
+};
+document.getElementById('btnMapTest').onclick = () => { initAudio(); startMapTest(); };
+
 let perfU = 0, perfD = 0, perfN = 0, perfText = '';
 let last = performance.now();
 const BASE_SPEED = 1.3; // 게임 기본 진행 속도 (2배속 시 실질 2.6배)
 function frame(now) {
   let dt = Math.min((now - last) / 1000, 0.05) * BASE_SPEED;
   last = now;
+  if (S.mapTest) { // 🏗️ 멀티맵 미리보기: 실게임 update/draw/HUD 전부 우회
+    try { updateMapTest(dt); drawMapTest(); } catch (e) { reportLoopError('maptest', e); }
+    requestAnimationFrame(frame);
+    return;
+  }
   const t0 = performance.now();
   if (!S.paused) {
     if (S.hitstop > 0) S.hitstop -= dt; // 보스 킬 히트스톱: 잠깐 세상이 멈춘다
