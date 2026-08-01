@@ -582,6 +582,11 @@ const PORTAL = { x: 80, y: 78, r: 34 }; // 강화 포털: 같은 유닛 5기를 
 const WAVE_TIME = 90, POKER_TIME = 60;
 const FINAL_ROUND = 80; // 이후는 헬모드
 const SUN_ROUND = 150;  // 🌞 아포칼립스 태양 강림 — 헬모드 최종장 (처치 시 헬모드 클리어)
+const ARENA = { x: 855, y: 255, r: 50 }; // 🏛️ 결투장: 광석방과 광산 사이 미니 콜로세움 — 전투 유닛 1기만 입장
+const DUEL_EVERY = 7;    // 도전자 주기 (보스 라운드와 겹치면 그 주는 휴장)
+// 도전자 체력: 몹HP가 아니라 "단일 유닛 DPS 성장"에 앵커 (몹HP는 유닛 수로 커버되는 곡선이라 배수로 쓰면 후반 도달 불가)
+// 실측(집중업글 단품): 스트레이트 DPS ≈ 69+3.2R → ×78초 = 스트레이트 풀타임 아슬아슬 / 풀하우스(보스판정 ×2) 26~36초 / 투페어 이하 135초+(불가능 벽)
+function duelHP(n) { return Math.floor(5400 + 250 * n); }
 
 const cv = document.getElementById('cv');
 let ctx = cv.getContext('2d'); // 스프라이트 캐시 빌드 시 임시 스왑 가능하도록 let
@@ -641,6 +646,7 @@ function reset() {
     tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 20기 → 완성, 라운드 재시작 시 리셋)
     bird: null, birdTimer: 250 + Math.random() * 200, // 🐦 힌트 새 / 다음 스폰까지 남은 초
     hellCleared: false, hellClearT: 0, // 🌞 아포칼립스 태양 격파 여부 / 클리어 화면까지 여운 타이머
+    duel: null, champion: null, // 🏛️ 결투장 도전자 / 현재 입장한 유닛 (1기 제한)
     sandbox: false,
   };
   dctx.clearRect(0, 0, 940, 500); // 이전 판 얼룩 제거
@@ -1019,6 +1025,11 @@ function startWave() {
   if (em.instantGold) { const g = S.round * 30; S.gold += g; addFloat(HOUSE.x, HOUSE.y - 40, `🎁 +${g}G`, '#ffd54f', 2); }
   // 소환장 포탈에서 우르르 쏟아지듯 (약 2초 안에 전부 등장)
   S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0 };
+  if (S.round % DUEL_EVERY === 0 && !boss) { // 🏛️ 결투장 도전자 (보스 라운드와 겹치면 휴장)
+    const dhp = duelHP(S.round);
+    S.duel = { x: ARENA.x, y: ARENA.y - 2, hp: dhp, max: dhp, mat: matInfo(S.round).idx, phase: Math.random() * 6.28, hitT: 0, tauntT: 0, nextTaunt: 0, taunt: '' };
+    logMsg('🏛️ 결투장에 도전자가 나타났다! "한 놈만 와라."');
+  }
   renderPoker();
   const info = stageInfo(S.round);
   logMsg(`🌊 스테이지 ${S.round} [${info.name}] — ${count}마리 (HP ${hp})${boss ? ' + 👹 보스!' : ''}${S.event ? ' · ' + S.event.name : ''}`);
@@ -1063,6 +1074,7 @@ function spawnMonster(hp, isBoss, opt) {
 function speedBonus() { return S.timer > 1 ? Math.round(S.timer * (1 + S.round * 0.25)) : 0; }
 function endWave() {
   S.slotBombs = []; // 잭팟 폭격 잔탄이 다음 웨이브로 넘어가 엉뚱한 좌표에서 터지지 않게
+  if (S.duel) { logMsg('🏛️ 도전자: "오늘도 챔피언은 나다." (유유히 퇴장 — 패널티 없음)'); S.duel = null; } // 못 잡아도 그만인 보너스 이벤트
   const bossAlive = S.monsters.some(m => m.boss);
   const leak = S.monsters.length;
   if (bossAlive) {
@@ -1566,6 +1578,16 @@ function update(dt) {
     }
   }
   for (const u of U) { pushOutOfPen(u); blockRoomWalls(u); if (isInRoom(u) && u.x > ORE_LINE) u.x = ORE_LINE; }
+  // 🏛️ 결투장: 전투 유닛 1기만 (챔피언). 두 번째부터는 보이지 않는 벽에 막힌다. 광부·아이템 유닛은 무관
+  if (S.champion && (S.champion.miner || S.champion.item || !U.includes(S.champion) || Math.hypot(S.champion.x - ARENA.x, S.champion.y - ARENA.y) > ARENA.r + 12)) S.champion = null;
+  for (const u of U) {
+    if (u.miner || u.item) continue;
+    const adx = u.x - ARENA.x, ady = u.y - ARENA.y, ad = Math.hypot(adx, ady);
+    if (ad < ARENA.r) {
+      if (!S.champion || S.champion === u) S.champion = u;
+      else { const k = (ARENA.r + 2) / (ad || 1); u.x = ARENA.x + adx * k; u.y = ARENA.y + ady * k; } // 만원사례 — 입장 불가
+    }
+  }
   // 재정착: 목표 8px 이내면 현재 위치를 목표로 스냅 — 밀려난 유닛이 되돌아가려고 미세 진동하는 것 방지
   for (const u of U) {
     if (u.miner) continue;
@@ -1760,6 +1782,15 @@ function update(dt) {
     // 광석 방 안이면 몬스터 대신 광석을 때린다 (정원 내 자격 유닛만)
     if (!S.hunt.done && S.hunt.hp > 0 && isInRoom(u)) {
       if (u.oreSlot && u.cool <= 0 && !u.moving && inOreRange(u)) { u.cool = effCd(u); fireAtOre(u); } // 광석도 사거리 판정 (근접 무기는 붙어야 캔다)
+      continue;
+    }
+    if (S.duel && u === S.champion) { // 🏛️ 결투: 챔피언은 도전자에게만 집중한다
+      const ddx = S.duel.x - u.x, ddy = S.duel.y - u.y, dd = Math.hypot(ddx, ddy);
+      if (dd > effRange(u)) { u.tx = S.duel.x - ddx / (dd || 1) * effRange(u) * 0.6; u.ty = S.duel.y - ddy / (dd || 1) * effRange(u) * 0.6; }
+      else {
+        u.tx = u.x; u.ty = u.y;
+        if (u.cool <= 0 && !u.moving) { u.cool = effCd(u); fireAtDuel(u); }
+      }
       continue;
     }
     if (u.forceTarget && (u.forceTarget.dead || u.forceTarget.hp <= 0)) u.forceTarget = null;
@@ -2421,6 +2452,60 @@ function assignOreSlots() {
   for (let i = 0; i < Math.min(cap, inR.length); i++) inR[i].oreSlot = true;
 }
 // 방 안 유닛이 광석을 때린다 (몬스터 공격과 동일 방식, 무기에서 발사)
+// 🏛️ 결투장 전용 공격 — fireAtOre 패턴 재사용: 모든 무기가 단일 대상 판정 (스플래시 무의미 → 단일 특화의 무대)
+// 도전자는 '보스 판정': 저격총·풀하우스 라인(단검·쌍단검)의 보스 ×2가 그대로 통한다
+function fireAtDuel(u) {
+  const d = S.duel; if (!d) return;
+  const crack = u.atk === 'sniper' || ((u.vis === 'sword' || u.vis === 'twin') && !u.shogun);
+  const dmg = effDmg(u) * (crack ? 2 : 1);
+  u.aimX = d.x; u.aimY = d.y; u.atkAnim = 1;
+  d.hp -= dmg; d.hitT = 0.09;
+  if (crack && Math.random() < 0.12) addFloat(d.x, d.y - 34, '💎 CRACK! ×2', '#7ab8ff', 0.6); // 보스 판정 표기 (가끔만 — 도배 방지)
+  const m = muzzle(u);
+  const col = MATERIALS[d.mat].col;
+  const ang = Math.atan2(d.y - m.y, d.x - m.x);
+  if (u.vis === 'twin') {
+    S.effects.push({ type:'slash', x: d.x, y: d.y, r: u.splash, a: ang - 0.5, t: 0.16, dur: 0.16 });
+    S.effects.push({ type:'slash', x: d.x, y: d.y, r: u.splash * 0.92, a: ang + 0.5, t: 0.2, dur: 0.2 });
+  } else if (u.vis === 'sword') {
+    const flurry = !u.shogun && !u.hero, sdur = flurry ? 0.13 : 0.24;
+    const soff = flurry ? ((u._flur = (u._flur || 0) + 1) % 2 ? 0.55 : -0.55) : 0;
+    S.effects.push({ type:'slash', x: d.x, y: d.y, r: u.splash, a: ang + soff, t: sdur, dur: sdur, fire: u.shogun });
+  } else if (u.vis === 'saw') {
+    S.effects.push({ type:'saw', x: d.x, y: d.y, r: u.splash * 0.7, t: 0.18 });
+  } else if (u.vis === 'flame') {
+    for (let i = 0; i < (u.hero ? 14 : 9); i++) {
+      const reach = Math.hypot(d.x - m.x, d.y - m.y) * (0.6 + Math.random() * 0.5), sp = reach / 0.4;
+      const aa = ang + (Math.random() - 0.5) * 0.5;
+      S.parts.push({ x: m.x, y: m.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, t: 0.4 + Math.random() * 0.25, r: (u.hero ? 7 : 5) + Math.random() * 5, fire: true, spin: Math.random() * 6.28 });
+    }
+  } else { // 원거리 무기: 광선 + 총구 섬광
+    S.effects.push({ type:'roomshot', x1: m.x, y1: m.y, x2: d.x, y2: d.y, t: 0.14, dur: 0.14, proj: u.proj || 'pellet' });
+    S.effects.push({ type:'boom', x: m.x, y: m.y, r: 4, t: 0.07 });
+  }
+  for (let i = 0; i < 5; i++) { const a = Math.random()*6.28, v = 40 + Math.random()*72; S.parts.push({ x: d.x, y: d.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 15, t: 0.32, r: 1.4 + Math.random()*1.6, c: col }); }
+  S.effects.push({ type:'boom', x: d.x, y: d.y, r: 9, t: 0.13 });
+  if (d.hp <= 0) duelWin(u);
+}
+function duelWin(u) {
+  const d = S.duel;
+  const gold = 150 + S.round * 20;
+  S.gold += gold;
+  if (u && u.kills != null) u.kills++;
+  const chipWin = Math.random() < 0.05 * gamblerLuck(); // 🎰 5% 잭팟 (도박의 신 가호 적용)
+  if (chipWin) {
+    S.chips++;
+    for (let i = 0; i < 3; i++) S.parts.push({ x: d.x, y: d.y, vx: (Math.random()-0.5)*120, vy: -80 - Math.random()*80, coin: true, chipFx: true, t: 1.6, r: 3.4, c: '#ffd54f' });
+  }
+  sfx('jackpot'); S.hitstop = 0.06;
+  const c = MATERIALS[d.mat].col;
+  for (let i = 0; i < 18; i++) { const a = Math.random() * 6.28, v = 90 + Math.random() * 160;
+    S.parts.push({ x: d.x, y: d.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 50, g: true, t: 0.6, r: 1.8 + Math.random() * 2.4, c: i % 3 ? c : '#ffd54f' }); }
+  S.effects.push({ type: 'boom', x: d.x, y: d.y, r: 60, t: 0.4 });
+  rewardToast('🏆', `도전자 격파! +${gold}G${chipWin ? ' · 🎰 칩 +1!!' : ''}`, '#c9971a', '콜 로 세 움 챔 피 언');
+  logMsg(`🏆 결투장 승리!! +${gold}G${chipWin ? ' · 🎰 행운의 칩 +1!!' : ''} — 도전자: "...인정."`);
+  S.duel = null;
+}
 function fireAtOre(u) {
   const dmg = effDmg(u) * (u.atk === 'sniper' ? 2 : 1); // 🎯 저격총: 광물 약점도 정확히 노린다 (×2)
   u.aimX = OREPOS.x; u.aimY = OREPOS.y; u.atkAnim = 1;
@@ -3164,6 +3249,68 @@ function drawBackdrop() {
   }
   drawHellCreep(); // 🔥 보통 난이도도 헬모드부터는 세계가 불탄다
 }
+// 🏛️ 결투장: 모래 바닥 + 돌기둥 아치 미니 콜로세움
+function drawArena() {
+  const { x, y, r } = ARENA;
+  const sg = ctx.createRadialGradient(x, y + 6, 4, x, y + 6, r); // 모래 바닥 (원근 타원)
+  sg.addColorStop(0, '#e8d5a3'); sg.addColorStop(1, '#cdb27a');
+  ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(x, y + 6, r, r * 0.72, 0, 0, 6.28); ctx.fill();
+  ctx.strokeStyle = '#9a835a'; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(154,131,90,0.5)'; // 결투 서클 라인
+  ctx.beginPath(); ctx.ellipse(x, y + 4, r * 0.55, r * 0.38, 0, 0, 6.28); ctx.stroke();
+  for (let i = 0; i < 5; i++) { // 뒤쪽 반원 돌기둥 아치 5개
+    const a = Math.PI + (i + 0.5) * Math.PI / 5;
+    const px = x + Math.cos(a) * (r - 4), py = y + 6 + Math.sin(a) * (r * 0.72 - 3);
+    ctx.fillStyle = '#b5a284'; ctx.fillRect(px - 3.5, py - 16, 7, 16);       // 기둥
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.arc(px, py - 8, 2.6, Math.PI, 6.28); ctx.fill();     // 아치 그늘
+    ctx.fillStyle = '#c8b696'; ctx.fillRect(px - 5.5, py - 20.5, 11, 5);      // 상단 보
+  }
+  if (S.duel) drawDuelist();
+  else { // 빈 결투장: 흐릿한 검 두 자루 표식
+    ctx.globalAlpha = 0.3; ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('⚔️', x, y + 10); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+}
+const DUEL_TAUNTS = ['한 놈만 와라. …올 수는 있고?', '그 실력으로 나를?', '하품 나오는군.', '아직도 고민 중이냐?', '가소롭구나.', '간지럽다. 더 세게.', '제법이군… 아니, 취소다.'];
+function drawDuelist() {
+  const d = S.duel, t = S.time, sz = 24;
+  const y = d.y + Math.sin(t * 2.2 + d.phase) * 2; // 몸 풀기 바운스
+  d.hitT = Math.max(0, d.hitT - 0.016);
+  const squish = d.hitT > 0 ? d.hitT / 0.09 : 0;
+  ctx.save(); ctx.translate(d.x, y);
+  if (squish) ctx.scale(1 + squish * 0.12, 1 - squish * 0.12);
+  drawMatStatic(0, 0, sz, d.mat, 0, MATERIALS[d.mat].col); // 몸통 = 현재 라운드 재질 (라운드 따라 험악해짐)
+  ctx.fillStyle = '#c0392b'; // 검투사 볏(크레스트)
+  ctx.beginPath(); ctx.moveTo(-sz * 0.5, -sz * 0.72);
+  ctx.quadraticCurveTo(0, -sz * 1.5, sz * 0.5, -sz * 0.72);
+  ctx.quadraticCurveTo(0, -sz * 1.05, -sz * 0.5, -sz * 0.72); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#97a1b4'; // 투구 (상반구 금속)
+  ctx.beginPath(); ctx.arc(0, -sz * 0.16, sz * 0.9, Math.PI * 1.02, Math.PI * 1.98); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#5d6675'; ctx.lineWidth = 1.4; ctx.stroke(); ctx.lineWidth = 1;
+  ctx.fillStyle = '#20242e'; // T자 눈구멍
+  ctx.fillRect(-sz * 0.3, -sz * 0.5, sz * 0.6, sz * 0.15);
+  ctx.fillRect(-sz * 0.08, -sz * 0.5, sz * 0.16, sz * 0.36);
+  const sw = Math.sin(t * 1.8 + d.phase) * 0.18; // 검 (한가로운 idle 스윙 — 여유의 표현)
+  ctx.save(); ctx.translate(sz * 0.95, sz * 0.1); ctx.rotate(-0.5 + sw);
+  ctx.fillStyle = '#d8dde6'; ctx.fillRect(-1.6, -sz * 1.05, 3.2, sz * 1.05);
+  ctx.fillStyle = '#8a6d3b'; ctx.fillRect(-4.5, -1, 9, 2.6);
+  ctx.fillStyle = '#5d4a28'; ctx.fillRect(-1.6, 1.6, 3.2, 6);
+  ctx.restore();
+  ctx.restore();
+  drawBar(d.x - 30, y - sz - 30, 60, d.hp / d.max, '#e05a2b'); // 체력바
+  // 도발 말풍선 (이따금)
+  if (t > d.nextTaunt) { d.taunt = DUEL_TAUNTS[(Math.random() * DUEL_TAUNTS.length) | 0]; d.tauntT = t + 2.6; d.nextTaunt = t + 12 + Math.random() * 10; }
+  if (t < d.tauntT) {
+    ctx.font = '10.5px sans-serif';
+    const w = ctx.measureText(d.taunt).width + 14, h = 18;
+    const bx = Math.max(4, Math.min(936 - w, d.x - w / 2)), by = y - sz - 52;
+    ctx.fillStyle = 'rgba(255,255,255,0.95)'; roundRect(bx, by, w, h, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(120,80,60,0.5)'; roundRect(bx, by, w, h, 8); ctx.stroke();
+    ctx.fillStyle = '#5a3c2e'; ctx.textAlign = 'center';
+    ctx.fillText(d.taunt, bx + w / 2, by + 12.5); ctx.textAlign = 'left';
+  }
+}
 function draw() {
   ctx.clearRect(0, 0, cv.width, cv.height);
   ctx.save();
@@ -3182,6 +3329,7 @@ function draw() {
   drawBarrack();
   drawPortal();
   drawAltar();
+  drawArena(); // 🏛️ 결투장
   if (S.plank) drawPlank();
   drawEnemyPortal(); // 소환장 안 적 포탈 (몹보다 뒤)
   for (const p of S.acidPools) {
@@ -5369,6 +5517,8 @@ const OBJ_INFO = {
     tip: '💡 풀하우스(단검)의 🗡️암살 스킬만이 유일하게 소환장 안으로 들어갈 수 있습니다.' },
   altar: { t: '🪨 제물대', d: '유닛을 이 위로 이동시키면 <b>제물</b>로 바쳐집니다.',
     tip: '🪨 오래된 돌 위에 무언가를 충분히 쌓으면… 깨어난다고들 한다.' },
+  arena: { t: '🏛️ 결투장', d: '“과연 네가? 나를? 도전한다는 게 너라니, 가소롭구나.”<br><span style="font-size:11px;color:#8a7a5c">⚔️ 유닛 1기만 입장 · 👹 도전자는 보스 판정</span>',
+    tip: '🏛️ 이따금 도전자가 몸을 푼다. 이긴다면… 뭐, 후하게는 주지.' },
 };
 function showObjInfo(k) {
   S.selMon = null; // 건물 정보 표시 중엔 몬스터 실시간 갱신 안 함
@@ -5443,6 +5593,7 @@ function objAt(x, y) {
   if (Math.hypot(x - PORTAL.x, y - PORTAL.y) < PORTAL.r + 12) return 'portal';
   if (Math.abs(x - ROOM.cx) <= ROOM.w/2 && Math.abs(y - ROOM.cy) <= ROOM.h/2) return 'room';
   if (Math.abs(x - HOUSE.x) < 48 && Math.abs(y - HOUSE.y + 8) < 52) return 'castle';
+  if (Math.hypot(x - ARENA.x, y - ARENA.y) < ARENA.r + 6) return 'arena';
   if (Math.abs(x - MINE_POS.x) < 52 && Math.abs(y - MINE_POS.y) < 55) return 'mine';
   if (Math.abs(x - PEN.x) < PEN.w/2 + 8 && Math.abs(y - PEN.y) < PEN.h/2 + 8) return 'pen';
   return null;
