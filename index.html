@@ -6920,19 +6920,157 @@ const MT = {
   cam: { x: 1070, y: 0 }, keys: {}, mouse: { x: 470, y: 250, in: false },
   mmDrag: false, drag: null, time: 0, effects: [], raider: null, boss: null,
 };
+// ── 🎨 페인터리 월드 베이크: 잔디 얼룩·데코(나무·바위·꽃·연못)·레인·광장을 로드 시 1회만 그려두고 매 프레임 drawImage 1번 (목업 아트 디렉션, 성능은 오히려 순증)
+let mtWorldBake = null;
+function mtNoDecor(x, y) { // 데코 배치 금지 구역 (건물·레인·광장·갓길·스폰존)
+  if (x > 900 && x < 1110) return true;                       // 세로 레인 + 여유
+  if (y > 462 && y < 668) return true;                        // 가로 레인 + 여유
+  if (Math.hypot(x - MT.KING.x, y - MT.KING.y) < 185) return true; // 왕국 광장
+  for (const [ox, oy] of MT.ORIGIN) {
+    if (x < ox || x > ox + 940 || y < oy || y > oy + 500) continue;
+    const lx = x - ox, ly = y - oy;
+    if (Math.abs(lx - CX) < 165 && Math.abs(ly - CY) < 122) return true;  // 소환장
+    if (Math.abs(lx - ROOM.cx) < ROOM.w / 2 + 18 && Math.abs(ly - ROOM.cy) < ROOM.h / 2 + 18) return true; // 광석방
+    if (Math.abs(lx - HOUSE.x) < 66 && Math.abs(ly - HOUSE.y) < 70) return true;  // 성
+    if (Math.abs(lx - MINE_POS.x) < 76 && Math.abs(ly - MINE_POS.y) < 66) return true; // 광산
+    if (Math.hypot(lx - PORTAL.x, ly - PORTAL.y) < 58) return true;      // 포털
+    if (Math.abs(lx - ALTAR.x) < 48 && Math.abs(ly - ALTAR.y) < 60) return true;   // 제물대
+    if (Math.hypot(lx - ARENA.x, ly - ARENA.y) < 70) return true;        // 결투장
+    if (ly > 448) return true;                                            // 광부 갓길
+    if (Math.abs(lx - CX) < 150 && ly > CY + 112 && ly < CY + 200) return true; // 유닛 스폰열 (클램프 440 + 여유)
+  }
+  return false;
+}
+function mtBakeWorld() {
+  if (mtWorldBake) return mtWorldBake;
+  const c = document.createElement('canvas'); c.width = MT.W; c.height = MT.H;
+  mtWorldBake = c; // 실패해도 캐시는 잡는다 — 부분 베이크가 매 프레임 12ms 재시도 폭주·백화면보다 낫다 (Opus)
+  const old = ctx; ctx = c.getContext('2d');
+  try { mtBakeBody(); } finally { ctx = old; } // 베이크 중 예외가 나도 ctx는 반드시 원복 (안 그러면 게임 전체가 오프스크린에 그려진다)
+  return c;
+}
+function mtBakeBody() {
+  const rnd = mulberry32(20260801);
+  // ① 잔디 바탕 + 큰 얼룩 (플랫 톤 4단 — 목업의 다층 잔디)
+  ctx.fillStyle = '#97b654'; ctx.fillRect(0, 0, MT.W, MT.H);
+  const TONES = [['#a4c266', 0.5, 60], ['#8ba94a', 0.5, 66], ['#b0cc74', 0.34, 46], ['#7e9c42', 0.42, 54]];
+  for (let i = 0; i < 700; i++) {
+    const [col, al, sz] = TONES[i % 4];
+    const x = rnd() * MT.W, y = rnd() * MT.H, r = sz * (0.5 + rnd());
+    ctx.globalAlpha = al; ctx.fillStyle = col;
+    ctx.beginPath(); ctx.ellipse(x, y, r, r * (0.5 + rnd() * 0.3), rnd() * 3.14, 0, 6.28); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  for (let i = 0; i < 1100; i++) { // 잔 풀포기 스페클
+    const x = rnd() * MT.W, y = rnd() * MT.H;
+    ctx.fillStyle = i % 2 ? 'rgba(122,152,60,0.5)' : 'rgba(182,206,120,0.5)';
+    ctx.beginPath(); ctx.arc(x, y, 1.4 + rnd() * 2, 0, 6.28); ctx.fill();
+  }
+  // ② 레인: 따뜻한 흙+자갈 수로 (연석·내벽 그림자·잔디 턱까지 베이크)
+  const lane = (x, y, w, h, vert) => {
+    ctx.fillStyle = '#c3ad83'; ctx.fillRect(x, y, w, h);
+    for (let i = 0; i < (vert ? h : w) * 0.5; i++) { // 둥근 자갈들
+      const px = x + rnd() * w, py = y + rnd() * h, r = 2.5 + rnd() * 4.5;
+      ctx.fillStyle = ['#b7a37e', '#cdbb94', '#a8946e'][i % 3];
+      ctx.beginPath(); ctx.ellipse(px, py, r, r * 0.75, rnd() * 3, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = 'rgba(120,100,70,0.25)'; ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(35,28,16,0.14)'; ctx.fillRect(x, y, w, h); // 파인 바닥 톤
+  };
+  lane(940, 0, 130, MT.H, true); lane(0, 500, MT.W, 130, false);
+  let wg = ctx.createLinearGradient(0, 500, 0, 518); // 내벽 그림자 (북 깊게)
+  wg.addColorStop(0, 'rgba(15,11,6,0.55)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
+  ctx.fillStyle = wg; ctx.fillRect(0, 500, MT.W, 18);
+  wg = ctx.createLinearGradient(0, 630, 0, 616);
+  wg.addColorStop(0, 'rgba(15,11,6,0.3)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
+  ctx.fillStyle = wg; ctx.fillRect(0, 616, MT.W, 14);
+  wg = ctx.createLinearGradient(940, 0, 958, 0);
+  wg.addColorStop(0, 'rgba(15,11,6,0.55)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
+  ctx.fillStyle = wg; ctx.fillRect(940, 0, 18, MT.H);
+  wg = ctx.createLinearGradient(1070, 0, 1056, 0);
+  wg.addColorStop(0, 'rgba(15,11,6,0.3)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
+  ctx.fillStyle = wg; ctx.fillRect(1056, 0, 14, MT.H);
+  ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 3; // 연석
+  ctx.strokeRect(940, -4, 130, MT.H + 8); ctx.strokeRect(-4, 500, MT.W + 8, 130);
+  ctx.strokeStyle = 'rgba(255,255,240,0.3)'; ctx.lineWidth = 1.5; // 잔디 턱 하이라이트
+  ctx.beginPath(); ctx.moveTo(938, 0); ctx.lineTo(938, MT.H); ctx.moveTo(1072, 0); ctx.lineTo(1072, MT.H);
+  ctx.moveTo(0, 498); ctx.lineTo(MT.W, 498); ctx.moveTo(0, 632); ctx.lineTo(MT.W, 632); ctx.stroke(); ctx.lineWidth = 1;
+  // ③ 왕국 광장 바닥 + 계단 (베이크 — 성곽·킵은 라이브 유지)
+  const KX = MT.KING.x, KY = MT.KING.y;
+  ctx.fillStyle = '#cfc7b4'; ctx.beginPath(); ctx.arc(KX, KY, 148, 0, 6.28); ctx.fill();
+  for (let i = 0; i < 90; i++) { // 석판 얼룩
+    const a = rnd() * 6.28, rr = rnd() * 140;
+    ctx.fillStyle = i % 2 ? 'rgba(180,170,148,0.5)' : 'rgba(226,218,200,0.5)';
+    ctx.beginPath(); ctx.ellipse(KX + Math.cos(a) * rr, KY + Math.sin(a) * rr, 8 + rnd() * 14, 6 + rnd() * 9, rnd() * 3, 0, 6.28); ctx.fill();
+  }
+  ctx.save(); ctx.beginPath(); ctx.arc(KX, KY, 147, 0, 6.28); ctx.clip(); // 석판 줄눈 격자 (원 안에만)
+  ctx.strokeStyle = 'rgba(120,110,92,0.4)'; ctx.lineWidth = 1.2;
+  for (let gx2 = KX - 148; gx2 <= KX + 148; gx2 += 26) { ctx.beginPath(); ctx.moveTo(gx2, KY - 148); ctx.lineTo(gx2, KY + 148); ctx.stroke(); }
+  for (let gy2 = KY - 148; gy2 <= KY + 148; gy2 += 26) { ctx.beginPath(); ctx.moveTo(KX - 148, gy2); ctx.lineTo(KX + 148, gy2); ctx.stroke(); }
+  ctx.restore();
+  ctx.fillStyle = 'rgba(35,28,16,0.12)'; ctx.beginPath(); ctx.arc(KX, KY, 148, 0, 6.28); ctx.fill(); // 저지대 톤
+  ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(KX, KY, 148, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(90,80,60,0.7)'; ctx.lineWidth = 2;
+  for (const a0 of [0.785, 2.356, 3.927, 5.498]) for (let s = 0; s < 3; s++) {
+    ctx.beginPath(); ctx.arc(KX, KY, 130 + s * 8, a0 - 0.26, a0 + 0.26); ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+  // ④ 광부 갓길 4벌 (사분면마다)
+  for (const [ox, oy] of MT.ORIGIN) { ctx.save(); ctx.translate(ox, oy); drawMinerRoad(); ctx.restore(); }
+  // ⑤ 데코: 연못 → 바위 → 덤불 → 꽃 → 침엽수 (금지 구역 리젝션)
+  const put = (n, tries, fn) => { let placed = 0;
+    for (let i = 0; i < tries && placed < n; i++) { const x = rnd() * MT.W, y = rnd() * MT.H; if (!mtNoDecor(x, y)) { fn(x, y); placed++; } } };
+  put(5, 300, (x, y) => { // 연못
+    ctx.fillStyle = 'rgba(70,110,50,0.5)'; ctx.beginPath(); ctx.ellipse(x, y + 4, 34, 22, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#6db6dd'; ctx.beginPath(); ctx.ellipse(x, y, 30, 19, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#8ecdec'; ctx.beginPath(); ctx.ellipse(x - 4, y - 3, 20, 12, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(x - 9, y - 6, 7, 3, 0.4, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = 'rgba(60,100,45,0.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, 30, 19, 0, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1;
+  });
+  put(38, 900, (x, y) => { // 바위 무리
+    const n2 = 2 + (rnd() * 2 | 0);
+    ctx.fillStyle = 'rgba(60,80,40,0.35)'; ctx.beginPath(); ctx.ellipse(x + 3, y + 6, 16, 7, 0, 0, 6.28); ctx.fill();
+    for (let k = 0; k < n2; k++) {
+      const rx = x + (k - n2 / 2) * 11 + rnd() * 5, ry = y + (rnd() - 0.5) * 6, r = 6 + rnd() * 7;
+      ctx.fillStyle = '#a8a294'; ctx.beginPath(); ctx.ellipse(rx, ry, r, r * 0.8, 0, 0, 6.28); ctx.fill();
+      ctx.fillStyle = '#c2bcae'; ctx.beginPath(); ctx.ellipse(rx - r * 0.25, ry - r * 0.3, r * 0.55, r * 0.4, 0, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = 'rgba(90,85,72,0.5)'; ctx.beginPath(); ctx.ellipse(rx, ry, r, r * 0.8, 0, 0, 6.28); ctx.stroke();
+    }
+  });
+  put(46, 900, (x, y) => { // 덤불
+    ctx.fillStyle = 'rgba(50,80,35,0.4)'; ctx.beginPath(); ctx.ellipse(x + 2, y + 5, 14, 6, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#5d8a3c';
+    for (const [dx, dy, r] of [[-7, 0, 8], [7, 1, 7], [0, -4, 9]]) { ctx.beginPath(); ctx.arc(x + dx, y + dy, r, 0, 6.28); ctx.fill(); }
+    ctx.fillStyle = '#79a854'; ctx.beginPath(); ctx.arc(x - 2, y - 6, 6, 0, 6.28); ctx.fill();
+  });
+  put(70, 1200, (x, y) => { // 꽃 무리
+    const col = ['#fff8e0', '#ffd9e8', '#ffe98a'][rnd() * 3 | 0];
+    for (let k = 0; k < 3; k++) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x + (rnd() - 0.5) * 14, y + (rnd() - 0.5) * 10, 1.8, 0, 6.28); ctx.fill(); }
+  });
+  const pine = (x, y, s) => {
+    ctx.fillStyle = 'rgba(45,70,32,0.4)'; ctx.beginPath(); ctx.ellipse(x + 3, y + s * 0.1, s * 0.6, s * 0.22, 0, 0, 6.28); ctx.fill(); // 그림자
+    ctx.fillStyle = '#6d4a2a'; ctx.fillRect(x - s * 0.07, y - s * 0.1, s * 0.14, s * 0.2); // 둥치
+    for (let L = 0; L < 3; L++) { // 3단 침엽
+      const w = s * (0.62 - L * 0.15), ty = y - s * (0.12 + L * 0.3);
+      ctx.fillStyle = L % 2 ? '#3f6b2e' : '#4a7a36';
+      ctx.beginPath(); ctx.moveTo(x - w, ty); ctx.lineTo(x, ty - s * 0.42); ctx.lineTo(x + w, ty); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.14)'; // 왼쪽 하이라이트
+    ctx.beginPath(); ctx.moveTo(x - s * 0.35, y - s * 0.2); ctx.lineTo(x, y - s * 0.95); ctx.lineTo(x, y - s * 0.6); ctx.closePath(); ctx.fill();
+  };
+  put(46, 1200, (x, y) => pine(x, y, 24 + rnd() * 16));
+  for (let i = 0; i < 90; i++) { // 외곽 숲 (테두리 밀도 업 — 목업의 숲 가장자리)
+    const side = rnd() * 4 | 0, t = rnd();
+    const x = side === 0 ? t * MT.W : side === 1 ? t * MT.W : side === 2 ? 14 + rnd() * 44 : MT.W - 14 - rnd() * 44;
+    const y = side === 0 ? 12 + rnd() * 40 : side === 1 ? MT.H - 12 - rnd() * 40 : t * MT.H;
+    if (!mtNoDecor(x, y)) pine(x, y, 20 + rnd() * 18);
+  }
+}
 let mtPats = null; // 질감 패턴 캐시 (돌길·벽돌·석판)
 function mtPatterns() {
   if (mtPats) return mtPats;
   const mk = (w, h, fn) => { const c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); return ctx.createPattern(c, 'repeat'); };
   mtPats = {
-    cobble: mk(46, 46, g => { // 돌길: 둥근 자갈 + 줄눈
-      g.fillStyle = '#b8b0a0'; g.fillRect(0, 0, 46, 46);
-      [[4, 4, 17, 13], [24, 3, 18, 14], [2, 20, 13, 11], [18, 19, 14, 12], [35, 20, 9, 11], [6, 34, 16, 9], [26, 34, 16, 9]].forEach(([x, y, rw, rh], i) => {
-        g.fillStyle = i % 3 ? '#a9a191' : '#c4bcab';
-        g.beginPath(); g.ellipse(x + rw / 2, y + rh / 2, rw / 2, rh / 2, 0, 0, 6.28); g.fill();
-        g.strokeStyle = 'rgba(90,82,70,0.5)'; g.lineWidth = 1; g.stroke();
-      });
-    }),
     brick: mk(44, 24, g => { // 벽돌: 어긋난 두 줄 + 회반죽 줄눈 + 상단 하이라이트
       g.fillStyle = '#7f766a'; g.fillRect(0, 0, 44, 24);
       g.fillStyle = '#9c948a'; g.fillRect(1, 1, 20, 10); g.fillRect(23, 1, 20, 10);
@@ -7075,17 +7213,8 @@ function mtGate(x, y, i) { // 게이트: 석재 프레임 + 마계 소용돌이 
   ctx.beginPath(); ctx.arc(0, 8, 13 + Math.sin(MT.time * 2) * 3, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); ctx.lineWidth = 1;
   ctx.restore();
 }
-function mtKingdom(P) { // 중앙 왕국 (¾ 시점): 낮은 광장 + 높이 있는 성곽 + 전면 벽·지붕이 보이는 킵 + 원기둥 타워
+function mtKingdom(P) { // 중앙 왕국 (¾ 시점): 성곽 + 전면 벽·지붕이 보이는 킵 + 원기둥 타워 (광장 바닥·계단은 베이크에)
   const { x, y } = MT.KING;
-  // ── 광장 (저지대)
-  ctx.fillStyle = P.plaza; ctx.beginPath(); ctx.arc(x, y, 148, 0, 6.28); ctx.fill();
-  ctx.fillStyle = 'rgba(35,28,16,0.12)'; ctx.beginPath(); ctx.arc(x, y, 148, 0, 6.28); ctx.fill();
-  ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 148, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(90,80,60,0.7)'; ctx.lineWidth = 2; // 4모서리 계단 (물리 개구 섹터 ±0.3과 정합)
-  for (const a0 of [0.785, 2.356, 3.927, 5.498]) for (let s = 0; s < 3; s++) {
-    ctx.beginPath(); ctx.arc(x, y, 130 + s * 8, a0 - 0.26, a0 + 0.26); ctx.stroke();
-  }
-  ctx.lineWidth = 1;
   // ── 성곽 링: 레인 4곳(±0.28) + 대각 계단 4곳(±0.24) 개구 — 벽 세그먼트가 '벽'으로 읽히게 개구는 좁게, 물리(±0.3)는 살짝 관대하게
   ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 8;
   for (const [a0, a1] of [[Math.PI + 0.28, 3.927 - 0.24], [3.927 + 0.24, Math.PI * 1.5 - 0.28], [Math.PI * 1.5 + 0.28, 5.498 - 0.24], [5.498 + 0.24, 6.28 - 0.28]]) {
@@ -7251,36 +7380,12 @@ function mtMinimap() {
 function drawMapTest() {
   const P = mtPatterns(), cam = MT.cam;
   ctx.clearRect(0, 0, 940, 500);
-  ctx.save(); ctx.translate(-cam.x, -cam.y);
+  ctx.save();
+  try { // 월드 그리기 중 예외가 나도 카메라 save가 프레임마다 누적되지 않게 (Opus)
+  ctx.translate(-cam.x, -cam.y);
   const vx0 = cam.x, vy0 = cam.y, vx1 = cam.x + 940, vy1 = cam.y + 500;
-  ctx.fillStyle = '#d9edc4'; ctx.fillRect(vx0, vy0, 940, 500); // 대지 (보이는 영역만)
-  ctx.fillStyle = 'rgba(110,180,90,0.35)'; // 풀 점 (결정적 랜덤)
-  for (let gx = Math.floor(vx0 / 90) * 90; gx < vx1 + 90; gx += 90)
-    for (let gy = Math.floor(vy0 / 90) * 90; gy < vy1 + 90; gy += 90) {
-      const j = Math.sin(gx * 12.9898 + gy * 78.233) * 43758.5453, f = j - Math.floor(j);
-      ctx.beginPath(); ctx.arc(gx + f * 60, gy + (((j * 7) % 1 + 1) % 1) * 60, 1.6 + f * 1.6, 0, 6.28); ctx.fill();
-    }
-  ctx.fillStyle = P.cobble; // 십자 레인 (파인 수로 — 몹의 길, 유닛은 다리·광장 계단으로만)
-  ctx.fillRect(940, 0, 130, MT.H); ctx.fillRect(0, 500, MT.W, 130);
-  ctx.fillStyle = 'rgba(35,28,16,0.18)'; // 수로 바닥은 지면보다 한 단계 어둡다 (파임)
-  ctx.fillRect(940, 0, 130, MT.H); ctx.fillRect(0, 500, MT.W, 130);
-  let wg = ctx.createLinearGradient(0, 500, 0, 518); // 북쪽 내벽: 깊은 그림자
-  wg.addColorStop(0, 'rgba(15,11,6,0.55)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
-  ctx.fillStyle = wg; ctx.fillRect(0, 500, MT.W, 18);
-  wg = ctx.createLinearGradient(0, 630, 0, 616); // 남쪽 내벽: 얕은 그림자 (원근)
-  wg.addColorStop(0, 'rgba(15,11,6,0.3)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
-  ctx.fillStyle = wg; ctx.fillRect(0, 616, MT.W, 14);
-  wg = ctx.createLinearGradient(940, 0, 958, 0); // 서쪽 내벽
-  wg.addColorStop(0, 'rgba(15,11,6,0.55)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
-  ctx.fillStyle = wg; ctx.fillRect(940, 0, 18, MT.H);
-  wg = ctx.createLinearGradient(1070, 0, 1056, 0); // 동쪽 내벽
-  wg.addColorStop(0, 'rgba(15,11,6,0.3)'); wg.addColorStop(1, 'rgba(15,11,6,0)');
-  ctx.fillStyle = wg; ctx.fillRect(1056, 0, 14, MT.H);
-  ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 3; // 연석
-  ctx.strokeRect(940, -4, 130, MT.H + 8); ctx.strokeRect(-4, 500, MT.W + 8, 130);
-  ctx.strokeStyle = 'rgba(255,255,240,0.30)'; ctx.lineWidth = 1.5; // 바깥 잔디 턱 하이라이트 (윗면 모서리)
-  ctx.beginPath(); ctx.moveTo(938, 0); ctx.lineTo(938, MT.H); ctx.moveTo(1072, 0); ctx.lineTo(1072, MT.H);
-  ctx.moveTo(0, 498); ctx.lineTo(MT.W, 498); ctx.moveTo(0, 632); ctx.lineTo(MT.W, 632); ctx.stroke(); ctx.lineWidth = 1;
+  // 🎨 페인터리 월드 (잔디·데코·레인·광장 바닥 — 전부 1회 베이크, 매 프레임 drawImage 1번)
+  ctx.drawImage(mtBakeWorld(), vx0, vy0, 940, 500, vx0, vy0, 940, 500);
   MT.ORIGIN.forEach(([ox, oy], i) => { // 사분면 경계 + 이름표
     if (ox > vx1 || oy > vy1 || ox + 940 < vx0 || oy + 500 < vy0) return;
     ctx.strokeStyle = MT.PCOLS[i] + '44'; ctx.lineWidth = 3; ctx.strokeRect(ox + 3, oy + 3, 934, 494); ctx.lineWidth = 1;
@@ -7289,8 +7394,8 @@ function drawMapTest() {
   });
   MT.ORIGIN.forEach(([ox, oy]) => { // 사분면 기지 = 현 싱글맵 건물 전부 (컬링)
     if (ox > vx1 || oy > vy1 || ox + 940 < vx0 || oy + 500 < vy0) return;
-    ctx.save(); ctx.translate(ox, oy);
-    drawMinerRoad(); drawCastle(); drawMine(); drawOreRoom(); drawBarrack(); drawEnemyPortal(); drawPortal(); drawAltar(); drawArena();
+    ctx.save(); ctx.translate(ox, oy); // 광부 갓길은 베이크에 포함됨
+    drawCastle(); drawMine(); drawOreRoom(); drawBarrack(); drawEnemyPortal(); drawPortal(); drawAltar(); drawArena();
     ctx.restore();
   });
   mtGate(1005, 26, 0); mtGate(1984, 565, 1); mtGate(1005, 1104, 2); mtGate(26, 565, 3);
@@ -7320,7 +7425,7 @@ function drawMapTest() {
     ctx.strokeRect(Math.min(MT.drag.x0, MT.drag.x1), Math.min(MT.drag.y0, MT.drag.y1), Math.abs(MT.drag.x1 - MT.drag.x0), Math.abs(MT.drag.y1 - MT.drag.y0));
     ctx.lineWidth = 1;
   }
-  ctx.restore();
+  } finally { ctx.restore(); }
   mtMinimap();
   ctx.fillStyle = 'rgba(20,16,34,0.75)'; roundRect(210, 6, 520, 22, 8); ctx.fill();
   ctx.fillStyle = '#e8def8'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
