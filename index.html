@@ -564,7 +564,7 @@ function matInfo(n) {
 const BOSS_NAMES = ['슬라임','성게 어뢰','별','초승달','해'];
 
 const CX = 440, CY = 250;
-const MINE_POS = {x: 880, y: 448}; // 우하단 구석 — 광부 동선(하단 갓길)이 부대 주둔지를 관통하지 않게 (x880: 최우측 봉우리가 캔버스 안에 들게)
+const MINE_POS = {x: 880, y: 458}; // 우하단 구석 최하단 — 확장된 콜로세움과 간격 확보 + 광부 갓길이 부대 주둔지를 관통하지 않게
 const HOUSE = {x: 96, y: 428};    // 좌측 최하단 성 — 광부가 광물을 배달해야 골드가 쌓인다
 const ROOM = {cx: 772, cy: 100, w: 196, h: 150}; // 우측 상단 광석 방 (2배 크기) — 유닛 1기가 광석을 공격해 캔다
 // 10단계 광석 (이름·색·컷 모양)
@@ -600,7 +600,7 @@ const PORTAL = { x: 80, y: 78, r: 34 }; // 강화 포털: 같은 유닛 5기를 
 const WAVE_TIME = 90, POKER_TIME = 60;
 const FINAL_ROUND = 80; // 이후는 헬모드
 const SUN_ROUND = 150;  // 🌞 아포칼립스 태양 강림 — 헬모드 최종장 (처치 시 헬모드 클리어)
-const ARENA = { x: 855, y: 255, r: 50 }; // 🏛️ 결투장: 광석방과 광산 사이 미니 콜로세움 — 전투 유닛 1기만 입장
+const ARENA = { x: 848, y: 272, r: 85 }; // 🏛️ 결투장: 로마 콜로세움 (×1.7 확장) — 전투 유닛 1기만 입장
 const DUEL_EVERY = 7;    // 도전자 주기 (보스 라운드와 겹치면 그 주는 휴장)
 // 도전자 체력: 몹HP가 아니라 "단일 유닛 DPS 성장"에 앵커 (몹HP는 유닛 수로 커버되는 곡선이라 배수로 쓰면 후반 도달 불가)
 // 실측(집중업글 단품): 스트레이트 DPS ≈ 69+3.2R → ×78초 = 스트레이트 풀타임 아슬아슬 / 풀하우스(보스판정 ×2) 26~36초 / 투페어 이하 135초+(불가능 벽)
@@ -1043,6 +1043,7 @@ function startWave() {
   if (em.instantGold) { const g = S.round * 30; S.gold += g; addFloat(HOUSE.x, HOUSE.y - 40, `🎁 +${g}G`, '#ffd54f', 2); }
   // 소환장 포탈에서 우르르 쏟아지듯 (약 2초 안에 전부 등장)
   S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0 };
+  if (S.duel) { logMsg('🏛️ 도전자: "시간 다 됐다. 다음에 보자." (퇴장)'); S.duel = null; } // 연장전(포커)까지 못 잡았으면 새 웨이브 시작에 퇴장
   if (S.round % DUEL_EVERY === 0 && !boss) { // 🏛️ 결투장 도전자 (보스 라운드와 겹치면 휴장)
     const dhp = duelHP(S.round);
     S.duel = { x: ARENA.x, y: ARENA.y - 2, hp: dhp, max: dhp, mat: matInfo(S.round).idx, phase: Math.random() * 6.28, hitT: 0, tauntT: 0, nextTaunt: 0, taunt: '' };
@@ -1092,7 +1093,7 @@ function spawnMonster(hp, isBoss, opt) {
 function speedBonus() { return S.timer > 1 ? Math.round(S.timer * (1 + S.round * 0.25)) : 0; }
 function endWave() {
   S.slotBombs = []; // 잭팟 폭격 잔탄이 다음 웨이브로 넘어가 엉뚱한 좌표에서 터지지 않게
-  if (S.duel) { logMsg('🏛️ 도전자: "오늘도 챔피언은 나다." (유유히 퇴장 — 패널티 없음)'); S.duel = null; } // 못 잡아도 그만인 보너스 이벤트
+  if (S.duel && S.timer <= 0) { logMsg('🏛️ 도전자: "오늘도 챔피언은 나다." (유유히 퇴장 — 패널티 없음)'); S.duel = null; } // 시간 소진 시에만 퇴장. 조기 전멸이면 결투는 포커 페이즈까지 이어진다 (유저 버그 리포트)
   const bossAlive = S.monsters.some(m => m.boss);
   const leak = S.monsters.length;
   if (bossAlive) {
@@ -1690,6 +1691,7 @@ function update(dt) {
     for (const u of S.units) {
       if (u.miner || u.item) continue;
       u.cool -= dt;
+      if (updateDuelFight(u)) continue; // 🏛️ 조기 전멸로 이어진 결투: 포커 페이즈에도 챔피언은 계속 싸운다
       // 광석 방 안이면 광석을 때린다 (정원 내 자격 유닛만). 광산 채굴은 광부 전담 — 전투 유닛은 안 캔다.
       if (!S.hunt.done && S.hunt.hp > 0 && isInRoom(u)) {
         if (u.oreSlot && u.cool <= 0 && !u.moving && inOreRange(u)) { u.cool = effCd(u); fireAtOre(u); } // 광석도 사거리 판정 (근접 무기는 붙어야 캔다)
@@ -1803,15 +1805,7 @@ function update(dt) {
       if (u.oreSlot && u.cool <= 0 && !u.moving && inOreRange(u)) { u.cool = effCd(u); fireAtOre(u); } // 광석도 사거리 판정 (근접 무기는 붙어야 캔다)
       continue;
     }
-    if (S.duel && u === S.champion) { // 🏛️ 결투: 챔피언은 도전자에게만 집중한다
-      const ddx = S.duel.x - u.x, ddy = S.duel.y - u.y, dd = Math.hypot(ddx, ddy);
-      if (dd > effRange(u)) { u.tx = S.duel.x - ddx / (dd || 1) * effRange(u) * 0.6; u.ty = S.duel.y - ddy / (dd || 1) * effRange(u) * 0.6; }
-      else {
-        u.tx = u.x; u.ty = u.y;
-        if (u.cool <= 0 && !u.moving) { u.cool = effCd(u); fireAtDuel(u); }
-      }
-      continue;
-    }
+    if (updateDuelFight(u)) continue; // 🏛️ 결투: 챔피언은 도전자에게만 집중 (웨이브·포커 공용)
     if (u.forceTarget && (u.forceTarget.dead || u.forceTarget.hp <= 0)) u.forceTarget = null;
     // A명령: 대상 집중 공격 (보스 저격용)
     if (u.forceTarget) {
@@ -2473,6 +2467,17 @@ function assignOreSlots() {
 // 방 안 유닛이 광석을 때린다 (몬스터 공격과 동일 방식, 무기에서 발사)
 // 🏛️ 결투장 전용 공격 — fireAtOre 패턴 재사용: 모든 무기가 단일 대상 판정 (스플래시 무의미 → 단일 특화의 무대)
 // 도전자는 '보스 판정': 저격총·풀하우스 라인(단검·쌍단검)의 보스 ×2가 그대로 통한다
+// 챔피언 결투 AI (웨이브·포커 페이즈 공용 — 조기 전멸 시 결투가 포커까지 이어지므로)
+function updateDuelFight(u) {
+  if (!S.duel || u !== S.champion) return false;
+  const ddx = S.duel.x - u.x, ddy = S.duel.y - u.y, dd = Math.hypot(ddx, ddy);
+  if (dd > effRange(u)) { u.tx = S.duel.x - ddx / (dd || 1) * effRange(u) * 0.6; u.ty = S.duel.y - ddy / (dd || 1) * effRange(u) * 0.6; }
+  else {
+    u.tx = u.x; u.ty = u.y;
+    if (u.cool <= 0 && !u.moving) { u.cool = effCd(u); fireAtDuel(u); }
+  }
+  return true;
+}
 function fireAtDuel(u) {
   const d = S.duel; if (!d) return;
   const crack = u.atk === 'sniper' || ((u.vis === 'sword' || u.vis === 'twin') && !u.shogun);
@@ -3011,9 +3016,12 @@ function drawHellCreep() {
 // 🌱 쉬움: 봄 소풍 — 파스텔 하늘 + 옅은 무지개 + 꽃밭 + 팔랑이는 나비
 function drawSpringscape() {
   const T = S.time;
-  const g = ctx.createLinearGradient(0, 0, 0, cv.height);
-  g.addColorStop(0, '#f2fbff'); g.addColorStop(0.5, '#ecfaea'); g.addColorStop(1, '#daf2c6');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  const art = sbGround(); // 🎨 아트 지면 (없으면 기존 파스텔)
+  if (!art) {
+    const g = ctx.createLinearGradient(0, 0, 0, cv.height);
+    g.addColorStop(0, '#f2fbff'); g.addColorStop(0.5, '#ecfaea'); g.addColorStop(1, '#daf2c6');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  }
   // 옅은 무지개 (좌상단 큰 호) — 끝자락은 하늘에 녹아들듯 옅어지며 빛 알갱이로 흩어진다
   const rbFade = Math.max(0, 1 - apocK() * 1.6); // 태양이 다가오면 무지개도 바랜다
   if (rbFade > 0.01) {
@@ -3053,15 +3061,15 @@ function drawSpringscape() {
     ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(170, 52, 9, 0, 6.28); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(167.5, 49.5, 3, 0, 6.28); ctx.fill();
   }
-  // 풀 (밝은 초록, 살랑)
+  // 풀 (밝은 초록, 살랑) — 아트 지면엔 이미 질감이 있어 생략
   ctx.strokeStyle = 'rgba(110,190,90,0.65)'; ctx.lineWidth = 1.3;
-  for (const [gx, gy] of GRASS_SPOTS) {
+  if (!art) for (const [gx, gy] of GRASS_SPOTS) {
     const sw = Math.sin(T * 1.6 + gx) * 1.2;
     for (const o of [-3, 0, 3]) { ctx.beginPath(); ctx.moveTo(gx + o, gy);
       ctx.quadraticCurveTo(gx + o + sw, gy - 5, gx + o * 0.6 + sw, gy - 9 - Math.abs(o)); ctx.stroke(); }
   }
   // 꽃 2배 (다양한 색)
-  const SPRING_FLOWERS = [[112,252,'#f06292'],[592,302,'#ba68c8'],[825,398,'#f06292'],[212,388,'#64b5f6'],[482,462,'#fff176'],[672,132,'#ff8a65'],[342,182,'#f8bbd0'],[882,332,'#aed581']];
+  const SPRING_FLOWERS = art ? [] : [[112,252,'#f06292'],[592,302,'#ba68c8'],[825,398,'#f06292'],[212,388,'#64b5f6'],[482,462,'#fff176'],[672,132,'#ff8a65'],[342,182,'#f8bbd0'],[882,332,'#aed581']];
   for (const [fx, fy, fc] of SPRING_FLOWERS) {
     const sw = Math.sin(T * 1.5 + fx) * 1.5;
     ctx.strokeStyle = 'rgba(110,190,90,0.65)';
@@ -3081,16 +3089,23 @@ function drawSpringscape() {
     ctx.beginPath(); ctx.ellipse(bx + 2.6 * flap, by - 1, 3 * flap, 2.2, 0.5, 0, 6.28); ctx.fill();
     ctx.fillStyle = '#5d4037'; ctx.fillRect(bx - 0.6, by - 2.4, 1.2, 4.4); // 몸통
   }
+  sbPhaseTint(skyPhase()); // 🌅 쉬움도 라운드 따라 저물어간다 (낮→노을→밤→붉은 달)
 }
 // 🔥 어려움: 폭풍 전야 — 회보라 하늘 + 흐르는 먹구름 + 눕는 풀·낙엽 + 멀리 번개 + 까마귀
 function drawStormscape() {
   const T = S.time, k = Math.min(1, S.round / 80); // 진행도: 갈수록 세계가 무너진다
   const period = 8 - 5 * k;                         // 번개 간격 8초 → 3초
   const lightning = ((T * 0.9 + 3) % period) < 0.14;
-  const g = ctx.createLinearGradient(0, 0, 0, cv.height);
-  g.addColorStop(0, lightning ? '#8f8da6' : '#7d7b93');
-  g.addColorStop(0.55, '#a39aa2'); g.addColorStop(1, '#bdb098');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  const art = sbGround(); // 🎨 아트 지면 + 폭풍 무드 틴트
+  if (!art) {
+    const g = ctx.createLinearGradient(0, 0, 0, cv.height);
+    g.addColorStop(0, lightning ? '#8f8da6' : '#7d7b93');
+    g.addColorStop(0.55, '#a39aa2'); g.addColorStop(1, '#bdb098');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  } else {
+    ctx.fillStyle = lightning ? 'rgba(143,141,166,0.42)' : 'rgba(112,108,135,0.42)';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+  }
   if (k > 0.05) { ctx.fillStyle = `rgba(28,26,44,${(0.22 * k).toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height); } // 점점 잿빛으로
   if (k > 0.8) { // 말기: 지평선에 스미는 붉은 기운 — 전쟁이 다가온다
     const rg = ctx.createLinearGradient(0, cv.height - 90, 0, cv.height);
@@ -3128,9 +3143,9 @@ function drawStormscape() {
       ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 5, ry + 13); ctx.stroke();
     }
   }
-  // 풀: 바람이 갈수록 세다
+  // 풀: 바람이 갈수록 세다 (아트 지면엔 생략)
   ctx.strokeStyle = 'rgba(120,130,80,0.6)'; ctx.lineWidth = 1.3;
-  for (const [gx, gy] of GRASS_SPOTS) {
+  if (!art) for (const [gx, gy] of GRASS_SPOTS) {
     const sw = 4.5 + 3 * k + Math.sin(T * (3.2 + k * 2) + gx) * 2.2;
     for (const o of [-3, 0, 3]) { ctx.beginPath(); ctx.moveTo(gx + o, gy);
       ctx.quadraticCurveTo(gx + o + sw * 0.7, gy - 4, gx + o * 0.4 + sw, gy - 7 - Math.abs(o) * 0.6); ctx.stroke(); }
@@ -3159,9 +3174,16 @@ function drawStormscape() {
 // 💀 지옥 난이도: 검붉은 하늘 + 일식 + 지평선 화염 + 일렁이는 불혀 + 떠오르는 불씨
 function drawHellscape() {
   const T = S.time, hk = Math.min(1, S.round / 80), hell2 = Math.max(0, Math.min(1, (S.round - FINAL_ROUND) / 40)); // 진행도 / 헬 심화
-  const g = ctx.createLinearGradient(0, 0, 0, cv.height);           // 검붉은 하늘 → 타는 대지 (갈수록 더 검게)
-  g.addColorStop(0, hell2 > 0 ? '#140609' : '#200d10'); g.addColorStop(0.5, '#48150f'); g.addColorStop(1, '#772812');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  const art = sbGround(); // 🎨 아트 지면 + 지옥 틴트 (탄 대지 질감이 비쳐 보인다)
+  if (!art) {
+    const g = ctx.createLinearGradient(0, 0, 0, cv.height);           // 검붉은 하늘 → 타는 대지 (갈수록 더 검게)
+    g.addColorStop(0, hell2 > 0 ? '#140609' : '#200d10'); g.addColorStop(0.5, '#48150f'); g.addColorStop(1, '#772812');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, cv.height);
+    g.addColorStop(0, hell2 > 0 ? 'rgba(20,6,9,0.78)' : 'rgba(32,13,16,0.72)'); g.addColorStop(0.5, 'rgba(72,21,15,0.6)'); g.addColorStop(1, 'rgba(119,40,18,0.5)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  }
   const hg = ctx.createLinearGradient(0, cv.height - 130, 0, cv.height); // 지평선 화염 글로우 (갈수록 강하게)
   hg.addColorStop(0, 'rgba(255,110,20,0)');
   hg.addColorStop(1, `rgba(255,120,25,${(0.22 + 0.15 * hk + 0.08 * Math.sin(T * 1.7)).toFixed(2)})`);
@@ -3203,12 +3225,15 @@ function drawBackdrop() {
   if (ph === 5) { drawHellscape(); return; }        // 💀 지옥: 아포칼립스 (이미 지옥이라 생지옥화 오버레이 불필요)
   if (DIFF_MUL === 1.4) { drawStormscape(); drawHellCreep(); return; } // 🔥 어려움: 폭풍 전야
   if (DIFF_MUL === 0.7) { drawSpringscape(); drawHellCreep(); return; } // 🌱 쉬움: 봄 소풍
-  const g = ctx.createLinearGradient(0, 0, 0, cv.height);
-  g.addColorStop(0, t.top); g.addColorStop(1, t.bot);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
-  // 풀 포기 (고정 위치, 바람에 살랑)
+  const art = sbGround(); // 🎨 아트 지면 (보통 난이도) — 시간대 무드는 아래 sbPhaseTint
+  if (!art) {
+    const g = ctx.createLinearGradient(0, 0, 0, cv.height);
+    g.addColorStop(0, t.top); g.addColorStop(1, t.bot);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  }
+  // 풀 포기 (고정 위치, 바람에 살랑) — 아트 지면엔 생략
   ctx.strokeStyle = t.grass; ctx.lineWidth = 1.3;
-  for (const [gx, gy] of GRASS_SPOTS) {
+  if (!art) for (const [gx, gy] of GRASS_SPOTS) {
     const sw = Math.sin(S.time * 1.6 + gx) * 1.2;
     for (const o of [-3, 0, 3]) {
       ctx.beginPath(); ctx.moveTo(gx + o, gy);
@@ -3216,8 +3241,8 @@ function drawBackdrop() {
       ctx.stroke();
     }
   }
-  // 꽃 (꽃잎 5장 + 노란 수술)
-  for (const [fx, fy, fc] of FLOWER_SPOTS) {
+  // 꽃 (꽃잎 5장 + 노란 수술) — 아트 지면엔 생략
+  for (const [fx, fy, fc] of (art ? [] : FLOWER_SPOTS)) {
     const sw = Math.sin(S.time * 1.5 + fx) * 1.5;
     ctx.strokeStyle = t.grass;
     ctx.beginPath(); ctx.moveTo(fx, fy + 10); ctx.quadraticCurveTo(fx + sw * 0.6, fy + 4, fx + sw, fy); ctx.stroke();
@@ -3266,25 +3291,77 @@ function drawBackdrop() {
       ctx.beginPath(); ctx.arc(sx + 1, sy - 4.5, 1.2, 0, Math.PI*2); ctx.fill();
     }
   }
+  if (art) sbPhaseTint(ph); // 🌅 시간대가 대지에도 내려앉는다
   drawHellCreep(); // 🔥 보통 난이도도 헬모드부터는 세계가 불탄다
 }
-// 🏛️ 결투장: 모래 바닥 + 돌기둥 아치 미니 콜로세움
+// 🏛️ 결투장: 로마 콜로세움 (¾ 원근) — 회색 석재, 뒤쪽 관중석 2단 아케이드, 일부 붕괴, 앞은 관전용 개방
 function drawArena() {
   const { x, y, r } = ARENA;
-  const sg = ctx.createRadialGradient(x, y + 6, 4, x, y + 6, r); // 모래 바닥 (원근 타원)
-  sg.addColorStop(0, '#e8d5a3'); sg.addColorStop(1, '#cdb27a');
-  ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(x, y + 6, r, r * 0.72, 0, 0, 6.28); ctx.fill();
-  ctx.strokeStyle = '#9a835a'; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(154,131,90,0.5)'; // 결투 서클 라인
-  ctx.beginPath(); ctx.ellipse(x, y + 4, r * 0.55, r * 0.38, 0, 0, 6.28); ctx.stroke();
-  for (let i = 0; i < 5; i++) { // 뒤쪽 반원 돌기둥 아치 5개
-    const a = Math.PI + (i + 0.5) * Math.PI / 5;
-    const px = x + Math.cos(a) * (r - 4), py = y + 6 + Math.sin(a) * (r * 0.72 - 3);
-    ctx.fillStyle = '#b5a284'; ctx.fillRect(px - 3.5, py - 16, 7, 16);       // 기둥
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
-    ctx.beginPath(); ctx.arc(px, py - 8, 2.6, Math.PI, 6.28); ctx.fill();     // 아치 그늘
-    ctx.fillStyle = '#c8b696'; ctx.fillRect(px - 5.5, py - 20.5, 11, 5);      // 상단 보
+  const RY = 0.58; // 타원 납작비 (원근)
+  const band = (rx, ry, a0, a1, h, fill) => { // 타원 호를 따라가는 '높이 있는 벽면' 밴드
+    ctx.fillStyle = fill; ctx.beginPath();
+    for (let a = a0; a <= a1 + 0.001; a += 0.06) ctx.lineTo(x + Math.cos(a) * rx, y + Math.sin(a) * ry - h);
+    for (let a = a1; a >= a0 - 0.001; a -= 0.06) ctx.lineTo(x + Math.cos(a) * rx, y + Math.sin(a) * ry);
+    ctx.closePath(); ctx.fill();
+  };
+  // ① 접지 그림자 + 모래 바닥 (살짝 회색빛 도는 모래)
+  ctx.fillStyle = 'rgba(40,50,30,0.25)';
+  ctx.beginPath(); ctx.ellipse(x + 5, y + r * 0.28, r * 1.12, r * RY * 1.12, 0, 0, 6.28); ctx.fill();
+  const sg = ctx.createRadialGradient(x, y + 4, 6, x, y + 4, r);
+  sg.addColorStop(0, '#d9d0bc'); sg.addColorStop(1, '#bfb6a0');
+  ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(x, y + 4, r * 0.94, r * RY * 0.94, 0, 0, 6.28); ctx.fill();
+  ctx.strokeStyle = 'rgba(110,106,96,0.55)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(x, y + 4, r * 0.94, r * RY * 0.94, 0, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(110,106,96,0.35)'; // 결투 서클
+  ctx.beginPath(); ctx.ellipse(x, y + 3, r * 0.42, r * RY * 0.42, 0, 0, 6.28); ctx.stroke();
+  ctx.fillStyle = 'rgba(120,112,98,0.4)'; // 모래 얼룩
+  for (let i = 0; i < 6; i++) { const a = i * 1.13, rr = r * (0.2 + (i % 3) * 0.2);
+    ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * rr, y + 4 + Math.sin(a) * rr * RY, 7, 3.5, a, 0, 6.28); ctx.fill(); }
+  // ② 뒤쪽 관중석 (상단 반원) — 안쪽 낮은 티어 → 좌석 계단 → 바깥 높은 티어 (붕괴 구간 제외)
+  const A0 = Math.PI + 0.12, A1 = 6.28 - 0.12;      // 뒤쪽 반원 범위
+  const RU0 = 5.35, RU1 = 5.95;                      // 💥 붕괴 구간 (우상단)
+  band(r * 0.88, r * RY * 0.88, A0, A1, 16, '#9d9a91');            // 안쪽 티어 벽면
+  ctx.strokeStyle = '#c2bfb6'; ctx.lineWidth = 3;                   // 안쪽 티어 윗선
+  ctx.beginPath(); ctx.ellipse(x, y - 16, r * 0.88, r * RY * 0.88, 0, A0, A1); ctx.stroke(); ctx.lineWidth = 1;
+  for (let k = 0; k < 3; k++) { // 좌석 계단 3열 (티어 사이 — 콜로세움의 층층 좌석)
+    const rr = r * (0.92 + k * 0.05), hh = 18 + k * 7;
+    ctx.strokeStyle = k % 2 ? 'rgba(200,197,188,0.75)' : 'rgba(160,157,148,0.75)'; ctx.lineWidth = 3.4;
+    ctx.beginPath(); ctx.ellipse(x, y - hh, rr, r * RY * (0.88 + k * 0.05), 0, A0 + 0.05, A1 - 0.05); ctx.stroke();
   }
+  ctx.lineWidth = 1;
+  // 바깥 티어(가장 높은 외벽): 붕괴 구간을 피해 두 조각으로
+  for (const [b0, b1] of [[A0, RU0], [RU1, A1]]) {
+    band(r * 1.06, r * RY * 1.06, b0, b1, 38, '#a6a49c');
+    ctx.strokeStyle = '#cbc8bf'; ctx.lineWidth = 3.4; // 외벽 윗선 (밝게)
+    ctx.beginPath(); ctx.ellipse(x, y - 38, r * 1.06, r * RY * 1.06, 0, b0, b1); ctx.stroke(); ctx.lineWidth = 1;
+    ctx.fillStyle = '#55534c'; // 아치 개구 아케이드
+    for (let a = b0 + 0.14; a < b1 - 0.1; a += 0.235) {
+      const ax = x + Math.cos(a) * r * 1.06, ay = y + Math.sin(a) * r * RY * 1.06;
+      ctx.beginPath(); ctx.arc(ax, ay - 24, 5.5, Math.PI, 0); ctx.fill(); ctx.fillRect(ax - 5.5, ay - 24, 11, 17);
+    }
+  }
+  // 💥 붕괴 구간: 낮게 무너진 벽 + 들쭉날쭉 단면 + 잔해 더미
+  band(r * 1.06, r * RY * 1.06, RU0, RU1, 12, '#8e8c84');
+  ctx.fillStyle = '#a6a49c';
+  for (let k = 0; k < 4; k++) { // 무너진 단면 블록 (계단식)
+    const a = RU0 + 0.07 + k * 0.13, bx = x + Math.cos(a) * r * 1.06, by = y + Math.sin(a) * r * RY * 1.06;
+    ctx.fillRect(bx - 4, by - 12 - k * 4, 8, 6 + k * 2);
+  }
+  for (let k = 0; k < 5; k++) { // 잔해 (굴러떨어진 돌)
+    const a = RU0 + 0.1 + k * 0.11, bx = x + Math.cos(a) * r * (1.1 + (k % 2) * 0.08), by = y + Math.sin(a) * r * RY * 1.15 + 6;
+    ctx.fillStyle = k % 2 ? '#9d9a91' : '#b5b2a9';
+    ctx.beginPath(); ctx.ellipse(bx, by, 5 + (k % 3) * 2, 3.5 + (k % 2), k, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = 'rgba(70,68,62,0.5)'; ctx.stroke();
+  }
+  // ③ 앞쪽(하단): 낮은 관람 난간만 — 싸움이 보이게 개방. 끊어진 기둥 잔해 하나
+  ctx.strokeStyle = '#8e8c84'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.ellipse(x, y + 2, r * 1.02, r * RY * 1.02, 0, 0.22, Math.PI - 0.22); ctx.stroke(); ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(203,200,191,0.8)'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.ellipse(x, y - 1, r * 1.02, r * RY * 1.02, 0, 0.22, Math.PI - 0.22); ctx.stroke(); ctx.lineWidth = 1;
+  const cbx = x - r * 0.98, cby = y + r * RY * 0.5; // 부러진 기둥 (좌하단)
+  ctx.fillStyle = '#a6a49c'; ctx.fillRect(cbx - 5, cby - 18, 10, 18);
+  ctx.fillStyle = '#c2bfb6'; ctx.beginPath(); ctx.ellipse(cbx, cby - 18, 5, 2.2, 0, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#9d9a91'; ctx.beginPath(); ctx.ellipse(cbx + 12, cby + 4, 7, 3, 0.4, 0, 6.28); ctx.fill(); // 쓰러진 기둥 조각
   if (S.duel) drawDuelist();
   else { // 빈 결투장: 흐릿한 검 두 자루 표식
     ctx.globalAlpha = 0.3; ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
@@ -5802,12 +5879,21 @@ function updateInfoPanel() {
     sel.filter(u => !u.hidden && !u.hero && !u.miner).forEach(u => byTier[u.tier] = (byTier[u.tier] || 0) + 1);
     const canFuse = Object.values(byTier).some(n => n >= 5);
     const commonPri = sel.every(u => u.priority === sel[0].priority) ? (sel[0].priority || 'near') : '';
+    // 🗡️ 풀하우스 라인 부대: 전원 쿨 준비됐을 때만 일제 발동 (1기라도 쿨타임이면 회색 비활성)
+    const skUnits = sel.filter(u => u.tier === 6 && !u.clone && !u.miner);
+    const skReady = skUnits.length > 0 && skUnits.every(u => (u.skillCd || 0) <= 0 && (u.skillT || 0) <= 0);
+    const skHTML = skUnits.length === 0 ? '' :
+      `<br><button id="skillAllBtn" class="shopBtn" ${skReady ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:${skReady ? '#c0392b' : '#999'};font-weight:bold">` +
+      (skReady ? `🗡️ 스킬 일제 발동! (${skUnits.length}기)` : `🗡️ 스킬 준비 중… (${skUnits.filter(u => (u.skillCd || 0) <= 0 && (u.skillT || 0) <= 0).length}/${skUnits.length}기)`) + `</button>`;
     el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>우클릭 이동 · A키+클릭 공격 지정` +
       (sel.some(u => !u.miner) ? priorityRow(commonPri) : '') +
+      skHTML +
       (canFuse ? `<br><span style="color:#8c5bff;font-weight:bold">🌀 같은 유닛 5기! 좌측 상단 포털로 이동시키면 강화!</span>` : '') +
       deselBtnHTML();
     wirePriorityButtons(el);
     wireDesel(el);
+    const gb = el.querySelector('#skillAllBtn');
+    if (gb) gb.onclick = () => { skUnits.forEach(u => activateSkill(u)); updateInfoPanel(); };
     return;
   }
   const u = sel[0];
@@ -5869,7 +5955,7 @@ function updateInfoPanel() {
     `공속: ${(u.spdBuff || 1) < 1
       ? `<b style="color:#00a3ff">${(1/effCd(u)).toFixed(1)}회/초</b> <span style="color:#00a3ff;font-size:10px">📯 +20%</span>`
       : `${(1/effCd(u)).toFixed(1)}회/초`} · 사거리: ${Math.round(effRange(u))}<br>` + // 콰르텟 버프·히든 페널티 반영된 실제 값
-    `💀 처치: <b>${u.kills || 0}</b>킬<br>` +
+    `💀 처치: <b id="ipKills">${u.kills || 0}</b>킬<br>` +
     `특성: ${traits.join(', ')}` +
     (u.miner ? '' : priorityRow(u.priority || 'near')) +
     (u.tier === 6 ? skillRow(u) : '') +
@@ -5933,15 +6019,44 @@ function ascendRow(u) {
   const have = ascendCandidates(def).length, ok = have >= def.n;
   return `<br><button id="ascBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:#ff6b9d;font-weight:bold">🩸 제물 승급 Lv.${lv + 1} — ${def.mat} <span style="font-size:11px;color:${ok ? '#66bb6a' : '#e57373'}">(제단 위 ${have}/${def.n})</span><br><span style="font-size:11px;color:#c9971a">효과: ${def.desc}${ok ? '' : ' · 제물을 제단 위로 옮기세요'}</span></button>`;
 }
-function skillRow(u) {
+function skillState(u) { // 스킬 버튼 라벨·활성 상태 (렌더 + 실시간 갱신 공용)
   const active = (u.skillT || 0) > 0, cd = u.skillCd || 0;
   const clones = u.super ? 5 : 3;
-  const ico = u.hero ? '🌀' : '🗡️', color = u.hero ? '#7e57c2' : '#c0392b';
+  const ico = u.hero ? '🌀' : '🗡️';
   const idle = u.hero ? `🌀 분신술 스킬 (5초 · ${clones}명 분신)` : '🗡️ 암살 스킬 (5초 · 최강 몹 급습 난도질)';
   const name = u.hero ? '분신술' : '암살';
-  const label = active ? `${ico} ${name} 중… ${u.skillT.toFixed(0)}초` : (cd > 0 ? `${ico} ${name} (재사용 ${cd.toFixed(0)}초)` : idle);
-  const dis = active || cd > 0 ? 'disabled' : '';
-  return `<br><button id="skillBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:${color};font-weight:bold">${label}</button>`;
+  return {
+    label: active ? `${ico} ${name} 중… ${u.skillT.toFixed(0)}초` : (cd > 0 ? `${ico} ${name} (재사용 ${cd.toFixed(0)}초)` : idle),
+    dis: active || cd > 0,
+  };
+}
+function skillRow(u) {
+  const st = skillState(u), color = u.hero ? '#7e57c2' : '#c0392b';
+  return `<br><button id="skillBtn" class="shopBtn" ${st.dis ? 'disabled' : ''} style="margin-top:6px;text-align:center;color:${color};font-weight:bold">${st.label}</button>`;
+}
+// 선택 유닛 정보의 실시간 값(킬 수·스킬 쿨) 갱신 — 전체 리렌더 없이 매 프레임 (유저: 킬수가 실시간으로 안 오름)
+function refreshInfoPanelLive() {
+  const el = document.getElementById('unitInfo');
+  if (!el || el.style.display === 'none') return;
+  const sel = S.units.filter(u => u.selected);
+  const k = document.getElementById('ipKills');
+  if (k && sel.length === 1) { const v = String(sel[0].kills || 0); if (k.textContent !== v) k.textContent = v; }
+  const sb = document.getElementById('skillBtn');
+  if (sb && sel.length === 1 && sel[0].tier === 6) {
+    const st = skillState(sel[0]);
+    if (sb.textContent !== st.label) sb.textContent = st.label;
+    if (sb.disabled !== st.dis) sb.disabled = st.dis;
+  }
+  const gb = document.getElementById('skillAllBtn');
+  if (gb && sel.length > 1) {
+    const sk = sel.filter(u => u.tier === 6 && !u.clone && !u.miner);
+    const ready = sk.filter(u => (u.skillCd || 0) <= 0 && (u.skillT || 0) <= 0).length;
+    const allReady = sk.length > 0 && ready === sk.length;
+    const label = allReady ? `🗡️ 스킬 일제 발동! (${sk.length}기)` : `🗡️ 스킬 준비 중… (${ready}/${sk.length}기)`;
+    if (gb.textContent !== label) gb.textContent = label;
+    if (gb.disabled !== !allReady) gb.disabled = !allReady;
+    gb.style.color = allReady ? '#c0392b' : '#999';
+  }
 }
 // ⏳ 시간술사: 시간 정지 (4초간 몬스터 스폰·타이머·이동 정지, 아군은 그대로 행동)
 function activateChrono(u) {
@@ -6738,6 +6853,7 @@ function updateHUD() {
 
   document.getElementById('tStage').textContent = stageInfo(S.round).name + (DIFF_NAME === '보통' ? '' : ` · ${DIFF_NAME === '지옥' ? '💀' : ''}${DIFF_NAME}`); // 재질명 옆에 난이도 상시 표시
   // 원형 시계: 시간이 흐를수록 빨강(전투)/보라(포커)가 시계방향으로 채워진다
+  refreshInfoPanelLive(); // 킬 수·스킬 쿨 실시간
   const clock = document.getElementById('clock');
   let frac = 0, col = '#e53935';
   if (S.phase === 'wave') {
@@ -6970,11 +7086,14 @@ function mtExtractArt() {
 }
 (function mtLoadArt() {
   const im = new Image();
-  im.onload = () => { MTART.img = im;
-    try { mtExtractArt(); MTART.ready = true; mtWorldBake = null; } // 다음 프레임에 이미지 기반으로 재베이크
-    catch (e) { console.error('art extract 실패 — 프로시저럴 폴백 유지', e); } };
+  im.onload = () => { MTART.img = im; mtWorldBake = null; sbWorldBake = null; }; // 추출은 첫 베이크 때 lazy (파싱·로드 시점 111ms 블록 방지 — Opus)
   im.src = 'assets/art2.png';
 })();
+function mtEnsureArt() { // 첫 사용 시 1회 추출. 실패(tainted 등) 시 ready=false 유지 → 프로시저럴 폴백
+  if (MTART.ready || !MTART.img) return MTART.ready;
+  try { mtExtractArt(); MTART.ready = true; } catch (e) { MTART.img = null; console.error('art extract 실패 — 프로시저럴 폴백', e); }
+  return MTART.ready;
+}
 // ── 🎨 페인터리 월드 베이크: 잔디 얼룩·데코(나무·바위·꽃·연못)·레인·광장을 로드 시 1회만 그려두고 매 프레임 drawImage 1번 (목업 아트 디렉션, 성능은 오히려 순증)
 let mtWorldBake = null;
 function mtNoDecor(x, y) { // 데코 배치 금지 구역 (건물·레인·광장·갓길·스폰존)
@@ -6984,16 +7103,20 @@ function mtNoDecor(x, y) { // 데코 배치 금지 구역 (건물·레인·광�
   for (const [ox, oy] of MT.ORIGIN) {
     if (x < ox || x > ox + 940 || y < oy || y > oy + 500) continue;
     const lx = x - ox, ly = y - oy;
-    if (Math.abs(lx - CX) < 165 && Math.abs(ly - CY) < 122) return true;  // 소환장
-    if (Math.abs(lx - ROOM.cx) < ROOM.w / 2 + 18 && Math.abs(ly - ROOM.cy) < ROOM.h / 2 + 18) return true; // 광석방
-    if (Math.abs(lx - HOUSE.x) < 66 && Math.abs(ly - HOUSE.y) < 70) return true;  // 성
-    if (Math.abs(lx - MINE_POS.x) < 76 && Math.abs(ly - MINE_POS.y) < 66) return true; // 광산
-    if (Math.hypot(lx - PORTAL.x, ly - PORTAL.y) < 58) return true;      // 포털
-    if (Math.abs(lx - ALTAR.x) < 48 && Math.abs(ly - ALTAR.y) < 60) return true;   // 제물대
-    if (Math.hypot(lx - ARENA.x, ly - ARENA.y) < 70) return true;        // 결투장
-    if (ly > 448) return true;                                            // 광부 갓길
-    if (Math.abs(lx - CX) < 150 && ly > CY + 112 && ly < CY + 200) return true; // 유닛 스폰열 (클램프 440 + 여유)
+    if (baseNoDecor(lx, ly)) return true;
   }
+  return false;
+}
+function baseNoDecor(lx, ly) { // 싱글맵(사분면 로컬) 데코 금지 — 건물·동선과 겹치지 않게 여유 넉넉히 (유저: 포털 앞 나무 겹침)
+  if (Math.abs(lx - CX) < 168 && Math.abs(ly - CY) < 126) return true;   // 소환장
+  if (Math.abs(lx - ROOM.cx) < ROOM.w / 2 + 26 && Math.abs(ly - ROOM.cy) < ROOM.h / 2 + 26) return true; // 광석방
+  if (Math.abs(lx - HOUSE.x) < 78 && Math.abs(ly - HOUSE.y) < 86) return true;   // 성
+  if (Math.abs(lx - MINE_POS.x) < 88 && Math.abs(ly - MINE_POS.y) < 80) return true; // 광산
+  if (Math.hypot(lx - PORTAL.x, ly - PORTAL.y) < 86) return true;        // 포털 (+팁 말풍선 영역)
+  if (Math.abs(lx - ALTAR.x) < 58 && Math.abs(ly - ALTAR.y) < 72) return true;   // 제물대
+  if (Math.hypot(lx - ARENA.x, ly - ARENA.y) < ARENA.r + 24) return true; // 결투장 (확장 크기 반영)
+  if (ly > 442) return true;                                              // 광부 갓길
+  if (Math.abs(lx - CX) < 152 && ly > CY + 110 && ly < CY + 200) return true; // 유닛 스폰열
   return false;
 }
 function mtBakeWorld() {
@@ -7047,7 +7170,7 @@ function mtPlazaFloor(rnd) { // 왕국 광장 바닥 + 계단 (베이크 공용)
   ctx.lineWidth = 1;
 }
 function mtBakeBody() {
-  if (MTART.ready) return mtBakeArt(); // 🎨 아트 에셋 로드됨 → 이미지 기반 베이크
+  if (mtEnsureArt()) return mtBakeArt(); // 🎨 아트 에셋 로드됨 → 이미지 기반 베이크 (추출은 여기서 lazy 1회)
   const rnd = mulberry32(20260801);
   // ① 잔디 바탕 + 큰 얼룩 (플랫 톤 4단 — 목업의 다층 잔디)
   ctx.fillStyle = '#97b654'; ctx.fillRect(0, 0, MT.W, MT.H);
@@ -7129,16 +7252,12 @@ function mtBakeBody() {
     if (!mtNoDecor(x, y)) pine(x, y, 20 + rnd() * 18);
   }
 }
-// 🎨 이미지 기반 베이크: art2.png에서 추출한 타일·스프라이트로 월드 조립 (베끼는 게 아니라 그 픽셀 그대로)
-function mtBakeArt() {
-  const rnd = mulberry32(20260801), sp = MTART.sp;
-  // ① 잔디: 격자 타일 + 페더 스탬프 폭탄 (이음새·반복감 은폐 — 회전·반전 변주)
-  const g = sp.grass;
-  for (let y = 0; y < MT.H; y += g.height) for (let x = 0; x < MT.W; x += g.width) ctx.drawImage(g, x, y);
+function mtGrassStamps(rnd, W, H, count) { // 잔디 페더 스탬프 (격자 이음새·반복감 은폐 — 회전·반전 변주)
+  const g = MTART.sp.grass;
   const stw = Math.min(300, g.width - 4, g.height - 4);
   const stamp = document.createElement('canvas'); stamp.width = stamp.height = stw;
   const sg2 = stamp.getContext('2d');
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < count; i++) {
     sg2.clearRect(0, 0, stw, stw);
     sg2.save(); sg2.translate(stw / 2, stw / 2); sg2.rotate((rnd() * 4 | 0) * 1.5708); sg2.scale(rnd() < 0.5 ? -1 : 1, 1);
     sg2.drawImage(g, rnd() * (g.width - stw), rnd() * (g.height - stw), stw, stw, -stw / 2, -stw / 2, stw, stw);
@@ -7147,8 +7266,56 @@ function mtBakeArt() {
     rad.addColorStop(0, 'rgba(0,0,0,1)'); rad.addColorStop(1, 'rgba(0,0,0,0)');
     sg2.globalCompositeOperation = 'destination-in'; sg2.fillStyle = rad; sg2.fillRect(0, 0, stw, stw);
     sg2.globalCompositeOperation = 'source-over';
-    ctx.drawImage(stamp, rnd() * MT.W - stw / 2, rnd() * MT.H - stw / 2);
+    ctx.drawImage(stamp, rnd() * W - stw / 2, rnd() * H - stw / 2);
   }
+}
+// ── 🎨 싱글맵 아트 지면 베이크 (940×500): 혼자하기 전 난이도 공용 바탕 — 시간대·난이도 무드는 위에 틴트로 (유저: 새 이미지 스타일 전면 적용)
+let sbWorldBake = null;
+function sbBake() {
+  if (sbWorldBake || !mtEnsureArt()) return sbWorldBake;
+  const c = document.createElement('canvas'); c.width = 940; c.height = 500;
+  sbWorldBake = c; // 실패해도 캐시 유지 (재시도 폭주 방지)
+  const old = ctx; ctx = c.getContext('2d');
+  try {
+    const rnd = mulberry32(729), sp = MTART.sp, g = sp.grass;
+    for (let y = 0; y < 500; y += g.height) for (let x = 0; x < 940; x += g.width) ctx.drawImage(g, x, y);
+    mtGrassStamps(rnd, 940, 500, 26);
+    drawMinerRoad();
+    const put = (n, tries, fn) => { let placed = 0;
+      for (let i = 0; i < tries && placed < n; i++) { const x = rnd() * 940, y = rnd() * 500; if (!baseNoDecor(x, y)) { fn(x, y); placed++; } } };
+    const put2 = (s, x, y, w) => { const h = w * s.height / s.width; ctx.drawImage(s, x - w / 2, y - h + h * 0.18, w, h); };
+    put(1, 200, (x, y) => put2(sp.pond, x, y, 88));
+    put(7, 500, (x, y) => put2(rnd() < 0.5 ? sp.rock1 : sp.rock2, x, y, 46 + rnd() * 16));
+    put(8, 500, (x, y) => put2(sp.bush, x, y, 42 + rnd() * 16));
+    put(12, 700, (x, y) => put2(sp.flower, x, y, 32 + rnd() * 12));
+    const pines = [sp.pine1, sp.pine2, sp.pine3];
+    put(9, 700, (x, y) => put2(pines[rnd() * 3 | 0], x, y, 46 + rnd() * 24));
+    for (let i = 0; i < 16; i++) { // 캔버스 가장자리 숲기운
+      const side = rnd() * 4 | 0, t = rnd();
+      const x = side < 2 ? t * 940 : side === 2 ? 10 + rnd() * 26 : 930 - rnd() * 26;
+      const y = side === 0 ? 8 + rnd() * 26 : side === 1 ? 496 - rnd() * 20 : t * 500;
+      if (!baseNoDecor(x, y)) put2(pines[rnd() * 3 | 0], x, y, 40 + rnd() * 20);
+    }
+  } finally { ctx = old; }
+  return sbWorldBake;
+}
+function sbGround() { // 싱글 배경 지면: 아트 베이크 1장 (없으면 false → 기존 경로)
+  const b = sbBake();
+  if (!b) return false;
+  ctx.drawImage(b, 0, 0);
+  return true;
+}
+function sbPhaseTint(ph) { // 시간대 앰비언트 — 라운드가 흐르면 대지도 함께 저물게 (유저: 계속 초록초록)
+  const t = ['', 'rgba(255,150,70,0.10)', 'rgba(28,48,105,0.22)', 'rgba(150,45,55,0.16)', 'rgba(115,25,20,0.20)'][ph];
+  if (t) { ctx.fillStyle = t; ctx.fillRect(0, 0, cv.width, cv.height); }
+}
+// 🎨 이미지 기반 베이크: art2.png에서 추출한 타일·스프라이트로 월드 조립 (베끼는 게 아니라 그 픽셀 그대로)
+function mtBakeArt() {
+  const rnd = mulberry32(20260801), sp = MTART.sp;
+  // ① 잔디: 격자 타일 + 페더 스탬프 폭탄 (이음새·반복감 은폐 — 회전·반전 변주)
+  const g = sp.grass;
+  for (let y = 0; y < MT.H; y += g.height) for (let x = 0; x < MT.W; x += g.width) ctx.drawImage(g, x, y);
+  mtGrassStamps(rnd, MT.W, MT.H, 80);
   // ② 레인: 흙길 타일 스탬프 (가로는 그대로, 세로는 90° 회전) + 파인 수로 오버레이
   const road = sp.road, rs = 190 / road.height, rw = road.width * rs;
   for (let x = -20; x < MT.W + 20; x += rw - 16) ctx.drawImage(road, x, 565 - 95, rw, 190);
@@ -7160,7 +7327,7 @@ function mtBakeArt() {
   // ③ 광장 바닥 + 갓길 + 중앙 성 스프라이트
   mtPlazaFloor(rnd);
   for (const [ox, oy] of MT.ORIGIN) { ctx.save(); ctx.translate(ox, oy); drawMinerRoad(); ctx.restore(); }
-  const cs = sp.castle, csw = 265, csh = csw * cs.height / cs.width;
+  const cs = sp.castle, csw = 200, csh = csw * cs.height / cs.width; // 성곽 링(r128) 안에 들어가는 크기 — 물리(8섹터 개구)는 링이 담당 (Opus 정합)
   ctx.drawImage(cs, MT.KING.x - csw / 2, MT.KING.y - csh / 2 - 4, csw, csh);
   // ④ 게이트 스프라이트 4곳 (입구가 성 방향을 보게 회전)
   const gt = sp.gate, gw2 = 120, gh2 = gw2 * gt.height / gt.width;
@@ -7169,20 +7336,19 @@ function mtBakeArt() {
     ctx.save(); ctx.translate(gx2, gy2); ctx.rotate(ga);
     ctx.drawImage(gt, -gw2 / 2, -gh2 / 2, gw2, gh2); ctx.restore();
   }
-  // ⑤ 사분면 시설 스프라이트: 결투장·광산·소환장 울타리 (라이브 프로시저럴 대체)
-  const ar = sp.arena, arw = 132, arh = arw * ar.height / ar.width;
+  // ⑤ 사분면 시설 스프라이트: 광산·소환장 울타리 (결투장은 로마 콜로세움 프로시저럴이 담당 — 유저 지정 디자인)
   const mn = sp.mine, mnw = 120, mnh = mnw * mn.height / mn.width;
   const fc = sp.fence, fch = 30, fcw = fch * fc.width / fc.height; // 울타리 조각 (높이 30 기준)
+  const step = Math.max(8, fcw - 10); // 스텝 하한 — 세로로 긴 에셋으로 교체돼도 무한 루프 불가 (Opus)
   for (const [ox, oy] of MT.ORIGIN) {
-    ctx.drawImage(ar, ox + ARENA.x - arw / 2, oy + ARENA.y - arh / 2 - 4, arw, arh);
     ctx.drawImage(mn, ox + MINE_POS.x - mnw / 2, oy + MINE_POS.y - mnh / 2 - 12, mnw, mnh);
     const px0 = ox + CX - PEN.w / 2 - 8, px1 = ox + CX + PEN.w / 2 + 8;
     const py0 = oy + CY - PEN.h / 2 - 8, py1 = oy + CY + PEN.h / 2 + 8;
-    for (let x = px0; x < px1 - 10; x += fcw - 10) { // 상·하변
+    for (let x = px0; x < px1 - 10; x += step) { // 상·하변
       ctx.drawImage(fc, x, py0 - fch + 6, fcw, fch);
       ctx.drawImage(fc, x, py1 - 8, fcw, fch);
     }
-    for (let y = py0 + 6; y < py1 - 16; y += fcw - 10) { // 좌·우변 (90° 회전)
+    for (let y = py0 + 6; y < py1 - 16; y += step) { // 좌·우변 (90° 회전)
       ctx.save(); ctx.translate(px0 + 2, y + fcw / 2); ctx.rotate(Math.PI / 2); ctx.drawImage(fc, -fcw / 2, -fch / 2, fcw, fch); ctx.restore();
       ctx.save(); ctx.translate(px1 - 2, y + fcw / 2); ctx.rotate(Math.PI / 2); ctx.drawImage(fc, -fcw / 2, -fch / 2, fcw, fch); ctx.restore();
     }
@@ -7203,13 +7369,6 @@ function mtBakeArt() {
     const y = side === 0 ? 14 + rnd() * 44 : side === 1 ? MT.H - 14 - rnd() * 44 : t * MT.H;
     if (!mtNoDecor(x, y)) draw(pines[rnd() * 3 | 0], x, y, 46 + rnd() * 26);
   }
-}
-function mtKingdomLive() { // 아트 모드: 성은 베이크 스프라이트 — 라이브는 공유 HP·라벨만
-  const { x, y } = MT.KING;
-  ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('❤️❤️❤️❤️❤️', x, y - 128);
-  ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#5d4a80';
-  ctx.fillText('🏰 왕국 — 같이 지킨다', x, y + 142); ctx.textAlign = 'left';
 }
 let mtPats = null; // 질감 패턴 캐시 (돌길·벽돌·석판)
 function mtPatterns() {
@@ -7358,9 +7517,8 @@ function mtGate(x, y, i) { // 게이트: 석재 프레임 + 마계 소용돌이 
   ctx.beginPath(); ctx.arc(0, 8, 13 + Math.sin(MT.time * 2) * 3, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); ctx.lineWidth = 1;
   ctx.restore();
 }
-function mtKingdom(P) { // 중앙 왕국 (¾ 시점): 성곽 + 전면 벽·지붕이 보이는 킵 + 원기둥 타워 (광장 바닥·계단은 베이크에)
+function mtKingdomRing() { // 성곽 링 (물리 8섹터 개구와 정합) — 프로시저럴·아트 모드 공용
   const { x, y } = MT.KING;
-  // ── 성곽 링: 레인 4곳(±0.28) + 대각 계단 4곳(±0.24) 개구 — 벽 세그먼트가 '벽'으로 읽히게 개구는 좁게, 물리(±0.3)는 살짝 관대하게
   ctx.strokeStyle = '#8d8478'; ctx.lineWidth = 8;
   for (const [a0, a1] of [[Math.PI + 0.28, 3.927 - 0.24], [3.927 + 0.24, Math.PI * 1.5 - 0.28], [Math.PI * 1.5 + 0.28, 5.498 - 0.24], [5.498 + 0.24, 6.28 - 0.28]]) {
     ctx.beginPath(); ctx.arc(x, y, 128, a0, a1); ctx.stroke();
@@ -7377,6 +7535,18 @@ function mtKingdom(P) { // 중앙 왕국 (¾ 시점): 성곽 + 전면 벽·지�
     ctx.fillStyle = '#8d8478'; // 총안 이빨
     for (let a = a0 + 0.06; a < a1; a += 0.15) ctx.fillRect(x + Math.cos(a) * 128 - 3, y + Math.sin(a) * 128 - 7, 6, 7);
   }
+}
+function mtKingdomArt() { // 🎨 아트 모드: 킵 = 베이크 스프라이트, 링·HP·라벨만 라이브 (성곽 물리와 정합 — Opus)
+  mtKingdomRing();
+  const { x, y } = MT.KING;
+  ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('❤️❤️❤️❤️❤️', x, y - 128);
+  ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#5d4a80';
+  ctx.fillText('🏰 왕국 — 같이 지킨다', x, y + 142); ctx.textAlign = 'left';
+}
+function mtKingdom(P) { // 프로시저럴 모드: 링 + ¾ 킵·타워 전체
+  mtKingdomRing();
+  const { x, y } = MT.KING;
   // ── 킵: 전면 벽(벽돌 면) + 지붕면 + 그림자 (¾ 시점)
   ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(x + 8, y + 62, 72, 13, 0, 0, 6.28); ctx.fill();
   ctx.fillStyle = P.brick; ctx.fillRect(x - 56, y - 30, 112, 88); // 전면 벽 (높이감의 본체)
@@ -7548,12 +7718,18 @@ function drawMapTest() {
   const A = MTART.ready; // 🎨 아트 모드: 결투장·광산·울타리·게이트·성은 베이크 스프라이트가 대체
   MT.ORIGIN.forEach(([ox, oy]) => { // 사분면 기지 = 현 싱글맵 건물 전부 (컬링)
     if (ox > vx1 || oy > vy1 || ox + 940 < vx0 || oy + 500 < vy0) return;
-    ctx.save(); ctx.translate(ox, oy); // 광부 갓길은 베이크에 포함됨
-    drawCastle(); if (!A) drawMine(); drawOreRoom(); if (!A) drawBarrack(); drawEnemyPortal(); drawPortal(); drawAltar(); if (!A) drawArena();
+    ctx.save(); ctx.translate(ox, oy); // 광부 갓길은 베이크에 포함됨. 결투장은 항상 로마 콜로세움 프로시저럴
+    drawCastle(); if (!A) drawMine(); drawOreRoom(); if (!A) drawBarrack(); drawEnemyPortal(); drawPortal(); drawAltar(); drawArena();
+    if (A) { // 스프라이트로 대체된 시설의 라벨 유지 (Opus: 라벨 유실)
+      ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(120,60,130,0.9)'; ctx.fillText('👹 소환장', CX, CY - PEN.h / 2 - 32);
+      ctx.fillStyle = '#7a6a52'; ctx.font = 'bold 11px sans-serif'; ctx.fillText(`⛏️ ${S.mineLayer}단계`, MINE_POS.x, MINE_POS.y - 62);
+      ctx.textAlign = 'left';
+    }
     ctx.restore();
   });
   if (!A) { mtGate(1005, 26, 0); mtGate(1984, 565, 1); mtGate(1005, 1104, 2); mtGate(26, 565, 3); }
-  if (A) mtKingdomLive(); else mtKingdom(P);
+  if (A) mtKingdomArt(); else mtKingdom(P);
   for (const b of MT.BRIDGES) mtBridgeShadow(b);
   mtRaiderDraw(MT.raider); // 데모 개체 — 다리 밑을 지나며 가려진다
   mtBossDraw(MT.boss);
