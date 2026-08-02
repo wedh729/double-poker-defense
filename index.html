@@ -223,6 +223,17 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 40px rgba(40,25,10,0.28), 0 6px 22px rgba(40,30,20,0.25);
     padding: 16px 16px 18px; text-align: center; }
   #pokerPanel.up { transform: translateY(0); }
+  /* 포커 중 맵을 누르면 판이 내려가고 이 바만 남는다 (덮어둔 표시) — 누르면 다시 올라옴 */
+  #pokerHandle { position: absolute; left: 50%; bottom: 0; z-index: 8;
+    transform: translate(-50%, 100%); transition: transform 0.34s cubic-bezier(0.22, 0.9, 0.3, 1), filter 0.15s;
+    height: 30px; padding: 0 22px; cursor: pointer; font-family: inherit;
+    background: linear-gradient(180deg, #8a6848 0%, #5b4229 100%);
+    border: 1px solid #4e3a26; border-bottom: none; border-radius: 13px 13px 0 0;
+    color: #ffdca8; font-size: 12.5px; font-weight: bold; letter-spacing: 0.4px;
+    box-shadow: 0 -3px 16px rgba(40,30,20,0.4), inset 0 1px 0 rgba(255,235,200,0.22); }
+  #pokerHandle.show { transform: translate(-50%, 0); }
+  #pokerHandle:hover { filter: brightness(1.15); }
+  .mobile #pokerHandle { display: none; } /* 모바일은 탭 전환이라 해당 없음 */
   #pokerPanel::before { content: ''; position: absolute; inset: 7px; border: 1.5px solid rgba(235,205,150,0.30); border-radius: 13px; pointer-events: none; }
   #pokerPanel::after { content: '♠ ♥ ♦ ♣'; position: absolute; right: 18px; bottom: 8px; font-size: 15px; letter-spacing: 5px; color: rgba(255,230,180,0.14); pointer-events: none; }
   #pokerBanner { font-size: 13.5px; margin-bottom: 4px; min-height: 20px; color: #ecdcbe; letter-spacing: 0.2px; position: relative; }
@@ -361,7 +372,7 @@
 
   /* 🏗️ 미리보기 모드: 실게임 HUD를 통째로 숨긴다 (인라인 style이 아니라 클래스 —
      reset()이 클래스를 걷어내므로 리로드가 아닌 경로로 빠져나가도 자동 복원) */
-  body.mtMode #pokerPanel, body.mtMode #toolbar, body.mtMode #clock,
+  body.mtMode #pokerPanel, body.mtMode #pokerHandle, body.mtMode #toolbar, body.mtMode #clock,
   body.mtMode #chipBar, body.mtMode #log { display: none; }
 
   /* 모바일 탭 분리: 전투 탭에선 포커/로그 숨김, 포커 탭에선 캔버스·전투 HUD 숨김
@@ -422,6 +433,8 @@
       <button id="summonBtn">유닛 소환!</button>
       <div id="handResult"></div>
     </div>
+    <!-- 포커판을 잠시 내렸을 때 남는 얇은 바 — 누르면 다시 올라온다 -->
+    <button id="pokerHandle" title="포커판 다시 열기">🃏 포커판 ▲</button>
   </div>
   <div id="toolbar">
     <div class="tbGroup" title="게임 상점">
@@ -655,7 +668,9 @@ document.getElementById('mtPoker').onclick = () => setMobTab('poker');
 
 // ── 포커 패널 슬라이드 (데스크톱): 포커 페이즈에만 캔버스 위로 올라온다.
 //    전투 중엔 내려가서 그 공간이 통째로 게임 화면 (모바일은 탭 전환이라 CSS로 무력화)
-let pokerSlidePx = 0, pokerPanelUp = false;
+const HANDLE_H = 30; // #pokerHandle 높이
+let pokerSlidePx = 0, pokerPanelUp = false, pokerHandleOn = false;
+let pokerPeek = false; // 포커 중 맵을 건드려 판을 잠시 내려둔 상태 (유닛 배치용)
 function syncPokerPanel() {
   if (IS_MOBILE) return; // 모바일은 탭 전환(CSS position:static)이라 슬라이드 자체가 없다 — 레이아웃 측정도 낭비
   const p = document.getElementById('pokerPanel');
@@ -667,14 +682,28 @@ function syncPokerPanel() {
     p.style.setProperty('--slide', (h + 16) + 'px');
     if (pokerPanelUp) setPanelClearance(h); // 올라와 있는 중에 높이가 변하면 하단 UI 회피 높이도 같이
   }
-  const up = S.phase === 'poker' && !S.mapTest;
+  const inPoker = S.phase === 'poker' && !S.mapTest;
+  const up = inPoker && !pokerPeek;
   if (pokerPanelUp !== up) {
     pokerPanelUp = up;
     p.classList.toggle('up', up);
-    setPanelClearance(up ? h : 0); // 패널이 덮는 만큼 유닛정보·오브젝트정보·카지노를 위로 밀어 올린다
+    // 패널(또는 내렸을 때의 얇은 바)이 덮는 만큼 유닛정보·오브젝트정보·카지노를 위로 밀어 올린다
+    setPanelClearance(up ? h : (inPoker ? HANDLE_H : 0));
+  }
+  const handle = inPoker && pokerPeek;
+  if (pokerHandleOn !== handle) {
+    pokerHandleOn = handle;
+    document.getElementById('pokerHandle').classList.toggle('show', handle);
+    if (!up) setPanelClearance(handle ? HANDLE_H : 0);
   }
 }
+// 포커 중 맵을 건드리면 포커판을 잠시 내려 시야·배치 공간을 준다 (얇은 바로 다시 열 수 있음)
+function pokerPeekOnMapUse() {
+  if (IS_MOBILE || pokerPeek || S.mapTest || S.phase !== 'poker') return;
+  pokerPeek = true; syncPokerPanel();
+}
 function setPanelClearance(px) { document.documentElement.style.setProperty('--panelH', Math.round(px) + 'px'); }
+document.getElementById('pokerHandle').onclick = () => { pokerPeek = false; syncPokerPanel(); };
 // ── 게임 화면 최대화: 캔버스 밖 UI(제목·상태바·툴바·로그) 높이를 실측해 CSS에 넘긴다
 //    → #wrap의 max-width가 남는 세로만큼만 가로를 키운다 (비율 940:500 유지)
 function fitGameSize() {
@@ -804,6 +833,7 @@ function newDeck(salt) {
 }
 function startPoker() {
   S.phase = 'poker';
+  pokerPeek = false; // 새 포커판은 항상 올라온 상태로 시작
   S.pokerTimer = POKER_TIME;
   S.roomVirgin = true; // 🥚 라운드마다 광석방 첫 입장 기록 리셋
   rollEvent(); // 다음 전투 이벤트를 포커 시간에 미리 알린다
@@ -5822,6 +5852,7 @@ function mpos(e) {
   return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height };
 }
 function pressStart(x, y) {
+  pokerPeekOnMapUse(); // 포커 중 맵을 누르면 포커판이 먼저 비켜선다 (클릭 자체는 그대로 처리)
   drag = { x0: x, y0: y, x1: x, y1: y, moved: false };
 }
 function pressMove(x, y) {
@@ -5989,6 +6020,7 @@ function issueMove(px, py) {
 cv.addEventListener('contextmenu', e => {
   e.preventDefault();
   if (attackMode) { setAttackMode(false); return; } // 우클릭 = 어택 모드 취소
+  pokerPeekOnMapUse(); // 우클릭 이동도 맵 조작 — 포커판을 내린다
   const mp = mpos(e);
   issueMove(mp.x, mp.y);
 });
