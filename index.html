@@ -666,13 +666,8 @@ const PORTAL = { x: 80, y: 78, r: 34 }; // 강화 포털: 같은 유닛 5기를 
 const WAVE_TIME = 90, POKER_TIME = 60;
 const FINAL_ROUND = 80; // 이후는 헬모드
 const SUN_ROUND = 150;  // 🌞 아포칼립스 태양 강림 — 헬모드 최종장 (처치 시 헬모드 클리어)
-const ARENA = { x: 838, y: 278, r: 85 }; // 🏛️ 결투장: 로마 콜로세움 (×1.7) — 우측 잘림·광석방 밀착 없게 (838,278). 전투 유닛 1기만 입장
-const ARENA_GATE_A = Math.PI / 2, ARENA_GATE_W = 0.42; // 남쪽(아래) 계단 입구 — 이 각도로만 출입
-function arenaGateOpen(dx, dy) { // 중심 기준 방향이 계단 섹터 안인가
-  let d = Math.atan2(dy, dx) - ARENA_GATE_A;
-  while (d > Math.PI) d -= 6.283185; while (d < -Math.PI) d += 6.283185;
-  return Math.abs(d) < ARENA_GATE_W;
-}
+const ARENA = { x: 838, y: 278, r: 85 }; // 🏛️ 결투장: 로마 콜로세움 (×1.7) — 우측 잘림·광석방 밀착 없게 (838,278)
+// 벽·계단 없음: 어느 방향에서든 걸어 들어간다 (예전 남쪽 계단 전용 입구는 벽에 끼는 버그로 폐기)
 const DUEL_EVERY = 7;    // 도전자 주기 (보스 라운드와 겹치면 그 주는 휴장)
 // 도전자 체력: 몹HP가 아니라 "단일 유닛 DPS 성장"에 앵커 (몹HP는 유닛 수로 커버되는 곡선이라 배수로 쓰면 후반 도달 불가)
 // 실측(집중업글 단품): 스트레이트 DPS ≈ 69+3.2R → ×78초 = 스트레이트 풀타임 아슬아슬 / 풀하우스(보스판정 ×2) 26~36초 / 투페어 이하 135초+(불가능 벽)
@@ -1743,20 +1738,17 @@ function update(dt) {
   for (const u of U) { pushOutOfPen(u); blockRoomWalls(u); if (isInRoom(u) && u.x > ORE_LINE) u.x = ORE_LINE; }
   // 🏛️ 결투장: 전투 유닛 1기만 (챔피언). 두 번째부터는 보이지 않는 벽에 막힌다. 광부·아이템 유닛은 무관
   if (S.champion && (S.champion.miner || S.champion.item || !U.includes(S.champion) || Math.hypot(S.champion.x - ARENA.x, S.champion.y - ARENA.y) > ARENA.r + 12)) S.champion = null;
+  // 🏛️ 콜로세움: 벽·계단 없음 — 어느 방향에서든 그냥 걸어 들어간다 (유저: 벽에 끼는 버그).
+  //    남은 제약은 '결투 중 1기만'뿐이고, 그것도 밀어내는 대신 가장자리에서 멈춰 세워 진동하지 않게 한다.
   for (const u of U) {
     if (u.miner || u.item) continue;
     const adx = u.x - ARENA.x, ady = u.y - ARENA.y, ad = Math.hypot(adx, ady);
-    // 🏛️ 콜로세움 벽: 남쪽 계단으로만 출입 (다른 각도로는 벽에 막힌다)
-    const pdx = (u.px != null ? u.px : u.x) - ARENA.x, pdy = (u.py != null ? u.py : u.y) - ARENA.y;
-    const wasOut = Math.hypot(pdx, pdy) >= ARENA.r - 1;
-    if (ad < ARENA.r - 1 && wasOut && !arenaGateOpen(adx, ady)) { // 밖 → 안 진입인데 계단이 아니면 되돌림
-      const k = (ARENA.r + 1) / (ad || 1); u.x = ARENA.x + adx * k; u.y = ARENA.y + ady * k;
-      u.tx = u.x; u.ty = u.y; u.moving = false;
-      continue;
-    }
     if (ad < ARENA.r) {
       if (!S.champion || S.champion === u) S.champion = u;
-      else if (S.duel) { const k = (ARENA.r + 2) / (ad || 1); u.x = ARENA.x + adx * k; u.y = ARENA.y + ady * k; } // 결투 중엔 1기만 — 평시엔 자유 통행
+      else if (S.duel) { // 이미 챔피언이 싸우는 중 — 두 번째 유닛은 링 밖에 세운다 (목표까지 지워야 안 떤다)
+        const k = (ARENA.r + 2) / (ad || 1); u.x = ARENA.x + adx * k; u.y = ARENA.y + ady * k;
+        u.tx = u.x; u.ty = u.y; u.moving = false;
+      }
     }
   }
   // 재정착: 목표 8px 이내면 현재 위치를 목표로 스냅 — 밀려난 유닛이 되돌아가려고 미세 진동하는 것 방지
@@ -2200,7 +2192,9 @@ function update(dt) {
     return true;
   });
   if (newborns.length) S.monsters = S.monsters.concat(newborns);
-  if (S.timer <= 0 || (q.left === 0 && q.bossLeft === 0 && S.monsters.length === 0)) endWave();
+  // 조기 종료는 '소환장이 비었고 결투도 끝났을 때'만. 도전자가 남아 있으면 라운드는 계속된다
+  // (유저: 소환장 몹을 다 잡아도 콜로세움에 남아 있으면 라운드가 끝나면 안 된다)
+  if (S.timer <= 0 || (q.left === 0 && q.bossLeft === 0 && S.monsters.length === 0 && !S.duel)) endWave();
 }
 
 // 데미지 적용: 쉴드가 있으면 쉴드부터 깎고, 넘치면 체력으로 (모든 공격이 이 함수를 거침)
@@ -3446,36 +3440,14 @@ function drawBackdrop() {
   if (art) sbPhaseTint(ph); // 🌅 시간대가 대지에도 내려앉는다
   drawHellCreep(); // 🔥 보통 난이도도 헬모드부터는 세계가 불탄다
 }
-// 🏛️ 콜로세움 남쪽 진입 계단 — 벽이 끊긴 입구 + 아래로 내려가는 3단 돌계단
-function drawArenaStairs(x, y, r) {
-  const gy = y + r * 0.62;                       // 입구 중심 (아래쪽)
-  const halfW = Math.sin(ARENA_GATE_W) * r * 1.05;
-  ctx.save();
-  ctx.fillStyle = 'rgba(35,28,18,0.28)';         // 입구 그늘 (벽이 끊긴 자리)
-  ctx.beginPath(); ctx.ellipse(x, gy - 6, halfW * 0.92, 12, 0, 0, 6.28); ctx.fill();
-  for (let i = 0; i < 3; i++) {                  // 돌계단 3단 (아래로 갈수록 넓게 — 원근)
-    const w = halfW * (0.78 + i * 0.16), yy = gy + i * 9;
-    ctx.fillStyle = ['#cfc8b8', '#c2bbaa', '#b4ad9c'][i];
-    roundRect(x - w, yy, w * 2, 9, 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(90,84,70,0.55)'; ctx.lineWidth = 1;
-    roundRect(x - w, yy, w * 2, 9, 2); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(x - w + 2, yy, w * 2 - 4, 2); // 단 윗면 하이라이트
-  }
-  ctx.fillStyle = '#9a9384';                     // 계단 양옆 기둥
-  for (const s of [-1, 1]) { const px2 = x + s * (halfW * 1.16);
-    ctx.fillRect(px2 - 5, gy - 16, 10, 26);
-    ctx.fillStyle = '#b8b1a1'; ctx.fillRect(px2 - 6, gy - 20, 12, 5); ctx.fillStyle = '#9a9384'; }
-  ctx.restore();
-}
 // 🏛️ 결투장: 로마 콜로세움 (¾ 원근) — 회색 석재, 뒤쪽 관중석 2단 아케이드, 일부 붕괴, 앞은 관전용 개방
 function drawArena() {
   const { x, y, r } = ARENA;
   const as = artSp('arena');
-  if (as) { // 🎨 원형 결투장 에셋 + 남쪽 진입 계단 (여기로만 들어갈 수 있다)
+  if (as) { // 🎨 원형 결투장 에셋 (계단 없음 — 어디로든 들어간다)
     ctx.fillStyle = 'rgba(40,50,30,0.22)';
     ctx.beginPath(); ctx.ellipse(x + 4, y + r * 0.5, r * 1.02, r * 0.34, 0, 0, 6.28); ctx.fill();
     artDraw(as, x, y, r * 2.25);
-    drawArenaStairs(x, y, r);
     if (S.duel) drawDuelist();
     return;
   }
