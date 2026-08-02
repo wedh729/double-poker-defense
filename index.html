@@ -776,8 +776,19 @@ function splat(x, y, c, big) {
 
 // ==================== 상태 ====================
 let S;
-function reset() {
+// 판을 넘어 살아남는 UI/입력 전역을 초기화 — S만 새로 만들면 이것들이 다음 판에 새어 들어간다.
+// (예: A키 어택 모드를 켠 채 '다시하기' → 새 판 첫 클릭이 선택이 아니라 공격 지정이 된다)
+function resetTransientUI() {
   document.body.classList.remove('mtMode'); // 미리보기에서 다시하기로 빠져나와도 실게임 HUD가 되살아나게
+  if (typeof openShop !== 'undefined' && openShop && S) closeShop(); // 상점이 열린 채 재시작되면 토글 상태가 뒤집힌다
+  setAttackMode(false);                     // 어택 모드 + 커서 원복
+  drag = null;                              // 드래그 잔재 (다음 mouseup이 엉뚱한 부대지정을 하지 않게)
+  clearTimeout(longPressTimer); longPressFired = false; lastTapTime = 0; lastTapPos = null; // 모바일 롱프레스/더블탭
+  mutter = null; mutterT = 22;              // 이전 판 유닛을 가리키던 말풍선 (유령 말풍선 방지)
+  if (S) hideObjInfo();                     // 남아 있던 건물/몬스터 정보 팝업 (hideObjInfo가 S를 만지므로 부팅 시엔 건너뜀)
+}
+function reset() {
+  resetTransientUI();
   S = {
     phase: 'poker', round: 1, life: 20, gold: 120,
     minerCost: 80, chips: 0, event: null, eventMods: null,
