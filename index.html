@@ -7233,7 +7233,12 @@ const MT = { // 월드 지오메트리는 mtSetup(인원)이 채운다 (4인 = �
   MM: { w: 190, h: 107, x: 940 - 198, y: 500 - 115 }, // 미니맵 (우하단)
   cam: { x: 0, y: 0 }, keys: {}, mouse: { x: 470, y: 250, in: false },
   mmDrag: false, drag: null, time: 0, effects: [], raider: null, boss: null,
+  zoom: 1, pinch: null, // 🔍 줌 (PC 휠 / 모바일 두 손가락) — 넓은 멀티 월드를 한눈에 보거나 바짝 붙어 조작
 };
+const ZMIN = 0.25, ZMAX = 2.2; // 0.25 = 정사각 월드(1968²) 세로가 화면에 딱 들어오는 배율 — 전체 전황 조망용
+// 화면(캔버스 940×500)이 담는 '월드 크기' — 줌에 반비례. 카메라 클램프·컬링·미니맵 사각이 전부 이걸 쓴다
+function mtViewW() { return 940 / MT.zoom; }
+function mtViewH() { return 500 / MT.zoom; }
 const QW = 940, QH = 500; // 사분면(플레이어 기지) = 싱글맵 한 장
 function mtSetup(players) {
   MT.players = players;
@@ -7698,13 +7703,24 @@ function startMapTest(players) {
   MT.raider = MT.laneV ? { x: MT.KING.x, y: 60, dir: 1, vert: true }              // 4인: 12시 레인
                        : { x: MT.W - 140, y: MT.KING.y, dir: -1, vert: false };   // 2인: 동쪽 레인
   MT.boss = { x: MT.W - 45, y: MT.KING.y, dir: -1, minX: MT.KING.x + 220 };
-  MT.cam.x = Math.max(0, Math.min(MT.W - 940, ox + CX - 470));
-  MT.cam.y = Math.max(0, Math.min(MT.H - 500, oy + CY - 250));
+  MT.zoom = 1; MT.pinch = null;
+  MT.cam.x = ox + CX - mtViewW() / 2; MT.cam.y = oy + CY - mtViewH() / 2; mtClampCam();
   MT.time = 0; MT.effects = []; MT.drag = null; MT.mmDrag = false; MT.keys = {};
 }
 function mtClampCam() {
-  MT.cam.x = Math.max(0, Math.min(MT.W - 940, MT.cam.x));
-  MT.cam.y = Math.max(0, Math.min(MT.H - 500, MT.cam.y));
+  const vw = mtViewW(), vh = mtViewH();
+  // 화면이 월드보다 넓어질 만큼 축소하면(줌 아웃) 가장자리에 붙이는 대신 가운데 정렬
+  MT.cam.x = vw >= MT.W ? (MT.W - vw) / 2 : Math.max(0, Math.min(MT.W - vw, MT.cam.x));
+  MT.cam.y = vh >= MT.H ? (MT.H - vh) / 2 : Math.max(0, Math.min(MT.H - vh, MT.cam.y));
+}
+function mtSetZoom(z, ax, ay) { // ax,ay = 고정하고 싶은 화면 좌표(커서/핀치 중심) — 그 아래 월드 점이 안 움직이게
+  const nz = Math.max(ZMIN, Math.min(ZMAX, z));
+  if (Math.abs(nz - MT.zoom) < 1e-4) return;
+  if (ax === undefined) { ax = 470; ay = 250; }
+  const wx = ax / MT.zoom + MT.cam.x, wy = ay / MT.zoom + MT.cam.y;
+  MT.zoom = nz;
+  MT.cam.x = wx - ax / nz; MT.cam.y = wy - ay / nz;
+  mtClampCam();
 }
 function mtOccluded(x, y) { // 다리 상판 밑 = 조준 불가 (몹 시점) — 레인 폭 절반 + 여유
   const HW = LANE / 2 + 3;
@@ -7731,7 +7747,7 @@ function mtDeckLift(x, y) { // 상판 위 부양 높이 = 아치 곡률 (중앙�
 function updateMapTest(dt) {
   MT.time += dt;
   S.time += dt; // 재사용하는 기존 드로우(포털 회전·유닛 오라·광산 반짝임)가 S.time 기준으로 움직인다
-  const spd = 640 * dt;
+  const spd = 640 * dt / MT.zoom; // 줌과 무관하게 '화면상' 스크롤 속도가 일정하도록
   if (MT.keys.l) MT.cam.x -= spd; if (MT.keys.r) MT.cam.x += spd;
   if (MT.keys.u) MT.cam.y -= spd; if (MT.keys.d) MT.cam.y += spd;
   if (MT.mouse.in && !MT.mmDrag && !MT.drag) { // 화면 가장자리 스크롤
@@ -7994,17 +8010,20 @@ function mtMinimap() {
   ctx.fillStyle = '#43e0a0';
   for (const u of S.units) ctx.fillRect(M.x + u.x * s - 1.5, M.y + u.y * s - 1.5, 3, 3);
   ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 1.5;
-  ctx.strokeRect(M.x + MT.cam.x * s, M.y + MT.cam.y * s, 940 * s, 500 * s); ctx.lineWidth = 1;
+  ctx.strokeRect(M.x + MT.cam.x * s, M.y + MT.cam.y * s, mtViewW() * s, mtViewH() * s); ctx.lineWidth = 1; // 줌에 따라 사각 크기가 변한다
 }
 function drawMapTest() {
-  const P = mtPatterns(), cam = MT.cam;
-  ctx.clearRect(0, 0, 940, 500);
+  const P = mtPatterns(), cam = MT.cam, z = MT.zoom;
+  ctx.fillStyle = '#171326'; ctx.fillRect(0, 0, 940, 500); // 줌아웃하면 월드 밖이 드러난다 — 흰 캔버스 대신 어두운 여백
   ctx.save();
   try { // 월드 그리기 중 예외가 나도 카메라 save가 프레임마다 누적되지 않게 (Opus)
-  ctx.translate(-cam.x, -cam.y);
-  const vx0 = cam.x, vy0 = cam.y, vx1 = cam.x + 940, vy1 = cam.y + 500;
+  ctx.scale(z, z); ctx.translate(-cam.x, -cam.y); // 월드점 → 화면: (w - cam) × zoom
+  const vw = mtViewW(), vh = mtViewH();
+  // 월드 밖까지 보이는 줌아웃에서도 베이크 서브렉트가 캔버스를 벗어나지 않게 클램프
+  const vx0 = Math.max(0, cam.x), vy0 = Math.max(0, cam.y);
+  const vx1 = Math.min(MT.W, cam.x + vw), vy1 = Math.min(MT.H, cam.y + vh);
   // 🎨 페인터리 월드 (잔디·데코·레인·광장 바닥 — 전부 1회 베이크, 매 프레임 drawImage 1번)
-  ctx.drawImage(mtBakeWorld(), vx0, vy0, 940, 500, vx0, vy0, 940, 500);
+  ctx.drawImage(mtBakeWorld(), vx0, vy0, vx1 - vx0, vy1 - vy0, vx0, vy0, vx1 - vx0, vy1 - vy0);
   MT.ORIGIN.forEach(([ox, oy], i) => { // 사분면 경계 + 이름표
     if (ox > vx1 || oy > vy1 || ox + 940 < vx0 || oy + 500 < vy0) return;
     ctx.strokeStyle = MT.PCOLS[i] + '44'; ctx.lineWidth = 3; ctx.strokeRect(ox + 3, oy + 3, 934, 494); ctx.lineWidth = 1;
@@ -8049,15 +8068,15 @@ function drawMapTest() {
   mtMinimap();
   ctx.fillStyle = 'rgba(20,16,34,0.75)'; roundRect(210, 6, 520, 22, 8); ctx.fill();
   ctx.fillStyle = '#e8def8'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('🏗️ 미리보기 — WASD·미니맵·화면 가장자리 = 카메라 · Space = 내 진영 · 드래그 = 부대 · 우클릭 = 이동', 470, 21);
+  ctx.fillText(`🏗️ 미리보기 — WASD·미니맵 = 카메라 · 휠/두 손가락 = 줌(${MT.zoom.toFixed(1)}×) · Space = 내 진영 · 드래그 = 부대 · 우클릭 = 이동`, 470, 21);
   ctx.textAlign = 'left';
 }
 // --- 미리보기 입력: 캡처 단계에서 가로채 기존 게임 입력과 완전 분리 ---
-function mtScreenToWorld(p) { return { x: p.x + MT.cam.x, y: p.y + MT.cam.y }; }
+function mtScreenToWorld(p) { return { x: p.x / MT.zoom + MT.cam.x, y: p.y / MT.zoom + MT.cam.y }; }
 function mtInMM(p) { const M = MT.MM; return p.x >= M.x - 4 && p.x <= M.x + M.w + 4 && p.y >= M.y - 4 && p.y <= M.y + M.h + 4; }
 function mtMMJump(p) {
   const M = MT.MM, s = M.w / MT.W;
-  MT.cam.x = (p.x - M.x) / s - 470; MT.cam.y = (p.y - M.y) / s - 250;
+  MT.cam.x = (p.x - M.x) / s - mtViewW() / 2; MT.cam.y = (p.y - M.y) / s - mtViewH() / 2; // 클릭 지점이 화면 중앙에 오게
   mtClampCam();
 }
 cv.addEventListener('mousedown', e => {
@@ -8131,7 +8150,10 @@ window.addEventListener('keydown', e => {
   if (c === 'ArrowRight' || c === 'KeyD') { MT.keys.r = true; e.preventDefault(); }
   if (c === 'ArrowUp' || c === 'KeyW') { MT.keys.u = true; e.preventDefault(); }
   if (c === 'ArrowDown' || c === 'KeyS') { MT.keys.d = true; e.preventDefault(); }
-  if (c === 'Space') { const [ox, oy] = MT.ORIGIN[0]; MT.cam.x = ox + CX - 470; MT.cam.y = oy + CY - 250; mtClampCam(); e.preventDefault(); }
+  if (c === 'Space') { const [ox, oy] = MT.ORIGIN[0]; MT.cam.x = ox + CX - mtViewW() / 2; MT.cam.y = oy + CY - mtViewH() / 2; mtClampCam(); e.preventDefault(); }
+  if (c === 'Equal' || c === 'NumpadAdd') { mtSetZoom(MT.zoom * 1.2); e.preventDefault(); }   // 키보드 줌 (+/-)
+  if (c === 'Minus' || c === 'NumpadSubtract') { mtSetZoom(MT.zoom / 1.2); e.preventDefault(); }
+  if (c === 'Digit0' || c === 'Numpad0') { mtSetZoom(1); e.preventDefault(); }                 // 원래 배율
   if (c === 'Escape') { if (openShop) closeShop(); else hideObjInfo(); }
 }, true);
 window.addEventListener('keyup', e => {
@@ -8144,22 +8166,45 @@ window.addEventListener('keyup', e => {
 }, true);
 window.addEventListener('blur', () => { if (S && S.mapTest) MT.keys = {}; }); // alt-tab 중 keyup 유실로 카메라가 흐르는 것 방지
 cv.addEventListener('dblclick', e => { if (S && S.mapTest) { e.stopImmediatePropagation(); e.preventDefault(); } }, true); // 더블클릭 같은종류 선택(화면좌표 기반)이 미리보기에 새지 않게
-cv.addEventListener('touchcancel', e => { if (S && S.mapTest) { e.stopImmediatePropagation(); MT.mmDrag = false; } }, true);
+cv.addEventListener('touchcancel', e => { if (S && S.mapTest) { e.stopImmediatePropagation(); MT.mmDrag = false; MT.pinch = null; } }, true);
+// 🔍 PC 줌: 마우스 휠 (커서 아래 지점이 안 움직이게 고정)
+cv.addEventListener('wheel', e => {
+  if (!S || !S.mapTest) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  const p = mpos(e);
+  if (mtInMM(p)) return; // 미니맵 위에서는 줌하지 않는다
+  mtSetZoom(MT.zoom * (e.deltaY < 0 ? 1.14 : 1 / 1.14), p.x, p.y);
+}, { capture: true, passive: false });
+// 모바일: 한 손가락 = 미니맵 드래그 / 두 손가락 = 핀치 줌 + 화면 끌기
+function mtTouchPt(t) { const r = cv.getBoundingClientRect();
+  return { x: (t.clientX - r.left) * cv.width / r.width, y: (t.clientY - r.top) * cv.height / r.height }; }
+function mtPinchOf(e) { // 두 손가락의 중점과 간격
+  const a = mtTouchPt(e.touches[0]), b = mtTouchPt(e.touches[1]);
+  return { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) };
+}
 cv.addEventListener('touchstart', e => { // 모바일: 미니맵 드래그로 카메라 (v1)
   if (!S || !S.mapTest) return;
   e.stopImmediatePropagation(); e.preventDefault();
-  const t = e.touches[0], r = cv.getBoundingClientRect();
-  const p = { x: (t.clientX - r.left) * cv.width / r.width, y: (t.clientY - r.top) * cv.height / r.height };
+  if (e.touches.length >= 2) { MT.pinch = { ...mtPinchOf(e), z: MT.zoom }; MT.mmDrag = false; return; }
+  const p = mtTouchPt(e.touches[0]);
   if (mtInMM(p)) { MT.mmDrag = true; mtMMJump(p); }
 }, { capture: true, passive: false });
 cv.addEventListener('touchmove', e => {
   if (!S || !S.mapTest) return;
   e.stopImmediatePropagation(); e.preventDefault();
+  if (e.touches.length >= 2) { // 핀치: 간격비로 줌, 중점 이동분만큼 화면도 끌린다
+    const now = mtPinchOf(e);
+    if (!MT.pinch) { MT.pinch = { ...now, z: MT.zoom }; return; }
+    mtSetZoom(MT.pinch.z * (now.d / MT.pinch.d), now.cx, now.cy);
+    MT.cam.x -= (now.cx - MT.pinch.cx) / MT.zoom; MT.cam.y -= (now.cy - MT.pinch.cy) / MT.zoom;
+    mtClampCam();
+    MT.pinch.cx = now.cx; MT.pinch.cy = now.cy; MT.pinch.d = now.d; MT.pinch.z = MT.zoom;
+    return;
+  }
   if (!MT.mmDrag) return;
-  const t = e.touches[0], r = cv.getBoundingClientRect();
-  mtMMJump({ x: (t.clientX - r.left) * cv.width / r.width, y: (t.clientY - r.top) * cv.height / r.height });
+  mtMMJump(mtTouchPt(e.touches[0]));
 }, { capture: true, passive: false });
-cv.addEventListener('touchend', e => { if (S && S.mapTest) { e.stopImmediatePropagation(); MT.mmDrag = false; } }, true);
+cv.addEventListener('touchend', e => { if (S && S.mapTest) { e.stopImmediatePropagation(); MT.mmDrag = false; if (e.touches.length < 2) MT.pinch = null; } }, true);
 document.getElementById('btnCoop').onclick = () => {
   document.getElementById('modeRow').style.display = 'none';
   document.getElementById('coopRow').style.display = 'flex';
