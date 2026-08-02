@@ -664,6 +664,13 @@ function fitGameSize() {
   const chrome = wrap.offsetHeight - cw.offsetHeight + 26; // +26 = body 상하 여백 + 여유
   if (chrome > 40 && chrome < 600) document.documentElement.style.setProperty('--chrome', Math.round(chrome) + 'px');
 }
+// 로그(#log)는 빈 상태 40px → 4줄 ~86px로 자라므로 부팅 때 잰 --chrome이 낡는다 → 다음 rAF에 1회만 다시 잰다
+let refitQueued = false;
+function queueFitGameSize() {
+  if (refitQueued || IS_MOBILE) return;
+  refitQueued = true;
+  requestAnimationFrame(() => { refitQueued = false; fitGameSize(); });
+}
 window.addEventListener('resize', fitGameSize);
 requestAnimationFrame(() => { fitGameSize(); requestAnimationFrame(fitGameSize); }); // 2패스 — 폭이 바뀌며 제목/로그가 접히는 경우 보정
 
@@ -2855,6 +2862,7 @@ function logMsg(msg) {
   const el = document.getElementById('log');
   el.innerHTML = `<div>${msg}</div>` + el.innerHTML;
   while (el.children.length > 4) el.removeChild(el.lastChild);
+  queueFitGameSize(); // 로그 높이가 바뀌면 캔버스 크기 기준(--chrome)도 다시 잰다
 }
 
 // ==================== 색상 ====================
@@ -7228,7 +7236,7 @@ const DEBUG = location.search.indexOf('debug=1') >= 0;
 // 실게임과 완전 격리: S.mapTest 중엔 frame()이 updateMapTest/drawMapTest만 돌리고, 입력은 캡처 단계에서 가로챈다.
 const LANE = 88;              // 십자 레인 폭 (130 → 2/3로 축소 — 근접 유닛도 레인 건너편에 닿게)
 const MT = { // 월드 지오메트리는 mtSetup(인원)이 채운다 (4인 = 십자 레인 / 2인 = 가로 레인 하나)
-  players: 4, W: 0, H: 0, ORIGIN: [], PNAMES: [], PCOLS: [], KING: { x: 0, y: 0 },
+  players: 4, W: 0, H: 0, ORIGIN: [], TERR: [], PNAMES: [], PCOLS: [], KING: { x: 0, y: 0 },
   laneV: null, laneH: null, BRIDGES: [], GATES: [],
   MM: { w: 190, h: 107, x: 940 - 198, y: 500 - 115 }, // 미니맵 (우하단)
   cam: { x: 0, y: 0 }, keys: {}, mouse: { x: 470, y: 250, in: false },
