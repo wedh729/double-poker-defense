@@ -4403,6 +4403,9 @@ function matBands(x, y, sz, esc) {
   }
 }
 // ── 🎨 몬스터 아트 (assets/art3.png): 4×4 격자, 전부 정원형이라 원형 페더 크롭으로 추출 (배경이 흐린 그라데이션이라 키잉 대신)
+// ⚠️ 2026-08-02 유저 판정: 아트 몹이 원래 재질 디자인과 결이 다름 → OFF(프로시저럴 원본 복귀).
+//    파이프라인은 그대로 두고 스위치만 내린다 — 보스·습격대 시트가 오면 다시 켤 수 있게.
+const MON_ART_ON = false;
 const MONART = { ready: false, img: null, sp: [] };
 const MON_CELLS = (() => { // mat 0..12 = 격자 순서, mat 13(블랙홀) = (행4,열3). (행4,열2)는 여분 구슬 — 미사용
   const c = []; for (let m2 = 0; m2 < 13; m2++) c.push([m2 % 4, m2 >> 2]);
@@ -4428,12 +4431,14 @@ function monExtract() {
   }
 }
 function monReady() { // 첫 사용 시 1회 추출 + 기존 프로시저럴 스프라이트 캐시 무효화
+  if (!MON_ART_ON) return false;
   if (MONART.ready || !MONART.img) return MONART.ready;
   try { monExtract(); MONART.ready = true; Object.keys(matSprites).forEach(k => delete matSprites[k]); }
   catch (e) { MONART.img = null; console.error('monster art 추출 실패 — 프로시저럴 폴백', e); }
   return MONART.ready;
 }
 (function monLoadArt() {
+  if (!MON_ART_ON) return; // 스위치 OFF면 1.8MB 시트도 받지 않는다
   const im = new Image();
   im.onload = () => { MONART.img = im;
     const warm = () => { try { monReady(); } catch (e) {} };
