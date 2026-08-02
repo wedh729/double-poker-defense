@@ -7301,12 +7301,12 @@ document.getElementById('bSfx').textContent = sfxOn ? '🔊' : '🔇';
 // 성능 측정: ?debug=1 로 열면 캔버스 좌상단에 update/draw 평균 ms 표시
 const DEBUG = location.search.indexOf('debug=1') >= 0;
 // ==================== 🏗️ P2-b 멀티맵 미리보기 (무인 모형 — 네트워크 없음) ====================
-// 4인 월드: 기지(각자 현 싱글맵 전체) 넷을 90°씩 돌려 풍차꼴로 맞물리고, 그 틈이 레인이 되어
-// 중앙 왕국 광장으로 모인다 (정사각 1528², 빈 땅 0). RTS 카메라+미니맵+돌다리 LoS 데모.
+// 4인 월드: 십자 레인이 사분면 4개(각자 현 싱글맵 전체 + 앞마당)를 가르고 교차점에 왕국
+// (정사각 1968²). RTS 카메라+미니맵+돌다리 LoS 데모.
 // 실게임과 완전 격리: S.mapTest 중엔 frame()이 updateMapTest/drawMapTest만 돌리고, 입력은 캡처 단계에서 가로챈다.
 const LANE = 88;              // 레인 폭 (130 → 2/3로 축소 — 근접 유닛도 레인 건너편에 닿게)
 const MT = { // 월드 지오메트리는 mtSetup(인원)이 채운다 (4인 = 풍차 레인 4개 / 2인 = 가로 레인 하나)
-  players: 4, W: 0, H: 0, PH: 0, ORIGIN: [], QUAD: [], PNAMES: [], PCOLS: [], KING: { x: 0, y: 0 },
+  players: 4, W: 0, H: 0, PH: 0, ORIGIN: [], QUAD: [], TERR: [], PNAMES: [], PCOLS: [], KING: { x: 0, y: 0 },
   LANES: [], BRIDGES: [], GATES: [], // LANES = 레인 사각 목록 (예전 laneV/laneH 단일 전제를 대체)
   MM: { w: 190, h: 107, x: 940 - 198, y: 500 - 115 }, // 미니맵 (우하단)
   cam: { x: 0, y: 0 }, keys: {}, mouse: { x: 470, y: 250, in: false },
@@ -7381,47 +7381,37 @@ function mtSetup(players) {
     // — 착지점이 펜·광석방·콜로세움 충돌체를 전부 피해서 건너간 뒤 어디로든 이동·복귀 가능
     MT.BRIDGES = [{ x: BX + 220, y: LM.a + LANE / 2, vert: false }, { x: BX + 625, y: LM.a + LANE / 2, vert: false }];
     MT.ROT = [0, 0]; MT.PH = 0; // 2인은 회전 없음 · 왕국이 레인 안에 있어 광장 사각(PH) 개념이 없다
+    MT.TERR = MT.ORIGIN.map(([ox, oy]) => [ox, oy, QW, QH]); // 영토 = 기지 그대로
   } else {
-    // ★ 4인 = 풍차(pinwheel) 배치 (2026-08-02 유저: "비율을 조정해 정사각형으로, 남는 공간 없이")
-    //   이전엔 940×500 기지를 2×2로 놓고 위아래에 440씩 여백을 붙여 정사각을 맞췄더니
-    //   월드의 43%가 건물 없는 빈 땅이었다. 대신 기지 넷을 90°씩 돌려 톱니처럼 맞물리면
-    //   940×500 그대로 빈틈없이 정사각이 된다 — 싱글맵은 손대지 않는다.
-    //     S = QW + LANE + QH = 1528.  중심 (764,764) 기준 90° 회전이 배치를 자기 자신으로 옮긴다
-    //     (= 4중 회전대칭). 게이트→왕국 거리도 네 방향 전부 같다.
-    const S2 = QW + LANE + QH;
-    MT.W = MT.H = S2;                                                    // 1528 × 1528
-    //  ┌────────┬──┬─────┐   Q0 위(rot0) · Q1 오른쪽(rot1)
-    //  │   Q0   │L0│     │   Q2 아래(rot2) · Q3 왼쪽(rot3)
-    //  ├─────┬──┴──┤ Q1  │   L0~L3 = 맞물린 자리에 생기는 레인 4개
-    //  │ L3  │     │     │
-    //  │  ┌──┴──┬──┴─────┤
-    //  │Q3│     │   L1   │
-    //  │  │ L2  ├────────┤
-    //  └──┴─────┴   Q2   ┘
-    MT.ORIGIN = [[0, 0], [QW + LANE, 0], [QH + LANE, QW + LANE], [0, QH + LANE]];
-    MT.ROT = [0, 1, 2, 3];
+    // 4인: 십자 레인이 사분면 4개를 가르고 교차점에 왕국. 게이트 12·3·6·9시
+    // 정사각 월드 — 기지(940×500)는 안쪽(왕국 쪽)에 붙고, 남는 세로 여유 440은 기지 바깥
+    // '앞마당'(YARD)으로. 12·6시 몹도 진격 내내 누군가의 영토를 지난다.
+    // (풍차 배치를 시도했다가 유저 반려로 이 버전 복원 — 2026-08-03. 변환 쌍(QUAD/rot) 인프라는 유지)
+    const LN = { a: QW, b: QW + LANE };
+    MT.W = QW * 2 + LANE; MT.H = MT.W;                                  // 1968 × 1968
+    const LM = { a: (MT.H - LANE) / 2, b: (MT.H + LANE) / 2 };           // 가로 레인 = 월드 정중앙
+    const YARD = LM.a - QH;                                              // 440 — 기지 바깥 앞마당 깊이
+    MT.ORIGIN = [[LN.b, YARD], [LN.b, LM.b], [0, LM.b], [0, YARD]];      // P1(1시)·P2(5시)·P3(7시)·P4(11시)
+    MT.ROT = [0, 0, 0, 0]; MT.PH = 0; // 회전 없음 · 광장 = 두 레인의 교차부라 PH 불필요
     MT.PNAMES = ['P1 · 내 진영', 'P2', 'P3', 'P4'];
     MT.PCOLS = ['#1D9E75', '#378ADD', '#D4537E', '#BA7517'];
-    MT.LANES = [{ vert: true,  x: QW, y: 0, w: LANE, h: QW },                  // L0: Q0↔Q1
-                { vert: false, x: QH + LANE, y: QW, w: QW, h: LANE },          // L1: Q1↔Q2
-                { vert: true,  x: QH, y: QH + LANE, w: LANE, h: QW },          // L2: Q2↔Q3
-                { vert: false, x: 0, y: QH, w: QW, h: LANE }];                 // L3: Q3↔Q0
-    MT.KING = { x: S2 / 2, y: S2 / 2 };                                        // (764,764) — 회전 중심
-    // 게이트 = 각 레인의 바깥 끝. 네 곳 모두 왕국까지 757로 균일하다
-    MT.GATES = [[QW + LANE / 2, 40, Math.PI], [S2 - 40, QW + LANE / 2, -Math.PI / 2],
-                [QH + LANE / 2, S2 - 40, 0], [40, QH + LANE / 2, Math.PI / 2]];
-    // 다리: 레인마다 2개씩, '두 기지가 실제로 맞닿는 구간'에만 (안쪽 절반은 광장이라 이미 트여 있다).
-    // 한 벌(L0의 150·400)을 정하고 나머지는 90° 회전으로 옮겨 완전 대칭
-    const LV0 = QW + LANE / 2, LH1 = QW + LANE / 2, LV2 = QH + LANE / 2, LH3 = QH + LANE / 2;
-    MT.BRIDGES = [{ x: LV0, y: 150, vert: true }, { x: LV0, y: 400, vert: true },
-                  { x: S2 - 150, y: LH1, vert: false }, { x: S2 - 400, y: LH1, vert: false },
-                  { x: LV2, y: S2 - 150, vert: true }, { x: LV2, y: S2 - 400, vert: true },
-                  { x: 150, y: LH3, vert: false }, { x: 400, y: LH3, vert: false }];
-    MT.PH = QW - S2 / 2; // 176 = 중앙 광장 사각의 반폭 (레인 넷이 둘러싼 독립 광장)
+    MT.LANES = [{ vert: true, x: LN.a, y: 0, w: LANE, h: MT.H },   // 세로 레인 (12↔6시)
+                { vert: false, x: 0, y: LM.a, w: MT.W, h: LANE }]; // 가로 레인 (9↔3시)
+    MT.KING = { x: LN.a + LANE / 2, y: LM.a + LANE / 2 };
+    MT.GATES = [[MT.KING.x, 40, Math.PI], [MT.W - 40, MT.KING.y, -Math.PI / 2],
+                [MT.KING.x, MT.H - 40, 0], [40, MT.KING.y, Math.PI / 2]];
+    // 세로 다리: 기지 구간 로컬 y=392(서쪽 착지가 콜로세움 아래 클리어 존, 동쪽은 성 옆 개활지)
+    //            + 앞마당 한가운데 — 건물이 없는 개활지라 제약 없이 놓인다 (세로 레인 여유 확보)
+    // 가로 다리: 로컬 x=625 수직 회랑 — 건넌 뒤 위아래 어디로든 통행 가능
+    MT.BRIDGES = [{ x: MT.KING.x, y: YARD / 2, vert: true }, { x: MT.KING.x, y: YARD + 392, vert: true },
+                  { x: MT.KING.x, y: LM.b + 392, vert: true }, { x: MT.KING.x, y: MT.H - YARD / 2, vert: true },
+                  { x: 625, y: MT.KING.y, vert: false }, { x: LN.b + 625, y: MT.KING.y, vert: false }];
+    // 영토 = 기지 + 앞마당 (사분면 전체 940×940) — 미니맵에 옅게 칠해 소유권이 읽히게
+    const TH = LM.a;
+    MT.TERR = [[LN.b, 0, QW, TH], [LN.b, LM.b, QW, TH], [0, LM.b, QW, TH], [0, 0, QW, TH]];
   }
   MT.QUAD = MT.ORIGIN.map(([ox, oy], i) => mtQuad(ox, oy, (MT.ROT && MT.ROT[i]) || 0, i));
-  // 다리마다 '자기가 건너는 레인'을 붙인다 — 다리 좌표를 품은 레인으로 (풍차는 세로 레인이 둘이라
-  // vert만 보면 엉뚱한 레인이 잡힌다)
+  // 다리마다 '자기가 건너는 레인'을 붙인다 — 다리 좌표를 품은 레인으로 (같은 방향 레인이 여럿이어도 안전)
   for (const b of MT.BRIDGES)
     b.lane = MT.LANES.find(L => b.x >= L.x - 1 && b.x <= L.x + L.w + 1 && b.y >= L.y - 1 && b.y <= L.y + L.h + 1)
           || MT.LANES.find(L => L.vert === b.vert) || MT.LANES[0];
@@ -7849,7 +7839,8 @@ function startMapTest(players) {
   const lv = MT.LANES.find(L => L.vert), lh = MT.LANES.find(L => !L.vert);
   const lane0 = lv || lh; // 습격대: 세로 레인이 있으면 거기, 없으면(2인) 가로 레인
   MT.raider = lane0.vert
-    ? { x: lane0.x + lane0.w / 2, y: lane0.y + 60, dir: 1, vert: true, lo: lane0.y + 55, hi: lane0.y + lane0.h - 120 }
+    ? { x: lane0.x + lane0.w / 2, y: lane0.y + 60, dir: 1, vert: true,
+        lo: lane0.y + 55, hi: Math.min(lane0.y + lane0.h - 120, MT.KING.y - 160) } // 광장 앞까지만 (왕국 통과 금지)
     : { x: lane0.x + lane0.w - 140, y: lane0.y + lane0.h / 2, dir: -1, vert: false,
         lo: Math.max(lane0.x + 120, MT.KING.x + 130), hi: lane0.x + lane0.w - 55 }; // 왕국을 지나쳐 성 안으로 파고들지 않게
   const lb = lh || lv;   // 보스: 가로 레인을 아주 느리게 왕복
@@ -8163,7 +8154,8 @@ function mtMinimap() {
   const M = MT.MM, s = M.w / MT.W;
   ctx.fillStyle = 'rgba(14,10,26,0.88)'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.fill();
   ctx.strokeStyle = '#5a5278'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.stroke();
-  MT.QUAD.forEach(q => { ctx.fillStyle = MT.PCOLS[q.i] + (q.i ? '30' : '55'); ctx.fillRect(M.x + q.ox * s, M.y + q.oy * s, q.w * s, q.h * s); }); // 기지는 진하게 (회전해도 발자국은 축 정렬)
+  MT.TERR.forEach(([tx, ty, tw, th], i) => { ctx.fillStyle = MT.PCOLS[i] + (i ? '22' : '3c'); ctx.fillRect(M.x + tx * s, M.y + ty * s, tw * s, th * s); }); // 영토(기지+앞마당) 옅게
+  MT.QUAD.forEach(q => { ctx.fillStyle = MT.PCOLS[q.i] + (q.i ? '30' : '55'); ctx.fillRect(M.x + q.ox * s, M.y + q.oy * s, q.w * s, q.h * s); }); // 기지는 진하게
   ctx.fillStyle = 'rgba(200,190,170,0.75)';
   for (const L of MT.LANES) ctx.fillRect(M.x + L.x * s, M.y + L.y * s, L.w * s, L.h * s);
   ctx.fillStyle = '#EF9F27';
