@@ -135,6 +135,10 @@
 
   /* ===== 좌측 카지노 스테이션 ===== */
   #chipBar { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 6; }
+  /* 포커 패널이 올라오면 그만큼(--panelH) 위로 비켜선다 — 안 그러면 패널이 통째로 덮어 클릭까지 막는다.
+     (이 세 규칙은 위 원본 뒤에 와야 bottom/top을 덮는다) */
+  #unitInfo, #objInfo { bottom: calc(10px + var(--panelH, 0px)); transition: bottom 0.34s cubic-bezier(0.22, 0.9, 0.3, 1); }
+  #chipBar { top: calc(50% - var(--panelH, 0px) / 2); transition: top 0.34s cubic-bezier(0.22, 0.9, 0.3, 1); }
   .chipStation { width: 60px; height: 62px; border-radius: 14px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
     background: linear-gradient(160deg, #fff7e6 0%, #f3e2b8 100%); border: 2px solid #c9a75a;
     box-shadow: inset 0 0 0 2px rgba(255,255,255,0.7), 0 3px 9px rgba(90,60,10,0.25); transition: transform 0.12s, box-shadow 0.12s; position: relative; }
@@ -354,6 +358,11 @@
   /* 포커 패널은 데스크톱에선 캔버스 위 슬라이드 오버레이지만, 모바일은 탭 전환이라 일반 흐름으로 되돌린다 */
   .mobile #pokerPanel { position: static; transform: none; transition: none; padding-bottom: 52px; }
   .mobile #cvWrap { overflow: visible; border-radius: 0; }
+
+  /* 🏗️ 미리보기 모드: 실게임 HUD를 통째로 숨긴다 (인라인 style이 아니라 클래스 —
+     reset()이 클래스를 걷어내므로 리로드가 아닌 경로로 빠져나가도 자동 복원) */
+  body.mtMode #pokerPanel, body.mtMode #toolbar, body.mtMode #clock,
+  body.mtMode #chipBar, body.mtMode #log { display: none; }
 
   /* 모바일 탭 분리: 전투 탭에선 포커/로그 숨김, 포커 탭에선 캔버스·전투 HUD 숨김
      (cvWrap 자체는 포커 패널의 부모라 숨기면 안 된다) */
@@ -646,16 +655,26 @@ document.getElementById('mtPoker').onclick = () => setMobTab('poker');
 
 // ── 포커 패널 슬라이드 (데스크톱): 포커 페이즈에만 캔버스 위로 올라온다.
 //    전투 중엔 내려가서 그 공간이 통째로 게임 화면 (모바일은 탭 전환이라 CSS로 무력화)
-let pokerSlidePx = 0;
+let pokerSlidePx = 0, pokerPanelUp = false;
 function syncPokerPanel() {
+  if (IS_MOBILE) return; // 모바일은 탭 전환(CSS position:static)이라 슬라이드 자체가 없다 — 레이아웃 측정도 낭비
   const p = document.getElementById('pokerPanel');
-  const up = S.phase === 'poker' && !S.mapTest;
-  if (up) { // 올라와 있는 동안 실제 높이를 재둔다 — 내려갈 땐 이 거리(+16 그림자 여유)만큼 내려가면 확실히 숨는다
-    const h = p.offsetHeight; // 더블포커(두 패)는 패널이 더 높다
-    if (h > 0 && Math.abs(h - pokerSlidePx) > 2) { pokerSlidePx = h; p.style.setProperty('--slide', (h + 16) + 'px'); }
+  // offsetHeight는 transform에 영향받지 않으므로 올라와 있든 내려가 있든 정확하다.
+  // 항상 재야 창 크기 변화로 배너·결과줄이 접혀 패널이 높아졌을 때 --slide가 낡지 않는다 (+16 = box-shadow 번짐)
+  const h = p.offsetHeight;
+  if (h > 0 && Math.abs(h - pokerSlidePx) > 2) {
+    pokerSlidePx = h;
+    p.style.setProperty('--slide', (h + 16) + 'px');
+    if (pokerPanelUp) setPanelClearance(h); // 올라와 있는 중에 높이가 변하면 하단 UI 회피 높이도 같이
   }
-  if (p.classList.contains('up') !== up) p.classList.toggle('up', up);
+  const up = S.phase === 'poker' && !S.mapTest;
+  if (pokerPanelUp !== up) {
+    pokerPanelUp = up;
+    p.classList.toggle('up', up);
+    setPanelClearance(up ? h : 0); // 패널이 덮는 만큼 유닛정보·오브젝트정보·카지노를 위로 밀어 올린다
+  }
 }
+function setPanelClearance(px) { document.documentElement.style.setProperty('--panelH', Math.round(px) + 'px'); }
 // ── 게임 화면 최대화: 캔버스 밖 UI(제목·상태바·툴바·로그) 높이를 실측해 CSS에 넘긴다
 //    → #wrap의 max-width가 남는 세로만큼만 가로를 키운다 (비율 940:500 유지)
 function fitGameSize() {
@@ -693,6 +712,7 @@ function splat(x, y, c, big) {
 // ==================== 상태 ====================
 let S;
 function reset() {
+  document.body.classList.remove('mtMode'); // 미리보기에서 다시하기로 빠져나와도 실게임 HUD가 되살아나게
   S = {
     phase: 'poker', round: 1, life: 20, gold: 120,
     minerCost: 80, chips: 0, event: null, eventMods: null,
@@ -7243,7 +7263,9 @@ const MT = { // 월드 지오메트리는 mtSetup(인원)이 채운다 (4인 = �
   mmDrag: false, drag: null, time: 0, effects: [], raider: null, boss: null,
   zoom: 1, pinch: null, // 🔍 줌 (PC 휠 / 모바일 두 손가락) — 넓은 멀티 월드를 한눈에 보거나 바짝 붙어 조작
 };
-const ZMIN = 0.25, ZMAX = 2.2; // 0.25 = 정사각 월드(1968²) 세로가 화면에 딱 들어오는 배율 — 전체 전황 조망용
+// 최소 배율은 월드마다 다르다 — '월드 전체가 화면에 들어오는 배율'이 하한 (2인 월드에서 0.25까지 빠지면
+// 어두운 여백 한가운데 작은 사각만 남는다). mtSetup이 MT.zMin에 채운다.
+let ZMIN = 0.25; const ZMAX = 2.2;
 // 화면(캔버스 940×500)이 담는 '월드 크기' — 줌에 반비례. 카메라 클램프·컬링·미니맵 사각이 전부 이걸 쓴다
 function mtViewW() { return 940 / MT.zoom; }
 function mtViewH() { return 500 / MT.zoom; }
@@ -7295,6 +7317,8 @@ function mtSetup(players) {
   }
   MT.MM.h = Math.round(MT.MM.w * MT.H / MT.W); // 미니맵은 월드 비율에 맞춘다 (2인은 세로로 길다)
   MT.MM.y = 500 - MT.MM.h - 10;
+  // 월드 '전체'가 보이려면 가로·세로 둘 다 들어와야 하므로 min (max를 쓰면 화면을 꽉 채우는 배율이라 세로가 잘린다)
+  ZMIN = Math.min(1, Math.min(940 / MT.W, 500 / MT.H) * 0.95);
   mtWorldBake = null; // 지오메트리가 바뀌었으니 다시 굽는다
 }
 // 데코 개수는 고정이라 월드가 넓어지면 밀도가 묽어진다 → 면적/둘레 비례로 보정 (기준 = 옛 4인 월드)
@@ -7488,14 +7512,14 @@ function mtBakeBody() {
   // ① 잔디 바탕 + 큰 얼룩 (플랫 톤 4단 — 목업의 다층 잔디)
   ctx.fillStyle = '#97b654'; ctx.fillRect(0, 0, MT.W, MT.H);
   const TONES = [['#a4c266', 0.5, 60], ['#8ba94a', 0.5, 66], ['#b0cc74', 0.34, 46], ['#7e9c42', 0.42, 54]];
-  for (let i = 0; i < 700; i++) {
+  for (let i = 0, n2 = Math.round(700 * mtDecorK()); i < n2; i++) { // 잔디 얼룩도 면적 비례 (데코와 동일 규칙)
     const [col, al, sz] = TONES[i % 4];
     const x = rnd() * MT.W, y = rnd() * MT.H, r = sz * (0.5 + rnd());
     ctx.globalAlpha = al; ctx.fillStyle = col;
     ctx.beginPath(); ctx.ellipse(x, y, r, r * (0.5 + rnd() * 0.3), rnd() * 3.14, 0, 6.28); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  for (let i = 0; i < 1100; i++) { // 잔 풀포기 스페클
+  for (let i = 0, n3 = Math.round(1100 * mtDecorK()); i < n3; i++) { // 잔 풀포기 스페클 (면적 비례)
     const x = rnd() * MT.W, y = rnd() * MT.H;
     ctx.fillStyle = i % 2 ? 'rgba(122,152,60,0.5)' : 'rgba(182,206,120,0.5)';
     ctx.beginPath(); ctx.arc(x, y, 1.4 + rnd() * 2, 0, 6.28); ctx.fill();
@@ -7696,11 +7720,11 @@ function startMapTest(players) {
   reset();
   S.mapTest = true; S.paused = true;
   document.getElementById('startOverlay').style.display = 'none';
-  document.getElementById('pokerPanel').style.display = 'none';
   document.getElementById('mtExit').style.display = 'block';
-  document.getElementById('clock').style.display = 'none';   // 실게임 HUD 잔재 정리 (나가기 = reload라 복원 불필요)
-  document.getElementById('chipBar').style.display = 'none';
-  document.getElementById('log').style.display = 'none';
+  // 실게임 HUD 잔재 정리. 인라인 style 대신 body 클래스 — 인라인은 리로드 아닌 경로로 빠져나가면
+  // 그대로 남아 카드·타이머 없는 좀비 상태가 된다 (툴바의 🔄 다시하기가 그 경로였다)
+  document.body.classList.add('mtMode');
+  mtBindWheel();
   if (IS_MOBILE) setMobTab('battle'); // reset()→startPoker()가 포커 탭으로 보내 캔버스가 숨는 문제 방지 (Opus P0)
   S.units = []; S.monsters = []; S.projs = []; S.effects = []; S.parts = []; S.floats = [];
   S.upg = [10, 10, 10]; // 시찰 부대: 사거리 체감용 (새총·원페어·기관총·스트레이트·풀하우스 + 저격 영웅)
@@ -7770,7 +7794,8 @@ function updateMapTest(dt) {
     u.aimX = MT.ORIGIN[0][0] + CX; u.aimY = MT.ORIGIN[0][1] + CY;
   }
   const r = MT.raider; // 데모 습격대: 레인을 따라 왕복 (4인=12시 세로 / 2인=가로)
-  if (r.vert) { r.y += 55 * dt * r.dir; if (r.y > 440) r.dir = -1; else if (r.y < 60) r.dir = 1; }
+  // 왕복 하한은 광장 위쪽까지 (옛 월드 기준 440 하드코딩이라, 정사각화 후엔 앞마당 안에서만 맴돌았다)
+  if (r.vert) { r.y += 55 * dt * r.dir; if (r.y > MT.KING.y - 160) r.dir = -1; else if (r.y < 60) r.dir = 1; }
   else { r.x += 55 * dt * r.dir; if (r.x > MT.W - 90) r.dir = -1; else if (r.x < MT.KING.x + 130) r.dir = 1; }
   const b = MT.boss; b.x += 24 * dt * b.dir; if (b.x < b.minX) b.dir = 1; else if (b.x > MT.W - 45) b.dir = -1; // 3시(동쪽) 레인 왕복 (아주 느림)
   for (const u of S.units) { // 간이 이동 + LoS 사격 데모
@@ -8018,7 +8043,10 @@ function mtMinimap() {
   ctx.fillStyle = '#43e0a0';
   for (const u of S.units) ctx.fillRect(M.x + u.x * s - 1.5, M.y + u.y * s - 1.5, 3, 3);
   ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 1.5;
-  ctx.strokeRect(M.x + MT.cam.x * s, M.y + MT.cam.y * s, mtViewW() * s, mtViewH() * s); ctx.lineWidth = 1; // 줌에 따라 사각 크기가 변한다
+  // 줌아웃하면 뷰가 월드보다 커진다 → 월드 경계로 교집합 (안 그러면 사각이 미니맵 박스 밖으로 삐져나온다)
+  const rx0 = Math.max(0, MT.cam.x), ry0 = Math.max(0, MT.cam.y);
+  const rx1 = Math.min(MT.W, MT.cam.x + mtViewW()), ry1 = Math.min(MT.H, MT.cam.y + mtViewH());
+  ctx.strokeRect(M.x + rx0 * s, M.y + ry0 * s, (rx1 - rx0) * s, (ry1 - ry0) * s); ctx.lineWidth = 1;
 }
 function drawMapTest() {
   const P = mtPatterns(), cam = MT.cam, z = MT.zoom;
@@ -8104,7 +8132,7 @@ cv.addEventListener('mousemove', e => {
   if (MT.drag) {
     const w = mtScreenToWorld(p);
     MT.drag.x1 = w.x; MT.drag.y1 = w.y;
-    if (Math.hypot(w.x - MT.drag.x0, w.y - MT.drag.y0) > 6) MT.drag.moved = true;
+    if (Math.hypot(w.x - MT.drag.x0, w.y - MT.drag.y0) > 6 / MT.zoom) MT.drag.moved = true; // 임계는 화면 기준 6px
   }
 }, true);
 cv.addEventListener('mouseleave', () => { if (S && S.mapTest) MT.mouse.in = false; });
@@ -8118,13 +8146,13 @@ window.addEventListener('mouseup', e => {
     const x0 = Math.min(d.x0, d.x1), x1 = Math.max(d.x0, d.x1), y0 = Math.min(d.y0, d.y1), y1 = Math.max(d.y0, d.y1);
     for (const u of S.units) u.selected = u.x >= x0 && u.x <= x1 && u.y >= y0 && u.y <= y1;
   } else {
-    let best = null, bd = 28 * 28;
+    let best = null, bd = (28 / MT.zoom) ** 2; // 픽 반경도 화면 기준 28px (줌아웃에서 못 집던 문제)
     for (const u of S.units) { const dd = (u.x - d.x0) ** 2 + (u.y - d.y0) ** 2; if (dd < bd) { bd = dd; best = u; } }
     for (const u of S.units) u.selected = false;
     if (best) best.selected = true;
     else { // 건물 클릭: 사분면 로컬 좌표로 objAt 재사용 — 내 성은 강화창, 나머지는 정보 팝업
       let handled = false;
-      for (let qi = 0; qi < 4; qi++) {
+      for (let qi = 0; qi < MT.ORIGIN.length; qi++) { // 2인은 사분면이 2개 — 4 고정이면 빈 곳 클릭 시 undefined 구조분해로 죽는다
         const [qox, qoy] = MT.ORIGIN[qi];
         if (d.x0 > qox && d.x0 < qox + 940 && d.y0 > qoy && d.y0 < qoy + 500) {
           const k = objAt(d.x0 - qox, d.y0 - qoy);
@@ -8176,13 +8204,20 @@ window.addEventListener('blur', () => { if (S && S.mapTest) MT.keys = {}; }); //
 cv.addEventListener('dblclick', e => { if (S && S.mapTest) { e.stopImmediatePropagation(); e.preventDefault(); } }, true); // 더블클릭 같은종류 선택(화면좌표 기반)이 미리보기에 새지 않게
 cv.addEventListener('touchcancel', e => { if (S && S.mapTest) { e.stopImmediatePropagation(); MT.mmDrag = false; MT.pinch = null; } }, true);
 // 🔍 PC 줌: 마우스 휠 (커서 아래 지점이 안 움직이게 고정)
-cv.addEventListener('wheel', e => {
+// ⚠️ 등록은 미리보기 진입 시에만 (mtBindWheel) — passive:false 휠 리스너가 상시 붙어 있으면
+//    싱글 플레이에서도 캔버스 위 휠마다 메인 스레드 히트테스트를 강제받는다
+function mtWheel(e) {
   if (!S || !S.mapTest) return;
   e.stopImmediatePropagation(); e.preventDefault();
   const p = mpos(e);
   if (mtInMM(p)) return; // 미니맵 위에서는 줌하지 않는다
   mtSetZoom(MT.zoom * (e.deltaY < 0 ? 1.14 : 1 / 1.14), p.x, p.y);
-}, { capture: true, passive: false });
+}
+function mtBindWheel() { // 나가기 = location.reload라 해제 코드는 불필요
+  if (MT._wheelBound) return;
+  MT._wheelBound = true;
+  cv.addEventListener('wheel', mtWheel, { capture: true, passive: false });
+}
 // 모바일: 한 손가락 = 미니맵 드래그 / 두 손가락 = 핀치 줌 + 화면 끌기
 function mtTouchPt(t) { const r = cv.getBoundingClientRect();
   return { x: (t.clientX - r.left) * cv.width / r.width, y: (t.clientY - r.top) * cv.height / r.height }; }
