@@ -14,10 +14,13 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #f4f5f7; color: #333; font-family: 'Segoe UI', 'Malgun Gothic', sans-serif; display: flex; justify-content: center; padding: 10px; }
-  #wrap { width: 960px; max-width: 100%; }
+  /* 게임 화면 최대화: 남는 가로를 채우되, 세로는 '캔버스 밖 UI 높이(--chrome, JS 실측)'를 뺀 만큼까지만
+     → 비율 940:500 유지한 채 화면에 들어가는 최대 크기. 광고 레일이 있으면 flex가 알아서 양보한다 */
+  #wrap { flex: 1 1 auto; min-width: 0; width: 960px;
+    max-width: min(1480px, calc((100vh - var(--chrome, 210px)) * 1.88)); }
 
   /* ===== 사이드 광고 레일 (게임 중앙 + 양옆 광고, 좁은 화면에선 자동 숨김) ===== */
-  #page { display: flex; justify-content: center; align-items: flex-start; gap: 16px; }
+  #page { display: flex; justify-content: center; align-items: flex-start; gap: 16px; width: 100%; } /* 폭을 채워야 #wrap의 flex-grow가 남는 가로를 먹는다 */
   .adRail { position: sticky; top: 10px; flex: 0 0 auto; }
   .adSlot { width: 300px; height: 600px; border-radius: 12px; background: #fff; border: 2px dashed #dcdce8; color: #c2c2d0;
     display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; letter-spacing: 1px; line-height: 1.8; }
@@ -35,8 +38,9 @@
   #bigTimer .p { font-size: 11px; color: #888; }
 
   /* ===== 캔버스 영역 ===== */
-  #cvWrap { position: relative; }
+  #cvWrap { position: relative; overflow: hidden; border-radius: 12px; } /* 포커 패널이 내려가면 여기서 잘린다 */
   canvas { background: #ffffff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: block; cursor: crosshair; }
+  #cv { width: 100%; height: auto; } /* #wrap 폭에 맞춰 스케일 (내부 해상도는 940×500 고정) */
 
   /* 원형 시계 타이머 (정중앙 상단, 빨강이 시계방향으로 채워짐) */
   #clock { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 50px; height: 50px; border-radius: 50%; background: #e3e8ee; border: 3px solid #b0bcc8; box-shadow: 0 2px 8px rgba(0,0,0,0.18); z-index: 5; }
@@ -44,7 +48,7 @@
 
   /* 상점 아이콘 (RPG풍: 이중 테두리 + 안쪽 문양 보더 + 꼭대기 보석 장식) */
   /* 좌: 게임 상점(⚔️⛏️📖) / 우: 시스템(🔊⏩⛶🔄) */
-  #toolbar { display: flex; justify-content: space-between; margin-bottom: 12px; padding: 0 4px; position: relative; }
+  #toolbar { display: flex; justify-content: space-between; margin: 10px 0 12px; padding: 0 4px; position: relative; } /* 포커 패널 밖으로 나와 캔버스 아래에 상주 */
   .tbGroup { display: flex; gap: 8px; }
   .shopIcon { position: relative; width: 42px; height: 42px; border-radius: 12px;
     background: linear-gradient(160deg, #fffef8 0%, #f1ecfb 70%, #e6def5 100%);
@@ -200,8 +204,13 @@
   .flipFront { background: linear-gradient(150deg, #5b48d0, #8c5bff); color: #fff; border: 2px solid #b39ddb; }
   .flipBack { background: linear-gradient(150deg, #fff, #e6e9f2); transform: rotateY(180deg); border: 2px solid #c3c8d6; }
 
-  /* ===== 포커 패널 (브라운 카드 테이블 — 모던 + 아기자기) ===== */
-  #pokerPanel { position: relative; margin-top: 10px; overflow: hidden;
+  /* ===== 포커 패널 (브라운 카드 테이블 — 모던 + 아기자기) =====
+     캔버스 하단에 붙은 오버레이. 포커 페이즈에만 '샥' 올라오고 끝나면 내려간다
+     → 전투 중엔 그 공간이 통째로 게임 화면 (유저: 안 쓸 땐 자리가 죽어 비효율) */
+  /* 슬라이드 거리는 px(--slide, JS가 실측). 퍼센트 transform은 패널 높이가 바뀌는 순간
+     해석값이 굳어 내려간 채로 멈추는 사례가 있었다 (카드 유무로 94↔326px 변동) */
+  #pokerPanel { position: absolute; left: 0; right: 0; bottom: 0; z-index: 7; overflow: hidden;
+    transform: translateY(var(--slide, 420px)); transition: transform 0.34s cubic-bezier(0.22, 0.9, 0.3, 1);
     background:
       radial-gradient(rgba(255,235,200,0.05) 1.2px, transparent 1.6px),
       linear-gradient(180deg, #7d5f45 0%, #64492f 100%);
@@ -209,6 +218,7 @@
     border: 1px solid #4e3a26; border-radius: 18px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 40px rgba(40,25,10,0.28), 0 6px 22px rgba(40,30,20,0.25);
     padding: 16px 16px 18px; text-align: center; }
+  #pokerPanel.up { transform: translateY(0); }
   #pokerPanel::before { content: ''; position: absolute; inset: 7px; border: 1.5px solid rgba(235,205,150,0.30); border-radius: 13px; pointer-events: none; }
   #pokerPanel::after { content: '♠ ♥ ♦ ♣'; position: absolute; right: 18px; bottom: 8px; font-size: 15px; letter-spacing: 5px; color: rgba(255,230,180,0.14); pointer-events: none; }
   #pokerBanner { font-size: 13.5px; margin-bottom: 4px; min-height: 20px; color: #ecdcbe; letter-spacing: 0.2px; position: relative; }
@@ -341,11 +351,15 @@
   .mobile #diffBtnRow { flex-wrap: wrap; justify-content: center; }
   .mobile #unitInfo { max-width: 38vw; font-size: 10px; bottom: 6px; left: 6px; max-height: 168px; }
   .mobile #objInfo { max-width: 46vw; font-size: 11px; }
-  .mobile #pokerPanel { padding-bottom: 52px; }
+  /* 포커 패널은 데스크톱에선 캔버스 위 슬라이드 오버레이지만, 모바일은 탭 전환이라 일반 흐름으로 되돌린다 */
+  .mobile #pokerPanel { position: static; transform: none; transition: none; padding-bottom: 52px; }
+  .mobile #cvWrap { overflow: visible; border-radius: 0; }
 
-  /* 모바일 탭 분리: 전투 탭에선 포커/로그 숨김, 포커 탭에선 캔버스 숨김 */
+  /* 모바일 탭 분리: 전투 탭에선 포커/로그 숨김, 포커 탭에선 캔버스·전투 HUD 숨김
+     (cvWrap 자체는 포커 패널의 부모라 숨기면 안 된다) */
   .mobile[data-tab="battle"] #pokerPanel, .mobile[data-tab="battle"] #log { display: none; }
-  .mobile[data-tab="poker"] #cvWrap { display: none; }
+  .mobile[data-tab="poker"] #cv, .mobile[data-tab="poker"] #clock, .mobile[data-tab="poker"] #unitInfo,
+  .mobile[data-tab="poker"] #objInfo, .mobile[data-tab="poker"] #chipBar { display: none; }
 
   /* 📱 모바일 전투 탭: 가로에서만 풀블리드(꽉 찬 화면) — 세로는 일반 흐름 레이아웃 (둘 다 플레이 가능) */
   @media (orientation: landscape) {
@@ -391,26 +405,27 @@
     <div id="chipBar">
       <button class="chipStation" id="stCasino" title="카지노"><span class="ci">🎰</span><span class="cl">카지노</span></button>
     </div>
-  </div>
-  <div id="pokerPanel">
-    <div id="toolbar">
-      <div class="tbGroup" title="게임 상점">
-        <button class="shopIcon" data-shop="book" title="족보">📖</button>
-        <button class="shopIcon" id="bSandbox" data-shop="sandbox" title="샌드박스 소환" style="display:none">🧪</button>
-      </div>
-      <div class="tbGroup" title="시스템">
-        <button class="shopIcon" id="bMusic" title="배경음악 켜기/끄기">🎵</button>
-        <button class="shopIcon" id="bSfx" title="타격음 켜기/끄기">🔊</button>
-        <button class="shopIcon" id="bSpeed" title="배속">⏩</button>
-        <button class="shopIcon" id="btnFull" title="전체화면">⛶</button>
-        <button class="shopIcon restartBtn" id="btnRestart" title="처음부터 다시">🔄 다시하기</button>
-      </div>
+    <!-- 포커 패널: 캔버스 위로 '샥' 오르내리는 오버레이 (평소엔 캔버스가 이 공간을 전부 쓴다) -->
+    <div id="pokerPanel">
+      <div id="pokerBanner"></div>
+      <div id="pokerTimerBar"><div id="pokerTimerFill"></div></div>
+      <div id="cards"></div>
+      <button id="summonBtn">유닛 소환!</button>
+      <div id="handResult"></div>
     </div>
-    <div id="pokerBanner"></div>
-    <div id="pokerTimerBar"><div id="pokerTimerFill"></div></div>
-    <div id="cards"></div>
-    <button id="summonBtn">유닛 소환!</button>
-    <div id="handResult"></div>
+  </div>
+  <div id="toolbar">
+    <div class="tbGroup" title="게임 상점">
+      <button class="shopIcon" data-shop="book" title="족보">📖</button>
+      <button class="shopIcon" id="bSandbox" data-shop="sandbox" title="샌드박스 소환" style="display:none">🧪</button>
+    </div>
+    <div class="tbGroup" title="시스템">
+      <button class="shopIcon" id="bMusic" title="배경음악 켜기/끄기">🎵</button>
+      <button class="shopIcon" id="bSfx" title="타격음 켜기/끄기">🔊</button>
+      <button class="shopIcon" id="bSpeed" title="배속">⏩</button>
+      <button class="shopIcon" id="btnFull" title="전체화면">⛶</button>
+      <button class="shopIcon restartBtn" id="btnRestart" title="처음부터 다시">🔄 다시하기</button>
+    </div>
   </div>
   <div id="log"></div>
 </div>
@@ -628,6 +643,29 @@ function setMobTab(t) {
 }
 document.getElementById('mtBattle').onclick = () => setMobTab('battle');
 document.getElementById('mtPoker').onclick = () => setMobTab('poker');
+
+// ── 포커 패널 슬라이드 (데스크톱): 포커 페이즈에만 캔버스 위로 올라온다.
+//    전투 중엔 내려가서 그 공간이 통째로 게임 화면 (모바일은 탭 전환이라 CSS로 무력화)
+let pokerSlidePx = 0;
+function syncPokerPanel() {
+  const p = document.getElementById('pokerPanel');
+  const up = S.phase === 'poker' && !S.mapTest;
+  if (up) { // 올라와 있는 동안 실제 높이를 재둔다 — 내려갈 땐 이 거리(+16 그림자 여유)만큼 내려가면 확실히 숨는다
+    const h = p.offsetHeight; // 더블포커(두 패)는 패널이 더 높다
+    if (h > 0 && Math.abs(h - pokerSlidePx) > 2) { pokerSlidePx = h; p.style.setProperty('--slide', (h + 16) + 'px'); }
+  }
+  if (p.classList.contains('up') !== up) p.classList.toggle('up', up);
+}
+// ── 게임 화면 최대화: 캔버스 밖 UI(제목·상태바·툴바·로그) 높이를 실측해 CSS에 넘긴다
+//    → #wrap의 max-width가 남는 세로만큼만 가로를 키운다 (비율 940:500 유지)
+function fitGameSize() {
+  if (IS_MOBILE) return; // 모바일은 탭 + 풀블리드 레이아웃이 따로 있다
+  const wrap = document.getElementById('wrap'), cw = document.getElementById('cvWrap');
+  const chrome = wrap.offsetHeight - cw.offsetHeight + 26; // +26 = body 상하 여백 + 여유
+  if (chrome > 40 && chrome < 600) document.documentElement.style.setProperty('--chrome', Math.round(chrome) + 'px');
+}
+window.addEventListener('resize', fitGameSize);
+requestAnimationFrame(() => { fitGameSize(); requestAnimationFrame(fitGameSize); }); // 2패스 — 폭이 바뀌며 제목/로그가 접히는 경우 보정
 
 // 죽음 얼룩 데칼 레이어 (오프스크린 — 매 프레임 drawImage 1회, 서서히 페이드)
 const decalCv = document.createElement('canvas');
@@ -6998,6 +7036,7 @@ function refreshInfoOnBuffChange() { // 콰르텟/고물상 버프가 붙거나 
   if (sig !== __buffSig) { __buffSig = sig; updateInfoPanel(); }
 }
 function updateHUD() {
+  syncPokerPanel(); // 포커 페이즈에만 패널이 올라와 있게 (모든 전환 경로를 한 곳에서 보장)
   refreshInfoOnBuffChange();
   placeInfoPanel(); // 유닛이 카드 쪽으로 이동하면 반대편으로 비켜준다
   if (S.selMon) { // 🎯 선택한 몬스터 체력 실시간 갱신 (죽거나 사라지면 팝업 닫기)
