@@ -3297,6 +3297,14 @@ function drawBackdrop() {
 // 🏛️ 결투장: 로마 콜로세움 (¾ 원근) — 회색 석재, 뒤쪽 관중석 2단 아케이드, 일부 붕괴, 앞은 관전용 개방
 function drawArena() {
   const { x, y, r } = ARENA;
+  const as = artSp('arena');
+  if (as) { // 🎨 원형 결투장 에셋
+    ctx.fillStyle = 'rgba(40,50,30,0.22)';
+    ctx.beginPath(); ctx.ellipse(x + 4, y + r * 0.5, r * 1.02, r * 0.34, 0, 0, 6.28); ctx.fill();
+    artDraw(as, x, y, r * 2.25);
+    if (S.duel) drawDuelist();
+    return;
+  }
   const RY = 0.58; // 타원 납작비 (원근)
   const band = (rx, ry, a0, a1, h, fill) => { // 타원 호를 따라가는 '높이 있는 벽면' 밴드
     ctx.fillStyle = fill; ctx.beginPath();
@@ -3838,16 +3846,13 @@ function drawBarrack() {
   ctx.fillStyle = 'rgba(150,100,180,0.06)';
   ctx.fillRect(x0, y0, b.w, b.h);
   const fc = artSp('fence');
-  if (fc) { // 🎨 통나무 울타리 에셋으로 사방을 두른다 (아래변은 몹보다 앞에 그려져 우리 안이 읽히게)
-    const fh = 30, fw = fh * fc.width / fc.height, step = Math.max(10, fw - 12);
-    for (let x = x0 - 6; x < x0 + b.w + 6; x += step) { // 위·아래변
-      ctx.drawImage(fc, x, y0 - fh + 8, fw, fh);
-      ctx.drawImage(fc, x, y0 + b.h - 10, fw, fh);
-    }
-    for (let y = y0 + 4; y < y0 + b.h - 12; y += step) { // 좌·우변 (세로로 눕힘)
-      ctx.save(); ctx.translate(x0 + 2, y + fw / 2); ctx.rotate(Math.PI / 2); ctx.drawImage(fc, -fw / 2, -fh / 2, fw, fh); ctx.restore();
-      ctx.save(); ctx.translate(x0 + b.w - 2, y + fw / 2); ctx.rotate(Math.PI / 2); ctx.drawImage(fc, -fw / 2, -fh / 2, fw, fh); ctx.restore();
-    }
+  if (fc) { // 🎨 통나무 울타리: 네 변을 정확히 채워 모서리에서 삐져나오지 않게 (세로변은 가로변 사이에 끼워 넣는다)
+    const fh = 28;
+    artTileLine(fc, x0, y0 - fh + 7, b.w, fh, false);            // 윗변
+    artTileLine(fc, x0, y0 + b.h - 9, b.w, fh, false);           // 아랫변
+    const vy0 = y0 + 7, vLen = b.h - 16;                          // 세로변: 가로변 안쪽으로만
+    artTileLine(fc, x0 - fh / 2, vy0, vLen, fh, true);
+    artTileLine(fc, x0 + b.w - fh / 2, vy0, vLen, fh, true);
   } else {
     ctx.strokeStyle = '#b08a5e'; ctx.lineWidth = 2;
     ctx.strokeRect(x0, y0, b.w, b.h);
@@ -4039,15 +4044,10 @@ function drawOreRoom() {
   const BW = 8, gateY0 = R.cy - ROOM_GATE, gateY1 = R.cy + ROOM_GATE; // 담 두께 / 입구 구간 (충돌 판정과 공유)
   ctx.fillStyle = 'rgba(250,245,232,0.10)'; ctx.fillRect(x0, y0, R.w, R.h); // 내부: 아주 옅은 밝음 (게이지 가독용)
   const ws = artSp('wall');
-  const brick = ws ? (bx, by, horiz, len) => { // 🎨 돌담 블록 에셋을 한 변에 이어 붙인다
-    const wh = 26, ww = wh * ws.width / ws.height, step2 = Math.max(10, ww - 8);
-    for (let o = 0; o < len; o += step2) {
-      const seg = Math.min(ww, len - o + 6);
-      if (seg < 6) break;
-      if (horiz) ctx.drawImage(ws, 0, 0, ws.width * (seg / ww), ws.height, bx + o, by - wh + BW, seg, wh);
-      else { ctx.save(); ctx.translate(bx + BW / 2, by + o + seg / 2); ctx.rotate(Math.PI / 2);
-        ctx.drawImage(ws, 0, 0, ws.width * (seg / ww), ws.height, -seg / 2, -wh / 2, seg, wh); ctx.restore(); }
-    }
+  const brick = ws ? (bx, by, horiz, len) => { // 🎨 돌담 블록: 변 길이를 정수 개수로 나눠 딱 맞게 (끊김·삐침 없음)
+    const wh = 24;
+    if (horiz) artTileLine(ws, bx, by - wh + BW, len, wh, false);
+    else artTileLine(ws, bx + BW / 2 - wh / 2, by, len, wh, true);
   } : (bx, by, horiz, len) => { // 한 변을 벽돌로 채운다
     const step2 = 16, mortar = anyIn ? '#7a5a40' : '#8a6a52';
     ctx.fillStyle = mortar;
@@ -7173,6 +7173,20 @@ function mtEnsureArt() { // 첫 사용 시 1회 추출. 실패(tainted 등) 시 
   return MTART.ready;
 }
 function artSp(key) { return MTART.ready ? MTART.sp[key] : null; } // 에셋 스프라이트 (없으면 null → 프로시저럴 폴백)
+// 한 변을 스프라이트로 '딱 맞게' 채운다: 길이를 정수 개수로 나눠 조각 폭을 미세 조정 → 끝이 삐져나오거나 뚝 끊기지 않는다
+function artTileLine(s, x0, y0, len, thick, vert) {
+  const ideal = thick * s.width / s.height;          // 원본 비율 기준 조각 폭
+  const n = Math.max(1, Math.round(len / ideal));    // 이 변에 들어갈 조각 수
+  const w = len / n;                                 // 실제 조각 폭 (변을 정확히 채움)
+  for (let i = 0; i < n; i++) { // 한 칸씩 좌우 반전 — 같은 조각 반복이 '붙여넣은 티'로 보이지 않게
+    ctx.save();
+    if (vert) { ctx.translate(x0 + thick / 2, y0 + i * w + w / 2); ctx.rotate(Math.PI / 2); }
+    else ctx.translate(x0 + i * w + w / 2, y0 + thick / 2);
+    if (i % 2) ctx.scale(-1, 1);
+    ctx.drawImage(s, -w / 2, -thick / 2, w, thick);
+    ctx.restore();
+  }
+}
 function artDraw(s, cx2, cy2, w) { const h = w * s.height / s.width; ctx.drawImage(s, cx2 - w / 2, cy2 - h / 2, w, h); } // 중심 기준
 function artDrawBase(s, cx2, baseY, w) { const h = w * s.height / s.width; ctx.drawImage(s, cx2 - w / 2, baseY - h, w, h); } // 발치 기준
 // ── 🎨 페인터리 월드 베이크: 잔디 얼룩·데코(나무·바위·꽃·연못)·레인·광장을 로드 시 1회만 그려두고 매 프레임 drawImage 1번 (목업 아트 디렉션, 성능은 오히려 순증)
