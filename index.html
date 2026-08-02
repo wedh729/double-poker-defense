@@ -1076,7 +1076,9 @@ function updateMiner(u, dt) {
     if (u.mtimer <= 0) { u.carry = true; u.mjob = 'toHouse'; }
   } else { // toHouse (하단 갓길을 따라 배달 — 부대와 동선 분리)
     u.tx = HOUSE.x + 26 + u.jx * 0.5; u.ty = HOUSE.y + 42 + u.jy * 0.25;
-    if (Math.hypot(HOUSE.x - u.x, HOUSE.y - u.y) < 60) { // 유닛 분리로 밀려도 배달되도록 여유
+    // 도착 판정 76: 개별 오프셋 최대 hypot(26+16, 42+8) ≈ 65px + 유닛 분리 밀림 여유
+    // (60이던 시절 오프셋 큰 광부는 목표에 서고도 배달을 못 하고 광물을 든 채 영영 멈춰 있었다 — toMine 74와 같은 병)
+    if (Math.hypot(HOUSE.x - u.x, HOUSE.y - u.y) < 76) {
       const dep = (MINER_LOAD + S.mineBonus) * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1);
       S.gold += dep;
       addFloat(HOUSE.x, HOUSE.y - 34, `+${dep}G`, (u.sminer || u.hminer) ? '#c9a227' : '#b8860b', 1.1);
@@ -1455,7 +1457,7 @@ function spawnJoker(x, y) {
     keyRank: 14, keyLabel: '🃏', kills: 0,
     jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
     forceTarget: null, attackMine: false, amove: false, priority: 'near',
-    dmg: 70, cd: 2.0, range: 100, splash: 60, bounce: 0, atk: 'area', proj: null, vis: 'scythe', // 기본은 느리고 짧게(0.5회/초·100) — 승급으로 공속·사거리를 키운다
+    dmg: 70, cd: 0.4, range: 110, splash: 60, bounce: 0, atk: 'area', proj: null, vis: 'scythe', // 공속 2.5회/초 · 사거리 110 (2026-08-03 유저: cd 2.0→0.4, 사거리 +10%) — cd 0.4 < 견인 0.45라 공격 중엔 풀이 계속 갱신돼 뭉침이 유지된다
     pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 조커', cool: 0, selected: true, walk: 0, speed: 85,
   });
   addFloat(x, y - 30, '🃏 조커 강림!! 🃏', '#8c5bff', 2.8);
@@ -2429,9 +2431,9 @@ function areaHit(u, x, y, dmg) {
       if (u.shogun) { m.burnT = 1.5; m.burnDmg = dmg * ((u.ascend || 0) >= 1 ? 0.4 : 0.2); } // 🔥 화상 도트 (승급1: 2배)
     }
   }
-  if (u.joker) { // 🃏 낫이 닿는 범위 안의 몹을 조커 쪽으로 견인 — 상한: 승급 0/1/2 = 50/100/200마리 (가까운 순)
+  if (u.joker) { // 🃏 낫이 닿는 범위 안의 몹을 조커 쪽으로 견인 — 상한: 승급 0/1/2 = 70/140/280마리 (가까운 순, 2026-08-03 유저 상향)
     const pr = effRange(u), pr2 = pr * pr, asc = u.ascend || 0;
-    const pt = asc >= 2 ? 0.7 : 0.45, cap = asc >= 2 ? 200 : asc >= 1 ? 100 : 50;
+    const pt = asc >= 2 ? 0.7 : 0.45, cap = asc >= 2 ? 280 : asc >= 1 ? 140 : 70;
     const inR = [];
     for (const m of S.monsters) {
       const jx = m.x - u.x, jy = m.y - u.y, d2 = jx * jx + jy * jy;
@@ -2803,8 +2805,8 @@ const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단
     { needs: [{ tier: 3, hero: true, n: 1 }], mat: '트리플 영웅 1기', desc: '쿨타임 75초 → 55초' },
   ],
   joker: [
-    { needs: [{ hero: true, n: 1 }], mat: '영웅 1기', desc: '공속 0.8회/초 · 사거리 125 · 견인 최대 100마리' },
-    { needs: [{ hero: true, n: 2 }], mat: '영웅 2기', desc: '공속 1.25회/초 · 사거리 150 · 견인 200마리 + 견인 강화' },
+    { needs: [{ hero: true, n: 1 }], mat: '영웅 1기', desc: '공속 4회/초 · 사거리 138 · 견인 최대 140마리' },
+    { needs: [{ hero: true, n: 2 }], mat: '영웅 2기', desc: '공속 6.25회/초 · 사거리 165 · 견인 280마리 + 견인 강화' },
   ],
   catapult: [
     { needs: [{ tier: 0, n: 10 }], mat: '하이카드 10기', desc: '착탄 시 파편 4방 폭발' },
@@ -2837,8 +2839,8 @@ function doAscend(u) {
   S.units = S.units.filter(v => !gone.includes(v));
   u.ascend = lv + 1;
   // 스탯 직접 반영형 효과 (고유 능력 — 공격력은 건드리지 않는다)
-  if (key === 'joker' && u.ascend === 1) { u.cd = 1.25; u.range = 125; } // 공속 0.8회/초
-  if (key === 'joker' && u.ascend === 2) { u.cd = 0.8; u.range = 150; }  // 공속 1.25회/초
+  if (key === 'joker' && u.ascend === 1) { u.cd = 0.25; u.range = 138; } // 공속 4회/초 (베이스 0.4에서 ×0.625 유지, 사거리 +10% 반영)
+  if (key === 'joker' && u.ascend === 2) { u.cd = 0.16; u.range = 165; } // 공속 6.25회/초
   if (key === 'quartet' && u.ascend === 1) u.range = 190;                // 오라 반경 (버프 강도는 update에서 ascend 참조)
   for (const g of gone) { for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 80 + Math.random()*140; S.parts.push({ x: g.x, y: g.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 1.8 + Math.random()*2.4, c: '#c62828' }); } }
   addFloat(u.x, u.y - 32, `🩸 승급! Lv.${u.ascend} — ${def.desc}`, '#ff6b9d', 2.4);
