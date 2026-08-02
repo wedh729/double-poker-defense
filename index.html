@@ -600,7 +600,7 @@ const PORTAL = { x: 80, y: 78, r: 34 }; // 강화 포털: 같은 유닛 5기를 
 const WAVE_TIME = 90, POKER_TIME = 60;
 const FINAL_ROUND = 80; // 이후는 헬모드
 const SUN_ROUND = 150;  // 🌞 아포칼립스 태양 강림 — 헬모드 최종장 (처치 시 헬모드 클리어)
-const ARENA = { x: 848, y: 272, r: 85 }; // 🏛️ 결투장: 로마 콜로세움 (×1.7 확장) — 전투 유닛 1기만 입장
+const ARENA = { x: 838, y: 278, r: 85 }; // 🏛️ 결투장: 로마 콜로세움 (×1.7) — 우측 잘림·광석방 밀착 없게 (838,278). 전투 유닛 1기만 입장
 const DUEL_EVERY = 7;    // 도전자 주기 (보스 라운드와 겹치면 그 주는 휴장)
 // 도전자 체력: 몹HP가 아니라 "단일 유닛 DPS 성장"에 앵커 (몹HP는 유닛 수로 커버되는 곡선이라 배수로 쓰면 후반 도달 불가)
 // 실측(집중업글 단품): 스트레이트 DPS ≈ 69+3.2R → ×78초 = 스트레이트 풀타임 아슬아슬 / 풀하우스(보스판정 ×2) 26~36초 / 투페어 이하 135초+(불가능 벽)
@@ -1605,7 +1605,7 @@ function update(dt) {
     const adx = u.x - ARENA.x, ady = u.y - ARENA.y, ad = Math.hypot(adx, ady);
     if (ad < ARENA.r) {
       if (!S.champion || S.champion === u) S.champion = u;
-      else { const k = (ARENA.r + 2) / (ad || 1); u.x = ARENA.x + adx * k; u.y = ARENA.y + ady * k; } // 만원사례 — 입장 불가
+      else if (S.duel) { const k = (ARENA.r + 2) / (ad || 1); u.x = ARENA.x + adx * k; u.y = ARENA.y + ady * k; } // 결투 중에만 배제 — 평시엔 자유 통행 (r85 확장으로 통행 방해 방지, Opus)
     }
   }
   // 재정착: 목표 8px 이내면 현재 위치를 목표로 스냅 — 밀려난 유닛이 되돌아가려고 미세 진동하는 것 방지
@@ -5881,10 +5881,9 @@ function updateInfoPanel() {
     const commonPri = sel.every(u => u.priority === sel[0].priority) ? (sel[0].priority || 'near') : '';
     // 🗡️ 풀하우스 라인 부대: 전원 쿨 준비됐을 때만 일제 발동 (1기라도 쿨타임이면 회색 비활성)
     const skUnits = sel.filter(u => u.tier === 6 && !u.clone && !u.miner);
-    const skReady = skUnits.length > 0 && skUnits.every(u => (u.skillCd || 0) <= 0 && (u.skillT || 0) <= 0);
+    const st6 = skillAllLabel(skUnits);
     const skHTML = skUnits.length === 0 ? '' :
-      `<br><button id="skillAllBtn" class="shopBtn" ${skReady ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:${skReady ? '#c0392b' : '#999'};font-weight:bold">` +
-      (skReady ? `🗡️ 스킬 일제 발동! (${skUnits.length}기)` : `🗡️ 스킬 준비 중… (${skUnits.filter(u => (u.skillCd || 0) <= 0 && (u.skillT || 0) <= 0).length}/${skUnits.length}기)`) + `</button>`;
+      `<br><button id="skillAllBtn" class="shopBtn" ${st6.allReady ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:${st6.allReady ? '#c0392b' : '#999'};font-weight:bold">${st6.label}</button>`;
     el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>우클릭 이동 · A키+클릭 공격 지정` +
       (sel.some(u => !u.miner) ? priorityRow(commonPri) : '') +
       skHTML +
@@ -5893,7 +5892,10 @@ function updateInfoPanel() {
     wirePriorityButtons(el);
     wireDesel(el);
     const gb = el.querySelector('#skillAllBtn');
-    if (gb) gb.onclick = () => { skUnits.forEach(u => activateSkill(u)); updateInfoPanel(); };
+    if (gb) gb.onclick = () => { // 클릭 시점의 선택을 재계산 (렌더 시점 캡처가 낡는 것 방지 — Opus)
+      S.units.filter(u => u.selected && u.tier === 6 && !u.clone && !u.miner).forEach(u => activateSkill(u));
+      updateInfoPanel();
+    };
     return;
   }
   const u = sel[0];
@@ -6034,6 +6036,13 @@ function skillRow(u) {
   const st = skillState(u), color = u.hero ? '#7e57c2' : '#c0392b';
   return `<br><button id="skillBtn" class="shopBtn" ${st.dis ? 'disabled' : ''} style="margin-top:6px;text-align:center;color:${color};font-weight:bold">${st.label}</button>`;
 }
+function skillAllLabel(sk) { // 부대 일괄 스킬 라벨 (렌더·실시간 공용) — 단검/영웅 혼성 아이콘 반영
+  const ready = sk.filter(u => (u.skillCd || 0) <= 0 && (u.skillT || 0) <= 0).length;
+  const allReady = sk.length > 0 && ready === sk.length;
+  const hasH = sk.some(u => u.hero), hasD = sk.some(u => !u.hero);
+  const ico = hasH && hasD ? '🗡️🌀' : hasH ? '🌀' : '🗡️';
+  return { allReady, label: allReady ? `${ico} 스킬 일제 발동! (${sk.length}기)` : `${ico} 스킬 준비 중… (${ready}/${sk.length}기)` };
+}
 // 선택 유닛 정보의 실시간 값(킬 수·스킬 쿨) 갱신 — 전체 리렌더 없이 매 프레임 (유저: 킬수가 실시간으로 안 오름)
 function refreshInfoPanelLive() {
   const el = document.getElementById('unitInfo');
@@ -6049,13 +6058,10 @@ function refreshInfoPanelLive() {
   }
   const gb = document.getElementById('skillAllBtn');
   if (gb && sel.length > 1) {
-    const sk = sel.filter(u => u.tier === 6 && !u.clone && !u.miner);
-    const ready = sk.filter(u => (u.skillCd || 0) <= 0 && (u.skillT || 0) <= 0).length;
-    const allReady = sk.length > 0 && ready === sk.length;
-    const label = allReady ? `🗡️ 스킬 일제 발동! (${sk.length}기)` : `🗡️ 스킬 준비 중… (${ready}/${sk.length}기)`;
-    if (gb.textContent !== label) gb.textContent = label;
-    if (gb.disabled !== !allReady) gb.disabled = !allReady;
-    gb.style.color = allReady ? '#c0392b' : '#999';
+    const st6 = skillAllLabel(sel.filter(u => u.tier === 6 && !u.clone && !u.miner));
+    if (gb.textContent !== st6.label) gb.textContent = st6.label;
+    if (gb.disabled !== !st6.allReady) gb.disabled = !st6.allReady;
+    gb.style.color = st6.allReady ? '#c0392b' : '#999';
   }
 }
 // ⏳ 시간술사: 시간 정지 (4초간 몬스터 스폰·타이머·이동 정지, 아군은 그대로 행동)
@@ -7086,7 +7092,11 @@ function mtExtractArt() {
 }
 (function mtLoadArt() {
   const im = new Image();
-  im.onload = () => { MTART.img = im; mtWorldBake = null; sbWorldBake = null; }; // 추출은 첫 베이크 때 lazy (파싱·로드 시점 111ms 블록 방지 — Opus)
+  im.onload = () => { // 추출·베이크는 유휴 시간에 선(先)워밍 — 게임 프레임 안에서 237ms 콜드 히치가 나지 않게 (Opus)
+    MTART.img = im; mtWorldBake = null; sbWorldBake = null;
+    const warm = () => { try { mtEnsureArt(); sbBake(); } catch (e) {} };
+    if (window.requestIdleCallback) requestIdleCallback(warm, { timeout: 2500 }); else setTimeout(warm, 120);
+  };
   im.src = 'assets/art2.png';
 })();
 function mtEnsureArt() { // 첫 사용 시 1회 추출. 실패(tainted 등) 시 ready=false 유지 → 프로시저럴 폴백
@@ -7913,7 +7923,7 @@ function frame(now) {
     }
     if (perfText) { ctx.fillStyle = '#c0392b'; ctx.font = 'bold 11px monospace'; ctx.fillText(perfText, 8, 14); }
   }
-  updateHUD();
+  try { updateHUD(); } catch (e) { reportLoopError('hud', e); } // HUD·정보패널 갱신 예외로 rAF 루프가 멎지 않게 (Opus)
   requestAnimationFrame(frame);
 }
 // 루프 예외 보고: 게임을 멈추지 않되 조용히 묻히지도 않게 — 같은 메시지는 한 번만, 새로운 오류는 다시 알린다
