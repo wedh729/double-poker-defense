@@ -1231,7 +1231,10 @@ function spawnMonster(hp, isBoss, opt) {
 function speedBonus() { return S.timer > 1 ? Math.round(S.timer * (1 + S.round * 0.25)) : 0; }
 function endWave() {
   S.slotBombs = []; // 잭팟 폭격 잔탄이 다음 웨이브로 넘어가 엉뚱한 좌표에서 터지지 않게
-  if (S.duel && S.timer <= 0) { logMsg('🏛️ 도전자: "오늘도 챔피언은 나다." (유유히 퇴장 — 패널티 없음)'); S.duel = null; } // 시간 소진 시에만 퇴장. 조기 전멸이면 결투는 포커 페이즈까지 이어진다 (유저 버그 리포트)
+  // 결투는 시간이 다 돼도 포커 페이즈까지 이어진다 (퇴장은 다음 startWave가 처리 — '시간 다 됐다').
+  // 여기서 지우면, 조기 종료를 막은 뒤로 endWave가 timer<=0으로만 오기 때문에 결투 창이
+  // 150초(90 전투 + 60 포커) → 90초로 줄어 도전자 HP 튜닝 전제가 무너진다.
+  if (S.duel) logMsg('🏛️ 도전자: "시간은 다 됐지만… 아직 안 끝났다."');
   const bossAlive = S.monsters.some(m => m.boss);
   const leak = S.monsters.length;
   if (bossAlive) {
@@ -7298,11 +7301,12 @@ document.getElementById('bSfx').textContent = sfxOn ? '🔊' : '🔇';
 // 성능 측정: ?debug=1 로 열면 캔버스 좌상단에 update/draw 평균 ms 표시
 const DEBUG = location.search.indexOf('debug=1') >= 0;
 // ==================== 🏗️ P2-b 멀티맵 미리보기 (무인 모형 — 네트워크 없음) ====================
-// 4인 월드: 십자 레인이 4사분면(각자 현 싱글맵 전체)을 나누고 중앙에 왕국. RTS 카메라+미니맵+돌다리 LoS 데모.
+// 4인 월드: 기지(각자 현 싱글맵 전체) 넷을 90°씩 돌려 풍차꼴로 맞물리고, 그 틈이 레인이 되어
+// 중앙 왕국 광장으로 모인다 (정사각 1528², 빈 땅 0). RTS 카메라+미니맵+돌다리 LoS 데모.
 // 실게임과 완전 격리: S.mapTest 중엔 frame()이 updateMapTest/drawMapTest만 돌리고, 입력은 캡처 단계에서 가로챈다.
-const LANE = 88;              // 십자 레인 폭 (130 → 2/3로 축소 — 근접 유닛도 레인 건너편에 닿게)
-const MT = { // 월드 지오메트리는 mtSetup(인원)이 채운다 (4인 = 십자 레인 / 2인 = 가로 레인 하나)
-  players: 4, W: 0, H: 0, ORIGIN: [], QUAD: [], TERR: [], PNAMES: [], PCOLS: [], KING: { x: 0, y: 0 },
+const LANE = 88;              // 레인 폭 (130 → 2/3로 축소 — 근접 유닛도 레인 건너편에 닿게)
+const MT = { // 월드 지오메트리는 mtSetup(인원)이 채운다 (4인 = 풍차 레인 4개 / 2인 = 가로 레인 하나)
+  players: 4, W: 0, H: 0, PH: 0, ORIGIN: [], QUAD: [], PNAMES: [], PCOLS: [], KING: { x: 0, y: 0 },
   LANES: [], BRIDGES: [], GATES: [], // LANES = 레인 사각 목록 (예전 laneV/laneH 단일 전제를 대체)
   MM: { w: 190, h: 107, x: 940 - 198, y: 500 - 115 }, // 미니맵 (우하단)
   cam: { x: 0, y: 0 }, keys: {}, mouse: { x: 470, y: 250, in: false },
@@ -7344,6 +7348,16 @@ function mtQuadAt(wx, wy) { // 이 월드 좌표를 품은 사분면 (없으면 
   for (const q of MT.QUAD) if (wx >= q.ox && wx <= q.ox + q.w && wy >= q.oy && wy <= q.oy + q.h) return q;
   return null;
 }
+// 회전 사분면에서 '텍스트만' 똑바로 세운다 — 건물 라벨(소환장·광석 방·제물대·N단계)이
+// 기지와 함께 돌면 rot2는 뒤집히고 rot1/3은 누워서 못 읽는다. 앵커 기준으로 역회전만 걸어 준다.
+function mtUprightText(rot) {
+  if (!rot) return null;
+  const a = -rot * Math.PI / 2, t = ctx; // 대상 컨텍스트를 고정 (ctx는 오프스크린 베이크로 스왑될 수 있다)
+  const of = t.fillText.bind(t), os = t.strokeText.bind(t);
+  const wrap = fn => (s, x, y, mw) => { t.save(); t.translate(x, y); t.rotate(a); fn(s, 0, 0, mw); t.restore(); };
+  t.fillText = wrap(of); t.strokeText = wrap(os);
+  return () => { delete t.fillText; delete t.strokeText; }; // 프로토타입 메서드로 복귀
+}
 function mtQuadCtx(q) { // 캔버스 변환을 사분면 로컬로 — 이후 drawCastle() 등을 싱글맵 좌표 그대로 호출
   ctx.translate(q.ox, q.oy);
   if (q.rot === 1) { ctx.translate(QH, 0); ctx.rotate(Math.PI / 2); }
@@ -7366,7 +7380,7 @@ function mtSetup(players) {
     // 다리는 두 진영의 '수직 회랑'에만: x≈220(포털·성 기둥~펜 사이) / x≈625(펜~광석방 왼담 사이, 방 입구 옆)
     // — 착지점이 펜·광석방·콜로세움 충돌체를 전부 피해서 건너간 뒤 어디로든 이동·복귀 가능
     MT.BRIDGES = [{ x: BX + 220, y: LM.a + LANE / 2, vert: false }, { x: BX + 625, y: LM.a + LANE / 2, vert: false }];
-    MT.ROT = [0, 0]; MT.TERR = []; // 2인은 회전 없음 · 영토 = 기지 그대로
+    MT.ROT = [0, 0]; MT.PH = 0; // 2인은 회전 없음 · 왕국이 레인 안에 있어 광장 사각(PH) 개념이 없다
   } else {
     // ★ 4인 = 풍차(pinwheel) 배치 (2026-08-02 유저: "비율을 조정해 정사각형으로, 남는 공간 없이")
     //   이전엔 940×500 기지를 2×2로 놓고 위아래에 440씩 여백을 붙여 정사각을 맞췄더니
@@ -7403,7 +7417,7 @@ function mtSetup(players) {
                   { x: S2 - 150, y: LH1, vert: false }, { x: S2 - 400, y: LH1, vert: false },
                   { x: LV2, y: S2 - 150, vert: true }, { x: LV2, y: S2 - 400, vert: true },
                   { x: 150, y: LH3, vert: false }, { x: 400, y: LH3, vert: false }];
-    MT.TERR = []; // 앞마당이 없어졌으니 '영토 = 기지'. 미니맵은 기지 사각만 그린다
+    MT.PH = QW - S2 / 2; // 176 = 중앙 광장 사각의 반폭 (레인 넷이 둘러싼 독립 광장)
   }
   MT.QUAD = MT.ORIGIN.map(([ox, oy], i) => mtQuad(ox, oy, (MT.ROT && MT.ROT[i]) || 0, i));
   // 다리마다 '자기가 건너는 레인'을 붙인다 — 다리 좌표를 품은 레인으로 (풍차는 세로 레인이 둘이라
@@ -7836,9 +7850,11 @@ function startMapTest(players) {
   const lane0 = lv || lh; // 습격대: 세로 레인이 있으면 거기, 없으면(2인) 가로 레인
   MT.raider = lane0.vert
     ? { x: lane0.x + lane0.w / 2, y: lane0.y + 60, dir: 1, vert: true, lo: lane0.y + 55, hi: lane0.y + lane0.h - 120 }
-    : { x: lane0.x + lane0.w - 140, y: lane0.y + lane0.h / 2, dir: -1, vert: false, lo: lane0.x + 120, hi: lane0.x + lane0.w - 55 };
+    : { x: lane0.x + lane0.w - 140, y: lane0.y + lane0.h / 2, dir: -1, vert: false,
+        lo: Math.max(lane0.x + 120, MT.KING.x + 130), hi: lane0.x + lane0.w - 55 }; // 왕국을 지나쳐 성 안으로 파고들지 않게
   const lb = lh || lv;   // 보스: 가로 레인을 아주 느리게 왕복
-  MT.boss = { x: lb.x + lb.w - 45, y: lb.y + lb.h / 2, dir: -1, lo: lb.x + lb.w * 0.45, hi: lb.x + lb.w - 45 };
+  MT.boss = { x: lb.x + lb.w - 45, y: lb.y + lb.h / 2, dir: -1,
+              lo: Math.max(MT.KING.x + 220, lb.x + 60), hi: lb.x + lb.w - 45 };
   MT.zoom = 1; MT.pinch = null;
   MT.cam.x = kc.x - mtViewW() / 2; MT.cam.y = kc.y - mtViewH() / 2; mtClampCam();
   MT.time = 0; MT.effects = []; MT.drag = null; MT.mmDrag = false; MT.keys = {};
@@ -7908,13 +7924,26 @@ function updateMapTest(dt) {
     if (d > 3) {
       const px_ = u.x, py_ = u.y;
       const st = Math.min(d, 70 * dt); u.x += dx / d * st; u.y += dy / d * st; u.moving = true; u.walk = (u.walk || 0) + dt;
-      // 🚧 레인 = 파인 수로: 다리 상판·중앙 광장(계단)으로만 건넌다
-      const inLane = MT.LANES.some(L => u.x > L.x - 8 && u.x < L.x + L.w + 8 && u.y > L.y - 8 && u.y < L.y + L.h + 8);
-      const kr = Math.hypot(u.x - MT.KING.x, u.y - MT.KING.y);
-      const ka = Math.atan2(u.y - MT.KING.y, u.x - MT.KING.x);
-      const inGateSector = Math.abs(((ka % (Math.PI / 4)) + Math.PI / 4 + Math.PI / 8) % (Math.PI / 4) - Math.PI / 8) < 0.3; // 레인 4 + 대각 계단 4 방향
-      const allowed = mtOnDeck(u.x, u.y) || kr < 132 || (kr < 152 && inGateSector); // 광장 내부는 자유, 성곽 링은 개구 8곳으로만
-      if (inLane && !allowed) { u.x = px_; u.y = py_; u.tx = u.x; u.ty = u.y; u.moving = false; } // 벽 앞에서 멈춤
+      // 🚧 레인 = 파인 수로: 다리 상판·중앙 광장으로만 건넌다
+      const dxK = u.x - MT.KING.x, dyK = u.y - MT.KING.y;
+      const kr = Math.hypot(dxK, dyK);
+      const ka = Math.atan2(dyK, dxK);
+      const inGateSector = Math.abs(((ka % (Math.PI / 4)) + Math.PI / 4 + Math.PI / 8) % (Math.PI / 4) - Math.PI / 8) < 0.3; // 성곽 링 개구 8방향
+      // 🏛️ 광장은 사각 (풍차 전용: MT.PH = 광장 반폭 176). 십자였을 땐 광장이 두 레인의 교차부라
+      //    kr<132 하나로 통행이 됐지만, 풍차의 광장은 레인 넷에 둘러싸인 독립 사각이고
+      //    레인 안쪽 면에서 왕국까지 220 > 152라 예전 조건으론 아무도 못 들어간다.
+      //    2인은 PH=0이라 아래 식이 예전과 완전히 동일해진다.
+      const inPlaza = MT.PH > 0 && Math.abs(dxK) < MT.PH && Math.abs(dyK) < MT.PH;
+      // 광장 입구 = 레인이 광장에 맞닿는 구간 (각도 섹터로 재면 kr이 줄수록 좁아져 레인 한복판에서 얼어붙는다)
+      let inLane = false, inMouth = false;
+      for (const L of MT.LANES) {
+        if (!(u.x > L.x - 8 && u.x < L.x + L.w + 8 && u.y > L.y - 8 && u.y < L.y + L.h + 8)) continue;
+        inLane = true;
+        if (MT.PH > 0 && (L.vert ? Math.abs(dyK) < MT.PH : Math.abs(dxK) < MT.PH)) inMouth = true;
+      }
+      const ringOK = kr < 132 || (kr < 152 ? inGateSector : true); // 성곽 링은 개구 8곳으로만
+      const allowed = mtOnDeck(u.x, u.y) || (ringOK && (kr < 152 || inPlaza || inMouth));
+      if ((inLane || inPlaza) && !allowed) { u.x = px_; u.y = py_; u.tx = u.x; u.ty = u.y; u.moving = false; } // 벽 앞에서 멈춤
       const q = mtQuadAt(u.x, u.y); // 사분면 내부 경계: 소환장 밀어내기 + 광석방 담장 (기존 충돌을 로컬 좌표로 재사용)
       if (q) {
         const l = mtToLocal(q, u.x, u.y), lp = mtToLocal(q, px_, py_);
@@ -8134,7 +8163,6 @@ function mtMinimap() {
   const M = MT.MM, s = M.w / MT.W;
   ctx.fillStyle = 'rgba(14,10,26,0.88)'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.fill();
   ctx.strokeStyle = '#5a5278'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.stroke();
-  MT.TERR.forEach(([tx, ty, tw, th], i) => { ctx.fillStyle = MT.PCOLS[i] + (i ? '22' : '3c'); ctx.fillRect(M.x + tx * s, M.y + ty * s, tw * s, th * s); }); // 영토(기지+앞마당) 옅게
   MT.QUAD.forEach(q => { ctx.fillStyle = MT.PCOLS[q.i] + (q.i ? '30' : '55'); ctx.fillRect(M.x + q.ox * s, M.y + q.oy * s, q.w * s, q.h * s); }); // 기지는 진하게 (회전해도 발자국은 축 정렬)
   ctx.fillStyle = 'rgba(200,190,170,0.75)';
   for (const L of MT.LANES) ctx.fillRect(M.x + L.x * s, M.y + L.y * s, L.w * s, L.h * s);
@@ -8175,8 +8203,9 @@ function drawMapTest() {
   MT.QUAD.forEach(q => { // 사분면 기지 = 현 싱글맵 건물 전부 (컬링)
     if (!vis(q)) return;
     ctx.save(); mtQuadCtx(q); // 광부 갓길만 베이크. 시설은 전부 라이브(에셋 인지 드로우) — 싱글과 완전히 같은 그림
-    drawCastle(); drawMine(); drawOreRoom(); drawBarrack(); drawEnemyPortal(); drawPortal(); drawAltar(); drawArena();
-    ctx.restore();
+    const unpatch = mtUprightText(q.rot); // 건물 라벨은 회전 밖으로 (읽을 수 있게)
+    try { drawCastle(); drawMine(); drawOreRoom(); drawBarrack(); drawEnemyPortal(); drawPortal(); drawAltar(); drawArena(); }
+    finally { if (unpatch) unpatch(); ctx.restore(); }
   });
   if (!A) for (const [gx2, gy2, ga] of MT.GATES) mtGate(gx2, gy2, ga);
   if (A) mtKingdomArt(); else mtKingdom(P);
