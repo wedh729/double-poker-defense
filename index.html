@@ -7195,13 +7195,14 @@ const MT = { // 월드 지오메트리는 mtSetup(인원)이 채운다 (4인 = �
   cam: { x: 0, y: 0 }, keys: {}, mouse: { x: 470, y: 250, in: false },
   mmDrag: false, drag: null, time: 0, effects: [], raider: null, boss: null,
 };
+const QW = 940, QH = 500; // 사분면(플레이어 기지) = 싱글맵 한 장
 function mtSetup(players) {
   MT.players = players;
-  const LM = { a: 500, b: 500 + LANE }; // 가로 레인은 두 모드 공통 (기지 사이)
   if (players === 2) {
     // 2인: 위·아래 기지 + 가운데 가로 레인 하나. 서쪽(9시) 왕국 ← 동쪽(3시) 게이트에서 몹이 진격
+    const LM = { a: QH, b: QH + LANE };
     const BX = 300;                              // 서쪽 왕국 구역 폭
-    MT.W = BX + 940 + 70; MT.H = 500 * 2 + LANE;
+    MT.W = BX + QW + 70; MT.H = QH * 2 + LANE;
     MT.ORIGIN = [[BX, 0], [BX, LM.b]];
     MT.PNAMES = ['P1 · 내 진영', 'P2'];
     MT.PCOLS = ['#1D9E75', '#378ADD'];
@@ -7211,26 +7212,42 @@ function mtSetup(players) {
     // 다리는 두 진영의 '수직 회랑'에만: x≈220(포털·성 기둥~펜 사이) / x≈625(펜~광석방 왼담 사이, 방 입구 옆)
     // — 착지점이 펜·광석방·콜로세움 충돌체를 전부 피해서 건너간 뒤 어디로든 이동·복귀 가능
     MT.BRIDGES = [{ x: BX + 220, y: LM.a + LANE / 2, vert: false }, { x: BX + 625, y: LM.a + LANE / 2, vert: false }];
+    MT.TERR = MT.ORIGIN.map(([ox, oy]) => [ox, oy, QW, QH]); // 2인은 영토 = 기지 그대로
   } else {
     // 4인: 십자 레인이 사분면 4개를 가르고 교차점에 왕국. 게이트 12·3·6·9시
-    const LN = { a: 940, b: 940 + LANE };
-    MT.W = 940 * 2 + LANE; MT.H = 500 * 2 + LANE;
-    MT.ORIGIN = [[LN.b, 0], [LN.b, LM.b], [0, LM.b], [0, 0]]; // P1(1시)·P2(5시)·P3(7시)·P4(11시)
+    // ★ 정사각 월드 (2026-08-02 유저): 예전엔 W1968×H1088이라 세로 레인이 가로의 절반이었다
+    //   → 12·6시 게이트 몹이 훨씬 빨리 왕국에 닿고, 세로 레인엔 다리 놓을 여유도 없었음.
+    //   H를 W와 같게 맞추고 남는 세로 여유를 기지 바깥 '앞마당'(YARD)으로 준다 —
+    //   기지(940×500)는 안쪽(왕국 쪽)에 붙고, 앞마당이 세로 레인 바깥 회랑을 감싼다.
+    const LN = { a: QW, b: QW + LANE };
+    MT.W = QW * 2 + LANE; MT.H = MT.W;                                  // 1968 × 1968
+    const LM = { a: (MT.H - LANE) / 2, b: (MT.H + LANE) / 2 };           // 가로 레인 = 월드 정중앙
+    const YARD = LM.a - QH;                                              // 440 — 기지 바깥 앞마당 깊이
+    MT.ORIGIN = [[LN.b, YARD], [LN.b, LM.b], [0, LM.b], [0, YARD]];      // P1(1시)·P2(5시)·P3(7시)·P4(11시)
     MT.PNAMES = ['P1 · 내 진영', 'P2', 'P3', 'P4'];
     MT.PCOLS = ['#1D9E75', '#378ADD', '#D4537E', '#BA7517'];
     MT.laneV = LN; MT.laneH = LM;
     MT.KING = { x: LN.a + LANE / 2, y: LM.a + LANE / 2 };
     MT.GATES = [[MT.KING.x, 40, Math.PI], [MT.W - 40, MT.KING.y, -Math.PI / 2],
                 [MT.KING.x, MT.H - 40, 0], [40, MT.KING.y, Math.PI / 2]];
-    // 세로 다리(12·6시): y=392 — 서쪽 착지가 콜로세움(로컬 838,278 r85) 아래 클리어 존, 동쪽은 성 옆 개활지
-    // 가로 다리(9·3시): 로컬 x=625 수직 회랑 — 건넌 뒤 위아래 어디로든 통행 가능 (펜 상단에 막히던 x470에서 이동)
-    MT.BRIDGES = [{ x: MT.KING.x, y: 392, vert: true }, { x: MT.KING.x, y: LM.b + 392, vert: true },
+    // 세로 다리: 기지 구간 로컬 y=392(서쪽 착지가 콜로세움 아래 클리어 존, 동쪽은 성 옆 개활지)
+    //            + 앞마당 한가운데 — 건물이 없는 개활지라 제약 없이 놓인다 (세로 레인 여유 확보)
+    // 가로 다리: 로컬 x=625 수직 회랑 — 건넌 뒤 위아래 어디로든 통행 가능
+    MT.BRIDGES = [{ x: MT.KING.x, y: YARD / 2, vert: true }, { x: MT.KING.x, y: YARD + 392, vert: true },
+                  { x: MT.KING.x, y: LM.b + 392, vert: true }, { x: MT.KING.x, y: MT.H - YARD / 2, vert: true },
                   { x: 625, y: MT.KING.y, vert: false }, { x: LN.b + 625, y: MT.KING.y, vert: false }];
+    // 영토 = 기지 + 앞마당 (사분면 전체 940×940). 앞마당이 세로 레인 바깥 회랑을 감싸므로
+    // 12·6시 몹도 진격 내내 누군가의 영토를 지난다 — 가로 레인과 동일한 조건
+    const TH = LM.a; // 위쪽 영토 높이 = 앞마당 + 기지
+    MT.TERR = [[LN.b, 0, QW, TH], [LN.b, LM.b, QW, TH], [0, LM.b, QW, TH], [0, 0, QW, TH]];
   }
   MT.MM.h = Math.round(MT.MM.w * MT.H / MT.W); // 미니맵은 월드 비율에 맞춘다 (2인은 세로로 길다)
   MT.MM.y = 500 - MT.MM.h - 10;
   mtWorldBake = null; // 지오메트리가 바뀌었으니 다시 굽는다
 }
+// 데코 개수는 고정이라 월드가 넓어지면 밀도가 묽어진다 → 면적/둘레 비례로 보정 (기준 = 옛 4인 월드)
+function mtDecorK() { return MT.W * MT.H / (1968 * 1088); }
+function mtEdgeK() { return (MT.W + MT.H) / (1968 + 1088); }
 // ── 🎨 아트 에셋 (assets/art2.png — ChatGPT 생성 시트): 로드 → 셀 자동 크롭(체커 배경 키잉) → 스프라이트/타일
 // 로드 성공 시 베이크가 이미지 기반으로 다시 구워진다. 실패(오프라인 등) 시 프로시저럴 폴백 유지.
 const MTART = { ready: false, img: null, sp: {} };
@@ -7449,7 +7466,8 @@ function mtBakeBody() {
   // ④ 광부 갓길 4벌 (사분면마다)
   for (const [ox, oy] of MT.ORIGIN) { ctx.save(); ctx.translate(ox, oy); drawMinerRoad(); ctx.restore(); }
   // ⑤ 데코: 연못 → 바위 → 덤불 → 꽃 → 침엽수 (금지 구역 리젝션)
-  const put = (n, tries, fn) => { let placed = 0;
+  const K = mtDecorK(); // 월드 면적 비례 (아트 베이크와 동일 규칙)
+  const put = (n, tries, fn) => { let placed = 0; n = Math.round(n * K); tries = Math.round(tries * K);
     for (let i = 0; i < tries && placed < n; i++) { const x = rnd() * MT.W, y = rnd() * MT.H; if (!mtNoDecor(x, y)) { fn(x, y); placed++; } } };
   put(2, 300, (x, y) => { // 연못 (밀도 1/3)
     ctx.fillStyle = 'rgba(70,110,50,0.5)'; ctx.beginPath(); ctx.ellipse(x, y + 4, 34, 22, 0, 0, 6.28); ctx.fill();
@@ -7490,7 +7508,7 @@ function mtBakeBody() {
     ctx.beginPath(); ctx.moveTo(x - s * 0.35, y - s * 0.2); ctx.lineTo(x, y - s * 0.95); ctx.lineTo(x, y - s * 0.6); ctx.closePath(); ctx.fill();
   };
   put(15, 1200, (x, y) => pine(x, y, 24 + rnd() * 16));
-  for (let i = 0; i < 30; i++) { // 외곽 숲 (테두리 밀도 업 — 목업의 숲 가장자리)
+  for (let i = 0, fn2 = Math.round(30 * mtEdgeK()); i < fn2; i++) { // 외곽 숲 (둘레 비례, 테두리 밀도 업 — 목업의 숲 가장자리)
     const side = rnd() * 4 | 0, t = rnd();
     const x = side === 0 ? t * MT.W : side === 1 ? t * MT.W : side === 2 ? 14 + rnd() * 44 : MT.W - 14 - rnd() * 44;
     const y = side === 0 ? 12 + rnd() * 40 : side === 1 ? MT.H - 12 - rnd() * 40 : t * MT.H;
@@ -7560,7 +7578,7 @@ function mtBakeArt() {
   // ① 잔디: 격자 타일 + 페더 스탬프 폭탄 (이음새·반복감 은폐 — 회전·반전 변주)
   const g = sp.grass;
   for (let y = 0; y < MT.H; y += g.height) for (let x = 0; x < MT.W; x += g.width) ctx.drawImage(g, x, y);
-  mtGrassStamps(rnd, MT.W, MT.H, 80);
+  mtGrassStamps(rnd, MT.W, MT.H, Math.round(80 * mtDecorK()));
   // ② 레인: 흙길 타일 스탬프 (가로는 그대로, 세로는 90° 회전) + 파인 수로 오버레이
   const road = sp.road, roadH = LANE + 18, rs = roadH / road.height, rw = road.width * rs; // 레인 폭에 맞춰 (번짐 최소)
   const laneCY = MT.laneH.a + LANE / 2;
@@ -7584,7 +7602,8 @@ function mtBakeArt() {
   }
   // ⑤ 사분면 시설은 라이브 드로우가 담당 (drawMine/drawBarrack/drawArena가 에셋 인지 — 단일 경로)
   // ⑥ 데코 산포: 연못 → 바위 → 덤불 → 꽃 → 침엽수 (스프라이트 + 크기 변주, 금지 구역 리젝션)
-  const put = (n, tries, fn) => { let placed = 0;
+  const K = mtDecorK(); // 월드 면적 비례 (정사각 월드의 앞마당까지 같은 밀도로 채운다)
+  const put = (n, tries, fn) => { let placed = 0; n = Math.round(n * K); tries = Math.round(tries * K);
     for (let i = 0; i < tries && placed < n; i++) { const x = rnd() * MT.W, y = rnd() * MT.H; if (!mtNoDecor(x, y)) { fn(x, y); placed++; } } };
   const draw = (s, x, y, w) => { const h = w * s.height / s.width; ctx.drawImage(s, x - w / 2, y - h + h * 0.18, w, h); }; // 발치 기준 배치
   put(2, 300, (x, y) => draw(sp.pond, x, y, 96 + rnd() * 26)); // 데코 밀도 1/3 (유저 지정)
@@ -7593,7 +7612,7 @@ function mtBakeArt() {
   put(20, 1200, (x, y) => draw(sp.flower, x, y, 36 + rnd() * 12));
   const pines = [sp.pine1, sp.pine2, sp.pine3];
   put(15, 1200, (x, y) => draw(pines[rnd() * 3 | 0], x, y, 54 + rnd() * 30));
-  for (let i = 0; i < 34; i++) { // 외곽 숲
+  for (let i = 0, fn2 = Math.round(34 * mtEdgeK()); i < fn2; i++) { // 외곽 숲 (둘레 비례)
     const side = rnd() * 4 | 0, t = rnd();
     const x = side === 0 ? t * MT.W : side === 1 ? t * MT.W : side === 2 ? 16 + rnd() * 48 : MT.W - 16 - rnd() * 48;
     const y = side === 0 ? 14 + rnd() * 44 : side === 1 ? MT.H - 14 - rnd() * 44 : t * MT.H;
@@ -7922,7 +7941,8 @@ function mtMinimap() {
   const M = MT.MM, s = M.w / MT.W;
   ctx.fillStyle = 'rgba(14,10,26,0.88)'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.fill();
   ctx.strokeStyle = '#5a5278'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.stroke();
-  MT.ORIGIN.forEach(([ox, oy], i) => { ctx.fillStyle = MT.PCOLS[i] + (i ? '30' : '55'); ctx.fillRect(M.x + ox * s, M.y + oy * s, 940 * s, 500 * s); });
+  MT.TERR.forEach(([tx, ty, tw, th], i) => { ctx.fillStyle = MT.PCOLS[i] + (i ? '22' : '3c'); ctx.fillRect(M.x + tx * s, M.y + ty * s, tw * s, th * s); }); // 영토(기지+앞마당) 옅게
+  MT.ORIGIN.forEach(([ox, oy], i) => { ctx.fillStyle = MT.PCOLS[i] + (i ? '30' : '55'); ctx.fillRect(M.x + ox * s, M.y + oy * s, QW * s, QH * s); });   // 기지는 진하게
   ctx.fillStyle = 'rgba(200,190,170,0.75)';
   if (MT.laneV) ctx.fillRect(M.x + MT.laneV.a * s, M.y, LANE * s, M.h);
   ctx.fillRect(M.x, M.y + MT.laneH.a * s, M.w, LANE * s);
