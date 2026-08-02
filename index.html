@@ -776,6 +776,15 @@ function splat(x, y, c, big) {
 
 // ==================== 상태 ====================
 let S;
+// 🎰 카지노 지연 보상(룰렛 5.1s·슬롯 3s·교환 0.9s)은 창을 닫아도 계속 흘러 보상을 지급한다(의도).
+// 다만 그 사이 재시작하면 '다음 판'에 골드·영웅이 꽂히므로, 판마다 세대 번호를 올려 무효화한다.
+let gameGen = 0, casTimers = [];
+function casTimeout(fn, ms) {
+  const gen = gameGen;
+  const id = setTimeout(() => { if (gen === gameGen) fn(); }, ms);
+  casTimers.push(id);
+  return id;
+}
 // 판을 넘어 살아남는 UI/입력 전역을 초기화 — S만 새로 만들면 이것들이 다음 판에 새어 들어간다.
 // (예: A키 어택 모드를 켠 채 '다시하기' → 새 판 첫 클릭이 선택이 아니라 공격 지정이 된다)
 function resetTransientUI() {
@@ -786,6 +795,11 @@ function resetTransientUI() {
   clearTimeout(longPressTimer); longPressFired = false; lastTapTime = 0; lastTapPos = null; // 모바일 롱프레스/더블탭
   mutter = null; mutterT = 22;              // 이전 판 유닛을 가리키던 말풍선 (유령 말풍선 방지)
   if (S) hideObjInfo();                     // 남아 있던 건물/몬스터 정보 팝업 (hideObjInfo가 S를 만지므로 부팅 시엔 건너뜀)
+  gameGen++;                                // 이전 판의 카지노 지연 보상 무효화
+  casTimers.forEach(clearTimeout); casTimers = [];
+  if (typeof CM !== 'undefined' && CM) CM.style.display = 'none'; // 카지노 모달이 열린 채 재시작되는 경우
+  clearTimeout(rtTimer);                    // 보상 토스트가 새 판까지 남지 않게
+  const rt = document.getElementById('rewardToast'); if (rt) rt.style.display = 'none';
 }
 function reset() {
   resetTransientUI();
@@ -987,7 +1001,7 @@ function confirmHand() {
   } else {
     res.forEach(r => {
       spawnUnit(r.rank, r.race, false, r.keyRank);
-      if (r.bs) { // 빽스트레이트: 카드값 배수 대신 전용 ×1.3
+      if (r.bs) { // 빽스트레이트: 카드값 배수 대신 전용 배수 (BACK_STRAIGHT_MUL)
         const u = S.units[S.units.length - 1];
         u.dmg = WEAPONS[4].dmg * BACK_STRAIGHT_MUL;
         u.keyLabel = 'B'; u.weapon = '빽 ' + u.weapon;
@@ -1175,7 +1189,11 @@ function startWave() {
   S.phase = 'wave';
   S.timer = WAVE_TIME;
   S.feverUsed = false;
-  if (S.round === SUN_ROUND && !S.hellCleared) { // 🌞 최종장: 하늘의 태양이 강림한다 — 잡몹 없는 독대
+  // 🌞 최종장: 하늘의 태양이 강림한다 — 잡몹 없는 독대.
+  // >= 인 이유: === 이면 태양을 못 잡고 부활권으로 살아남는 순간 라운드가 151로 넘어가
+  // 태양이 영영 다시 안 나오고 hellOverlay(엔딩)도 도달 불가인 무한 헬모드가 된다.
+  // 못 잡으면 다음 라운드에 다시 온다 (라운드가 오를수록 강해지는 게 재도전 대가)
+  if (S.round >= SUN_ROUND && !S.hellCleared) {
     S.spawnQueue = { left: 0, hp: 0, interval: 1, acc: 0, bossLeft: 0 };
     const sun = spawnMonster(Math.floor(monsterHP(S.round) * 140), true); // ⚠️ 극악 튜닝 노브: ×140 (일반몹 대비) — "1000판에 1번" 목표치
     sun.sunBoss = true; sun.shape = 28; sun.split = false; sun.mat = 0;
@@ -1468,7 +1486,10 @@ function spawnJoker(x, y) {
     keyRank: 14, keyLabel: '🃏', kills: 0,
     jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
     forceTarget: null, attackMine: false, amove: false, priority: 'near',
-    dmg: 70, cd: 0.4, range: 110, splash: 60, bounce: 0, atk: 'area', proj: null, vis: 'scythe', // 공속 2.5회/초 · 사거리 110 (2026-08-03 유저: cd 2.0→0.4, 사거리 +10%) — cd 0.4 < 견인 0.45라 공격 중엔 풀이 계속 갱신돼 뭉침이 유지된다
+    // 사거리 110 (2026-08-03 유저: cd 2.0→0.4, 사거리 +10%).
+    // ⚠️ 실제 발사 간격은 effCd = cd × 1.4286(히든 조합 공속 페널티) = 0.571초.
+    //    견인 지속 0.45초보다 길어 사이클마다 ~0.12초 뭉침이 풀린다 (승급1부터는 0.357초라 유지).
+    dmg: 70, cd: 0.4, range: 110, splash: 60, bounce: 0, atk: 'area', proj: null, vis: 'scythe',
     pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 조커', cool: 0, selected: true, walk: 0, speed: 85,
   });
   addFloat(x, y - 30, '🃏 조커 강림!! 🃏', '#8c5bff', 2.8);
@@ -2815,9 +2836,9 @@ const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단
     { needs: [{ tier: 3, n: 3 }], mat: '트리플 3기', desc: '폭탄 14~22 → 20~30개' },
     { needs: [{ tier: 3, hero: true, n: 1 }], mat: '트리플 영웅 1기', desc: '쿨타임 75초 → 55초' },
   ],
-  joker: [
-    { needs: [{ hero: true, n: 1 }], mat: '영웅 1기', desc: '공속 4회/초 · 사거리 138 · 견인 최대 140마리' },
-    { needs: [{ hero: true, n: 2 }], mat: '영웅 2기', desc: '공속 6.25회/초 · 사거리 165 · 견인 280마리 + 견인 강화' },
+  joker: [ // 공속은 실제 발사 간격(effCd — 히든 페널티 반영) 기준. 정보창 표기와 일치시킨다
+    { needs: [{ hero: true, n: 1 }], mat: '영웅 1기', desc: '공속 2.8회/초 · 사거리 138 · 견인 최대 140마리' },
+    { needs: [{ hero: true, n: 2 }], mat: '영웅 2기', desc: '공속 4.4회/초 · 사거리 165 · 견인 280마리 + 견인 강화' },
   ],
   catapult: [
     { needs: [{ tier: 0, n: 10 }], mat: '하이카드 10기', desc: '착탄 시 파편 4방 폭발' },
@@ -3656,9 +3677,12 @@ function draw() {
       ctx.arc(e.x2, e.y2, e.r, a + 2.6, a - 2.6);
       ctx.closePath(); ctx.fill();
     } else if (e.type === 'boom') {
-      ctx.strokeStyle = `rgba(255,140,50,${e.t * 4})`;
+      // 반지름은 t가 0.65를 넘으면 음수가 된다 → arc가 IndexSizeError를 던져 그 프레임의 draw가 통째로 중단됨.
+      // (실제로 태양 보스 격파의 r230·t0.7이 -23으로 시작해 헬모드 클리어 연출 내내 화면이 안 그려졌다)
+      const br = Math.max(0, e.r * (1.3 - e.t * 2));
+      ctx.strokeStyle = `rgba(255,140,50,${Math.min(1, e.t * 4)})`;
       ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(e.x, e.y, e.r * (1.3 - e.t * 2), 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(e.x, e.y, br, 0, Math.PI*2); ctx.stroke();
       ctx.lineWidth = 1;
     } else if (e.type === 'fireball') { // 🔥 뭉게뭉게 화염: 구름처럼 겹친 화구 덩어리 (흰 코어→주황→붉은 가장자리)
       const pr = 1 - e.t / e.dur, al = e.t / e.dur;
@@ -6869,7 +6893,7 @@ function casRoulette() {
   const R = Math.max(78, wheel.clientWidth/2 - 26);
   wheel.innerHTML = RWHEEL.map((k, i) => `<div class="lab" style="transform:translate(-50%,-50%) rotate(${i*seg}deg) translateY(-${R}px) rotate(${-i*seg}deg);font-size:17px">${RCAT[k].icon}</div>`).join('');
   requestAnimationFrame(() => { wheel.style.transform = `rotate(${360*6 - slice*seg}deg)`; ballTrack.style.transform = 'rotate(-3240deg)'; });
-  setTimeout(() => {
+  casTimeout(() => {
     reward.apply(); updateInfoPanel();
     const el = document.getElementById('rlRes');
     if (!el) { logMsg(`🎡 룰렛 당첨: <b>${reward.label}</b> (창을 닫는 사이 지급되었습니다)`); return; } // 회전 중 창을 닫아도 보상은 지급 — 예전엔 여기서 TypeError
@@ -6955,8 +6979,8 @@ function slotPull() {
     }));
     setTimeout(() => sfx('pick'), durs[i] * 1000); // 릴 정지음 착·착·착
   });
-  if (tease) setTimeout(() => { const el = document.getElementById('slRes'); if (el) el.innerHTML = '<span style="color:#ff6b9d;font-weight:bold">7️⃣ 7️⃣ …!?</span>'; }, 2300);
-  setTimeout(() => {
+  if (tease) casTimeout(() => { const el = document.getElementById('slRes'); if (el) el.innerHTML = '<span style="color:#ff6b9d;font-weight:bold">7️⃣ 7️⃣ …!?</span>'; }, 2300);
+  casTimeout(() => {
     const won = res.pay;
     S.gold += won;
     if (won >= 1000000) markAchv('lotto50');
@@ -6990,7 +7014,7 @@ function doExchange() {
   const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '';
   CB.innerHTML = luckMsg + `<div class="flipWrap"><div class="flipCard" id="flipCard"><div class="flipFace flipFront">🃏</div><div class="flipFace flipBack">${out.back}</div></div></div><div class="chipResult" id="exRes">카드를 뒤집는 중…</div><div id="exBtns"></div>`;
   requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('flipCard').classList.add('flipped')));
-  setTimeout(() => {
+  casTimeout(() => {
     out.apply(); sfx(out.s); updateInfoPanel();
     const exR = document.getElementById('exRes'); if (!exR) return; // 창을 닫으면 보상만 지급하고 종료
     exR.innerHTML = out.txt;
