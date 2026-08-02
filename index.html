@@ -4388,7 +4388,10 @@ function drawMatStatic(x, y, sz, mat, esc, c) {
   // 공통 테두리 + 입체 하이라이트
   ctx.strokeStyle = 'rgba(0,0,0,0.32)'; ctx.lineWidth = 1.4; circle(); ctx.stroke(); ctx.lineWidth = 1;
   if (mat !== 7 && mat !== 8 && mat !== 12) { ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.beginPath(); ctx.arc(x - sz*0.3, y - sz*0.32, sz*0.34, 0, 6.28); ctx.fill(); }
-  // 보강 밴드 (밴드 후반부): 금속 띠 + 리벳
+  matBands(x, y, sz, esc);
+}
+// 보강 밴드 (밴드 후반부): 금속 띠 + 리벳 — 프로시저럴·아트 몹 공용 (난이도 신호는 아트 위에도 얹는다)
+function matBands(x, y, sz, esc) {
   const nBand = Math.floor(esc * 3);
   for (let i = 0; i < nBand; i++) {
     const by = y + (i - (nBand - 1) / 2) * sz * 0.62, dy = by - y;
@@ -4399,19 +4402,77 @@ function drawMatStatic(x, y, sz, mat, esc, c) {
     ctx.fillStyle = '#c8ccd4'; ctx.beginPath(); ctx.arc(x - half*0.7, by, sz*0.06, 0, 6.28); ctx.arc(x + half*0.7, by, sz*0.06, 0, 6.28); ctx.fill();
   }
 }
+// ── 🎨 몬스터 아트 (assets/art3.png): 4×4 격자, 전부 정원형이라 원형 페더 크롭으로 추출 (배경이 흐린 그라데이션이라 키잉 대신)
+const MONART = { ready: false, img: null, sp: [] };
+const MON_CELLS = (() => { // mat 0..12 = 격자 순서, mat 13(블랙홀) = (행4,열3). (행4,열2)는 여분 구슬 — 미사용
+  const c = []; for (let m2 = 0; m2 < 13; m2++) c.push([m2 % 4, m2 >> 2]);
+  c.push([2, 3]); return c;
+})();
+function monExtract() {
+  const im = MONART.img, cell = im.width / 4;
+  const full = document.createElement('canvas'); full.width = im.width; full.height = im.height;
+  full.getContext('2d').drawImage(im, 0, 0);
+  for (let mat = 0; mat < 14; mat++) {
+    const [gx, gy] = MON_CELLS[mat];
+    const glow = mat === 8 || mat === 12 || mat === 13;      // 화염·태양·블랙홀은 이펙트가 넓다
+    const R = cell * (glow ? 0.49 : 0.42), feather = cell * (glow ? 0.07 : 0.04);
+    const s = document.createElement('canvas'); s.width = s.height = cell;
+    const g = s.getContext('2d');
+    g.drawImage(full, gx * cell, gy * cell, cell, cell, 0, 0, cell, cell);
+    const rad = g.createRadialGradient(cell / 2, cell / 2, Math.max(1, R - feather), cell / 2, cell / 2, R);
+    rad.addColorStop(0, 'rgba(0,0,0,1)'); rad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalCompositeOperation = 'destination-in';
+    g.fillStyle = rad; g.fillRect(0, 0, cell, cell);
+    g.globalCompositeOperation = 'source-over';
+    MONART.sp[mat] = s;
+  }
+}
+function monReady() { // 첫 사용 시 1회 추출 + 기존 프로시저럴 스프라이트 캐시 무효화
+  if (MONART.ready || !MONART.img) return MONART.ready;
+  try { monExtract(); MONART.ready = true; Object.keys(matSprites).forEach(k => delete matSprites[k]); }
+  catch (e) { MONART.img = null; console.error('monster art 추출 실패 — 프로시저럴 폴백', e); }
+  return MONART.ready;
+}
+(function monLoadArt() {
+  const im = new Image();
+  im.onload = () => { MONART.img = im;
+    const warm = () => { try { monReady(); } catch (e) {} };
+    if (window.requestIdleCallback) requestIdleCallback(warm, { timeout: 2500 }); else setTimeout(warm, 150);
+  };
+  im.src = 'assets/art3.png';
+})();
 // 재질 스프라이트 캐시: (재질 × esc 8단계 × 황금) 조합당 1회만 렌더 → 이후 drawImage 1번 (400마리 렉 해결)
 const matSprites = {};
 const SPR = 88, SPR_C = 44; // 스프라이트 캔버스 크기/중심
 function matSpriteSz(bucket) { return 19 * (1 + (bucket / 7) * 0.32); }
 function matSprite(mat, bucket, golden) {
+  monReady(); // 아트 로드 완료 순간 1회: 추출 + 캐시 무효화
   const key = mat * 20 + bucket * 2 + (golden ? 1 : 0);
   if (!matSprites[key]) {
     const cnv = document.createElement('canvas'); cnv.width = cnv.height = SPR;
     const old = ctx; ctx = cnv.getContext('2d');
-    const escB = bucket / 7;
-    const c = golden ? '#ffcf3a' : shade(MATERIALS[mat].col, -Math.round(escB * 62));
-    drawMatStatic(SPR_C, SPR_C, matSpriteSz(bucket), mat, escB, c);
-    ctx = old;
+    try {
+      const escB = bucket / 7;
+      const sz = matSpriteSz(bucket);
+      if (MONART.ready && MONART.sp[mat]) { // 🎨 아트 몹: 원형 크롭 스프라이트 + esc 그을림·황금 틴트·보강밴드 오버레이
+        const pad = mat === 8 || mat === 12 || mat === 13 ? 9 : 4; // 글로우 몹은 여유 크게
+        ctx.drawImage(MONART.sp[mat], SPR_C - sz - pad, SPR_C - sz - pad, (sz + pad) * 2, (sz + pad) * 2);
+        if (escB > 0) { // 그을림 (험악해짐 신호 — 기존 shade 어둡힘의 아트 버전)
+          ctx.globalCompositeOperation = 'source-atop';
+          ctx.fillStyle = `rgba(28,18,12,${(escB * 0.34).toFixed(2)})`; ctx.fillRect(0, 0, SPR, SPR);
+          ctx.globalCompositeOperation = 'source-over';
+        }
+        if (golden) { // ✨ 황금 레어
+          ctx.globalCompositeOperation = 'source-atop';
+          ctx.fillStyle = 'rgba(255,198,40,0.55)'; ctx.fillRect(0, 0, SPR, SPR);
+          ctx.globalCompositeOperation = 'source-over';
+        }
+        matBands(SPR_C, SPR_C, sz, escB);
+      } else {
+        const c = golden ? '#ffcf3a' : shade(MATERIALS[mat].col, -Math.round(escB * 62));
+        drawMatStatic(SPR_C, SPR_C, sz, mat, escB, c);
+      }
+    } finally { ctx = old; }
     matSprites[key] = cnv;
   }
   return matSprites[key];
@@ -7142,7 +7203,9 @@ function mtSetup(players) {
     MT.laneV = null; MT.laneH = LM;
     MT.KING = { x: 152, y: LM.a + LANE / 2 };
     MT.GATES = [[MT.W - 40, LM.a + LANE / 2, -Math.PI / 2]];
-    MT.BRIDGES = [{ x: BX + 290, y: LM.a + LANE / 2, vert: false }, { x: BX + 690, y: LM.a + LANE / 2, vert: false }];
+    // 다리는 두 진영의 '수직 회랑'에만: x≈220(포털·성 기둥~펜 사이) / x≈625(펜~광석방 왼담 사이, 방 입구 옆)
+    // — 착지점이 펜·광석방·콜로세움 충돌체를 전부 피해서 건너간 뒤 어디로든 이동·복귀 가능
+    MT.BRIDGES = [{ x: BX + 220, y: LM.a + LANE / 2, vert: false }, { x: BX + 625, y: LM.a + LANE / 2, vert: false }];
   } else {
     // 4인: 십자 레인이 사분면 4개를 가르고 교차점에 왕국. 게이트 12·3·6·9시
     const LN = { a: 940, b: 940 + LANE };
@@ -7154,8 +7217,10 @@ function mtSetup(players) {
     MT.KING = { x: LN.a + LANE / 2, y: LM.a + LANE / 2 };
     MT.GATES = [[MT.KING.x, 40, Math.PI], [MT.W - 40, MT.KING.y, -Math.PI / 2],
                 [MT.KING.x, MT.H - 40, 0], [40, MT.KING.y, Math.PI / 2]];
-    MT.BRIDGES = [{ x: MT.KING.x, y: 250, vert: true }, { x: MT.KING.x, y: LM.b + 250, vert: true },
-                  { x: 470, y: MT.KING.y, vert: false }, { x: LN.b + 470, y: MT.KING.y, vert: false }];
+    // 세로 다리(12·6시): y=392 — 서쪽 착지가 콜로세움(로컬 838,278 r85) 아래 클리어 존, 동쪽은 성 옆 개활지
+    // 가로 다리(9·3시): 로컬 x=625 수직 회랑 — 건넌 뒤 위아래 어디로든 통행 가능 (펜 상단에 막히던 x470에서 이동)
+    MT.BRIDGES = [{ x: MT.KING.x, y: 392, vert: true }, { x: MT.KING.x, y: LM.b + 392, vert: true },
+                  { x: 625, y: MT.KING.y, vert: false }, { x: LN.b + 625, y: MT.KING.y, vert: false }];
   }
   MT.MM.h = Math.round(MT.MM.w * MT.H / MT.W); // 미니맵은 월드 비율에 맞춘다 (2인은 세로로 길다)
   MT.MM.y = 500 - MT.MM.h - 10;
