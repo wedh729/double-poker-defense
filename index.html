@@ -685,7 +685,11 @@ function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > C
 // 크기: 밴드 진행도(esc)만큼 커진다 (③ 시각적 난이도 신호)
 // 재질별 크기 배율: 실제 공 크기 싱크 (야구공 작게 ~ 농구공 크게). 천체는 웅장하게
 const MAT_SIZE = [0.9, 0.95, 1.12, 1.18, 0.8, 0.85, 1.1, 0.9, 0.9, 1.2, 1.15, 1.25, 1.3, 1.1];
-function monSize(m) { return (m.boss ? (m.sunBoss ? 104 : 52) : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + (m.esc || 0) * 0.32); } // 🌞 태양 = 보스 2배
+// 크기 성장은 '재질 밴드 안'이 아니라 '사다리 전체 진행도' 기준 (2026-08-03 유저: 축구공이 농구공보다 커 보인다).
+// 예전엔 esc가 밴드마다 0으로 리셋돼, 축구공 밴드 끝(19×1.12×1.32=28.1) → 농구공 밴드 시작(19×1.18=22.4)으로
+// 재질이 올라가는데 몹이 20% 작아졌다. 전체 진행도를 쓰면 단조 증가하고 최대 크기는 그대로.
+function monProg(m) { return Math.min(1, ((m.mat || 0) + (m.esc || 0)) / (MATERIALS.length - 1)); }
+function monSize(m) { return (m.boss ? (m.sunBoss ? 104 : 52) : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + monProg(m) * 0.32); } // 🌞 태양 = 보스 2배
 const PORTAL = { x: 80, y: 78, r: 34 }; // 강화 포털: 같은 유닛 5기를 넣으면 영웅
 const WAVE_TIME = 90, POKER_TIME = 60;
 const FINAL_ROUND = 80; // 이후는 헬모드
@@ -1164,10 +1168,10 @@ function fuseCount(u) {
   if (u.hero) return 5;        // 영웅 = 기본 5기분
   return 1;
 }
-// 종족 업글 유효치: Lv.15까지 선형, 그 뒤는 초과분이 제곱으로 가속 (Lv20→22.5, Lv25→35, Lv30→52.5, Lv40→102.5)
-// 경제 개편(2026-08-03): 가속 시작 20→15·계수 0.08→0.10 — 비용 ×1.45 벽(정상 수입 한계 ≈ L16)의
-// 바로 앞에서 가속이 시작돼, 경제를 키워 벽을 넘는 플레이어만 이 구간을 탄다 (복리 판타지의 보상)
-function upgEff(lv) { return lv <= 15 ? lv : lv + (lv - 15) * (lv - 15) * 0.10; }
+// 종족 업글 유효치: Lv.12까지 선형, 그 뒤는 초과분이 제곱으로 가속 (Lv15→12.9, Lv20→18.4, Lv25→28.9, Lv30→44.4, Lv40→90.4)
+// 가속 시작 20→15→12 (2026-08-03 시뮬 결과): L15로는 R30 도달선이 L14라 아무도 가속 구간을 못 탔다.
+// L12는 R25 도달선(L13) 바로 아래라 즉시 체감되고, 광산 복리를 굴린 쪽이 먼저 벽을 넘는다.
+function upgEff(lv) { return lv <= 12 ? lv : lv + (lv - 12) * (lv - 12) * 0.10; }
 function effDmg(u) {
   const heroUp = 1 + 0.15 * (u.heroUpLv || 0); // ⭐ 영웅 단련: 히든 영웅 전용 (레벨당 총 공격력 +15%)
   if (u.catapult) return (u.dmg + upgPer(u) * 8 * S.upg[0]) * heroUp; // 🪨 투석기: ♦ 다이아 업글 적용. 전체타격 계수 × 8 → 렙당 실효 DPS ≈ 91 (영웅 탱크 75보다 약간 위, 하이카드 20기 값어치)
@@ -2652,7 +2656,20 @@ const OREPOS = { x: ROOM.cx + ROOM.w/2 - 22, y: ROOM.cy }; // 광석을 방 최�
 const ORE_LINE = OREPOS.x - 34; // 유닛 접근 한계선 — 이 선을 넘으면 광석이 가려지므로 통행 금지
 function isInRoom(u) { return Math.abs(u.x - ROOM.cx) <= ROOM.w/2 && Math.abs(u.y - ROOM.cy) <= ROOM.h/2; }
 const ROOM_GATE = 40; // 🧱 입구 반높이 (왼쪽 벽 가운데) — 담장 통과는 여기로만
-function labelCol(normal) { return DIFF_MUL >= 1.4 ? 'rgba(255,250,238,0.92)' : normal; } // 어두운 배경(폭풍·지옥)에선 라벨을 흰색으로
+// 🏷️ 캔버스 건물 라벨: 흰 글씨 + 어두운 외곽선. 배경(잔디·돌담·아트 타일)이 뭐든 읽힌다.
+// 예전엔 labelCol()로 난이도가 어두울 때만 흰색으로 바꿨는데, 쉬움/보통에서도 돌담 위 라벨이
+// #7a6f5c vs 배경(113,106,91) = 명암비 1.09로 사실상 안 보였다 (유저: "아무런 텍스트가 없어").
+// 제물대 라벨은 반투명(alpha 0.5)이라 아예 픽셀이 안 잡혔다.
+function drawLabel(text, x, y, size, col) {
+  ctx.font = `bold ${size || 11}px sans-serif`;
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(3, (size || 11) * 0.32);
+  ctx.strokeStyle = 'rgba(16,12,8,0.8)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = col || '#fff6e4';
+  ctx.fillText(text, x, y);
+  ctx.lineWidth = 1; ctx.lineJoin = 'miter';
+}
 function blockRoomWalls(u) { // 이동 전 위치(u.px,u.py)와 비교해 담장을 가로질렀으면 그 축만 되돌린다 (벽 따라 미끄러져 입구를 찾게)
   const x0 = ROOM.cx - ROOM.w / 2, x1 = ROOM.cx + ROOM.w / 2, y0 = ROOM.cy - ROOM.h / 2, y1 = ROOM.cy + ROOM.h / 2;
   const gy0 = ROOM.cy - ROOM_GATE, gy1 = ROOM.cy + ROOM_GATE;
@@ -4096,8 +4113,8 @@ function drawBarrack() {
       ctx.fillRect(x0 + b.w - 1.5, y - 4, 3, 8);
     }
   }
-  ctx.fillStyle = labelCol('#b09070'); ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('👹 소환장', b.x, y0 - (fc ? 26 : 9));
+  ctx.textAlign = 'center';
+  drawLabel('👹 소환장', b.x, y0 - (fc ? 26 : 9), 10);
   ctx.textAlign = 'left';
 }
 function drawPortal() {
@@ -4153,8 +4170,8 @@ function drawAltar() {
   // 카운터/라벨 (타원 접시 제거 — 직사각형 3단만)
   if (!S.units.some(u => u.catapult)) {
     ctx.textAlign = 'center';
-    if (S.tribute > 0) { ctx.fillStyle = '#cfd8dc'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(`🪨 ${S.tribute}/20`, a.x, a.y - a.h/2 - 6); }
-    else { ctx.fillStyle = labelCol('rgba(200,210,220,0.5)'); ctx.font = '11px sans-serif'; ctx.fillText('제물대', a.x, a.y - a.h/2 - 6); }
+    if (S.tribute > 0) drawLabel(`🪨 ${S.tribute}/20`, a.x, a.y - a.h/2 - 6, 12, '#e8f1f5');
+    else drawLabel('제물대', a.x, a.y - a.h/2 - 6, 11);
     ctx.textAlign = 'left';
   }
   ctx.restore();
@@ -4320,8 +4337,7 @@ function drawOreRoom() {
   // 라벨: "N단계: 이름 · 채굴 n/정원" (유닛은 실제 S.units로 위에 그려짐)
   const nMine = S.units.filter(u => u.oreSlot && u.tier !== 0).length;
   ctx.textAlign = 'center';
-  ctx.fillStyle = labelCol('#7a6f5c'); ctx.font = 'bold 11px sans-serif';
-  ctx.fillText(S.hunt.done ? '광석 방 (완료)' : `${S.hunt.stage}단계: ${ore.name} · ⛏ ${nMine}/${oreCap()}`, R.cx, y0 - 5);
+  drawLabel(S.hunt.done ? '광석 방 (완료)' : `${S.hunt.stage}단계: ${ore.name} · ⛏ ${nMine}/${oreCap()}`, R.cx, y0 - 5, 11);
   ctx.textAlign = 'left';
 }
 // 광산 재질 사다리: 겹이 깎일수록 흙 → 돌 → 철 → 동 → 은 → 금 → 보석 (점점 값비싸 보임)
@@ -4359,8 +4375,8 @@ function drawMine() {
     ctx.beginPath(); ctx.ellipse(x + 2, y + 30, 50, 9, 0, 0, 6.28); ctx.fill();
     artDrawBase(ms, x, y + 34, 124);
     drawBar(x - 30, y - 66, 60, S.mineHp / S.mineMax, T.dark);
-    ctx.fillStyle = labelCol('#7a6a52'); ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(`⛏️ ${S.mineLayer}단계`, x, y - 74); ctx.textAlign = 'left';
+    ctx.textAlign = 'center';
+    drawLabel(`⛏️ ${S.mineLayer}단계`, x, y - 74, 11); ctx.textAlign = 'left';
     return;
   }
   // 그림자
@@ -4428,8 +4444,8 @@ function drawMine() {
   ctx.beginPath(); ctx.arc(x - 21, y + 37, 2, 0, Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.arc(x - 16, y + 37, 2, 0, Math.PI*2); ctx.fill();
   drawBar(x - 30, y - 48, 60, S.mineHp / S.mineMax, T.dark); // 겹 진행 바 (산 위 — 광산이 캔버스 구석이라 아래는 잘린다)
-  ctx.fillStyle = labelCol('#7a6a52'); ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText(`⛏️ ${S.mineLayer}단계`, x, y - 56); ctx.textAlign = 'left'; // 현재 겹(단계) 표시
+  ctx.textAlign = 'center';
+  drawLabel(`⛏️ ${S.mineLayer}단계`, x, y - 56, 11); ctx.textAlign = 'left'; // 현재 겹(단계) 표시
 }
 function polyPath(x, y, n, r, rot, r2) {
   ctx.beginPath();
@@ -6624,7 +6640,7 @@ function upgItemsHTML() {
     `<div class="rpgItem" style="border-left:5px solid ${r.color}">
       <div class="rpgIcon" style="color:${r.color}">${r.suit}</div>
       <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
-        <span class="desc">단일 +${(upgEff(S.upg[i])*2.5).toFixed(1)} · 스플래시 초당 +${(upgEff(S.upg[i])*0.55).toFixed(1)}/마리 · 전체 초당 +${(upgEff(S.upg[i])*0.15).toFixed(1)}/마리${S.upg[i] > 15 ? ' <b style="color:#c9971a">⚡가속!</b>' : ''}</span></div>
+        <span class="desc">단일 +${(upgEff(S.upg[i])*2.5).toFixed(1)} · 스플래시 초당 +${(upgEff(S.upg[i])*0.55).toFixed(1)}/마리 · 전체 초당 +${(upgEff(S.upg[i])*0.15).toFixed(1)}/마리${S.upg[i] > 12 ? ' <b style="color:#c9971a">⚡가속!</b>' : ''}</span></div>
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
       <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값으로 3레벨 도전 — 타이밍바 중앙에 맞추면 35%">🎰 ×3</button>
     </div>`).join('') +
