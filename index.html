@@ -433,7 +433,7 @@
     <span>❤️ <b id="tLife"></b></span>
     <span>💰 <b id="tGold"></b></span>
     <span>⛏️ <b id="tMiner"></b></span>
-    <span title="보스를 잡으면 얻는 칩 — 좌측 카지노에서 사용">🎰 <b id="tChips" style="color:#c9a227">0</b></span>
+    <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 카지노에서 룰렛·슬롯·광부 고용에 사용">🎰 <b id="tChips" style="color:#c9a227">0</b></span>
     <span>🏳️ 스테이지 <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
     <div id="bigTimer"><div class="p" id="tPhase"></div></div>
   </div>
@@ -648,7 +648,7 @@ const ORES = [
 ];
 const MINE_TIME = 5;              // 광부 기본 채굴 시간(초)
 const MINER_SPEED = 42;          // 광부 기본 이동속도 (느릿느릿)
-const MINER_LOAD = 45;           // 배달 1회 기본 골드 (킬골드 ×1.5 하향분을 광산으로 이전: 30→45)
+const MINER_LOAD = 90;           // 배달 1회 기본 골드 (경제 개편: 광부 = 칩 전용 희소 자원 → 1기 가치 2배, 45→90)
 const DIG_RATE = 30;             // 광부가 캐는 동안 광산 체력 감소/초
 const MINER_MAX_LV = 5;          // 광부 업그레이드 최대 레벨
 const PEN = { x: CX, y: CY, w: 264, h: 176 }; // 몬스터 소환장 울타리 (2배 확장 — 몬스터도 2배, 카타르시스 업)
@@ -805,7 +805,9 @@ function reset() {
   resetTransientUI();
   S = {
     phase: 'poker', round: 1, life: 20, gold: 120,
-    minerCost: 80, chips: 0, event: null, eventMods: null,
+    // 💰 경제 개편 (2026-08-03 유저 확정 B안): 시작 칩 1개 — 첫 결정 = 룰렛이냐 슬롯이냐 광부냐
+    minerCost: 80, chips: 1, event: null, eventMods: null,
+    valves: { sand: 0, bomb: 0, pray: 0 }, // 🛒 비상 물자 구매 횟수 (판당 제한 3/2/2)
     hunt: null, items: { reroll: 0, copier: 0 }, groups: {},
     upg: [0,0,0], upgCost: [50,50,50],
     units: [], monsters: [], effects: [], floats: [], parts: [], projs: [],
@@ -1135,9 +1137,10 @@ function fuseCount(u) {
   if (u.hero) return 5;        // 영웅 = 기본 5기분
   return 1;
 }
-// 종족 업글 유효치: Lv.20까지 선형, 그 뒤는 초과분이 제곱으로 가속 (Lv25→27, Lv30→38, Lv35→53, Lv40→72)
-// 후반(헬)에서 업글 벽을 뚫고 '아슬아슬하게 버티며 크는' 곡선
-function upgEff(lv) { return lv <= 20 ? lv : lv + (lv - 20) * (lv - 20) * 0.08; }
+// 종족 업글 유효치: Lv.15까지 선형, 그 뒤는 초과분이 제곱으로 가속 (Lv20→22.5, Lv25→35, Lv30→52.5, Lv40→102.5)
+// 경제 개편(2026-08-03): 가속 시작 20→15·계수 0.08→0.10 — 비용 ×1.45 벽(정상 수입 한계 ≈ L16)의
+// 바로 앞에서 가속이 시작돼, 경제를 키워 벽을 넘는 플레이어만 이 구간을 탄다 (복리 판타지의 보상)
+function upgEff(lv) { return lv <= 15 ? lv : lv + (lv - 15) * (lv - 15) * 0.10; }
 function effDmg(u) {
   const heroUp = 1 + 0.15 * (u.heroUpLv || 0); // ⭐ 영웅 단련: 히든 영웅 전용 (레벨당 총 공격력 +15%)
   if (u.catapult) return (u.dmg + upgPer(u) * 8 * S.upg[0]) * heroUp; // 🪨 투석기: ♦ 다이아 업글 적용. 전체타격 계수 × 8 → 렙당 실효 DPS ≈ 91 (영웅 탱크 75보다 약간 위, 하이카드 20기 값어치)
@@ -1295,6 +1298,14 @@ function endWave() {
       rewardToast('✅', `클리어 +${bonus}G`, '#2e7d32', '스테이지 클리어');
     }
     sfx('clear');
+  }
+  // 🏦 이자: 라운드 정산마다 보유 골드의 +8% (상한 없음 — 유저: "777 터지면 그렇게 붕괴도 되어봐야지").
+  // 저축 = 복리, 지출(업글·비상물자) = 즉시 전력. 이 긴장이 골드 운영의 축.
+  if (S.life > 0 && S.gold >= 13) { // 13G 미만이면 이자 1G도 안 됨
+    const interest = Math.floor(S.gold * 0.08);
+    S.gold += interest;
+    logMsg(`🏦 이자 +${interest.toLocaleString()}G (보유 골드의 8%)`);
+    addFloat(HOUSE.x, HOUSE.y - 52, `🏦 +${interest.toLocaleString()}G`, '#7ec8ff', 1.6);
   }
   S.monsters = [];
   S.projs = [];
@@ -2164,7 +2175,7 @@ function update(dt) {
   });
   if (projQ.length) S.projs.push(...projQ); // filter 도중 태어난 투사체 합류 (클러스터 폭탄·투석 파편 — 배열 교체로 유실되던 버그 방지)
   // 사망 처리 + 폭발 (몹 보상: 기존의 1/10로 축소)
-  const killGold = Math.max(1, Math.round(S.round * 0.06)) * ((S.eventMods && S.eventMods.killMul) || 1) * (S.feverT > 0 ? 2 : 1); // 몹 절반 보정 ×1.5 (부족분은 광산 상향으로 이전)
+  const killGold = Math.max(1, Math.round(S.round * 0.042)) * ((S.eventMods && S.eventMods.killMul) || 1) * (S.feverT > 0 ? 2 : 1); // 0.06 → ×0.7 (경제 개편: 수동 수입 축소, 광산·이자로 축 이동)
   const newborns = [];
   S.monsters = S.monsters.filter(m => {
     if (m.hp <= 0) {
@@ -2533,7 +2544,7 @@ function burstJuice(e) {
 function mineReward() {
   // 겹이 깊어질수록 배달 보너스가 기하급수로 커진다 (+4, +6, +8, +11, +16 … 10겹째 +83)
   // 광산 HP도 ×1.4씩 커서 깊이 파려면 시간이 필요 → "포커 시간을 벌며 채굴하는 운영"이 수익의 축
-  const inc = Math.ceil(4 * Math.pow(1.4, S.mineLayer - 1)); // 광산 비중 상향: 3×1.33^ → 4×1.4^ (킬골드 ×1.5 하향과 세트 — 후반 수입 축을 광산으로)
+  const inc = Math.ceil(8 * Math.pow(1.4, S.mineLayer - 1)); // 경제 개편: 4→8×1.4^ — 유일한 기하 수입을 경제 축으로 (킬골드 ×0.7 하향과 세트)
   S.mineBonus += inc;
   S.mineLayer++;
   logMsg(`⛰️💥 광산 ${S.mineLayer - 1}겹 파괴! 채굴량 +${inc} — 이제 배달마다 골드 +${S.mineBonus}`);
@@ -2698,18 +2709,20 @@ function duelWin(u) {
   const gold = 150 + S.round * 20;
   S.gold += gold;
   if (u && u.kills != null) u.kills++;
-  const chipWin = Math.random() < 0.05 * gamblerLuck(); // 🎰 5% 잭팟 (도박의 신 가호 적용)
-  if (chipWin) {
-    S.chips++;
-    for (let i = 0; i < 3; i++) S.parts.push({ x: d.x, y: d.y, vx: (Math.random()-0.5)*120, vy: -80 - Math.random()*80, coin: true, chipFx: true, t: 1.6, r: 3.4, c: '#ffd54f' });
-  }
+  // 🪙 시간 차등 칩 (2026-08-03 유저): 제한시간 절반 안에 잡으면 칩 1개, 그 뒤(연장전 포함)는 반 개.
+  // 반 개 두 번 = 자연히 1개 (0.5 + 0.5) — 카지노는 정수 칩만 소모하므로 반 개는 모아야 쓴다
+  const fast = S.timer > WAVE_TIME / 2;
+  const chipGain = fast ? 1 : 0.5;
+  S.chips += chipGain;
+  for (let i = 0; i < (fast ? 3 : 2); i++) S.parts.push({ x: d.x, y: d.y, vx: (Math.random()-0.5)*120, vy: -80 - Math.random()*80, coin: true, chipFx: true, t: 1.6, r: fast ? 3.4 : 2.4, c: '#ffd54f' });
   sfx('jackpot'); S.hitstop = 0.06;
   const c = MATERIALS[d.mat].col;
   for (let i = 0; i < 18; i++) { const a = Math.random() * 6.28, v = 90 + Math.random() * 160;
     S.parts.push({ x: d.x, y: d.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 50, g: true, t: 0.6, r: 1.8 + Math.random() * 2.4, c: i % 3 ? c : '#ffd54f' }); }
   S.effects.push({ type: 'boom', x: d.x, y: d.y, r: 60, t: 0.4 });
-  rewardToast('🏆', `도전자 격파! +${gold}G${chipWin ? ' · 🎰 칩 +1!!' : ''}`, '#c9971a', '콜 로 세 움 챔 피 언');
-  logMsg(`🏆 결투장 승리!! +${gold}G${chipWin ? ' · 🎰 행운의 칩 +1!!' : ''} — 도전자: "...인정."`);
+  const chipTxt = fast ? '🪙 칩 +1 (신속 격파!)' : '🪙 칩 +½ (반 개 — 모아서 쓰자)';
+  rewardToast('🏆', `도전자 격파! +${gold}G · ${chipTxt}`, '#c9971a', '콜 로 세 움 챔 피 언');
+  logMsg(`🏆 결투장 승리!! +${gold}G · ${chipTxt} — 도전자: "...인정."`);
   S.duel = null;
 }
 function fireAtOre(u) {
@@ -6574,7 +6587,7 @@ function upgItemsHTML() {
     `<div class="rpgItem" style="border-left:5px solid ${r.color}">
       <div class="rpgIcon" style="color:${r.color}">${r.suit}</div>
       <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
-        <span class="desc">단일 +${(upgEff(S.upg[i])*2.5).toFixed(1)} · 스플래시 초당 +${(upgEff(S.upg[i])*0.55).toFixed(1)}/마리 · 전체 초당 +${(upgEff(S.upg[i])*0.15).toFixed(1)}/마리${S.upg[i] > 20 ? ' <b style="color:#c9971a">⚡가속!</b>' : ''}</span></div>
+        <span class="desc">단일 +${(upgEff(S.upg[i])*2.5).toFixed(1)} · 스플래시 초당 +${(upgEff(S.upg[i])*0.55).toFixed(1)}/마리 · 전체 초당 +${(upgEff(S.upg[i])*0.15).toFixed(1)}/마리${S.upg[i] > 15 ? ' <b style="color:#c9971a">⚡가속!</b>' : ''}</span></div>
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
       <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값으로 3레벨 도전 — 타이밍바 중앙에 맞추면 35%">🎰 ×3</button>
     </div>`).join('') +
@@ -6664,8 +6677,8 @@ function minerItemsHTML() {
   const mineSec = (MINE_TIME / (1 + 0.25 * S.minerMineLv)).toFixed(1);
   return `
     <div class="rpgItem"><div class="rpgIcon">⛏️</div>
-      <div class="rpgInfo"><b>광부 고용</b> <span class="lv">현재 ${n}명</span></div>
-      <button class="rpgBuy" id="hireBtn" ${S.gold < S.minerCost ? 'disabled' : ''}>💰 ${S.minerCost}G</button></div>
+      <div class="rpgInfo"><b>광부 고용</b> <span class="lv">현재 ${n}명</span><br>
+        <span class="desc">광부는 🎰 카지노에서 <b>칩 1개</b>로 고용합니다 (좌측 카지노 버튼)</span></div></div>
     <div class="rpgItem"><div class="rpgIcon">🏃</div>
       <div class="rpgInfo"><b>이동속도</b> <span class="lv">Lv.${S.minerMoveLv}/${MINER_MAX_LV}</span> (${moveSpd})</div>
       ${S.minerMoveLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mvBtn" ${S.gold < S.minerMoveCost ? 'disabled' : ''}>💰 ${S.minerMoveCost}G</button>`}</div>
@@ -6676,13 +6689,7 @@ function minerItemsHTML() {
 }
 function wireMiner(el) {
   const wire = (id, fn) => { const b = el.querySelector(id); if (b) b.onclick = fn; };
-  wire('#hireBtn', () => {
-    if (S.gold < S.minerCost) return;
-    S.gold -= S.minerCost; spawnMiner();
-    S.minerCost = Math.floor(S.minerCost * 2.5);
-    logMsg(`⛏️ 광부 고용! (총 ${S.units.filter(u => u.miner).length}명)`);
-    renderShop();
-  });
+  // (경제 개편: 골드 고용 버튼 제거 — 광부는 카지노에서 칩 1개로. 이 창은 광부 '업그레이드' 전용)
   // 비용 사다리: 6,000 → ×3 → ×2 → ×2 → ×3 = 18k, 36k, 72k, 216k
   const MINER_COST_MUL = [3, 2, 2, 3];
   wire('#mvBtn', () => {
@@ -6864,13 +6871,46 @@ const LOTTO_ICONS = ['💰', '💰', '⚔️', '⛏️', '🎟️', '⭐', '💰
 // ===== 🎰 카지노: 단일 진입 → 메뉴 → 3섹션 =====
 function openCasino() { openChip('🎰 카지노'); casMenu(); }
 function casMenu() {
+  // 🛒 비상 물자: 고정가 · 판당 구매 제한 (유저 지정 — 라운드 비례면 미리 사두는 게 정답이 되므로 고정가)
+  const V = [
+    { k: 'sand', icon: '⏱️', name: '시간의 모래', desc: '이번 전투 +15초', cost: 10000, max: 3, ok: () => S.phase === 'wave' },
+    { k: 'bomb', icon: '💣', name: '긴급 폭격', desc: '모든 몹 최대체력 15% 타격', cost: 30000, max: 2, ok: () => S.phase === 'wave' && S.monsters.length > 0 },
+    { k: 'pray', icon: '❤️', name: '생명의 기도', desc: '목숨 +3', cost: 50000, max: 2, ok: () => true },
+  ];
+  const chipTxt = S.chips === Math.floor(S.chips) ? S.chips : Math.floor(S.chips) + '½';
   CB.innerHTML =
-    `<div style="display:flex;flex-direction:column;gap:10px">
+    `<div style="text-align:center;font-size:12px;color:#c9b8f0;margin-bottom:8px">보유 🪙 <b style="color:#ffd166">${chipTxt}</b>개 · 💰 <b style="color:#ffd166">${Math.floor(S.gold).toLocaleString()}G</b></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
       <button class="chipBtn casItem" data-go="roulette" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎡</span> <b style="color:#ffd166">룰렛</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 휠을 돌려 랜덤 보상 (골드·유닛·영웅·광부·아이템)</span></button>
-      <button class="chipBtn casItem" data-go="slot" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎰</span> <b style="color:#ffd166">777 슬롯</b><br><span style="font-size:11px;color:#c9b8f0">5000G + 칩 1개 — 7️⃣7️⃣7️⃣이 뜨면 <b>1000만 골드</b></span></button>
-    </div>`;
-  CB.querySelector('[data-go="roulette"]').onclick = () => { if (S.chips <= 0) return; casRoulette(); };
+      <button class="chipBtn casItem" data-go="slot" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎰</span> <b style="color:#ffd166">777 슬롯</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 7️⃣7️⃣7️⃣이 뜨면 <b>1000만 골드</b></span></button>
+      <button class="chipBtn casItem" data-go="miner" style="text-align:left;padding:12px" ${S.chips < 1 ? 'disabled' : ''}><span style="font-size:26px;vertical-align:middle">⛏️</span> <b style="color:#ffd166">광부 고용</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 확실한 투자. 광산에서 꾸준히 골드를 캐 온다 (현재 ${S.units.filter(u => u.miner).length}명)</span></button>
+    </div>
+    <div style="margin-top:12px;border-top:1px dashed rgba(201,167,90,0.4);padding-top:8px">
+      <div style="font-size:12px;color:#c9a75a;font-weight:bold;margin-bottom:6px">🛒 비상 물자 <span style="font-weight:normal;color:#9a8a60">— 골드 구매 · 판당 수량 한정</span></div>
+      <div style="display:flex;gap:6px">` +
+    V.map(v => { const left = v.max - S.valves[v.k];
+      const can = left > 0 && S.gold >= v.cost && v.ok();
+      return `<button class="chipBtn sub" data-valve="${v.k}" style="flex:1;padding:8px 4px;font-size:11px" ${can ? '' : 'disabled'}>${v.icon} ${v.name}<br><span style="font-size:10px">${v.desc}</span><br><b>${(v.cost/10000)}만G</b> · 남은 ${left}회</button>`; }).join('') +
+    `</div></div>`;
+  CB.querySelector('[data-go="roulette"]').onclick = () => { if (S.chips < 1) return; casRoulette(); };
   CB.querySelector('[data-go="slot"]').onclick = () => casSlot();
+  CB.querySelector('[data-go="miner"]').onclick = () => {
+    if (S.chips < 1) return;
+    S.chips--; spawnMiner(); sfx('reward');
+    logMsg(`⛏️ 광부 고용! (칩 1개 — 총 ${S.units.filter(u => u.miner).length}명)`);
+    casMenu(); updateHUD();
+  };
+  CB.querySelectorAll('[data-valve]').forEach(b => b.onclick = () => {
+    const v = V.find(x => x.k === b.dataset.valve);
+    if (!v || S.valves[v.k] >= v.max || S.gold < v.cost || !v.ok()) return;
+    S.gold -= v.cost; S.valves[v.k]++;
+    if (v.k === 'sand') { S.timer += 15; addFloat(CX, 130, '⏱️ +15초!', '#7ec8ff', 2); logMsg('⏱️ 시간의 모래 — 이번 전투 +15초!'); }
+    else if (v.k === 'bomb') { for (const m of S.monsters) dealDamage(m, m.max * 0.15, null);
+      S.effects.push({ type: 'boom', x: CX, y: CY, r: 150, t: 0.5 }); S.shake = 0.2; sfx('bigboom');
+      logMsg('💣 긴급 폭격!! 모든 몬스터 최대체력 15% 타격!'); }
+    else { S.life += 3; addFloat(HOUSE.x, HOUSE.y - 40, '❤️ +3', '#e53935', 2); logMsg('❤️ 생명의 기도 — 목숨 +3!'); }
+    sfx('coin'); casMenu(); updateHUD();
+  });
 }
 // --- 🎡 룰렛: 칩 1개 → 휠 돌려 보상 (rollLottery 재사용) ---
 const RCAT = { gs:{icon:'💰',c:'#3a2f52'}, gb:{icon:'💰',c:'#c98a2f'}, u:{icon:'⚔️',c:'#2f9e44'}, mi:{icon:'⛏️',c:'#b8860b'}, it:{icon:'🎁',c:'#8e44ad'}, hero:{icon:'⭐',c:'#e53935'} };
@@ -6899,11 +6939,11 @@ function casRoulette() {
     if (!el) { logMsg(`🎡 룰렛 당첨: <b>${reward.label}</b> (창을 닫는 사이 지급되었습니다)`); return; } // 회전 중 창을 닫아도 보상은 지급 — 예전엔 여기서 TypeError
     el.innerHTML = (reward.rare ? '🌟🌟 ' : '🎉 ') + `<span style="color:${reward.rare ? '#ff6b9d' : '#ffd166'}">${reward.label}</span> 당첨!`;
     if (reward.rare) sfx('hero'); else sfx('reward');
-    el.insertAdjacentHTML('afterend', `<div style="margin-top:8px;text-align:center"><button class="chipBtn" onclick="casMenu()">메뉴</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="casRoulette()">한 번 더 (칩 ${S.chips})</button>` : ''}</div>`);
+    el.insertAdjacentHTML('afterend', `<div style="margin-top:8px;text-align:center"><button class="chipBtn" onclick="casMenu()">메뉴</button>${S.chips >= 1 ? `<button class="chipBtn sub" onclick="casRoulette()">한 번 더 (칩 ${S.chips})</button>` : ''}</div>`);
   }, 5100);
 }
 // --- 🎰 777 슬롯: 5000G + 보스 칩 1개 → 클래식 3릴. 결과 선(先)추첨 후 릴이 맞춰 멈춤 (확률 정확 + 연출 자유) ---
-const SLOT_COST = 5000;
+// (경제 개편: 슬롯 골드 비용 5000G 삭제 — 칩 1개 전용)
 const SLOT_SYMS = { sev: '7', dia: '💎', bell: '🔔', melon: '🍉', cherry: '🍒', bar: 'BAR' };
 const SLOT_TABLE = [ // [키, 확률‰, 지급G] — 합 ~191.5‰ + 🍒×2 140.6‰, 나머지 꽝. EV ≈ 0.93 (gamblerLuck 시 ~1.02)
   ['777',    0.125, 10000000],
@@ -6942,7 +6982,7 @@ function slotSymsFor(key) { // 결과 → 표시 심볼 3개
 function slotCellHTML(s) { return `<div class="slotCell ${s === 'bar' ? 'bar' : s === 'sev' ? 'sev' : ''}">${SLOT_SYMS[s]}</div>`; }
 function casSlot() {
   const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '';
-  const can = S.gold >= SLOT_COST && S.chips > 0;
+  const can = S.chips >= 1; // 경제 개편: 골드 비용 삭제 — 칩 1개로만 돌린다 (유저 지정)
   CB.innerHTML =
     `<span class="back" onclick="casMenu()">‹ 카지노</span>` + luckMsg +
     `<div style="font-size:12px;color:#c9b8f0;text-align:center">보유 <b style="color:#ffd166">${Math.floor(S.gold)}G</b> · 칩 <b style="color:#ffd166">${S.chips}</b>개</div>` +
@@ -6951,13 +6991,13 @@ function casSlot() {
       <tr><td style="color:#ff6b9d;font-weight:bold">7️⃣7️⃣7️⃣ 1000만G</td><td style="text-align:right;color:#ffd166;font-weight:bold">💎×3 75만G</td><td style="text-align:right">🔔×3 20만G</td></tr>
       <tr><td>🍉×3 5만G</td><td style="text-align:right">🍒×3 2만G · BAR×3 1.25만G</td><td style="text-align:right">7️⃣×2 3만G · 🍒×2 6천G</td></tr>
     </table>` +
-    `<div style="text-align:center"><button class="chipBtn" id="slotBtn" ${can ? '' : 'disabled'}>🎰 레버 당기기 (5000G + 🪙1)</button></div>` +
-    `<div class="chipResult" id="slRes" style="text-align:center">${can ? '행운을 시험해 보세요!' : (S.chips <= 0 ? '보스 칩이 필요합니다 (보스를 잡으면 획득)' : '골드가 부족합니다 (5000G)')}</div>`;
+    `<div style="text-align:center"><button class="chipBtn" id="slotBtn" ${can ? '' : 'disabled'}>🎰 레버 당기기 (🪙1)</button></div>` +
+    `<div class="chipResult" id="slRes" style="text-align:center">${can ? '행운을 시험해 보세요!' : '칩이 필요합니다 (보스·결투장에서 획득)'}</div>`;
   document.getElementById('slotBtn').onclick = slotPull;
 }
 function slotPull() {
-  if (S.gold < SLOT_COST || S.chips <= 0) return;
-  S.gold -= SLOT_COST; S.chips--; sfx('coin'); updateInfoPanel();
+  if (S.chips < 1) return;
+  S.chips--; sfx('coin'); updateInfoPanel();
   const res = rollSlot();
   const syms = slotSymsFor(res.key);
   const btn = document.getElementById('slotBtn'); btn.disabled = true;
@@ -6987,7 +7027,7 @@ function slotPull() {
     updateInfoPanel();
     const el = document.getElementById('slRes');
     if (!el) { if (won > 0) logMsg(`🎰 슬롯 당첨: <b>+${won.toLocaleString()}G</b> (창을 닫는 사이 지급되었습니다)`); return; }
-    if (won === 0) { el.innerHTML = `<span style="color:#e57373">💨 꽝! 5000G 증발…</span>`; sfx('leak'); }
+    if (won === 0) { el.innerHTML = `<span style="color:#e57373">💨 꽝! 칩이 허공으로…</span>`; sfx('leak'); }
     else if (res.key === '777') {
       el.innerHTML = `<span style="color:#ff6b9d;font-size:19px;font-weight:900">🎆🎆 𝟕𝟕𝟕 잭팟!!! +1,000만G 🎆🎆</span>`;
       sfx('jackpot'); sfx('hero'); S.goldFlash = 0.9;
@@ -6995,15 +7035,15 @@ function slotPull() {
       logMsg('🎰🎆 𝟕𝟕𝟕 잭팟!!! 1000만 골드!!! 🎆🎰');
     }
     else if (won >= 100000) { el.innerHTML = `<span style="color:#ff6b9d;font-size:16px">🎆 대박!! +${won.toLocaleString()}G 🎆</span>`; sfx('jackpot'); S.goldFlash = 0.55; }
-    else { el.innerHTML = `<span style="color:${won > SLOT_COST ? '#ffd166' : '#c9b8f0'}">🎉 +${won.toLocaleString()}G (순익 ${won - SLOT_COST >= 0 ? '+' : ''}${won - SLOT_COST}G)</span>`; sfx(won > SLOT_COST ? 'reward' : 'coin'); }
+    else { el.innerHTML = `<span style="color:#ffd166">🎉 +${won.toLocaleString()}G</span>`; sfx(won >= 20000 ? 'reward' : 'coin'); }
     const b = document.getElementById('slotBtn');
-    if (b) { b.disabled = S.gold < SLOT_COST || S.chips <= 0; b.textContent = `🎰 한 번 더 (5000G + 🪙${S.chips})`; }
+    if (b) { b.disabled = S.chips < 1; b.textContent = `🎰 한 번 더 (🪙 보유 ${S.chips})`; }
   }, durs[2] * 1000 + 250);
 }
 
 // 🃏 카드 교환권 (30% 발급 / 40% 칩 환급 / 30% 소멸)
 function doExchange() {
-  if (S.chips <= 0) return;
+  if (S.chips < 1) return; // 반 개 칩으로는 못 돌린다
   S.chips--; sfx('coin');
   openChip('🃏 카드 교환권');
   const r = Math.random();
@@ -7018,7 +7058,7 @@ function doExchange() {
     out.apply(); sfx(out.s); updateInfoPanel();
     const exR = document.getElementById('exRes'); if (!exR) return; // 창을 닫으면 보상만 지급하고 종료
     exR.innerHTML = out.txt;
-    document.getElementById('exBtns').innerHTML = `<button class="chipBtn" onclick="closeChip()">확인</button>${S.chips > 0 ? `<button class="chipBtn sub" onclick="doExchange()">한 번 더 (칩 ${S.chips})</button>` : ''}`;
+    document.getElementById('exBtns').innerHTML = `<button class="chipBtn" onclick="closeChip()">확인</button>${S.chips >= 1 ? `<button class="chipBtn sub" onclick="doExchange()">한 번 더 (칩 ${S.chips})</button>` : ''}`;
   }, 900);
 }
 document.getElementById('stCasino').onclick = () => { initAudio(); openCasino(); };
@@ -7160,10 +7200,10 @@ function updateHUD() {
   document.getElementById('tLife').textContent = S.life + (S.reviveArmed ? ' 🔄' : '');
   document.getElementById('tGold').textContent = Math.floor(S.gold) + 'G';
   document.getElementById('tMiner').textContent = S.units.filter(u => u.miner).length + '명';
-  document.getElementById('tChips').textContent = S.chips;
+  document.getElementById('tChips').textContent = S.chips === Math.floor(S.chips) ? S.chips : Math.floor(S.chips) + '½'; // 결투 반 개 칩 표기
   // 좌측 카지노 스테이션: 칩 있으면 활성 + 빛남
-  const hasChip = S.chips > 0;
-  document.querySelectorAll('.chipStation').forEach(b => { b.disabled = !hasChip; b.classList.toggle('ready', hasChip); });
+  // 칩이 없어도 비상 물자(골드)는 살 수 있으므로 카지노는 항상 열린다. 정수 칩이 있을 때만 발광
+  document.querySelectorAll('.chipStation').forEach(b => { b.disabled = false; b.classList.toggle('ready', S.chips >= 1); });
   document.getElementById('tRound').textContent = S.round;
 
   document.getElementById('tStage').textContent = stageInfo(S.round).name + (DIFF_NAME === '보통' ? '' : ` · ${DIFF_NAME === '지옥' ? '💀' : ''}${DIFF_NAME}`); // 재질명 옆에 난이도 상시 표시
@@ -7194,7 +7234,6 @@ function updateHUD() {
     document.querySelectorAll('#shopBody button').forEach(b => {
       const i = b.dataset.upg !== undefined ? b.dataset.upg : b.dataset.gupg;
       if (i !== undefined) b.disabled = S.gold < S.upgCost[+i];
-      else if (b.id === 'hireBtn') b.disabled = S.gold < S.minerCost;
       else if (b.id === 'mvBtn') b.disabled = S.minerMoveLv >= MINER_MAX_LV || S.gold < S.minerMoveCost;
       else if (b.id === 'mnBtn') b.disabled = S.minerMineLv >= MINER_MAX_LV || S.gold < S.minerMineCost;
     });
