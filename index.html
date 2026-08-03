@@ -465,7 +465,7 @@
   <div id="topbar">
     <span>❤️ <b id="tLife"></b></span>
     <span>💰 <b id="tGold"></b></span>
-    <span id="tIntWrap" title="🏦 이자 — 라운드를 클리어할 때 보유 골드의 8%가 붙습니다. 쓰면 줄어들고, 모으면 불어납니다"><b id="tInterest" style="color:#7ec8ff">🏦 +0</b></span>
+    <span id="tIntWrap" title="📈 투자 — 카지노에서 골드를 묶어두면 만기에 불어서 돌아옵니다 (만기 전 인출 불가)"><b id="tInterest" style="color:#7ec8ff">📈 0</b></span>
     <span>⛏️ <b id="tMiner"></b></span>
     <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 카지노에서 룰렛·슬롯·광부 고용에 사용">🎰 <b id="tChips" style="color:#c9a227">0</b></span>
     <span>🏳️ 스테이지 <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
@@ -856,6 +856,7 @@ function reset() {
     valves: { sand: 0, bomb: 0, pray: 0 }, // 🛒 비상 물자 구매 횟수 (판당 3회씩 · 가격은 VCOST 누진)
     pendSand: 0, pendBomb: 0, // 포커 중에 산 모래·폭격: 다음 전투 시작에 자동 적용 (전투 중 구매는 즉시)
     duelCall: false,          // 🏛️ 모바일 전용: 포커 때 못 띄운 결투 예고를 전투 시작으로 이월
+    invests: [],              // 📈 예치금 [{amt, term, mul, matureRound}] — 만기 전 인출 불가(유저 지정)
     hunt: null, items: { reroll: 0, copier: 0 }, groups: {},
     upg: [0,0,0], upgCost: [50,50,50],
     units: [], monsters: [], effects: [], floats: [], parts: [], projs: [],
@@ -1377,15 +1378,8 @@ function endWave() {
     }
     sfx('clear');
   }
-  // 🏦 이자: 라운드 정산마다 보유 골드의 +8% (상한 없음 — 유저: "777 터지면 그렇게 붕괴도 되어봐야지").
-  // 저축 = 복리, 지출(업글·비상물자) = 즉시 전력. 이 긴장이 골드 운영의 축.
-  if (S.life > 0 && S.gold >= 13) { // 13G 미만이면 이자 1G도 안 됨
-    const interest = Math.floor(S.gold * 0.08);
-    S.gold += interest;
-    logMsg(`🏦 이자 +${interest.toLocaleString()}G (보유 골드의 8%)`);
-    // 캔버스 상단 중앙 — 하단(성 근처)에 띄우면 포커 패널이 캔버스 아래 57~75%를 덮어 통째로 가려진다
-    addFloat(CX, 120, `🏦 이자 +${interest.toLocaleString()}G`, '#7ec8ff', 2.2);
-  }
+  // 🏦 이자(보유 골드 +8%)는 2026-08-04 유저 지시로 폐지 — 가만히 있어도 붙어서 '결정'이 없었다.
+  //    대신 📈 투자: 골드를 5·10·20라운드 잠그고 복리로 받는다 (settleInvests / casInvest).
   S.monsters = [];
   S.projs = [];
   if (S.life <= 0) {
@@ -1420,6 +1414,7 @@ function endWave() {
     logMsg('🎉🎉 80라운드 클리어!! 이제부터는 헬모드... 🎉🎉');
   }
   S.round++;
+  settleInvests(); // 📈 만기 도래한 예치금 지급 (라운드가 올라간 직후 = "N라운드 뒤")
   if (S.round >= 40) markAchv('r40');
   if (S.round >= 80) markAchv('r80');
   // 광석방 정원 증가 알림 (10라운드마다)
@@ -6984,6 +6979,31 @@ function rollLottery() {
   return { icon: '⭐', label: `${HAND_NAMES[t]} 영웅!!`, apply: () => spawnHero(t, RACE_OF_RANK[t], PORTAL.x, PORTAL.y + PORTAL.r + 30, 1), rare: true };
 }
 const LOTTO_ICONS = ['💰', '💰', '⚔️', '⛏️', '🎟️', '⭐', '💰', '⚔️'];
+// ==================== 📈 투자 (구 이자 시스템 대체 · 2026-08-04 유저 확정) ====================
+// 이자는 "가만히 있으면 8%"라 결정이 없었다. 투자는 골드를 실제로 못 쓰게 잠그므로 비용이 생긴다.
+// 유저 확정: 안정형 수익 · **만기 전 인출 불가** — "지금 이 돈이 없어도 버틸 수 있나"가 매 예치의 질문이 된다.
+// 라운드당 실효 복리는 8.4% → 9.6% → 9.4%로, 길게 묶을수록 유리하다.
+const INVEST_TERMS = [
+  { term: 5,  mul: 1.5 },
+  { term: 10, mul: 2.5 },
+  { term: 20, mul: 6   },
+];
+const INVEST_MIN = 100; // 이보다 적으면 수익이 반올림에 먹힌다
+function investTotal() { return S.invests.reduce((a, v) => a + v.amt, 0); }
+// 만기 도래분 지급. endWave의 S.round++ 직후에 호출된다 (그래야 "5라운드 뒤"가 클리어 5번과 일치).
+function settleInvests() {
+  if (!S.invests.length) return;
+  const due = S.invests.filter(v => S.round >= v.matureRound);
+  if (!due.length) return;
+  S.invests = S.invests.filter(v => S.round < v.matureRound);
+  let sum = 0;
+  for (const v of due) sum += Math.floor(v.amt * v.mul);
+  S.gold += sum;
+  logMsg(`📈 투자 만기! +${sum.toLocaleString()}G (${due.length}건 회수)`);
+  // 캔버스 상단 중앙 — 하단에 띄우면 포커 패널이 덮는다 (구 이자 플로트와 같은 이유)
+  addFloat(CX, 120, `📈 만기 +${sum.toLocaleString()}G`, '#7ec8ff', 2.4);
+  sfx('coin');
+}
 // 🛒 비상 물자 누진 가격 (유저 지정): 첫 구매 1만 → 5만 → 10만. 세 품목 모두 동일.
 const VCOST = [10000, 50000, 100000];
 function valveCost(k) { return VCOST[Math.min(VCOST.length - 1, S.valves[k] || 0)]; } // 다 산 뒤에도 라벨이 NaN이 되지 않게 clamp
@@ -7009,6 +7029,7 @@ function casMenu() {
       <button class="chipBtn casItem" data-go="roulette" style="text-align:left;padding:12px" ${S.chips < 1 ? 'disabled' : ''}><span style="font-size:26px;vertical-align:middle">🎡</span> <b style="color:#ffd166">룰렛</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 휠을 돌려 랜덤 보상 (골드·유닛·영웅·광부·아이템)</span></button>
       <button class="chipBtn casItem" data-go="slot" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎰</span> <b style="color:#ffd166">777 슬롯</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 7️⃣7️⃣7️⃣이 뜨면 <b>1000만 골드</b></span></button>
       <button class="chipBtn casItem" data-go="miner" style="text-align:left;padding:12px" ${S.chips < 1 ? 'disabled' : ''}><span style="font-size:26px;vertical-align:middle">⛏️</span> <b style="color:#ffd166">광부 고용</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 확실한 투자. 광산에서 꾸준히 골드를 캐 온다 (현재 ${S.units.filter(u => u.miner).length}명)</span></button>
+      <button class="chipBtn casItem" data-go="invest" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">📈</span> <b style="color:#ffd166">투자</b><br><span style="font-size:11px;color:#c9b8f0">골드를 묶어 불린다. 오래 묶을수록 많이 붙지만 <b>만기 전엔 못 뺀다</b>${investTotal() ? ` · 예치 중 <b style="color:#7ec8ff">${investTotal().toLocaleString()}G</b>` : ''}</span></button>
     </div>
     <div style="margin-top:12px;border-top:1px dashed rgba(201,167,90,0.4);padding-top:8px">
       <div style="font-size:12px;color:#c9a75a;font-weight:bold;margin-bottom:6px">🛒 비상 물자 <span style="font-weight:normal;color:#9a8a60">— 골드 구매 · 판당 수량 한정</span></div>
@@ -7018,6 +7039,7 @@ function casMenu() {
       const later = S.phase !== 'wave' && v.k !== 'pray'; // 전투가 아니면 다음 전투에 들어간다
       return `<button class="chipBtn sub" data-valve="${v.k}" style="flex:1;padding:8px 4px;font-size:11px" ${can ? '' : 'disabled'}>${v.icon} ${v.name}<br><span style="font-size:10px">${v.desc}${later ? ' <span style="color:#c9a75a">(다음 전투)</span>' : ''}</span><br><b>${(v.cost/10000)}만G</b> · 남은 ${left}회</button>`; }).join('') +
     `</div></div>`;
+  CB.querySelector('[data-go="invest"]').onclick = () => casInvest();
   CB.querySelector('[data-go="roulette"]').onclick = () => { if (S.chips < 1) return; casRoulette(); };
   CB.querySelector('[data-go="slot"]').onclick = () => casSlot();
   CB.querySelector('[data-go="miner"]').onclick = () => {
@@ -7040,6 +7062,47 @@ function casMenu() {
       else { S.pendBomb++; logMsg('💣 긴급 폭격 — 몬스터가 나타나는 즉시 떨어집니다.'); }
     } else { S.life += 3; addFloat(HOUSE.x, HOUSE.y - 40, '❤️ +3', '#e53935', 2); logMsg('❤️ 생명의 기도 — 목숨 +3!'); }
     sfx('coin'); casMenu(); updateHUD();
+  });
+}
+// --- 📈 투자: 금액을 정하고 기간을 고르면 그 라운드 수만큼 잠긴다 (중도 인출 없음) ---
+function casInvest() {
+  const g = Math.floor(S.gold);
+  const rows = S.invests.slice().sort((a, b) => a.matureRound - b.matureRound).map(v =>
+    `<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px dotted rgba(201,167,90,0.25)">
+       <span>${v.amt.toLocaleString()}G · ${v.term}라운드</span>
+       <span style="color:#7ec8ff">${Math.max(0, v.matureRound - S.round)}라운드 뒤 <b style="color:#ffd166">${Math.floor(v.amt * v.mul).toLocaleString()}G</b></span>
+     </div>`).join('');
+  CB.innerHTML =
+    `<span class="back" onclick="casMenu()">‹ 카지노</span>` +
+    `<div style="text-align:center;font-size:12px;color:#c9b8f0;margin-bottom:8px">보유 💰 <b style="color:#ffd166">${g.toLocaleString()}G</b>${investTotal() ? ` · 예치 중 <b style="color:#7ec8ff">${investTotal().toLocaleString()}G</b>` : ''}</div>` +
+    `<div style="display:flex;gap:5px;align-items:center;margin-bottom:8px">
+       <input id="invAmt" type="number" min="${INVEST_MIN}" step="100" value="${Math.min(g, Math.max(INVEST_MIN, Math.floor(g / 2)))}"
+              style="flex:1;padding:7px;border-radius:8px;border:1px solid #c9a75a;background:#1b1430;color:#ffd166;font-size:13px;font-weight:bold;text-align:right">
+       <button class="chipBtn sub" id="invHalf" style="padding:6px 8px;font-size:11px">절반</button>
+       <button class="chipBtn sub" id="invAll" style="padding:6px 8px;font-size:11px">전액</button>
+     </div>` +
+    `<div style="display:flex;gap:6px">` +
+    INVEST_TERMS.map(t => `<button class="chipBtn sub" data-term="${t.term}" style="flex:1;padding:9px 4px;font-size:12px">
+        <b style="color:#ffd166">${t.term}라운드</b><br><span style="font-size:14px;font-weight:bold">×${t.mul}</span></button>`).join('') +
+    `</div>` +
+    `<div style="text-align:center;font-size:10.5px;color:#9a8a60;margin-top:7px">묶는 동안엔 꺼내 쓸 수 없습니다</div>` +
+    (rows ? `<div style="margin-top:10px;border-top:1px dashed rgba(201,167,90,0.4);padding-top:6px">
+       <div style="font-size:12px;color:#c9a75a;font-weight:bold;margin-bottom:3px">📈 예치 중</div>${rows}</div>` : '');
+  const amtEl = document.getElementById('invAmt');
+  document.getElementById('invHalf').onclick = () => { amtEl.value = Math.floor(S.gold / 2); };
+  document.getElementById('invAll').onclick = () => { amtEl.value = Math.floor(S.gold); };
+  CB.querySelectorAll('[data-term]').forEach(b => b.onclick = () => {
+    const t = INVEST_TERMS.find(x => x.term === +b.dataset.term);
+    const amt = Math.floor(+amtEl.value || 0);
+    if (!t || !(amt >= INVEST_MIN) || amt > Math.floor(S.gold)) { // NaN·음수·초과 전부 여기서 걸린다
+      amtEl.style.borderColor = '#e57373';
+      return;
+    }
+    S.gold -= amt;
+    S.invests.push({ amt, term: t.term, mul: t.mul, matureRound: S.round + t.term });
+    logMsg(`📈 투자! ${amt.toLocaleString()}G를 ${t.term}라운드 묶었습니다 → 만기 ${Math.floor(amt * t.mul).toLocaleString()}G`);
+    sfx('coin');
+    casInvest(); updateHUD();
   });
 }
 // --- 🎡 룰렛: 칩 1개 → 휠 돌려 보상 (rollLottery 재사용) ---
@@ -7334,9 +7397,12 @@ function updateHUD() {
   }
   document.getElementById('tLife').textContent = S.life + (S.reviveArmed ? ' 🔄' : '');
   document.getElementById('tGold').textContent = Math.floor(S.gold).toLocaleString() + 'G';
-  // 🏦 다음 정산에 붙을 이자 예고 — 골드를 쓸 때마다 이 숫자가 줄어드는 게 보여야 '저축 vs 지출' 결정이 생긴다
-  // (사후 로그 한 줄만으론 시스템이 있는지도 모른다 — 유저 피드백)
-  document.getElementById('tInterest').textContent = '🏦 +' + Math.floor(S.gold * 0.08).toLocaleString();
+  // 📈 예치 총액 + 가장 가까운 만기 — 묶어둔 돈이 얼마고 언제 풀리는지가 안 보이면 잠금이 그냥 손실로만 느껴진다
+  const iv = document.getElementById('tInterest');
+  if (S.invests.length) {
+    const near = Math.min(...S.invests.map(v => v.matureRound)) - S.round;
+    iv.textContent = `📈 ${investTotal().toLocaleString()}G (${Math.max(0, near)}R)`;
+  } else iv.textContent = '📈 0';
   document.getElementById('tMiner').textContent = S.units.filter(u => u.miner).length + '명';
   document.getElementById('tChips').textContent = chipTxt(S.chips); // 결투 반 개 칩 표기 (½·1½…)
   // 좌측 카지노 스테이션: 칩 있으면 활성 + 빛남
