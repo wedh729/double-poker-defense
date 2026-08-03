@@ -672,7 +672,7 @@ const ORES = [
 ];
 const MINE_TIME = 5;              // 광부 기본 채굴 시간(초)
 const MINER_SPEED = 42;          // 광부 기본 이동속도 (느릿느릿)
-const MINER_LOAD = 90;           // 배달 1회 기본 골드 (경제 개편: 광부 = 칩 전용 희소 자원 → 1기 가치 2배, 45→90)
+const MINER_LOAD = 150;          // 배달 1회 기본 골드. 45 → 90(칩 전용화) → 150 (유저: 광부를 구하기 힘들어진 만큼 1기 가치를 더 올린다)
 const DIG_RATE = 30;             // 광부가 캐는 동안 광산 체력 감소/초
 const MINER_MAX_LV = 5;          // 광부 업그레이드 최대 레벨
 const PEN = { x: CX, y: CY, w: 264, h: 176 }; // 몬스터 소환장 울타리 (2배 확장 — 몬스터도 2배, 카타르시스 업)
@@ -867,7 +867,7 @@ function reset() {
   logMsg('게임 시작! 드래그로 부대지정, 우클릭 이동, A키+클릭으로 공격 지정!');
   startPoker();
 }
-function mineHP(layer) { return Math.floor(2500 * Math.pow(1.4, layer - 1)); } // 한 겹 벗겨질 때마다 배달 골드 +1 (천천히)
+function mineHP(layer) { return Math.floor(2500 * Math.pow(1.3, layer - 1)); } // 겹 성장 1.4→1.3: 광부가 귀해진 만큼 겹이 좀 더 빨리 깊어지게 (복리 체감)
 // 광석 체력: 1단계 유지, 2~5단계 = ×2·3·4·5, 6단계부터 직전의 ×3 (기존 ×5는 후반 도달 불가 벽이라 완화)
 function huntHP(stage) {
   const base = 63000; // 광물 체력 ×1.4 (45000→63000)
@@ -1130,7 +1130,10 @@ function updateMiner(u, dt) {
     // 도착 판정 76: 개별 오프셋 최대 hypot(26+16, 42+8) ≈ 65px + 유닛 분리 밀림 여유
     // (60이던 시절 오프셋 큰 광부는 목표에 서고도 배달을 못 하고 광물을 든 채 영영 멈춰 있었다 — toMine 74와 같은 병)
     if (Math.hypot(HOUSE.x - u.x, HOUSE.y - u.y) < 76) {
-      const dep = (MINER_LOAD + S.mineBonus) * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1);
+      // ⚒️ 채굴속도 업글은 '한 번에 캐 오는 양'도 늘린다 (레벨당 +20%).
+      // 순수 시간 단축만으론 왕복 37초 중 채굴 5초라 배달 횟수가 안 늘어 업글이 무의미했다 (실측 Lv5에서 수입 변화 0)
+      const digMul = 1 + 0.20 * S.minerMineLv;
+      const dep = Math.round((MINER_LOAD + S.mineBonus) * digMul * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1));
       S.gold += dep;
       addFloat(HOUSE.x, HOUSE.y - 34, `+${dep}G`, (u.sminer || u.hminer) ? '#c9a227' : '#b8860b', 1.1);
       sfx('coin');
@@ -1289,10 +1292,12 @@ function spawnMonster(hp, isBoss, opt) {
 function speedBonus() { return S.timer > 1 ? Math.round(S.timer * (1 + S.round * 0.25)) : 0; }
 function endWave() {
   S.slotBombs = []; // 잭팟 폭격 잔탄이 다음 웨이브로 넘어가 엉뚱한 좌표에서 터지지 않게
-  // 결투는 시간이 다 돼도 포커 페이즈까지 이어진다 (퇴장은 다음 startWave가 처리 — '시간 다 됐다').
-  // 여기서 지우면, 조기 종료를 막은 뒤로 endWave가 timer<=0으로만 오기 때문에 결투 창이
-  // 150초(90 전투 + 60 포커) → 90초로 줄어 도전자 HP 튜닝 전제가 무너진다.
-  if (S.duel) logMsg('🏛️ 도전자: "시간은 다 됐지만… 아직 안 끝났다."');
+  // 🏛️ 결투 제한시간 = 그 라운드 전투 시간. 시간 내에 못 잡으면 도전자는 퇴장한다 (보상 없음).
+  // ⚠️ 한때 포커 페이즈까지 결투를 끌고 갔었는데(창을 150초로 넓히려던 의도),
+  //    '시간 초과했는데도 안 사라지고 포커 때 마저 잡아 보상을 받는' 상태가 되어 유저가 버그로 리포트.
+  //    라운드 조기 종료를 !S.duel로 막아둔 덕에 도전자가 살아 있으면 전투 90초를 통째로 쓸 수 있으므로,
+  //    창이 좁아진 것도 아니다 (예전엔 소환장을 비운 시점에 라운드가 끝나 결투 시간이 잘렸다).
+  if (S.duel) { logMsg('🏛️ 도전자: "오늘도 챔피언은 나다." (시간 초과 — 유유히 퇴장, 패널티 없음)'); S.duel = null; S.champion = null; }
   const bossAlive = S.monsters.some(m => m.boss);
   const leak = S.monsters.length;
   if (bossAlive) {
@@ -2569,7 +2574,7 @@ function burstJuice(e) {
 function mineReward() {
   // 겹이 깊어질수록 배달 보너스가 기하급수로 커진다 (+4, +6, +8, +11, +16 … 10겹째 +83)
   // 광산 HP도 ×1.4씩 커서 깊이 파려면 시간이 필요 → "포커 시간을 벌며 채굴하는 운영"이 수익의 축
-  const inc = Math.ceil(8 * Math.pow(1.4, S.mineLayer - 1)); // 경제 개편: 4→8×1.4^ — 유일한 기하 수입을 경제 축으로 (킬골드 ×0.7 하향과 세트)
+  const inc = Math.ceil(14 * Math.pow(1.4, S.mineLayer - 1)); // 4 → 8 → 14×1.4^ — 겹을 팔수록 배달액이 불어나는 '복리' 체감을 크게
   S.mineBonus += inc;
   S.mineLayer++;
   logMsg(`⛰️💥 광산 ${S.mineLayer - 1}겹 파괴! 채굴량 +${inc} — 이제 배달마다 골드 +${S.mineBonus}`);
@@ -6715,7 +6720,7 @@ function minerItemsHTML() {
       <div class="rpgInfo"><b>이동속도</b> <span class="lv">Lv.${S.minerMoveLv}/${MINER_MAX_LV}</span> (${moveSpd})</div>
       ${S.minerMoveLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mvBtn" ${S.gold < S.minerMoveCost ? 'disabled' : ''}>💰 ${S.minerMoveCost}G</button>`}</div>
     <div class="rpgItem"><div class="rpgIcon">⚒️</div>
-      <div class="rpgInfo"><b>채굴속도</b> <span class="lv">Lv.${S.minerMineLv}/${MINER_MAX_LV}</span> (${mineSec}초)</div>
+      <div class="rpgInfo"><b>채굴량</b> <span class="lv">Lv.${S.minerMineLv}/${MINER_MAX_LV}</span> (${mineSec}초 · 배달 ${Math.round((MINER_LOAD + S.mineBonus) * (1 + 0.20 * S.minerMineLv))}G)</div>
       ${S.minerMineLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mnBtn" ${S.gold < S.minerMineCost ? 'disabled' : ''}>💰 ${S.minerMineCost}G</button>`}</div>
     `;
 }
