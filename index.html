@@ -154,6 +154,16 @@
   #objInfo b { color: #5b48d0; font-size: 13px; }
   #objInfo .tip { display: block; margin-top: 7px; padding: 7px 9px; background: #fff8e6; border: 1px dashed #e0c060; border-radius: 8px; color: #8a6d1f; font-size: 11px; }
 
+  /* 🏛️ 결투 예고 토스트 — 소환장 위쪽에 가로로 길게. 도전자가 우리를 부르는 목소리 */
+  #duelToast { position: absolute; left: 50%; top: 96px; transform: translateX(-50%) translateY(-14px); width: 620px; max-width: 88%;
+    background: linear-gradient(90deg, rgba(60,22,18,0) 0%, rgba(88,30,24,0.94) 12%, rgba(120,44,32,0.96) 50%, rgba(88,30,24,0.94) 88%, rgba(60,22,18,0) 100%);
+    border-top: 1px solid rgba(255,190,120,0.55); border-bottom: 1px solid rgba(255,190,120,0.55);
+    padding: 9px 18px; text-align: center; font-size: 14px; font-weight: bold; color: #ffe6c2; letter-spacing: 0.3px;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.75); pointer-events: none; opacity: 0; z-index: 7;
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 0.9, 0.3, 1); }
+  #duelToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #duelToast .dtSub { display: block; margin-top: 2px; font-size: 11px; font-weight: normal; color: #f0c39a; letter-spacing: 0; }
+
   /* ===== 좌측 카지노 스테이션 ===== */
   #chipBar { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 6; }
   /* 포커 패널이 올라오면 그만큼(--panelH) 위로 비켜선다 — 안 그러면 패널이 통째로 덮어 클릭까지 막는다.
@@ -466,6 +476,7 @@
     <div id="clock" title="남은 시간"><div id="clockHub"></div></div>
     <div id="unitInfo"></div>
     <div id="objInfo"></div>
+    <div id="duelToast"></div>
     <!-- 좌측 카지노: 칩(보스·결투)으로 룰렛·슬롯·광부, 골드로 비상 물자 -->
     <div id="chipBar">
       <button class="chipStation" id="stCasino" title="카지노"><span class="ci">🎰</span><span class="cl">카지노</span></button>
@@ -603,8 +614,10 @@ const WEAPONS = [
   // 3 트리플 — 부메랑
   {name:'부메랑', dmg:16, cd:1.0, range:210, splash:0, bounce:3, atk:'boomerang',
    hero:{name:'대형 표창', bounce:7}}, // 영웅은 부메랑 대신 표창 (모양·투사체 모두)
-  // 4 스트레이트 — 기관총 (단일 dps가 압도적이라 공속 반감: cd 0.13→0.26. 넓은 사거리·연사 이점은 유지)
-  {name:'기관총', dmg:8, cd:0.26, range:280, splash:0, bounce:0, atk:'shot', proj:'mg',
+  // 4 스트레이트 — 기관총. 단일 특화 유지(유저 지정), 상향 레버는 공속만: cd 0.26 → 0.15 (전 구간 DPS ×1.73).
+  //   단일 무기는 upgPer가 발당 고정 +2.5라 cd가 업글분까지 통째로 곱해진다 → 노업글 30.8 → 53.3 DPS, 업글 후에도 같은 배수.
+  //   (0.26은 군집 실효 DPS가 투페어 40·트리플 58보다 낮은 티어 역전 상태였다. 0.13까지 내리면 표창(티어8)을 추월해 과했다.)
+  {name:'기관총', dmg:8, cd:0.15, range:280, splash:0, bounce:0, atk:'shot', proj:'mg',
    hero:{name:'저격총', atk:'sniper', cd:0.8, dmgMul:7, range:470, proj:'sniper'}}, // 속사 저격 (cd 0.8·데미지 하향, DPS 유지 리워크)
   // 5 플러쉬 — 화염방사기 (사거리 80: 소환장 정중앙엔 못 닿음. 사거리 손해분은 dmg↑로 보정)
   //   영웅(대형)은 폭·길이 각 1.5배 → 확실히 강해지고 정중앙까지 태움
@@ -686,10 +699,12 @@ function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > C
 // 재질별 크기 배율: 실제 공 크기 싱크 (야구공 작게 ~ 농구공 크게). 천체는 웅장하게
 const MAT_SIZE = [0.9, 0.95, 1.12, 1.18, 0.8, 0.85, 1.1, 0.9, 0.9, 1.2, 1.15, 1.25, 1.3, 1.1];
 // 크기 성장은 '재질 밴드 안'이 아니라 '사다리 전체 진행도' 기준 (2026-08-03 유저: 축구공이 농구공보다 커 보인다).
-// 예전엔 esc가 밴드마다 0으로 리셋돼, 축구공 밴드 끝(19×1.12×1.32=28.1) → 농구공 밴드 시작(19×1.18=22.4)으로
-// 재질이 올라가는데 몹이 20% 작아졌다. 전체 진행도를 쓰면 단조 증가하고 최대 크기는 그대로.
+// 🔧 2026-08-04 유저: "같은 공인데 라운드가 지날수록 커지고, 너무 커지니 화질도 나빠진다" → 성장 0.32 → 0.
+//    크기는 이제 재질(공 종류)로만 정해진다. 이 상수만 되돌리면 성장이 살아난다 (0.12 정도가 순한 맛).
+//    ⚠️ 0이 아니면 스프라이트를 확대해 그리게 되어 화질이 다시 흐려진다 (matSpriteSz는 성장을 모른다).
+const MON_GROWTH = 0;
 function monProg(m) { return Math.min(1, ((m.mat || 0) + (m.esc || 0)) / (MATERIALS.length - 1)); }
-function monSize(m) { return (m.boss ? (m.sunBoss ? 104 : 52) : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + monProg(m) * 0.32); } // 🌞 태양 = 보스 2배
+function monSize(m) { return (m.boss ? (m.sunBoss ? 104 : 52) : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + monProg(m) * MON_GROWTH); } // 🌞 태양 = 보스 2배
 const PORTAL = { x: 80, y: 78, r: 34 }; // 강화 포털: 같은 유닛 5기를 넣으면 영웅
 const WAVE_TIME = 90, POKER_TIME = 60;
 const FINAL_ROUND = 80; // 이후는 헬모드
@@ -807,6 +822,7 @@ let S;
 // 🎰 카지노 지연 보상(룰렛 5.1s·슬롯 3s·교환 0.9s)은 창을 닫아도 계속 흘러 보상을 지급한다(의도).
 // 다만 그 사이 재시작하면 '다음 판'에 골드·영웅이 꽂히므로, 판마다 세대 번호를 올려 무효화한다.
 let gameGen = 0, casTimers = [];
+let duelToastTimer = null; // 🏛️ 결투 예고 토스트 (resetTransientUI가 먼저 참조하므로 여기서 선언 — TDZ 방지)
 function casTimeout(fn, ms) {
   const gen = gameGen;
   const id = setTimeout(() => { if (gen === gameGen) fn(); }, ms);
@@ -828,6 +844,8 @@ function resetTransientUI() {
   if (typeof CM !== 'undefined' && CM) CM.style.display = 'none'; // 카지노 모달이 열린 채 재시작되는 경우
   clearTimeout(rtTimer);                    // 보상 토스트가 새 판까지 남지 않게
   const rt = document.getElementById('rewardToast'); if (rt) rt.style.display = 'none';
+  clearTimeout(duelToastTimer);             // 🏛️ 결투 예고가 새 판까지 걸려 있지 않게
+  const dt = document.getElementById('duelToast'); if (dt) dt.classList.remove('on');
 }
 function reset() {
   resetTransientUI();
@@ -835,7 +853,9 @@ function reset() {
     phase: 'poker', round: 1, life: 20, gold: 120,
     // 💰 경제 개편 (2026-08-03 유저 확정 B안): 시작 칩 1개 — 첫 결정 = 룰렛이냐 슬롯이냐 광부냐
     chips: 1, event: null, eventMods: null,
-    valves: { sand: 0, bomb: 0, pray: 0 }, // 🛒 비상 물자 구매 횟수 (판당 제한 3/2/2)
+    valves: { sand: 0, bomb: 0, pray: 0 }, // 🛒 비상 물자 구매 횟수 (판당 3회씩 · 가격은 VCOST 누진)
+    pendSand: 0, pendBomb: 0, // 포커 중에 산 모래·폭격: 다음 전투 시작에 자동 적용 (전투 중 구매는 즉시)
+    duelCall: false,          // 🏛️ 모바일 전용: 포커 때 못 띄운 결투 예고를 전투 시작으로 이월
     hunt: null, items: { reroll: 0, copier: 0 }, groups: {},
     upg: [0,0,0], upgCost: [50,50,50],
     units: [], monsters: [], effects: [], floats: [], parts: [], projs: [],
@@ -922,8 +942,30 @@ function newDeck(salt) {
   }
   return d;
 }
+// 🏛️ 결투 예고 토스트 — 다음 전투가 결투장 라운드면 포커(준비) 시간에 도전자가 우리를 부른다.
+// 주기·체력 같은 수치는 노출하지 않는다 (UI 설명 미니멀 원칙) — 부르는 목소리만.
+const DUEL_CALLS = [
+  ['모래판이 말라 있다.', '“누구 하나 피 좀 보자.”'],
+  ['콜로세움에 불이 켜졌다.', '“구경꾼은 됐고, 들어올 놈만 와라.”'],
+  ['도전자가 검을 갈고 있다.', '“이름값 하는 놈으로 보내라.”'],
+  ['관중석이 술렁인다.', '“오늘은 좀 버텨줬으면 좋겠는데.”'],
+  ['결투장에서 부르는 소리.', '“한 놈만. 딱 한 놈만 보내.”'],
+  ['모래 위에 그림자가 섰다.', '“다음은 네 차례다.”'],
+];
+function showDuelToast() {
+  const el = document.getElementById('duelToast');
+  if (!el) return;
+  const [head, line] = DUEL_CALLS[(Math.random() * DUEL_CALLS.length) | 0];
+  el.innerHTML = `🏛️ ${head}<span class="dtSub">${line}</span>`;
+  el.classList.add('on');
+  clearTimeout(duelToastTimer);
+  duelToastTimer = casTimeout(() => el.classList.remove('on'), 6000); // 재시작해도 남지 않게 세대 토큰 경유
+}
 function startPoker() {
   S.phase = 'poker';
+  // 라운드는 endWave에서 이미 올라갔으므로 S.round = 이번 포커가 준비하는 그 전투. 보스 주와 겹치면 휴장이라 제외.
+  // 모바일은 포커 탭에서 캔버스가 통째로 숨겨지므로(#cv display:none) 여기서 띄우면 아무도 못 본다 → 전투 탭으로 넘어가는 startWave에서 띄운다.
+  if (S.round % DUEL_EVERY === 0 && S.round % 10 !== 0) { if (IS_MOBILE) S.duelCall = true; else showDuelToast(); }
   pokerPeek = false; // 새 포커판은 항상 올라온 상태로 시작
   S.pokerTimer = POKER_TIME;
   S.roomVirgin = true; // 🥚 라운드마다 광석방 첫 입장 기록 리셋
@@ -1221,7 +1263,9 @@ function useAcid() { // 소환장 중앙에 염산 장판 (5초 도트)
 // ==================== 웨이브 ====================
 function startWave() {
   S.phase = 'wave';
-  S.timer = WAVE_TIME;
+  // ⏱️ 포커 중에 산 시간의 모래는 이 전투에 실린다 (전투 중 구매는 즉시 S.timer에 더해진다)
+  S.timer = WAVE_TIME + 15 * S.pendSand;
+  if (S.pendSand) { addFloat(CX, 130, `⏱️ +${15 * S.pendSand}초!`, '#7ec8ff', 2); S.pendSand = 0; }
   S.feverUsed = false;
   // 🌞 최종장: 하늘의 태양이 강림한다 — 잡몹 없는 독대.
   // >= 인 이유: === 이면 태양을 못 잡고 부활권으로 살아남는 순간 라운드가 151로 넘어가
@@ -1251,6 +1295,7 @@ function startWave() {
     const dhp = duelHP(S.round);
     S.duel = { x: ARENA.x, y: ARENA.y - 2, hp: dhp, max: dhp, mat: matInfo(S.round).idx, phase: Math.random() * 6.28, hitT: 0, tauntT: 0, nextTaunt: 0, taunt: '' };
     logMsg('🏛️ 결투장에 도전자가 나타났다! "한 놈만 와라."');
+    if (S.duelCall) { S.duelCall = false; showDuelToast(); } // 모바일 이월분 (데스크톱은 포커 때 이미 봤다)
   }
   renderPoker();
   const info = stageInfo(S.round);
@@ -2016,12 +2061,13 @@ function update(dt) {
   for (const u of S.units) {
     if (u.miner || u.item) continue; // 광부는 updateMiner에서, 아이템 유닛은 전투 안 함
     u.cool -= dt;
-    // 🗡️ 단검 암살 중: 최강 몹만 초고속(공속 2.5배) 난도질. 영웅 분신술은 일반 AI로 진행
+    // 🗡️ 풀하우스 스킬 발동 중: 최강 몹에게만 달라붙어 때린다 (대상 고정이 스킬의 값어치 — 보스 ×2가 그대로 실린다).
+    // 공속 2.5배 보너스는 2026-08-04 유저 지시로 삭제 (보스 데미지 2배만 남는다). 대상 선정은 위 1890행에서 갱신되므로 영웅·분신도 이 경로.
     if (u.skillT > 0) {
       const tgt = u.assassinTgt;
       if (tgt && tgt.hp > 0 && u.cool <= 0 && !u.moving) {
         const d = Math.hypot(tgt.x - u.x, tgt.y - u.y);
-        if (d <= effRange(u) + 24) { u.cool = effCd(u) * 0.4; u.aimX = tgt.x; u.aimY = tgt.y; fireAt(u, tgt); }
+        if (d <= effRange(u) + 24) { u.cool = effCd(u); u.aimX = tgt.x; u.aimY = tgt.y; fireAt(u, tgt); }
       }
       continue;
     }
@@ -2274,6 +2320,12 @@ function update(dt) {
     return true;
   });
   if (newborns.length) S.monsters = S.monsters.concat(newborns);
+  // 💣 예약된 긴급 폭격: 소환이 끝나 몹이 전부 나온 뒤에 떨어진다.
+  // (몹이 보이자마자 터뜨리면 2초에 걸쳐 나오는 뒷줄이 통째로 폭격을 피한다 — 예약분이 손해가 되면 안 된다)
+  const sq = S.spawnQueue;
+  if (S.pendBomb > 0 && sq && sq.left === 0 && sq.bossLeft === 0 && S.monsters.some(m => !m.entering)) {
+    while (S.pendBomb > 0) { S.pendBomb--; emergencyBomb(); }
+  }
   // 조기 종료는 '소환장이 비었고 결투도 끝났을 때'만. 도전자가 남아 있으면 라운드는 계속된다
   // (유저: 소환장 몹을 다 잡아도 콜로세움에 남아 있으면 라운드가 끝나면 안 된다)
   if (S.timer <= 0 || (q.left === 0 && q.bossLeft === 0 && S.monsters.length === 0 && !S.duel)) endWave();
@@ -4657,7 +4709,9 @@ function monReady() { // 첫 사용 시 1회 추출 + 기존 프로시저럴 스
 // 재질 스프라이트 캐시: (재질 × esc 8단계 × 황금) 조합당 1회만 렌더 → 이후 drawImage 1번 (400마리 렉 해결)
 const matSprites = {};
 const SPR = 88, SPR_C = 44; // 스프라이트 캔버스 크기/중심
-function matSpriteSz(bucket) { return 19 * (1 + (bucket / 7) * 0.32); }
+// 스프라이트를 굽는 크기 = 실제로 그려지는 크기(monSize의 재질분). 예전엔 MAT_SIZE를 빼먹고 esc 성장만 반영해서
+// 태양(MAT_SIZE 1.3)은 25.1로 구운 걸 32.6으로 늘려 그렸다 → ×1.3 확대 = 유저가 지적한 화질 저하. 이제 k===1.
+function matSpriteSz(mat) { return 19 * (MAT_SIZE[mat] || 1); }
 function matSprite(mat, bucket, golden) {
   monReady(); // 아트 로드 완료 순간 1회: 추출 + 캐시 무효화
   const key = mat * 20 + bucket * 2 + (golden ? 1 : 0);
@@ -4666,7 +4720,7 @@ function matSprite(mat, bucket, golden) {
     const old = ctx; ctx = cnv.getContext('2d');
     try {
       const escB = bucket / 7;
-      const sz = matSpriteSz(bucket);
+      const sz = matSpriteSz(mat);
       if (MONART.ready && MONART.sp[mat]) { // 🎨 아트 몹: 원형 크롭 스프라이트 + esc 그을림·황금 틴트·보강밴드 오버레이
         const pad = mat === 8 || mat === 12 || mat === 13 ? 9 : 4; // 글로우 몹은 여유 크게
         ctx.drawImage(MONART.sp[mat], SPR_C - sz - pad, SPR_C - sz - pad, (sz + pad) * 2, (sz + pad) * 2);
@@ -4695,7 +4749,7 @@ function drawMatMob(m, sz, c) {
   const x = m.x, y = m.y, mat = m.mat || 0, esc = m.esc || 0, t = S.time;
   const bucket = Math.min(7, Math.floor(esc * 8));
   const sp = matSprite(mat, bucket, !!m.golden);
-  const k = sz / matSpriteSz(bucket); // 시각 크기 → 스프라이트 스케일
+  const k = sz / matSpriteSz(mat); // 시각 크기 → 스프라이트 스케일 (MON_GROWTH=0·일반 몹이면 정확히 1 = 무손실)
   if (mat === 0) { // 물풍선: 출렁 (스케일로)
     const w = 1 + 0.06 * Math.sin(t * 5 + m.phase);
     ctx.save(); ctx.translate(x, y); ctx.scale(w, 2 - w);
@@ -6923,15 +6977,25 @@ function rollLottery() {
   return { icon: '⭐', label: `${HAND_NAMES[t]} 영웅!!`, apply: () => spawnHero(t, RACE_OF_RANK[t], PORTAL.x, PORTAL.y + PORTAL.r + 30, 1), rare: true };
 }
 const LOTTO_ICONS = ['💰', '💰', '⚔️', '⛏️', '🎟️', '⭐', '💰', '⚔️'];
+// 🛒 비상 물자 누진 가격 (유저 지정): 첫 구매 1만 → 5만 → 10만. 세 품목 모두 동일.
+const VCOST = [10000, 50000, 100000];
+function valveCost(k) { return VCOST[Math.min(VCOST.length - 1, S.valves[k] || 0)]; } // 다 산 뒤에도 라벨이 NaN이 되지 않게 clamp
+// 💣 긴급 폭격 발동 (즉시 구매 · 예약분 자동 발동 공용)
+function emergencyBomb() {
+  for (const m of S.monsters) dealDamage(m, m.max * 0.15, null);
+  S.effects.push({ type: 'boom', x: CX, y: CY, r: 150, t: 0.5 }); S.shake = 0.2; sfx('bigboom');
+  logMsg('💣 긴급 폭격!! 모든 몬스터 최대체력 15% 타격!');
+}
 // ===== 🎰 카지노: 단일 진입 → 메뉴 → 3섹션 =====
 function openCasino() { openChip('🎰 카지노'); casMenu(); }
 function casMenu() {
-  // 🛒 비상 물자: 고정가 · 판당 구매 제한 (유저 지정 — 라운드 비례면 미리 사두는 게 정답이 되므로 고정가)
+  // 🛒 비상 물자: 판당 3회 · 살수록 비싸진다 (유저 지정 1만/5만/10만 — 라운드 비례가 아니라 누진이라 미리 쟁여도 이득이 없다)
+  // 포커 중에도 살 수 있다 (유저 리포트: 모래·폭격이 늘 잠겨 있었다) — 전투가 아니면 '다음 전투에 예약'으로 들어간다.
   const V = [
-    { k: 'sand', icon: '⏱️', name: '시간의 모래', desc: '이번 전투 +15초', cost: 10000, max: 3, ok: () => S.phase === 'wave' },
-    { k: 'bomb', icon: '💣', name: '긴급 폭격', desc: '모든 몹 최대체력 15% 타격', cost: 30000, max: 2, ok: () => S.phase === 'wave' && S.monsters.some(m => !m.entering) }, // 강림 중(무적) 태양뿐이면 3만G 낭비 방지
-    { k: 'pray', icon: '❤️', name: '생명의 기도', desc: '목숨 +3', cost: 50000, max: 2, ok: () => true },
-  ];
+    { k: 'sand', icon: '⏱️', name: '시간의 모래', desc: '전투 +15초', max: 3 },
+    { k: 'bomb', icon: '💣', name: '긴급 폭격', desc: '모든 몹 최대체력 15% 타격', max: 3 },
+    { k: 'pray', icon: '❤️', name: '생명의 기도', desc: '목숨 +3', max: 3 },
+  ].map(v => Object.assign(v, { cost: valveCost(v.k) }));
   CB.innerHTML =
     `<div style="text-align:center;font-size:12px;color:#c9b8f0;margin-bottom:8px">보유 🪙 <b style="color:#ffd166">${chipTxt(S.chips)}</b>개 · 💰 <b style="color:#ffd166">${Math.floor(S.gold).toLocaleString()}G</b></div>
     <div style="display:flex;flex-direction:column;gap:10px">
@@ -6943,8 +7007,9 @@ function casMenu() {
       <div style="font-size:12px;color:#c9a75a;font-weight:bold;margin-bottom:6px">🛒 비상 물자 <span style="font-weight:normal;color:#9a8a60">— 골드 구매 · 판당 수량 한정</span></div>
       <div style="display:flex;gap:6px">` +
     V.map(v => { const left = v.max - S.valves[v.k];
-      const can = left > 0 && S.gold >= v.cost && v.ok();
-      return `<button class="chipBtn sub" data-valve="${v.k}" style="flex:1;padding:8px 4px;font-size:11px" ${can ? '' : 'disabled'}>${v.icon} ${v.name}<br><span style="font-size:10px">${v.desc}</span><br><b>${(v.cost/10000)}만G</b> · 남은 ${left}회</button>`; }).join('') +
+      const can = left > 0 && S.gold >= v.cost;
+      const later = S.phase !== 'wave' && v.k !== 'pray'; // 전투가 아니면 다음 전투에 들어간다
+      return `<button class="chipBtn sub" data-valve="${v.k}" style="flex:1;padding:8px 4px;font-size:11px" ${can ? '' : 'disabled'}>${v.icon} ${v.name}<br><span style="font-size:10px">${v.desc}${later ? ' <span style="color:#c9a75a">(다음 전투)</span>' : ''}</span><br><b>${(v.cost/10000)}만G</b> · 남은 ${left}회</button>`; }).join('') +
     `</div></div>`;
   CB.querySelector('[data-go="roulette"]').onclick = () => { if (S.chips < 1) return; casRoulette(); };
   CB.querySelector('[data-go="slot"]').onclick = () => casSlot();
@@ -6956,13 +7021,17 @@ function casMenu() {
   };
   CB.querySelectorAll('[data-valve]').forEach(b => b.onclick = () => {
     const v = V.find(x => x.k === b.dataset.valve);
-    if (!v || S.valves[v.k] >= v.max || S.gold < v.cost || !v.ok()) return;
+    if (!v || S.valves[v.k] >= v.max || S.gold < v.cost) return;
     S.gold -= v.cost; S.valves[v.k]++;
-    if (v.k === 'sand') { S.timer += 15; addFloat(CX, 130, '⏱️ +15초!', '#7ec8ff', 2); logMsg('⏱️ 시간의 모래 — 이번 전투 +15초!'); }
-    else if (v.k === 'bomb') { for (const m of S.monsters) dealDamage(m, m.max * 0.15, null);
-      S.effects.push({ type: 'boom', x: CX, y: CY, r: 150, t: 0.5 }); S.shake = 0.2; sfx('bigboom');
-      logMsg('💣 긴급 폭격!! 모든 몬스터 최대체력 15% 타격!'); }
-    else { S.life += 3; addFloat(HOUSE.x, HOUSE.y - 40, '❤️ +3', '#e53935', 2); logMsg('❤️ 생명의 기도 — 목숨 +3!'); }
+    const now = S.phase === 'wave';
+    if (v.k === 'sand') {
+      if (now) { S.timer += 15; addFloat(CX, 130, '⏱️ +15초!', '#7ec8ff', 2); logMsg('⏱️ 시간의 모래 — 이번 전투 +15초!'); }
+      else { S.pendSand++; logMsg('⏱️ 시간의 모래 — 다음 전투가 15초 길어집니다.'); }
+    } else if (v.k === 'bomb') {
+      // 전투 중이라도 몹이 아직 강림 중(무적)이면 바로 터뜨려 봐야 헛돈 → 예약해두고 대상이 생기면 자동 발동
+      if (now && S.monsters.some(m => !m.entering)) emergencyBomb();
+      else { S.pendBomb++; logMsg('💣 긴급 폭격 — 몬스터가 나타나는 즉시 떨어집니다.'); }
+    } else { S.life += 3; addFloat(HOUSE.x, HOUSE.y - 40, '❤️ +3', '#e53935', 2); logMsg('❤️ 생명의 기도 — 목숨 +3!'); }
     sfx('coin'); casMenu(); updateHUD();
   });
 }
