@@ -2896,7 +2896,9 @@ function giveHuntReward(stage) {
     ['🏹', '원페어 영웅 유닛!', () => spawnHero(1, RACE_OF_RANK[1], CX-40, CY+155, 1), '#43a047'],
     ['⚔️', '전 종족 +3Lv', () => S.upg = S.upg.map(v => v + 3), '#43a047'],
     ['📑✨', '복사권×2 + 슈퍼광부', () => { S.items.copier += 2; spawnSuperMiner(); }, '#5b48d0'],
-    ['♠', '무료 에이스!', () => spawnUnit(Math.floor(Math.random()*10), 0, true, 14), '#e91e8c'],
+    // 💎 다이아(9단계): 예전엔 족보를 0~9에서 굴려 원페어 에이스 같은 게 나왔다 — 8단계(복사권2+슈퍼광부)보다 초라해지는 사고.
+    //   이제 플러쉬 이상에서만 굴린다 (에이스 배수 5.5~12 구간) → 8단계보다 확실히 위, 10단계 슈퍼영웅보다는 아래.
+    ['♠', '상위 족보 에이스!', () => spawnUnit(5 + Math.floor(Math.random()*5), 0, true, 14), '#e91e8c'],
     ['🌟', '슈퍼영웅 강림!!', () => { const t = Math.floor(Math.random()*10); spawnHero(t, RACE_OF_RANK[t], CX-40, CY+155, 1.5, true); }, '#ff6b9d'],
   ][Math.min(10, stage)];
   R[2]();
@@ -2925,7 +2927,8 @@ const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단
     { needs: [{ tier: 3, hero: true, n: 1 }], mat: '트리플 영웅 1기', desc: '6 잭팟 시 8연타' },
   ],
   junk: [
-    { needs: [{ tier: 0, n: 2 }, { tier: 1, n: 2 }, { tier: 2, n: 2 }], mat: '하이·원·투 각 2기', desc: '버프 대상 5기 → 7기' },
+    // 2026-08-04 유저: 하이카드 2기가 재료였는데 🪨 제물대(투석기)가 하이카드를 먼저 먹어버려 승급 제물로 못 썼다 → 원3·투3으로 교체.
+    { needs: [{ tier: 1, n: 3 }, { tier: 2, n: 3 }], mat: '원페어·투페어 각 3기', desc: '버프 대상 5기 → 7기' },
     { needs: [{ tier: 1, hero: true, n: 1 }], mat: '원페어 영웅 1기', desc: '킬 골드 ×1.2 → ×1.35' },
   ],
   quartet: [
@@ -6358,7 +6361,7 @@ function updateInfoPanel() {
   if (u.execute) traits.push('⚔️ 빈사 몬스터 즉시 처형');
   if (u.shogun) traits.push('🔥 불타는 참격');
   if (u.chrono) traits.push('⏳ 시간 정지 스킬 (쿨 150초)');
-  if (u.slot) traits.push('🎰 잭팟 폭격 스킬 (쿨 75초)');
+  if (u.slot) { traits.push('🎰 잭팟 폭격 스킬 (쿨 75초)'); traits.push('7️⃣ 카지노 슬롯의 7이 잘 붙는다'); } // 수치는 노출하지 않는다 (UI 미니멀 원칙)
   if (u.joker) traits.push('🃏 타격한 몹을 잠깐 끌어당김 (클럼핑)');
   if (u.catapult) traits.push('🪨 설치형 공성병기 (이동 불가)');
   if (u.ascend) traits.push(`<b style="color:#ff6b9d">🩸 승급 Lv.${u.ascend}</b>`);
@@ -6391,7 +6394,7 @@ function updateInfoPanel() {
     (u.chrono ? chronoRow(u) : '') +
     (u.slot ? slotRow(u) : '') +
     (isHiddenCombo(u) && !u.clone ? `<br><span style="font-size:10.5px;color:#9a8a60">⭐ 단련·🩸 승급은 🏰 성에서</span>` : '') +
-    ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier}) <span style="color:${u.hero?'#e57373':'#66bb6a'};font-size:11px">성공률 ${u.hero?50:70}%</span></button>` : '') +
+    ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier}) <span style="color:${u.super?'#c62828':u.hero?'#e57373':'#66bb6a'};font-size:11px">성공률 ${Math.round(copyRate(u)*100)}%</span></button>` : '') +
     deselBtnHTML();
   wirePriorityButtons(el);
   wireDesel(el);
@@ -6538,11 +6541,15 @@ function wirePriorityButtons(el) {
     updateInfoPanel();
   });
 }
+// 📑 복사 성공률 (2026-08-04 유저 지정): 기본 70% / 영웅 40% / 슈퍼영웅 20%.
+// 에이스·슈퍼에이스는 등급이 아니라 '족보가 겹친 기본 유닛'이므로 70%다 (예전엔 hero 플래그만 봐서
+// 슈퍼에이스가 일반 영웅보다 복사하기 쉬웠고, 슈퍼영웅도 영웅과 똑같이 50%였다).
+function copyRate(u) { return u.super ? 0.2 : u.hero ? 0.4 : 0.7; }
 function copyUnit(u) {
   if (S.items.copier <= 0 || u.miner || u.clone) return; // 분신은 복사 불가 (곧 사라질 유닛을 영구화하는 익스플로잇 차단)
   if (isHiddenCombo(u)) { addFloat(u.x, u.y - 26, '📑 히든 유닛은 복사 불가!', '#e57373', 1.6); logMsg('📑 히든 조합 유닛은 복사기로 복사할 수 없습니다.'); return; }
   S.items.copier--;
-  const rate = u.hero ? 0.5 : 0.7; // 영웅 복사는 더 어렵다
+  const rate = copyRate(u);
   if (Math.random() >= rate) { addFloat(u.x, u.y - 26, '📑 복사 실패…', '#8d8d8d', 1.4); sfx('leak'); logMsg(`📑 복사 실패! (${u.weapon} · 성공률 ${Math.round(rate*100)}%)`); updateInfoPanel(); return; }
   const c = Object.assign({}, u);
   c.x = c.tx = u.x + 26; c.y = c.ty = u.y; c.selected = false; c.kills = 0;
@@ -7078,11 +7085,15 @@ const SLOT_TABLE = [ // [키, 확률‰, 지급G] — 합 ~191.5‰ + 🍒×2 14
   ['sev2',   7.125, 30000],
   ['cher2',  140.625, 6000],
 ];
+// 🎰 슬롯머신 히든 영웅이 살아 있으면 잭팟 줄만 두껍게 당겨준다 (2026-08-04 유저 지정).
+// 표 전체에 배수를 걸면 슬롯 EV가 통째로 부풀어 경제가 흔들리므로 777 한 줄만 건드린다.
+// 실효: 0.125‰ → 0.3125‰ (8,547판 → 3,419판). 갬블러(×1.1)와는 곱해진다.
+function sevenLuck() { return S.units.some(u => u.slot) ? 2.5 : 1; }
 function rollSlot() {
   const L = gamblerLuck();
   const r = Math.random() * 1000;
   let acc = 0;
-  for (const [key, p, pay] of SLOT_TABLE) { acc += p * L; if (r < acc) return { key, pay }; }
+  for (const [key, p, pay] of SLOT_TABLE) { acc += p * L * (key === '777' ? sevenLuck() : 1); if (r < acc) return { key, pay }; }
   return { key: 'miss', pay: 0 };
 }
 const SLOT_FILL = ['sev', 'dia', 'bell', 'melon', 'cherry', 'bar']; // 릴 필러(연출용 — 확률과 무관)
@@ -7104,7 +7115,8 @@ function slotSymsFor(key) { // 결과 → 표시 심볼 3개
 }
 function slotCellHTML(s) { return `<div class="slotCell ${s === 'bar' ? 'bar' : s === 'sev' ? 'sev' : ''}">${SLOT_SYMS[s]}</div>`; }
 function casSlot() {
-  const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '';
+  const luckMsg = (gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '')
+    + (sevenLuck() > 1 ? '<div style="text-align:center;color:#ffd166;font-weight:bold;font-size:12px;margin-bottom:6px">🎰 슬롯머신이 릴을 봐주고 있다 — 7이 잘 붙는다</div>' : '');
   const can = S.chips >= 1; // 경제 개편: 골드 비용 삭제 — 칩 1개로만 돌린다 (유저 지정)
   CB.innerHTML =
     `<span class="back" onclick="casMenu()">‹ 카지노</span>` + luckMsg +
