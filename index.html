@@ -39,7 +39,10 @@
 
   /* ===== 캔버스 영역 ===== */
   #cvWrap { position: relative; overflow: hidden; border-radius: 12px; } /* 포커 패널이 내려가면 여기서 잘린다 */
-  canvas { background: #ffffff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: block; cursor: crosshair; }
+  /* 커서: 기본 crosshair는 잔디·돌길 위에서 얇은 검은 십자라 잘 안 보인다 (유저 피드백)
+     → 흰 십자 + 검은 외곽선 SVG 커서 (어떤 배경에서도 대비 확보) */
+  canvas { background: #ffffff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: block;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg stroke='%23000' stroke-opacity='0.65' stroke-width='4' stroke-linecap='round'%3E%3Cline x1='14' y1='3' x2='14' y2='10'/%3E%3Cline x1='14' y1='18' x2='14' y2='25'/%3E%3Cline x1='3' y1='14' x2='10' y2='14'/%3E%3Cline x1='18' y1='14' x2='25' y2='14'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='14' y1='3' x2='14' y2='10'/%3E%3Cline x1='14' y1='18' x2='14' y2='25'/%3E%3Cline x1='3' y1='14' x2='10' y2='14'/%3E%3Cline x1='18' y1='14' x2='25' y2='14'/%3E%3C/g%3E%3Ccircle cx='14' cy='14' r='1.6' fill='%23fff' stroke='%23000' stroke-opacity='0.65' stroke-width='1'/%3E%3C/svg%3E") 14 14, crosshair; }
   #cv { width: 100%; height: auto; } /* #wrap 폭에 맞춰 스케일 (내부 해상도는 940×500 고정) */
 
   /* 원형 시계 타이머 (정중앙 상단, 빨강이 시계방향으로 채워짐) */
@@ -434,6 +437,7 @@
   <div id="topbar">
     <span>❤️ <b id="tLife"></b></span>
     <span>💰 <b id="tGold"></b></span>
+    <span id="tIntWrap" title="🏦 이자 — 라운드를 클리어할 때 보유 골드의 8%가 붙습니다. 쓰면 줄어들고, 모으면 불어납니다"><b id="tInterest" style="color:#7ec8ff">🏦 +0</b></span>
     <span>⛏️ <b id="tMiner"></b></span>
     <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 카지노에서 룰렛·슬롯·광부 고용에 사용">🎰 <b id="tChips" style="color:#c9a227">0</b></span>
     <span>🏳️ 스테이지 <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
@@ -1307,7 +1311,8 @@ function endWave() {
     const interest = Math.floor(S.gold * 0.08);
     S.gold += interest;
     logMsg(`🏦 이자 +${interest.toLocaleString()}G (보유 골드의 8%)`);
-    addFloat(HOUSE.x, HOUSE.y - 52, `🏦 +${interest.toLocaleString()}G`, '#7ec8ff', 1.6);
+    // 캔버스 상단 중앙 — 하단(성 근처)에 띄우면 포커 패널이 캔버스 아래 57~75%를 덮어 통째로 가려진다
+    addFloat(CX, 120, `🏦 이자 +${interest.toLocaleString()}G`, '#7ec8ff', 2.2);
   }
   S.monsters = [];
   S.projs = [];
@@ -5081,9 +5086,16 @@ function drawUnit(u) {
   const raceC = (u.hidden || u.ace) ? '#e91e8c' : (u.miner ? (u.sminer ? '#e6a817' : u.hminer ? '#c9a227' : '#8d8d8d') : hm ? hm[2] : RACES[u.race].color); // 에이스=핑크, 히든=테마색
   // 선택 표시 + 사거리
   if (u.selected) {
-    ctx.strokeStyle = 'rgba(91,72,208,0.35)';
-    ctx.beginPath(); ctx.arc(u.x, u.y, u.range, 0, Math.PI*2); ctx.stroke();
-    ctx.strokeStyle = '#43a047'; ctx.lineWidth = 2;
+    // 사거리 링: 잔디·돌길 위에서도 보이게 밝은 흰색 + 어두운 밑선 2겹 (반투명 보라는 배경에 묻혔다 — 유저 피드백)
+    // 실제 사거리(effRange)를 그린다 — u.range는 이벤트·히든 페널티가 빠진 명목값
+    const rr = effRange(u);
+    ctx.setLineDash([7, 5]);                                              // 밑선·본선을 같은 점선 위상으로 겹쳐야
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(15,20,32,0.55)';           // 밑선이 흰 선 밖으로 삐져나와 대비가 산다
+    ctx.beginPath(); ctx.arc(u.x, u.y, rr, 0, Math.PI*2); ctx.stroke();
+    ctx.lineWidth = 1.8; ctx.strokeStyle = '#ffffff';                     // 본선(밝은 흰색)
+    ctx.beginPath(); ctx.arc(u.x, u.y, rr, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = '#8effa8'; ctx.lineWidth = 2.4;                     // 발밑 선택 링도 밝게
     ctx.beginPath(); ctx.ellipse(u.x, u.y + 15, 13, 5, 0, 0, Math.PI*2); ctx.stroke();
     ctx.lineWidth = 1;
     // 이동 목적지
@@ -5844,7 +5856,7 @@ let attackMode = false;
 const ATTACK_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cpolygon points='15,2 18,19 12,19' fill='%23eceff1' stroke='%23455a64' stroke-width='1'/%3E%3Cpolygon points='15,2 16.5,18 15,18' fill='%23b0bec5'/%3E%3Crect x='8' y='18' width='14' height='3' rx='1' fill='%23c0392b'/%3E%3Crect x='13' y='21' width='4' height='7' rx='1' fill='%237a4a22'/%3E%3C/svg%3E\") 15 2, crosshair";
 function setAttackMode(on) {
   attackMode = on;
-  cv.style.cursor = on ? ATTACK_CURSOR : 'crosshair';
+  cv.style.cursor = on ? ATTACK_CURSOR : ''; // '' = 인라인 해제 → CSS의 흰 십자 커서로 복귀 ('crosshair'로 쓰면 CSS를 덮어써 버린다)
 }
 function holdSelected() {
   const sel = S.units.filter(u => u.selected && !u.miner);
@@ -7202,6 +7214,9 @@ function updateHUD() {
   }
   document.getElementById('tLife').textContent = S.life + (S.reviveArmed ? ' 🔄' : '');
   document.getElementById('tGold').textContent = Math.floor(S.gold).toLocaleString() + 'G';
+  // 🏦 다음 정산에 붙을 이자 예고 — 골드를 쓸 때마다 이 숫자가 줄어드는 게 보여야 '저축 vs 지출' 결정이 생긴다
+  // (사후 로그 한 줄만으론 시스템이 있는지도 모른다 — 유저 피드백)
+  document.getElementById('tInterest').textContent = '🏦 +' + Math.floor(S.gold * 0.08).toLocaleString();
   document.getElementById('tMiner').textContent = S.units.filter(u => u.miner).length + '명';
   document.getElementById('tChips').textContent = chipTxt(S.chips); // 결투 반 개 칩 표기 (½·1½…)
   // 좌측 카지노 스테이션: 칩 있으면 활성 + 빛남
