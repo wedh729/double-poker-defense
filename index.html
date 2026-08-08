@@ -1099,6 +1099,11 @@ function isBackStraight(cards) {
   const rs = cards.map(c => c.r).sort((a, b) => a - b);
   return JSON.stringify(rs) === '[2,3,4,5,14]';
 }
+// ⛰️ 마운틴 (10·J·Q·K·A): 무늬 섞이면 rank 4, 같은 무늬면 로얄(rank 9) — 둘 다 A보너스 2기 대상
+function isMountain(cards) {
+  const rs = cards.map(c => c.r).sort((a, b) => a - b);
+  return JSON.stringify(rs) === '[10,11,12,13,14]';
+}
 // 족보를 구성하는 카드 인덱스 (오라 표시용)
 function madeCardIdx(cards, rank) {
   if (rank === 0) return [];                                    // 하이카드: 없음
@@ -1115,7 +1120,7 @@ function confirmHand() {
   const res = S.poker.hands.map(hand => {
     const rank = evalHand(hand.cards);
     const back = isBackStraight(hand.cards); // A-2-3-4-5 (같은 무늬면 rank 8) — bs는 전용 배수용(rank 4 한정), bsAny는 A보너스용
-    return { rank, race: RACE_OF_RANK[rank], keyRank: handKeyRank(hand.cards, rank), bs: rank === 4 && back, bsAny: back };
+    return { rank, race: RACE_OF_RANK[rank], keyRank: handKeyRank(hand.cards, rank), bs: rank === 4 && back, bsAny: back, mtn: isMountain(hand.cards) };
   });
   // 에이스 잭팟은 원페어부터 (페어 없는 하이카드 일치는 너무 쉬움)
   if (res.length === 2 && res[0].rank === res[1].rank && res[0].rank > 0) {
@@ -1143,10 +1148,10 @@ function confirmHand() {
     logMsg(res.map(r => `🃏 ${r.bs ? 'B 빽스트레이트' : rankLabel(r.keyRank) + ' ' + HAND_NAMES[r.rank]} → ${RACES[r.race].name} [${WEAPONS[r.rank].name}]`).join('  /  '));
   }
   // 🅰️ 에이스 카드 보너스 (2026-08-08 유저 확정): 키카드가 A인 '유족보'(A원페어·A투페어·A플러쉬·로얄…)마다 A새총 1기.
-  // A하이카드(무족보)는 제외 — 족보가 아니니까. 빽스트레이트(·플러쉬)는 A가 특별하게 깔린 패라 2기("특별하니까").
-  // 빽 계열은 keyRank가 5(A가 낮게 침)라 A필터에 안 걸리므로 bsAny로 별도 가산.
+  // A하이카드(무족보)는 제외 — 족보가 아니니까. 특별한 A 패는 2기: 빽스트레이트(·플러쉬) + ⛰️ 마운틴(10JQKA, 로얄 포함).
+  // 빽 계열은 keyRank가 5(A가 낮게 침)라 A필터에 안 걸리므로 별도 플래그. 빽/마운틴은 카드 구성이 달라 서로 배타.
   // 에이스 잭팟 판에도 각 패 기준으로 지급. 새총은 제물대(투석기) 재료라, A패를 노리는 것이 곧 제물 수급이 된다.
-  const aceBonus = res.reduce((n, r) => n + (r.keyRank === 14 && r.rank > 0 ? 1 : 0) + (r.bsAny ? 2 : 0), 0);
+  const aceBonus = res.reduce((n, r) => n + (r.bsAny || r.mtn ? 2 : r.keyRank === 14 && r.rank > 0 ? 1 : 0), 0);
   if (aceBonus) {
     for (let i = 0; i < aceBonus; i++) spawnUnit(0, RACE_OF_RANK[0], false, 14);
     logMsg(`🅰️ 에이스 카드 보너스! 새총 ${aceBonus}기 지급`);
