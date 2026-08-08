@@ -2691,7 +2691,10 @@ function deathPop(m) {
   if (m.boss) S.hitstop = 0.08; // 보스 킬: 히트스톱만 (화면 흔들림은 울렁여서 제거)
 }
 function burstJuice(e) {
-  const dk = e.dk, n = e.boss ? 26 : 12;
+  // 🚦 혼잡도 예산 (2026-08-08 최적화): 광역기로 몹 100마리가 한 프레임에 터지면 파편 1500개+붐 100개가 쏟아져
+  // 17.8ms 스파이크(프레임 드랍 = 뚜두둑)가 났다. 파티클이 붐빌수록 마리당 파편을 줄인다 — 소수 킬은 원래 그대로.
+  const crowd = S.parts.length <= 180 ? 1 : Math.max(0.25, 180 / S.parts.length);
+  const dk = e.dk, n = Math.max(3, Math.round((e.boss ? 26 : 12) * crowd));
   // 재질별 사운드
   if (e.boss) sfx('bigboom');
   else if (dk === 'splash') sfx('splash');
@@ -2712,7 +2715,8 @@ function burstJuice(e) {
     for (let i = 0; i < (e.boss?5:3); i++) { const a = Math.random()*6.28, v = 120 + Math.random()*130; S.parts.push({ x: e.x, y: e.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 90, g: true, frag: true, t: 0.5, c: e.c, r: 3 + Math.random()*(e.boss?5:2.5), spin: Math.random()*6.28 }); }
   }
   splat(e.x, e.y, e.c, e.boss);
-  S.effects.push({ type: 'boom', x: e.x, y: e.y, r: e.boss ? 46 : e.r * 1.6, t: 0.22 });
+  // 붐 링도 예산 적용 — 동시 폭발 100개면 링만 100개다 (보스는 항상)
+  if (e.boss || S.effects.length < 90) S.effects.push({ type: 'boom', x: e.x, y: e.y, r: e.boss ? 46 : e.r * 1.6, t: 0.22 });
   if (e.golden) { // ✨ 황금 사망: 금화 폭죽
     for (let i = 0; i < 8; i++) { const a = Math.random()*6.28, v = 100 + Math.random()*150; S.parts.push({ x: e.x, y: e.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 80, coin: true, chipFx: true, t: 1.4, r: 2.8, c: '#ffd54f' }); }
   }
@@ -3004,13 +3008,13 @@ function giveHuntReward(stage) {
 function spawnHiddenMiner() {
   spawnMiner();
   const m = S.units[S.units.length - 1];
-  m.hminer = true; // 이동 1.6배, 배달 3배
+  m.hminer = true; m._us = null; // 이동 1.6배, 배달 3배 (색이 바뀌므로 스프라이트 참조 캐시 무효화)
   addFloat(m.x, m.y - 26, '✨ 히든 광부!', '#c9a227', 2);
 }
 function spawnSuperMiner() {
   spawnMiner();
   const m = S.units[S.units.length - 1];
-  m.sminer = true; // 이동·배달 3배
+  m.sminer = true; m._us = null; // 이동·배달 3배 (색이 바뀌므로 스프라이트 참조 캐시 무효화)
   addFloat(m.x, m.y - 26, '✨ 슈퍼 광부!', '#ff9800', 2);
 }
 // ==================== 🩸 히든 영웅 제물 승급 (자기 레시피 계열 유닛을 바쳐 강화, 최대 2단계) ====================
@@ -3190,9 +3194,12 @@ function muzzle(u) {
 }
 function logMsg(msg) {
   const el = document.getElementById('log');
+  const wasFull = el.children.length >= 4; // 4줄 도달 후엔 높이 불변
   el.innerHTML = `<div>${msg}</div>` + el.innerHTML;
   while (el.children.length > 4) el.removeChild(el.lastChild);
-  queueFitGameSize(); // 로그 높이가 바뀌면 캔버스 크기 기준(--chrome)도 다시 잰다
+  // 높이가 실제로 변할 때(처음 4줄 채우는 동안)만 재측정 — 이전엔 매 메시지가 offsetHeight 강제 리플로우를 유발해
+  // 약한 기기에서 로그가 뜰 때마다 한 프레임씩 튀었다 (후반 "뚜두둑"의 한 축, 2026-08-08 최적화)
+  if (!wasFull) queueFitGameSize();
 }
 
 // ==================== 색상 ====================
@@ -5347,6 +5354,55 @@ function drawUnit(u) {
       ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
     }
   }
+  drawUnitBody(u, faceX); // 망토→다리→몸통→라벨→모자 (베이크 가능 코어 — 아래 함수)
+  // 🌈 영웅 홀로그램: 시간 애니메이션이라 베이크 불가 — 코어 위에 라이브로 (원래는 몸통과 라벨 사이였으나 위로 올라온 차이는 미세)
+  if (u.hero || u.superAce) drawHeroHolo(u);
+  // 팔 + 무기 (4방향: 좌/우/상/하) — 상완만 몸에 고정, 하완+주먹은 무기 변환을 따라 움직인다
+  drawUnitArm(u);
+  ctx.restore();
+  ctx.textAlign = 'left';
+}
+// ==================== 유닛 코어 (망토·다리·몸통·라벨·모자) — 스프라이트 베이크 대상 ====================
+// 🚀 2026-08-08 최적화: 이 블록이 draw 시간의 ~65%였다 (유닛 수 × 그라데이션 생성 × fillText, 매 프레임).
+// 시간 애니메이션이 없는 유닛은 (시그니처 × 방향 × 다리 3포즈)로 구워 drawImage 1번으로 대체.
+// 제외(라이브 폴백): 슈퍼에이스(망토 펄럭임·전신 홀로), 탱크(궤도 대시 흐름) — 소수라 비용 무시 가능.
+function drawUnitBody(u, faceX) {
+  const canBake = UNIT_BAKE && !u.superAce && u.vis !== 'tank';
+  if (canBake) {
+    const lw = u.moving ? Math.round(Math.sin(u.walk)) * 3 : 0; // 다리 스윙 3포즈 양자화 (-3/0/3)
+    // 유닛별 참조 캐시: 키 문자열 조인(13필드 × 유닛 수 × 60fps)만으로 0.1ms/frame이 나갔다 — 포즈·방향이 같으면 재조회 생략
+    let c = u._us;
+    if (!c || c.lw !== lw || c.fx !== faceX) c = u._us = { lw, fx: faceX, sp: unitCoreSprite(u, lw, faceX) };
+    ctx.drawImage(c.sp, u.x - USPR_CX / 2, u.y - USPR_CY / 2, USPR / 2, USPR / 2); // 2x 베이크 → ½로
+    return;
+  }
+  drawUnitCore(u, u.moving ? Math.sin(u.walk) * 3 : 0, faceX);
+}
+const UNIT_BAKE = true; // 문제 시 false로 — 원래 벡터 경로 복귀
+const unitSprites = new Map();
+const USPR = 128, USPR_CX = 64, USPR_CY = 72; // 2x 캔버스 (논리 64×64, 유닛 중심 = (32, 36) — 모자 위 여유)
+function unitCoreSprite(u, lw, faceX) {
+  const key = [u.tier, u.race, +!!u.hero, +!!u.super, +!!u.hidden, +!!u.ace, +!!u.miner, +!!u.sminer, +!!u.hminer,
+    u.vis || '', u.keyLabel || '', (hiddenMeta(u) || [''])[0], lw, faceX].join('|');
+  let cnv = unitSprites.get(key);
+  if (!cnv) {
+    cnv = document.createElement('canvas'); cnv.width = cnv.height = USPR;
+    const old = ctx; ctx = cnv.getContext('2d');
+    try {
+      ctx.save(); ctx.scale(2, 2);
+      const fake = Object.create(u); fake.x = USPR_CX / 2; fake.y = USPR_CY / 2; // 프로토타입 체인으로 나머지 속성 그대로
+      drawUnitCore(fake, lw, faceX);
+      ctx.restore();
+    } finally { ctx = old; }
+    if (unitSprites.size > 400) unitSprites.clear(); // 폭주 방어 (실사용 시그니처는 수십 개)
+    unitSprites.set(key, cnv);
+  }
+  return cnv;
+}
+function drawUnitCore(u, lw, faceX) {
+  const hm = (!u.miner && !u.hidden) ? hiddenMeta(u) : null;
+  const raceC = (u.hidden || u.ace) ? '#e91e8c' : (u.miner ? (u.sminer ? '#e6a817' : u.hminer ? '#c9a227' : '#8d8d8d') : hm ? hm[2] : RACES[u.race].color);
+  const B = bodyShape(u);
   // 망토 (풀하우스+ / 영웅 / 슈퍼에이스) — 몸통 뒤(바라보는 반대쪽)
   if (!u.miner && (u.hero || u.tier >= 6 || u.superAce)) {
     const cw = B.w*0.66, ch = B.h + 8;
@@ -5383,7 +5439,7 @@ function drawUnit(u) {
     ctx.moveTo(u.x - tw + 1, ty + 4.5); ctx.lineTo(u.x + tw - 1, ty + 4.5); ctx.stroke();
     ctx.setLineDash([]); ctx.lineWidth = 1;
   } else {
-    const lw = u.moving ? Math.sin(u.walk) * 3 : 0;
+    // lw = 다리 스윙 (파라미터 — 베이크 시 3포즈 양자화, 라이브 시 연속값)
     ctx.strokeStyle = '#454545'; ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(u.x - 4, u.y + B.h/2 - 1); ctx.lineTo(u.x - 4 + lw, u.y + B.h/2 + 4);
@@ -5399,20 +5455,6 @@ function drawUnit(u) {
   grad.addColorStop(0, shade(base, 18)); grad.addColorStop(1, shade(base, -22));
   ctx.fillStyle = grad; ctx.strokeStyle = raceC; ctx.lineWidth = u.hero ? 3 : 2.5;
   bodyPath(u, B); ctx.fill(); ctx.stroke();
-  if (u.hero || u.superAce) { // 🌈 영웅 홀로그램: 종족색 위에 흐르는 무지개 + 하이라이트 밴드 (슈퍼는 더 진하고 빠르게)
-    const sup = u.super || u.superAce;
-    ctx.save();
-    bodyPath(u, B); ctx.clip();
-    const off = (S.time * (sup ? 95 : 55)) % 360;
-    const hg = ctx.createLinearGradient(u.x - B.w/2, u.y - B.h/2, u.x + B.w/2, u.y + B.h/2);
-    for (let k = 0; k <= 3; k++) hg.addColorStop(k/3, `hsla(${(off + k*70)%360},90%,65%,${sup ? 0.42 : 0.22})`);
-    ctx.fillStyle = hg; bodyPath(u, B); ctx.fill();
-    const bx = u.x - B.w/2 + ((S.time * (sup ? 70 : 42)) % (B.w + 16));
-    const bg = ctx.createLinearGradient(bx - 6, 0, bx + 6, 0);
-    bg.addColorStop(0, 'rgba(255,255,255,0)'); bg.addColorStop(0.5, 'rgba(255,255,255,0.4)'); bg.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = bg; bodyPath(u, B); ctx.fill();
-    ctx.restore();
-  }
   ctx.restore();
   ctx.lineWidth = 1;
   // 몸통 안: 무늬 + 라벨 (광부는 표기 없음 — 곡괭이만)
@@ -5447,7 +5489,27 @@ function drawUnit(u) {
   }
   // 카드 위 머리 장식 (모자/투구/왕관)
   drawHeadgear(u, u.y - B.h/2 - 1);
-  // 팔 + 무기 (4방향: 좌/우/상/하) — 상완만 몸에 고정, 하완+주먹은 무기 변환을 따라 움직인다
+  ctx.textAlign = 'left';
+}
+// 🌈 영웅 홀로그램: 종족색 위에 흐르는 무지개 + 하이라이트 밴드 (슈퍼는 더 진하고 빠르게) — 시간 애니메이션이라 라이브
+function drawHeroHolo(u) {
+  const B = bodyShape(u);
+  const sup = u.super || u.superAce;
+  ctx.save();
+  bodyPath(u, B); ctx.clip();
+  const off = (S.time * (sup ? 95 : 55)) % 360;
+  const hg = ctx.createLinearGradient(u.x - B.w/2, u.y - B.h/2, u.x + B.w/2, u.y + B.h/2);
+  for (let k = 0; k <= 3; k++) hg.addColorStop(k/3, `hsla(${(off + k*70)%360},90%,65%,${sup ? 0.42 : 0.22})`);
+  ctx.fillStyle = hg; bodyPath(u, B); ctx.fill();
+  const bx = u.x - B.w/2 + ((S.time * (sup ? 70 : 42)) % (B.w + 16));
+  const bg = ctx.createLinearGradient(bx - 6, 0, bx + 6, 0);
+  bg.addColorStop(0, 'rgba(255,255,255,0)'); bg.addColorStop(0.5, 'rgba(255,255,255,0.4)'); bg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = bg; bodyPath(u, B); ctx.fill();
+  ctx.restore();
+}
+// 팔 + 무기 (4방향: 좌/우/상/하) — 조준 방향·공격 애니메이션 의존이라 라이브
+function drawUnitArm(u) {
+  const B = bodyShape(u);
   const fd = faceDir(u);
   ctx.strokeStyle = '#454545'; ctx.lineWidth = 2; ctx.lineCap = 'round';
   ctx.beginPath();
@@ -5509,9 +5571,7 @@ function drawUnit(u) {
     ctx.fillStyle = '#f2c9a0'; ctx.beginPath(); ctx.arc(wx - 1.8, wy + 0.7, 2.4, 0, 6.28); ctx.fill();
     ctx.strokeStyle = 'rgba(60,40,25,0.5)'; ctx.lineWidth = 0.9; ctx.stroke(); ctx.lineWidth = 1;
   }
-  ctx.restore();
-  ctx.restore();
-  ctx.textAlign = 'left';
+  ctx.restore(); // 무기 회전 프레임 (바깥 1.5배 스케일 restore는 drawUnit 본문이 담당)
 }
 function drawItemUnit(u) {
   const y = u.y + Math.sin(S.time * 3 + u.jx) * 2;
@@ -5523,8 +5583,11 @@ function drawItemUnit(u) {
   ctx.fillText(ITEM_META[u.item].icon, u.x, y);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
-// 티어별 몸통 크기/모양
+// 티어별 몸통 크기/모양 — 유닛의 tier/hero/vis는 스폰 후 불변이라 유닛 객체에 메모이즈 (프레임당 128회 객체 생성이 GC를 긁었다)
 function bodyShape(u) {
+  return u._bs || (u._bs = bodyShapeRaw(u));
+}
+function bodyShapeRaw(u) {
   if (u.item) return { w: 22, h: 22, shape: 'rect' };
   if (u.miner) return { w: 16, h: 20, shape: 'rect' };
   if (u.super) return { w: 36, h: 46, shape: 'rect' }; // 슈퍼영웅: 크게
@@ -8820,7 +8883,7 @@ document.getElementById('btnCoopBack').onclick = () => {
 document.getElementById('btnMapTest').onclick = () => { initAudio(); startMapTest(4); };
 document.getElementById('btnMapTest2').onclick = () => { initAudio(); startMapTest(2); };
 
-let perfU = 0, perfD = 0, perfN = 0, perfText = '';
+let perfU = 0, perfD = 0, perfN = 0, perfText = '', hudTick = 0;
 let last = performance.now();
 const BASE_SPEED = 1.3; // 게임 기본 진행 속도 (2배속 시 실질 2.6배)
 function frame(now) {
@@ -8855,7 +8918,8 @@ function frame(now) {
     }
     if (perfText) { ctx.fillStyle = '#c0392b'; ctx.font = 'bold 11px monospace'; ctx.fillText(perfText, 8, 14); }
   }
-  try { updateHUD(); } catch (e) { reportLoopError('hud', e); } // HUD·정보패널 갱신 예외로 rAF 루프가 멎지 않게 (Opus)
+  // HUD는 3프레임에 1번(≈20Hz) — DOM 텍스트 갱신이 프레임당 0.26ms였다. 숫자 표시 20Hz는 체감 불가 (2026-08-08 최적화)
+  if ((hudTick = (hudTick + 1) % 3) === 0) { try { updateHUD(); } catch (e) { reportLoopError('hud', e); } } // 예외로 rAF 루프가 멎지 않게 (Opus)
   requestAnimationFrame(frame);
 }
 // 루프 예외 보고: 게임을 멈추지 않되 조용히 묻히지도 않게 — 같은 메시지는 한 번만, 새로운 오류는 다시 알린다
