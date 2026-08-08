@@ -1114,7 +1114,8 @@ function confirmHand() {
   if (S.phase !== 'poker') return;
   const res = S.poker.hands.map(hand => {
     const rank = evalHand(hand.cards);
-    return { rank, race: RACE_OF_RANK[rank], keyRank: handKeyRank(hand.cards, rank), bs: rank === 4 && isBackStraight(hand.cards) };
+    const back = isBackStraight(hand.cards); // A-2-3-4-5 (같은 무늬면 rank 8) — bs는 전용 배수용(rank 4 한정), bsAny는 A보너스용
+    return { rank, race: RACE_OF_RANK[rank], keyRank: handKeyRank(hand.cards, rank), bs: rank === 4 && back, bsAny: back };
   });
   // 에이스 잭팟은 원페어부터 (페어 없는 하이카드 일치는 너무 쉬움)
   if (res.length === 2 && res[0].rank === res[1].rank && res[0].rank > 0) {
@@ -1141,15 +1142,15 @@ function confirmHand() {
     });
     logMsg(res.map(r => `🃏 ${r.bs ? 'B 빽스트레이트' : rankLabel(r.keyRank) + ' ' + HAND_NAMES[r.rank]} → ${RACES[r.race].name} [${WEAPONS[r.rank].name}]`).join('  /  '));
   }
-  // 🅰️ 에이스 탑카드 보너스 (2026-08-08 유저): 핵심 카드가 A인 족보(A원페어·A투페어·A플러쉬…)는 덤으로 A새총 1기.
-  // A하이카드(무족보+A탑)도 포함 — 유저 지정이 "등등 모두다"라 문자 그대로. 이 경우 패 자체(A새총)+보너스 = 새총 2기.
-  // 과하면 조건에 r.rank > 0 한 줄만 추가하면 유족보로 좁혀진다. 빽스트레이트는 A가 밑으로 깔린 패라 제외(keyRank 5).
+  // 🅰️ 에이스 카드 보너스 (2026-08-08 유저 확정): 키카드가 A인 '유족보'(A원페어·A투페어·A플러쉬·로얄…)마다 A새총 1기.
+  // A하이카드(무족보)는 제외 — 족보가 아니니까. 빽스트레이트(·플러쉬)는 A가 특별하게 깔린 패라 2기("특별하니까").
+  // 빽 계열은 keyRank가 5(A가 낮게 침)라 A필터에 안 걸리므로 bsAny로 별도 가산.
   // 에이스 잭팟 판에도 각 패 기준으로 지급. 새총은 제물대(투석기) 재료라, A패를 노리는 것이 곧 제물 수급이 된다.
-  const aceTops = res.filter(r => r.keyRank === 14 && !r.bs).length;
-  if (aceTops) {
-    for (let i = 0; i < aceTops; i++) spawnUnit(0, RACE_OF_RANK[0], false, 14);
-    logMsg(`🅰️ 에이스 탑카드 보너스! 새총 ${aceTops}기 지급`);
-    addFloat(CX, CY - 96, `🅰️ 보너스 새총 +${aceTops}`, '#ffd166', 1.6);
+  const aceBonus = res.reduce((n, r) => n + (r.keyRank === 14 && r.rank > 0 ? 1 : 0) + (r.bsAny ? 2 : 0), 0);
+  if (aceBonus) {
+    for (let i = 0; i < aceBonus; i++) spawnUnit(0, RACE_OF_RANK[0], false, 14);
+    logMsg(`🅰️ 에이스 카드 보너스! 새총 ${aceBonus}기 지급`);
+    addFloat(CX, CY - 96, `🅰️ 보너스 새총 +${aceBonus}`, '#ffd166', 1.6);
   }
   startWave();
 }
