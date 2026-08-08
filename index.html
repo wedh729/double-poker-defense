@@ -3445,9 +3445,29 @@ const SKY_COLS = [
   ['#4a1c16', '#84392a'],  // 헬: 핏빛
   ['#1c0b0e', '#7a2410'],  // 💀 지옥 난이도
 ];
+// 🏔️ 유저 제작 절벽·폭포 모서리 (2026-08-08, DPD/art3.png 난이도 컨셉시트에서 크롭·타원 페더): art5.png = 4셀 300×210 (easy/normal/hard/hell).
+// 페이즈 매핑 = "같은 장소가 변해간다": 낮(쉬움 난이도=easy, 그 외=normal) → 노을 normal+웜틴트 → 밤·붉은달 hard(+적틴트) → 헬·지옥 hell.
+// 시각 300×210이 차단 타원(265×175)보다 살짝 크지만 초과분은 페더된 풀 가장자리라 통행 유지 — 게임플레이 무변경. BG_CLIFF_ON=false로 원복.
+const BG_CLIFF_ON = true;
+const CLIFFART = { img: null };
+(function cliffLoadArt() {
+  if (!BG_CLIFF_ON || !SKY_CUT) return;
+  const im = new Image();
+  im.onload = () => { CLIFFART.img = im; for (const k of [...bldgLayers.keys()]) if (k.startsWith('skyCut|')) bldgLayers.delete(k); }; // 프로시저럴로 구운 하늘만 무효화
+  im.src = 'assets/art5.png';
+})();
 function drawSkyCorner() {
   if (!SKY_CUT) return;
   const ph = skyPhase();
+  if (CLIFFART.img) {
+    const cell = ph >= 4 ? 3 : ph >= 2 ? 2 : ph === 1 ? 1 : (DIFF_MUL === 0.7 ? 0 : 1);
+    bakedLayer('skyCut|A' + ph + cell, 0, 0, 300, 210, () => {
+      ctx.drawImage(CLIFFART.img, cell * 300, 0, 300, 210, 0, 0, 300, 210);
+      const tint = ph === 1 ? 'rgba(245,145,94,0.20)' : ph === 3 ? 'rgba(150,30,60,0.25)' : null; // 노을·붉은달은 hard/normal 셀 위 틴트로 변주
+      if (tint) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = tint; ctx.fillRect(0, 0, 300, 210); ctx.globalCompositeOperation = 'source-over'; }
+    });
+    return;
+  }
   bakedLayer('skyCut|' + ph, 0, 0, SKY_CUT.rx + 4, SKY_CUT.ry + 4, () => {
     const { rx, ry } = SKY_CUT, sc = SKY_COLS[ph] || SKY_COLS[0];
     ctx.save();
