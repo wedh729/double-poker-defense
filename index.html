@@ -174,13 +174,31 @@
   #mktToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
   #mktToast .dtSub { display: block; margin-top: 2px; font-size: 11px; font-weight: normal; color: #a8dfc0; letter-spacing: 0; }
 
-  /* 📈 상단 전자시계 — LED 느낌의 개장 카운트다운. 클릭하면 투자 현황 */
+  /* 🏛️ 결투 입장 확인 팝업 — duelToast와 같은 붉은 팔레트, 캔버스 중앙에 뜨는 모달 */
+  #duelConfirm { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 380px; max-width: 82%;
+    background: linear-gradient(180deg, rgba(74,26,20,0.97), rgba(46,14,12,0.97));
+    border: 1px solid rgba(255,190,120,0.55); border-radius: 12px; padding: 18px 20px; text-align: center;
+    color: #ffe6c2; z-index: 8; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+  #duelConfirm .dcTitle { font-size: 16px; font-weight: bold; margin-bottom: 10px; text-shadow: 0 2px 5px rgba(0,0,0,0.75); }
+  #duelConfirm .dcBody { font-size: 12.5px; line-height: 1.7; color: #f0c39a; margin-bottom: 14px; }
+  #duelConfirm .dcBtns { display: flex; gap: 10px; justify-content: center; }
+  #duelConfirm button { flex: 1; padding: 9px 10px; font-size: 13px; font-weight: bold; border: 1px solid rgba(255,190,120,0.5); border-radius: 8px;
+    background: rgba(120,44,32,0.9); color: #ffe6c2; cursor: pointer; }
+  #duelConfirm button:hover { background: rgba(150,58,40,0.95); }
+
+  /* 📈 투자 전자시계 — 12시 원형 시계 우측에 상주 (데스크톱). 모바일은 부팅 시 JS가 상단바로 되돌린다.
+     닫힘 = 빨간 LED 카운트다운 / 개장 = 밝은 금색 OPEN 펄스 ("지금 열렸다!" 구분). 클릭하면 투자 현황 */
   #tIntWrap { cursor: pointer; }
   #tIntWrap:hover #tInterest { color: #b8e0ff; }
-  .mktClock { font-family: Consolas, 'Courier New', monospace; background: #0d1a12; color: #4ade80; border: 1px solid #1e3a28;
+  #cvWrap #tIntWrap { position: absolute; top: 26px; left: calc(50% + 34px); z-index: 5;
+    background: rgba(10,14,20,0.72); border-radius: 8px; padding: 3px 8px; white-space: nowrap; }
+  body.mtMode #cvWrap #tIntWrap { display: none; } /* 미리보기 모드: 시계·HUD와 함께 숨김 */
+  /* b#tMkt: 모바일에선 상단바로 들어가는데 #topbar b(1,0,1)가 .mktClock(0,1,0)을 덮어 보라색이 되므로 동급 특이도+후순위로 이긴다 */
+  b#tMkt { font-family: Consolas, 'Courier New', monospace; background: #1a0d0d; color: #ff5252; border: 1px solid #4a1d1d;
     border-radius: 5px; padding: 1px 6px; font-size: 11.5px; letter-spacing: 1.5px; font-weight: bold; vertical-align: 1px; }
-  .mktClock.open { color: #ffd166; border-color: #6a5417; animation: mktPulse 0.7s ease-in-out infinite alternate; }
-  @keyframes mktPulse { from { box-shadow: 0 0 2px rgba(255,209,102,0.3); } to { box-shadow: 0 0 9px 2px rgba(255,209,102,0.75); } }
+  b#tMkt.open { color: #ffe97a; border-color: #8a6d1f; text-shadow: 0 0 6px rgba(255,220,90,0.95), 0 0 14px rgba(255,200,60,0.55);
+    animation: mktPulse 0.7s ease-in-out infinite alternate; }
+  @keyframes mktPulse { from { box-shadow: 0 0 3px rgba(255,220,90,0.4); } to { box-shadow: 0 0 11px 3px rgba(255,220,90,0.85); } }
 
   /* ===== 좌측 카지노 스테이션 ===== */
   #chipBar { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 6; }
@@ -455,6 +473,10 @@
   .mobile[data-tab="poker"] #mktToast { display: none; } /* 포커 탭에선 카드 위에 얹힌다 (크로스체크) — 시계가 상단에 있으니 토스트는 생략 */
   .mobile #mktToast, .mobile #duelToast { font-size: 12px; padding: 5px 10px; } /* 모바일 캔버스(~200px)에서 토스트가 하단을 넘지 않게 슬림 */
   .mobile #mktToast { top: 140px; } /* 모바일 결투 토스트(96+~40)와 안 겹치는 위치 */
+  .mobile #duelConfirm { width: 88%; }
+  .mobile #duelConfirm .dcTitle { font-size: 14px; }
+  .mobile #duelConfirm .dcBody { font-size: 11px; }
+  .mobile #duelConfirm button { font-size: 12px; padding: 8px 6px; }
 
   /* 📱 모바일 전투 탭: 가로에서만 풀블리드(꽉 찬 화면) — 세로는 일반 흐름 레이아웃 (둘 다 플레이 가능) */
   @media (orientation: landscape) {
@@ -486,7 +508,6 @@
   <div id="topbar">
     <span>❤️ <b id="tLife"></b></span>
     <span>💰 <b id="tGold"></b></span>
-    <span id="tIntWrap" title="📈 투자 — 클릭하면 투자 현황. 장이 열려 있을 때만 예치할 수 있습니다 (만기 전 인출 불가)"><b id="tInterest" style="color:#7ec8ff">📈 0</b> <b id="tMkt" class="mktClock">--:--</b></span>
     <span>⛏️ <b id="tMiner"></b></span>
     <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 자금 운영에서 룰렛·슬롯·광부 고용에 사용">🎰 <b id="tChips" style="color:#c9a227">0</b></span>
     <span>🏳️ 스테이지 <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
@@ -495,10 +516,19 @@
   <div id="cvWrap">
     <canvas id="cv" width="940" height="500"></canvas>
     <div id="clock" title="남은 시간"><div id="clockHub"></div></div>
+    <span id="tIntWrap" title="📈 투자 — 클릭하면 투자 현황. 장이 열려 있을 때만 예치할 수 있습니다 (만기 전 인출 불가)"><b id="tInterest" style="color:#7ec8ff">📈 0</b> <b id="tMkt" class="mktClock">--:--</b></span>
     <div id="unitInfo"></div>
     <div id="objInfo"></div>
     <div id="duelToast"></div>
     <div id="mktToast"></div>
+    <div id="duelConfirm">
+      <div class="dcTitle">🏛️ 결투장</div>
+      <div class="dcBody">입장하면 결투가 끝날 때까지 나올 수 없다.<br>시간 안에 도전자를 쓰러뜨리지 못하면 이 유닛은 사망한다.<br>(결투 시작 직후, 아주 잠깐 도망칠 기회는 있다)</div>
+      <div class="dcBtns">
+        <button onclick="duelEnter()">⚔️ 입장한다</button>
+        <button onclick="duelDecline()">🏃 그만둔다</button>
+      </div>
+    </div>
     <!-- 좌측 카지노: 칩(보스·결투)으로 룰렛·슬롯·광부, 골드로 비상 물자 -->
     <div id="chipBar">
       <button class="chipStation" id="stCasino" title="자금 운영 — 룰렛·슬롯·광부·투자·비상 물자"><span class="ci">💰</span><span class="cl">자금운영</span></button>
@@ -735,6 +765,15 @@ const MAT_SIZE = [0.63, 0.665, 0.784, 0.826, 0.64, 0.595, 0.77, 0.63, 0.63, 0.84
 const MON_GROWTH = 0;
 function monProg(m) { return Math.min(1, ((m.mat || 0) + (m.esc || 0)) / (MATERIALS.length - 1)); }
 function monSize(m) { return (m.boss ? (m.sunBoss ? 104 : 52) : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + monProg(m) * MON_GROWTH); } // 🌞 태양 = 보스 2배
+// 🪖 몬스터 장비: esc 버킷(bucket/7)으로 장비 개수, HP 비율로 파괴 단계 — 드로우와 베이크가 같은 버킷 기준을 쓰게 공용화
+function monGearCount(bucket) { return Math.min(2, Math.floor((bucket / 7) * 3)); } // 0=맨몸 1=투구 2=투구+갑옷
+function monBroken(m) { // 갑옷이 먼저 부서지고(broken1) 투구가 나중에 부서진다(broken2)
+  const gearCount = monGearCount(Math.min(7, Math.floor((m.esc || 0) * 8)));
+  if (gearCount === 0) return 0;
+  const ratio = m.hp / m.max;
+  if (gearCount === 2) return ratio <= 1/3 ? 2 : ratio <= 2/3 ? 1 : 0;
+  return ratio <= 1/2 ? 1 : 0;
+}
 // ☁️ 하늘 모퉁이 (2026-08-08 유저 테스트 요청): 좌상단을 라운드로 잘라 하늘로 — 해·달이 초원이 아니라 하늘에 뜬다.
 // 지상이 아니므로 유닛 통행 불가 (blockSky). 없애려면 SKY_CUT = null 한 줄.
 const SKY_CUT = { rx: 265, ry: 175 };
@@ -762,6 +801,8 @@ function duelHP(n) {
   if (n > 28) hp *= Math.pow(1.0625, n - 28);               // R28+: 진짜 영웅 시대 — 여기부터 "확" 뛴다
   return Math.floor(hp);
 }
+// 🏛️ 결투 창(window): 팝업·락인이 활성인 구간 — 도전자가 있거나, 결투 라운드 포커 중 아직 결판나지 않았을 때
+function duelWindowActive() { return !!S.duel || (S.phase === 'poker' && S.round % DUEL_EVERY === 0 && S.round % 10 !== 0 && !S.duelEnded); }
 
 const cv = document.getElementById('cv');
 let ctx = cv.getContext('2d'); // 스프라이트 캐시 빌드 시 임시 스왑 가능하도록 let
@@ -870,6 +911,7 @@ let S;
 // 다만 그 사이 재시작하면 '다음 판'에 골드·영웅이 꽂히므로, 판마다 세대 번호를 올려 무효화한다.
 let gameGen = 0, casTimers = [];
 let duelToastTimer = null, mktToastTimer = null; // 🏛️ 결투 예고 / 📈 개장 토스트 (resetTransientUI가 먼저 참조하므로 여기서 선언 — TDZ 방지)
+let duelAskU = null, duelLockFloatT = -10; // 🏛️ 결투 입장 확인 팝업 대상 유닛 / 🔒 락인 경고 플로트 스로틀
 function casTimeout(fn, ms) {
   const gen = gameGen;
   const id = setTimeout(() => { if (gen === gameGen) fn(); }, ms);
@@ -895,6 +937,8 @@ function resetTransientUI() {
   const dt = document.getElementById('duelToast'); if (dt) dt.classList.remove('on');
   clearTimeout(mktToastTimer);              // 📈 개장 예고도 동일
   const mt = document.getElementById('mktToast'); if (mt) mt.classList.remove('on');
+  const dc = document.getElementById('duelConfirm'); if (dc) dc.style.display = 'none'; // 🏛️ 결투 입장 팝업이 새 판까지 남지 않게 (참조·pause 잔류 방지)
+  duelAskU = null; duelLockFloatT = -10;
 }
 function reset() {
   resetTransientUI();
@@ -928,7 +972,7 @@ function reset() {
     tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 20기 → 완성, 라운드 재시작 시 리셋)
     bird: null, birdTimer: 250 + Math.random() * 200, // 🐦 힌트 새 / 다음 스폰까지 남은 초
     hellCleared: false, hellClearT: 0, // 🌞 아포칼립스 태양 격파 여부 / 클리어 화면까지 여운 타이머
-    duel: null, champion: null, // 🏛️ 결투장 도전자 / 현재 입장한 유닛 (1기 제한)
+    duel: null, champion: null, duelEnded: false, // 🏛️ 결투장 도전자 / 현재 입장한 유닛 (1기 제한) / 이번 결투 결판 여부
     sandbox: false,
   };
   dctx.clearRect(0, 0, 940, 500); // 이전 판 얼룩 제거
@@ -1027,11 +1071,67 @@ function showDuelToast() {
   clearTimeout(duelToastTimer);
   duelToastTimer = casTimeout(() => el.classList.remove('on'), 6000); // 재시작해도 남지 않게 세대 토큰 경유
 }
+// 🏛️ 결투 창이 열리는 순간: 링 안에 서 있던 전투 유닛을 가장자리 밖으로 밀어내고 목표 해제 (지나가다 갇히는 참사 방지)
+function evacuateArena() {
+  let moved = 0;
+  for (const u of S.units) {
+    if (u.miner || u.item) continue;
+    const dx = u.x - ARENA.x, dy = u.y - ARENA.y, d = Math.hypot(dx, dy);
+    if (d < ARENA.r + 12) {
+      const k = (ARENA.r + 12) / (d || 1);
+      u.x = ARENA.x + dx * k; u.y = ARENA.y + dy * k;
+      u.tx = u.x; u.ty = u.y; u.moving = false; moved++;
+    }
+  }
+  S.champion = null;
+  if (moved) logMsg('🏛️ 결투 준비 — 결투장이 비워집니다.');
+}
+// 🏛️ 입장 확인 팝업: 동의 안 한 유닛이 링에 접근하면 뜬다 (duelAskU = 대상 유닛)
+function openDuelConfirm(u) {
+  duelAskU = u;
+  const el = document.getElementById('duelConfirm');
+  if (el) el.style.display = 'block';
+  S.paused = true;
+}
+function closeDuelConfirm() {
+  const el = document.getElementById('duelConfirm');
+  if (el) el.style.display = 'none';
+  S.paused = false;
+}
+function duelEnter() { // ⚔️ 입장한다
+  const u = duelAskU;
+  closeDuelConfirm();
+  duelAskU = null;
+  if (!u) return;
+  u.duelOk = true;
+  S.champion = u;
+  const dx = u.x - ARENA.x, dy = u.y - ARENA.y, d = Math.hypot(dx, dy) || 1;
+  u.tx = ARENA.x + dx / d * ARENA.r * 0.45; u.ty = ARENA.y + dy / d * ARENA.r * 0.45;
+}
+function duelDecline() { // 🏃 그만둔다
+  const u = duelAskU;
+  closeDuelConfirm();
+  duelAskU = null;
+  if (!u) return;
+  // 유닛 분리 밀림(MINSEP)이 경계 2px 안으로 되밀면 팝업이 재발하므로: 살짝 더 밖으로 + 짧은 재질문 쿨다운 (크로스체크 P2)
+  const dx = u.x - ARENA.x, dy = u.y - ARENA.y, d = Math.hypot(dx, dy) || 1;
+  const k = (ARENA.r + 14) / d;
+  u.x = ARENA.x + dx * k; u.y = ARENA.y + dy * k;
+  u.tx = u.x; u.ty = u.y; u.moving = false;
+  u.duelAskCd = S.time + 1.2;
+}
+// 🔒 락인 판정 — 명령 경로(이동·어택 등)에서 잠긴 챔피언인지 확인
+function duelLocked(u) { return u === S.champion && u.duelOk && duelWindowActive(); }
+function duelLockFloat(u) {
+  if (S.time - duelLockFloatT < 0.8) return; // 도배 방지 스로틀
+  duelLockFloatT = S.time;
+  addFloat(u.x, u.y - 30, '🔒 결투 중!', '#ff6b6b', 0.9);
+}
 function startPoker() {
   S.phase = 'poker';
   // 라운드는 endWave에서 이미 올라갔으므로 S.round = 이번 포커가 준비하는 그 전투. 보스 주와 겹치면 휴장이라 제외.
   // 모바일은 포커 탭에서 캔버스가 통째로 숨겨지므로(#cv display:none) 여기서 띄우면 아무도 못 본다 → 전투 탭으로 넘어가는 startWave에서 띄운다.
-  if (S.round % DUEL_EVERY === 0 && S.round % 10 !== 0) { if (IS_MOBILE) S.duelCall = true; else showDuelToast(); }
+  if (S.round % DUEL_EVERY === 0 && S.round % 10 !== 0) { if (IS_MOBILE) S.duelCall = true; else showDuelToast(); evacuateArena(); }
   pokerPeek = false; // 새 포커판은 항상 올라온 상태로 시작
   S.pokerTimer = POKER_TIME;
   S.roomVirgin = true; // 🥚 라운드마다 광석방 첫 입장 기록 리셋
@@ -1387,10 +1487,14 @@ function startWave() {
   if (em.instantGold) { const g = S.round * 30; S.gold += g; addFloat(HOUSE.x, HOUSE.y - 40, `🎁 +${g}G`, '#ffd54f', 2); }
   // 소환장 포탈에서 우르르 쏟아지듯 (약 2초 안에 전부 등장)
   S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0 };
-  if (S.duel) { logMsg('🏛️ 도전자: "시간 다 됐다. 다음에 보자." (퇴장)'); S.duel = null; } // 연장전(포커)까지 못 잡았으면 새 웨이브 시작에 퇴장
+  if (S.duel) { // 연장전(포커)까지 못 잡았으면 새 웨이브 시작에 퇴장 — 챔피언이 잠겨 있었으면 대신 사망
+    if (S.champion && S.champion.duelOk) duelChampionDeath();
+    else logMsg('🏛️ 도전자: "시간 다 됐다. 다음에 보자." (퇴장)');
+    S.duel = null; S.champion = null; S.duelEnded = true;
+  }
   if (S.round % DUEL_EVERY === 0 && !boss) { // 🏛️ 결투장 도전자 (보스 라운드와 겹치면 휴장)
     const dhp = duelHP(S.round);
-    S.duel = { x: ARENA.x, y: ARENA.y - 2, hp: dhp, max: dhp, mat: matInfo(S.round).idx, phase: Math.random() * 6.28, hitT: 0, tauntT: 0, nextTaunt: 0, taunt: '' };
+    S.duel = { x: ARENA.x, y: ARENA.y - 2, hp: dhp, max: dhp, mat: matInfo(S.round).idx, phase: Math.random() * 6.28, hitT: 0, tauntT: 0, nextTaunt: 0, taunt: '', champ: null, fleeT: 0 };
     logMsg('🏛️ 결투장에 도전자가 나타났다! "한 놈만 와라."');
     if (S.duelCall) { S.duelCall = false; showDuelToast(); } // 모바일 이월분 (데스크톱은 포커 때 이미 봤다)
   }
@@ -1425,6 +1529,7 @@ function spawnMonster(hp, isBoss, opt) {
     else { m.mat = mi.idx; m.esc = mi.p; }                            // 이번 재질(밴드 진행만큼 험악)
     if (Math.random() < 0.003) m.golden = true; // ✨ 황금 레어 (0.3% — 희귀할수록 값지다)
   }
+  m._brk = 0; // 🪖 장비 파괴 단계 추적 (마지막으로 그린 broken — 증가 감지용)
   // 난이도 모디파이어 — 쉴드는 일반 몹 50라운드+, 분열은 최종 보스(R80)부터 보스 전용
   if (!isBoss && !opt.child) {
     const st = S.round;
@@ -1443,7 +1548,11 @@ function endWave() {
   //    '시간 초과했는데도 안 사라지고 포커 때 마저 잡아 보상을 받는' 상태가 되어 유저가 버그로 리포트.
   //    라운드 조기 종료를 !S.duel로 막아둔 덕에 도전자가 살아 있으면 전투 90초를 통째로 쓸 수 있으므로,
   //    창이 좁아진 것도 아니다 (예전엔 소환장을 비운 시점에 라운드가 끝나 결투 시간이 잘렸다).
-  if (S.duel) { logMsg('🏛️ 도전자: "오늘도 챔피언은 나다." (시간 초과 — 유유히 퇴장, 패널티 없음)'); S.duel = null; S.champion = null; }
+  if (S.duel) { // 챔피언이 잠겨 있었으면(입장 확정) 무패널티 퇴장 대신 사망
+    if (S.champion && S.champion.duelOk) duelChampionDeath();
+    else logMsg('🏛️ 도전자: "오늘도 챔피언은 나다." (시간 초과 — 유유히 퇴장, 패널티 없음)');
+    S.duel = null; S.champion = null; S.duelEnded = true;
+  }
   const bossAlive = S.monsters.some(m => m.boss);
   const leak = S.monsters.length;
   if (bossAlive) {
@@ -1510,6 +1619,7 @@ function endWave() {
     logMsg('🎉🎉 80라운드 클리어!! 이제부터는 헬모드... 🎉🎉');
   }
   S.round++;
+  S.duelEnded = false; // 🏛️ 새 라운드 — 다음 결투 창을 위해 리셋
   settleInvests(); // 📈 만기 도래한 예치금 지급 (라운드가 올라간 직후 = "N라운드 뒤")
   if (S.round >= 40) markAchv('r40');
   if (S.round >= 80) markAchv('r80');
@@ -1987,20 +2097,30 @@ function update(dt) {
     }
   }
   for (const u of U) { pushOutOfPen(u); blockRoomWalls(u); blockSky(u); if (isInRoom(u) && u.x > ORE_LINE) u.x = ORE_LINE; }
-  // 🏛️ 결투장: 전투 유닛 1기만 (챔피언). 두 번째부터는 보이지 않는 벽에 막힌다. 광부·아이템 유닛은 무관
-  if (S.champion && (S.champion.miner || S.champion.item || !U.includes(S.champion) || Math.hypot(S.champion.x - ARENA.x, S.champion.y - ARENA.y) > ARENA.r + 12)) S.champion = null;
-  // 🏛️ 콜로세움: 벽·계단 없음 — 어느 방향에서든 그냥 걸어 들어간다 (유저: 벽에 끼는 버그).
-  //    남은 제약은 '결투 중 1기만'뿐이고, 그것도 밀어내는 대신 가장자리에서 멈춰 세워 진동하지 않게 한다.
-  for (const u of U) {
-    if (u.miner || u.item) continue;
-    const adx = u.x - ARENA.x, ady = u.y - ARENA.y, ad = Math.hypot(adx, ady);
-    if (ad < ARENA.r) {
-      if (!S.champion || S.champion === u) S.champion = u;
-      else if (S.duel) { // 이미 챔피언이 싸우는 중 — 두 번째 유닛은 링 밖에 세운다 (목표까지 지워야 안 떤다)
+  // 🏛️ 결투장: 전투 유닛 1기만 (챔피언). 락인 중엔 반경 이탈 판정 제외 — 밀림에 튕겨나가도 챔피언을 잃지 않게(아래서 클램프로 되돌린다)
+  const duelLock = S.champion && S.champion.duelOk && duelWindowActive();
+  if (S.champion && (S.champion.miner || S.champion.item || !U.includes(S.champion) || (!duelLock && Math.hypot(S.champion.x - ARENA.x, S.champion.y - ARENA.y) > ARENA.r + 12))) S.champion = null;
+  // 🏛️ 결투 창이 열려 있을 때만 팝업·락인·챔피언 지정이 작동. 창 밖은 완전 자유 통행(벽·계단 없음 — 유저: 벽에 끼는 버그로 폐기)
+  if (duelWindowActive()) {
+    for (const u of U) {
+      if (u.miner || u.item || u === S.champion) continue;
+      const adx = u.x - ARENA.x, ady = u.y - ARENA.y, ad = Math.hypot(adx, ady);
+      if (ad < ARENA.r && !u.duelOk) { // 동의 안 한 유닛은 가장자리에 세운다 (기존 둘째-유닛 방식)
         const k = (ARENA.r + 2) / (ad || 1); u.x = ARENA.x + adx * k; u.y = ARENA.y + ady * k;
         u.tx = u.x; u.ty = u.y; u.moving = false;
+        if (!S.champion && !duelAskU && S.time > (u.duelAskCd || 0)) openDuelConfirm(u); // 챔피언 없고 재질문 쿨다운도 지났을 때만 팝업 (있으면 조용히 막기만)
       }
     }
+    if (S.champion && S.champion.duelOk) { // 🔒 락인: 링 밖으로 못 나간다
+      const c = S.champion, cdx = c.x - ARENA.x, cdy = c.y - ARENA.y, cd = Math.hypot(cdx, cdy);
+      if (cd > ARENA.r - 6) {
+        const k = (ARENA.r - 6) / (cd || 1);
+        c.x = ARENA.x + cdx * k; c.y = ARENA.y + cdy * k;
+        if (Math.hypot(c.tx - ARENA.x, c.ty - ARENA.y) > ARENA.r - 6) { c.tx = c.x; c.ty = c.y; }
+      }
+    }
+  } else if (S.champion) {
+    S.champion.duelOk = false; S.champion = null; // 창이 닫히면 챔피언 해제 + 동의 만료 보증 (다음 결투는 다시 팝업부터)
   }
   // 재정착: 목표 8px 이내면 현재 위치를 목표로 스냅 — 밀려난 유닛이 되돌아가려고 미세 진동하는 것 방지
   for (const u of U) {
@@ -2143,6 +2263,10 @@ function update(dt) {
   for (const m of S.monsters) {
     m.hitT = Math.max(0, (m.hitT || 0) - dt);
     if (m.burnT > 0) { m.burnT -= dt; m.hp -= m.burnDmg * dt; } // 🔥 쇼군 화상 도트 (얼어붙어도 계속 탄다)
+    if (!m.boss) { // 🪖 장비 파괴 감지: 단계가 늘어난 프레임에만 1회성 이펙트
+      const brk = monBroken(m);
+      if (brk > m._brk) { monGearBreakFx(m.x, m.y, monSize(m)); m._brk = brk; }
+    }
     if (m.entering) { // 🌞 태양 강림: 하늘에서 소환장 중앙으로 유유히 내려온다 (시간정지도 종말은 못 막는다)
       m.fallT += dt;
       const fp = Math.min(1, m.fallT / 2.4);
@@ -2440,7 +2564,7 @@ function update(dt) {
             spin: (Math.random()<0.5?-1:1)*(0.2+Math.random()*0.4), x: m.x, y: m.y, rot: Math.random()*3,
             hp: chp, max: chp, colorIdx: m.colorIdx, inc: 0, dead: false, shape: m.shape,
             mat: m.boss ? matInfo(S.round).idx : m.mat, esc: m.esc, golden: false, bobP: Math.random() * 6.28, // 보스는 mat 0(물풍선) 고정이라 조각은 현재 라운드 재질로
-            boss: false, born: 0.4, hell: m.hell, small: true, shield: 0, shieldMax: 0, split: false, child: true,
+            boss: false, born: 0.4, hell: m.hell, small: true, shield: 0, shieldMax: 0, split: false, child: true, _brk: 0, // 🪖 장비 파괴 단계 추적
           });
         }
       }
@@ -2759,6 +2883,13 @@ function burstJuice(e) {
   }
   if (S.parts.length > 500) S.parts.splice(0, S.parts.length - 500);
 }
+// 🪖 장비 파괴 순간: burstJuice의 금속 파편·붐 이펙트를 같은 예산으로 소규모 재사용 (새 파티클/오디오 시스템 없음)
+function monGearBreakFx(x, y, sz) {
+  for (let i = 0; i < 5 + (Math.random() < 0.5 ? 1 : 0); i++) { const a = Math.random()*6.28, v = 90 + Math.random()*160; S.parts.push({ x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 50, g: true, frag: true, t: 0.4, c: '#9aa3b0', r: 1.6 + Math.random()*2, spin: Math.random()*6.28 }); }
+  S.effects.push({ type: 'boom', x, y, r: sz * 1.1, t: 0.14 });
+  sfx('metal');
+  if (S.parts.length > 500) S.parts.splice(0, S.parts.length - 500);
+}
 
 function mineReward() {
   // 겹이 깊어질수록 배달 보너스가 기하급수로 커진다 (+4, +6, +8, +11, +16 … 10겹째 +83)
@@ -2902,6 +3033,7 @@ function assignOreSlots() {
 // 챔피언 결투 AI (웨이브·포커 페이즈 공용 — 조기 전멸 시 결투가 포커까지 이어지므로)
 function updateDuelFight(u) {
   if (!S.duel || u !== S.champion) return false;
+  if (S.duel.champ !== u) { S.duel.champ = u; S.duel.fleeT = S.time + 5; hideObjInfo(); } // 🏃 새 챔피언 입장 — 5초 도망 게이지 시작 (버튼을 가리는 objInfo도 치운다)
   const ddx = S.duel.x - u.x, ddy = S.duel.y - u.y, dd = Math.hypot(ddx, ddy);
   if (dd > effRange(u)) { u.tx = S.duel.x - ddx / (dd || 1) * effRange(u) * 0.6; u.ty = S.duel.y - ddy / (dd || 1) * effRange(u) * 0.6; }
   else {
@@ -2963,7 +3095,33 @@ function duelWin(u) {
   const chipTxt = fast ? '🪙 칩 +1 (신속 격파!)' : '🪙 칩 +½ (반 개 — 모아서 쓰자)';
   rewardToast('🏆', `도전자 격파! +${gold}G · ${chipTxt}`, '#c9971a', '콜 로 세 움 챔 피 언');
   logMsg(`🏆 결투장 승리!! +${gold}G · ${chipTxt} — 도전자: "...인정."`);
-  S.duel = null;
+  S.duel = null; S.duelEnded = true; // 승리로 창이 닫힌다 → 승자 즉시 자유
+}
+// 🏛️ 결투 시간 초과 챔피언 사망 — 유닛 제거는 제물대(updateAltar) 패턴 재사용
+function duelChampionDeath() {
+  const u = S.champion;
+  S.units = S.units.filter(v => v !== u);
+  burstJuice({ x: u.x, y: u.y, r: 16, c: '#c0392b', dk: 'thud', boss: false, golden: false }); // 소형 사망 이펙트 (기존 몬스터 사망 헬퍼 재사용)
+  addFloat(u.x, u.y - 26, '💀', '#e53935', 1.6);
+  logMsg(`💀 ${u.weapon}, 결투장에서 전사… 도전자: "약했다." (퇴장)`);
+  updateInfoPanel(); // 선택 정보 패널이 사라진 유닛을 계속 가리키지 않게 (제물대 패턴과 동일)
+}
+// 🏃 5초 도망 게이지 버튼: ARENA 바로 아래, 캔버스(940×500) 안 (792~884, 373~399)
+function duelFleeBtnRect() { return { x: ARENA.x - 46, y: ARENA.y + ARENA.r + 10, w: 92, h: 26 }; }
+function duelFleeActive() { return !!(S.duel && S.champion && S.time < S.duel.fleeT); }
+function hitDuelFleeBtn(px, py) {
+  if (!duelFleeActive()) return false;
+  const b = duelFleeBtnRect(), pad = IS_MOBILE ? 8 : 4; // 모바일 패드 8: 14면 링 하단(y≤363) 탭까지 도망으로 먹는다 (크로스체크 P2)
+  return px >= b.x - pad && px <= b.x + b.w + pad && py >= b.y - pad && py <= b.y + b.h + pad;
+}
+function duelFlee() {
+  const u = S.champion, d = S.duel;
+  if (!u || !d) return;
+  u.duelOk = false;
+  u.x = ARENA.x; u.y = ARENA.y + ARENA.r + 18; u.tx = u.x; u.ty = u.y; u.moving = false;
+  S.champion = null; d.champ = null;
+  d.taunt = '겁쟁이로군! 하하!'; d.tauntT = S.time + 2.6;
+  logMsg(`🏃 ${u.weapon}이(가) 결투장에서 도망쳤다!`);
 }
 function fireAtOre(u) {
   const dmg = effDmg(u) * (u.atk === 'sniper' ? 2 : 1); // 🎯 저격총: 광물 약점도 정확히 노린다 (×2)
@@ -3196,7 +3354,7 @@ function strongestMonster() {
 function spawnClones(u, count) {
   for (let i = 0; i < count; i++) {
     const a = Math.PI * 2 * (i + 0.5) / count, c = Object.assign({}, u);
-    c.clone = true; c.cloneLife = u.skillT; c.selected = false; c.skillT = 0; c.skillCd = 0;
+    c.clone = true; c.cloneLife = u.skillT; c.selected = false; c.skillT = 0; c.skillCd = 0; c.duelOk = false; // 결투 동의는 본체 전용 (복사되면 팝업을 영영 못 봄)
     c.assassinTgt = null; c.homeX = null; c.homeY = null; c.forceTarget = null; c.hold = false; c.moving = false; c.cool = Math.random() * 0.2;
     c.x = u.x + Math.cos(a) * 28; c.y = u.y + Math.sin(a) * 28;
     c.inPen = true; // 분신도 울타리 안으로 들어가 난전
@@ -3902,6 +4060,21 @@ function drawDuelist() {
     ctx.strokeStyle = 'rgba(120,80,60,0.5)'; roundRect(bx, by, w, h, 8); ctx.stroke();
     ctx.fillStyle = '#5a3c2e'; ctx.textAlign = 'center';
     ctx.fillText(d.taunt, bx + w / 2, by + 12.5); ctx.textAlign = 'left';
+  }
+  // 🏃 5초 도망 게이지 버튼: 새 챔피언 입장 직후에만, 좌→우로 빨갛게 차오른다
+  if (duelFleeActive()) {
+    const b = duelFleeBtnRect();
+    const prog = Math.max(0, Math.min(1, 1 - (d.fleeT - t) / 5));
+    ctx.save();
+    roundRect(b.x, b.y, b.w, b.h, 6); ctx.clip();
+    ctx.fillStyle = 'rgba(220,40,40,0.8)'; ctx.fillRect(b.x, b.y, b.w * prog, b.h);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(20,10,10,0.9)'; ctx.lineWidth = 1; roundRect(b.x - 1, b.y - 1, b.w + 2, b.h + 2, 7); ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; roundRect(b.x, b.y, b.w, b.h, 6); ctx.stroke();
+    ctx.lineWidth = 1;
+    ctx.textAlign = 'center';
+    drawLabel('[도망]', b.x + b.w / 2, b.y + b.h / 2 + 4, 12);
+    ctx.textAlign = 'left';
   }
 }
 function draw() {
@@ -4795,7 +4968,7 @@ function drawGem(cx, cy, r, col, cut) {
   path(); ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.4; ctx.stroke(); ctx.lineWidth = 1;
 }
 // 재질 몹 정적 렌더 (스프라이트 캐시용 — 시간/개체 의존 없음). 몸통+패턴+테두리+하이라이트+보강밴드
-function drawMatStatic(x, y, sz, mat, esc, c) {
+function drawMatStatic(x, y, sz, mat, esc, c, broken = 0) {
   const circle = () => { ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2); };
   const clip = () => { ctx.save(); circle(); ctx.clip(); };
   // 몸통
@@ -4870,18 +5043,36 @@ function drawMatStatic(x, y, sz, mat, esc, c) {
   // 공통 테두리 + 입체 하이라이트
   ctx.strokeStyle = 'rgba(0,0,0,0.32)'; ctx.lineWidth = 1.4; circle(); ctx.stroke(); ctx.lineWidth = 1;
   if (mat !== 7 && mat !== 8 && mat !== 12) { ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.beginPath(); ctx.arc(x - sz*0.3, y - sz*0.32, sz*0.34, 0, 6.28); ctx.fill(); }
-  matBands(x, y, sz, esc);
+  drawMonGear(x, y, sz, Math.min(2, Math.floor(esc * 3)), broken);
 }
-// 보강 밴드 (밴드 후반부): 금속 띠 + 리벳 — 프로시저럴·아트 몹 공용 (난이도 신호는 아트 위에도 얹는다)
-function matBands(x, y, sz, esc) {
-  const nBand = Math.floor(esc * 3);
-  for (let i = 0; i < nBand; i++) {
-    const by = y + (i - (nBand - 1) / 2) * sz * 0.62, dy = by - y;
-    if (Math.abs(dy) >= sz) continue;
-    const half = Math.sqrt(sz * sz - dy * dy);
-    ctx.fillStyle = 'rgba(70,74,84,0.85)'; ctx.fillRect(x - half, by - sz*0.11, half*2, sz*0.22);
-    ctx.fillStyle = 'rgba(200,205,215,0.7)'; ctx.fillRect(x - half, by - sz*0.11, half*2, sz*0.05);
-    ctx.fillStyle = '#c8ccd4'; ctx.beginPath(); ctx.arc(x - half*0.7, by, sz*0.06, 0, 6.28); ctx.arc(x + half*0.7, by, sz*0.06, 0, 6.28); ctx.fill();
+// 장비 (밴드 후반부 대체): 미니멀 투구·갑옷 — 프로시저럴·아트 몹 공용 (난이도 신호는 아트 위에도 얹는다)
+// gearCount: 0=맨몸 1=투구 2=투구+갑옷. broken: 부서진 개수(갑옷 먼저, 그다음 투구) — 부서진 장비는 그리지 않는다.
+function drawMonGear(x, y, sz, gearCount, broken) {
+  if (gearCount >= 2 && broken < 1) { // 갑옷: 하단 ~40% 판금 (원에 클립된 하단 현)
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, sz, 0, 6.28); ctx.clip();
+    ctx.fillStyle = '#7e8694';
+    ctx.fillRect(x - sz, y + sz*0.2, sz*2, sz*0.8);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x - sz, y + sz*0.2); ctx.lineTo(x + sz, y + sz*0.2); ctx.stroke(); // 상단 가장자리 하이라이트
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.moveTo(x, y + sz*0.2); ctx.lineTo(x, y + sz); ctx.stroke(); // 중앙 이음선
+    ctx.fillStyle = '#5c6270';
+    ctx.beginPath(); ctx.arc(x - sz*0.35, y + sz*0.5, sz*0.06, 0, 6.28); ctx.arc(x + sz*0.35, y + sz*0.5, sz*0.06, 0, 6.28); ctx.fill(); // 리벳 2개
+    ctx.restore(); ctx.lineWidth = 1;
+  }
+  if (gearCount >= 1 && broken < gearCount) { // 투구: 상단 ~38% 강철 캡 (원에 클립된 상단 호)
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, sz, 0, 6.28); ctx.clip();
+    ctx.fillStyle = '#9aa3b0';
+    ctx.fillRect(x - sz, y - sz, sz*2, sz*0.76);
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 2.4; // 클립 경계에 중심이 걸려 바깥 절반이 잘리므로 두 배로
+    ctx.beginPath(); ctx.arc(x, y, sz, 0, 6.28); ctx.stroke(); // 외곽선 (클립되어 캡 부분만 보임)
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x - sz*0.7, y - sz*0.62); ctx.lineTo(x + sz*0.7, y - sz*0.62); ctx.stroke(); // 상단 하이라이트
+    ctx.fillStyle = '#7e8694';
+    ctx.beginPath(); ctx.arc(x - sz*0.3, y - sz*0.85, sz*0.06, 0, 6.28); ctx.arc(x + sz*0.3, y - sz*0.85, sz*0.06, 0, 6.28); ctx.fill(); // 리벳 2개
+    ctx.restore(); ctx.lineWidth = 1;
+    ctx.fillStyle = '#9aa3b0'; // 코가리개 바 (캡 하단 중앙에서 아래로)
+    ctx.fillRect(x - sz*0.06, y - sz*0.24, sz*0.12, sz*0.2);
   }
 }
 // ── 🎨 몬스터 아트 (assets/art3.png): 4×4 격자, 전부 정원형이라 원형 페더 크롭으로 추출 (배경이 흐린 그라데이션이라 키잉 대신)
@@ -4934,16 +5125,16 @@ const SPR = 88, SPR_C = 44; // 스프라이트 캔버스 크기/중심
 // 스프라이트를 굽는 크기 = 실제로 그려지는 크기(monSize의 재질분). 예전엔 MAT_SIZE를 빼먹고 esc 성장만 반영해서
 // 태양(MAT_SIZE 1.3)은 25.1로 구운 걸 32.6으로 늘려 그렸다 → ×1.3 확대 = 유저가 지적한 화질 저하. 이제 k===1.
 function matSpriteSz(mat) { return 19 * (MAT_SIZE[mat] || 1); }
-function matSprite(mat, bucket, golden) {
+function matSprite(mat, bucket, golden, broken) {
   monReady(); // 아트 로드 완료 순간 1회: 추출 + 캐시 무효화
-  const key = mat * 20 + bucket * 2 + (golden ? 1 : 0);
+  const key = (mat * 20 + bucket * 2 + (golden ? 1 : 0)) * 3 + broken; // 기존 키(유일) × 3 + broken(0~2) → 충돌 없음
   if (!matSprites[key]) {
     const cnv = document.createElement('canvas'); cnv.width = cnv.height = SPR;
     const old = ctx; ctx = cnv.getContext('2d');
     try {
       const escB = bucket / 7;
       const sz = matSpriteSz(mat);
-      if (MONART.ready && MONART.sp[mat]) { // 🎨 아트 몹: 원형 크롭 스프라이트 + esc 그을림·황금 틴트·보강밴드 오버레이
+      if (MONART.ready && MONART.sp[mat]) { // 🎨 아트 몹: 원형 크롭 스프라이트 + esc 그을림·황금 틴트·장비 오버레이
         const pad = mat === 8 || mat === 12 || mat === 13 ? 9 : 4; // 글로우 몹은 여유 크게
         ctx.drawImage(MONART.sp[mat], SPR_C - sz - pad, SPR_C - sz - pad, (sz + pad) * 2, (sz + pad) * 2);
         if (escB > 0) { // 그을림 (험악해짐 신호 — 기존 shade 어둡힘의 아트 버전)
@@ -4956,10 +5147,10 @@ function matSprite(mat, bucket, golden) {
           ctx.fillStyle = 'rgba(255,198,40,0.55)'; ctx.fillRect(0, 0, SPR, SPR);
           ctx.globalCompositeOperation = 'source-over';
         }
-        matBands(SPR_C, SPR_C, sz, escB);
+        drawMonGear(SPR_C, SPR_C, sz, monGearCount(bucket), broken);
       } else {
         const c = golden ? '#ffcf3a' : shade(MATERIALS[mat].col, -Math.round(escB * 62));
-        drawMatStatic(SPR_C, SPR_C, sz, mat, escB, c);
+        drawMatStatic(SPR_C, SPR_C, sz, mat, escB, c, broken);
       }
     } finally { ctx = old; }
     matSprites[key] = cnv;
@@ -4970,7 +5161,7 @@ function matSprite(mat, bucket, golden) {
 function drawMatMob(m, sz, c) {
   const x = m.x, y = m.y, mat = m.mat || 0, esc = m.esc || 0, t = S.time;
   const bucket = Math.min(7, Math.floor(esc * 8));
-  const sp = matSprite(mat, bucket, !!m.golden);
+  const sp = matSprite(mat, bucket, !!m.golden, monBroken(m));
   const k = sz / matSpriteSz(mat); // 시각 크기 → 스프라이트 스케일 (MON_GROWTH=0·일반 몹이면 정확히 1 = 무손실)
   if (mat === 0) { // 물풍선: 출렁 (스케일로)
     const w = 1 + 0.06 * Math.sin(t * 5 + m.phase);
@@ -6250,7 +6441,10 @@ function setAttackMode(on) {
 }
 function holdSelected() {
   const sel = S.units.filter(u => u.selected && !u.miner);
-  sel.forEach(u => { u.tx = u.x; u.ty = u.y; u.forceTarget = null; u.attackMine = false; u.amove = false; u.hold = true; });
+  sel.forEach(u => {
+    if (duelLocked(u)) { duelLockFloat(u); return; } // 🔒 결투 락인 중엔 명령 무시
+    u.tx = u.x; u.ty = u.y; u.forceTarget = null; u.attackMine = false; u.amove = false; u.hold = true;
+  });
   if (sel.length) { S.effects.push({ type:'boom', x: sel[0].x, y: sel[0].y, r: 12, t: 0.2 }); logMsg('🛡️ 홀드! 제자리에서 근처 적을 공격합니다.'); }
 }
 window.addEventListener('keydown', e => {
@@ -6281,13 +6475,14 @@ function issueAttack(px, py) {
     if (Math.hypot(m.x - px, m.y - py) < (m.sunBoss ? 95 : m.boss ? (IS_MOBILE ? 48 : 32) : (IS_MOBILE ? 30 : 15))) { hitM = m; break; }
   }
   if (hitM) {
-    sel.forEach(u => { if (u.miner) return; u.forceTarget = hitM; u.attackMine = false; u.amove = false; u.hold = false; });
+    sel.forEach(u => { if (u.miner) return; if (duelLocked(u)) { duelLockFloat(u); return; } u.forceTarget = hitM; u.attackMine = false; u.amove = false; u.hold = false; });
     S.effects.push({ type:'boom', x: hitM.x, y: hitM.y, r: 18, t: 0.25 });
     logMsg(`🎯 집중 공격 명령! (${sel.length}기)`);
     return;
   }
   // 빈 땅 클릭 → 어택땅 (이동하다 적 만나면 교전)
   sel.forEach((u, i) => {
+    if (duelLocked(u)) { duelLockFloat(u); return; } // 🔒 결투 락인 중엔 명령 무시
     const cols = Math.ceil(Math.sqrt(sel.length));
     const t = clampTargetPos(
       px + (i % cols - (cols - 1) / 2) * 28,
@@ -6357,6 +6552,7 @@ const OBJ_INFO = {
     tip: '🏛️ 이따금 도전자가 몸을 푼다. 이긴다면… 뭐, 후하게는 주지.' },
 };
 function showObjInfo(k) {
+  if (duelFleeActive()) return; // 🏃 도망 게이지 5초 동안은 우하단 패널이 버튼을 가리므로 열지 않는다 (크로스체크 P1)
   S.selMon = null; // 건물 정보 표시 중엔 몬스터 실시간 갱신 안 함
   S.selObj = k;    // 광석 HP바 실시간 갱신용 (updateHUD)
   const o = OBJ_INFO[k], el = document.getElementById('objInfo');
@@ -6449,6 +6645,7 @@ function objAt(x, y) {
 }
 function pressEnd() {
   if (!drag) return;
+  if (!drag.moved && hitDuelFleeBtn(drag.x0, drag.y0)) { duelFlee(); drag = null; return; } // 🏃 도망 버튼 — 유닛 선택보다 먼저
   if (!drag.moved && tryCatchBird(drag.x0, drag.y0)) { drag = null; return; } // 🐦 새 잡기 우선
   if (attackMode && !drag.moved) {
     issueAttack(drag.x0, drag.y0);
@@ -6490,6 +6687,7 @@ function issueMove(px, py) {
   const p = clampTargetPos(px, py);
   const sel = S.units.filter(u => u.selected && !u.miner && !u.catapult); // 광부/투석기는 이동 명령 무시
   sel.forEach((u, i) => {
+    if (duelLocked(u)) { duelLockFloat(u); return; } // 🔒 결투 락인 중엔 명령 무시
     const cols = Math.ceil(Math.sqrt(sel.length));
     const t = clampTargetPos(
       p.x + (i % cols - (cols - 1) / 2) * 28,
@@ -6542,6 +6740,7 @@ cv.addEventListener('touchstart', e => {
   pressStart(p.x, p.y);
   longPressFired = false;
   clearTimeout(longPressTimer);
+  if (hitDuelFleeBtn(p.x, p.y)) return; // 🏃 도망 버튼 위 롱프레스가 어택땅으로 새지 않게 — touchend의 히트테스트가 처리 (크로스체크 P2)
   longPressTimer = setTimeout(() => {
     longPressFired = true;
     issueAttack(p.x, p.y);
@@ -6561,6 +6760,7 @@ cv.addEventListener('touchend', e => {
   if (longPressFired) { longPressFired = false; drag = null; return; } // 롱프레스가 이미 처리함
   if (drag && drag.moved) { pressEnd(); return; } // 드래그 박스 선택
   const p = touchPos(e);
+  if (hitDuelFleeBtn(p.x, p.y)) { duelFlee(); drag = null; return; } // 🏃 도망 버튼 — 유닛 선택보다 먼저
   if (tryCatchBird(p.x, p.y)) { drag = null; lastTapTime = 0; lastTapPos = null; return; } // 🐦 새 잡기 우선(유닛 이동보다 먼저)
   const now = performance.now();
   const isDouble = lastTapPos && (now - lastTapTime) < 350 && Math.hypot(p.x - lastTapPos.x, p.y - lastTapPos.y) < 40;
@@ -6599,7 +6799,7 @@ function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 
   const sx = cv.getBoundingClientRect().width / 940;              // 캔버스 좌표 → 화면 배율
   const avg = sel.reduce((a, u) => a + u.x, 0) / sel.length;
   const cardW = (el.getBoundingClientRect().width || 220) / (sx || 1);
-  const nearLeft = avg < cardW + 40;                              // 카드(좌측)와 겹칠 만큼 왼쪽에 있나
+  const nearLeft = avg < cardW + 40 && !duelFleeActive();         // 카드(좌측)와 겹칠 만큼 왼쪽에 있나 (도망 게이지 중엔 우측 카드가 버튼을 가리므로 금지 — 크로스체크 P1)
   const wantRight = nearLeft;
   if (wantRight) { el.style.left = 'auto'; el.style.right = '10px'; }
   else { el.style.right = 'auto'; el.style.left = '10px'; }
@@ -6878,7 +7078,7 @@ function copyUnit(u) {
   const rate = copyRate(u);
   if (Math.random() >= rate) { addFloat(u.x, u.y - 26, '📑 복사 실패…', '#8d8d8d', 1.4); sfx('leak'); logMsg(`📑 복사 실패! (${u.weapon} · 성공률 ${Math.round(rate*100)}%)`); updateInfoPanel(); return; }
   const c = Object.assign({}, u);
-  c.x = c.tx = u.x + 26; c.y = c.ty = u.y; c.selected = false; c.kills = 0;
+  c.x = c.tx = u.x + 26; c.y = c.ty = u.y; c.selected = false; c.kills = 0; c.duelOk = false; // 결투 동의는 본체 전용 (복사되면 팝업을 영영 못 봄)
   c.jx = (Math.random() - 0.5) * 48; c.jy = (Math.random() - 0.5) * 48;
   c.cool = 0; c.forceTarget = null; c.attackMine = false; c.amove = false; c.moving = false;
   S.units.push(c);
@@ -7597,8 +7797,11 @@ function doExchange() {
   }, 900);
 }
 document.getElementById('stCasino').onclick = () => { initAudio(); openCasino(); };
-// 📈 상단 투자 위젯 클릭 → 투자 현황 바로 열기 (2026-08-08 유저 지정)
+// 📈 투자 위젯 클릭 → 투자 현황 바로 열기 (2026-08-08 유저 지정)
 document.getElementById('tIntWrap').onclick = () => { initAudio(); openChip('📈 투자'); casInvest(); };
+// 위젯 위치: 데스크톱 = 12시 원형 시계 우측(#cvWrap 안, HTML 기본) / 모바일 = 상단바 복귀 —
+// 모바일 캔버스(~200px)엔 자리가 없고, 포커 탭에선 #cv와 함께 숨겨져 개장을 놓치기 때문 (상단바는 양쪽 탭 상시 노출)
+if (IS_MOBILE) document.getElementById('tMiner').parentElement.before(document.getElementById('tIntWrap'));
 
 // ==================== 라운드 이벤트 (난이도 곡선 사이 변주) ====================
 const EVENTS = [
