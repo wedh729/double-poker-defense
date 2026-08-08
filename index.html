@@ -3510,7 +3510,7 @@ function drawSkyCorner() {
   if (!SKY_CUT) return;
   const ph = skyPhase();
   if (CLIFFART.img) {
-    const cell = ph >= 4 ? 3 : ph >= 2 ? 2 : ph === 1 ? 1 : (DIFF_MUL === 0.7 ? 0 : 1);
+    const cell = ph >= 4 ? (ph === 4 && S.hellCleared ? 1 : 3) : ph >= 2 ? 2 : ph === 1 ? 1 : (DIFF_MUL === 0.7 ? 0 : 1); // 헬 클리어 후엔 세계가 회복 — 절벽도 초원으로
     const gc = CLIFF_META[cell].g, bl = CLIFF_META[cell].bl;
     const LW = bl[2] + 8, LH = Math.ceil(LW * 0.7);
     bakedLayer('skyCut|A' + ph + cell, 0, 0, LW, LH, () => {
@@ -3737,10 +3737,11 @@ function drawSmokeColumns(nP, baseA) { // 지평선 검은 연기 기둥: 세계
 // 🔥 생지옥화 오버레이: 태양이 다가올수록 모든 난이도의 세계가 그을리고 불탄다 (지옥 난이도는 전용 배경이 이미 지옥이라 제외)
 function drawHellCreep() {
   const k = apocK(); if (k <= 0) return;
-  ctx.fillStyle = `rgba(64,10,6,${(0.07 + 0.38 * k).toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height); // 세계가 그을린다
+  // 기본 그을림을 진입부터 진하게 (유저: "헬 페이즈도 지옥처럼" — 용암 절벽과 지형 톤 통일). 진행감은 불꽃·잿가루·균열의 k 램프가 담당
+  ctx.fillStyle = `rgba(64,10,6,${(0.26 + 0.26 * k).toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height); // 세계가 그을린다
   const hg = ctx.createLinearGradient(0, cv.height - 130, 0, cv.height); // 지평선이 타오른다
   hg.addColorStop(0, 'rgba(255,110,20,0)');
-  hg.addColorStop(1, `rgba(255,120,25,${(0.30 * k + 0.06 * Math.sin(S.time * 1.7)).toFixed(2)})`);
+  hg.addColorStop(1, `rgba(255,120,25,${(0.14 + 0.22 * k + 0.06 * Math.sin(S.time * 1.7)).toFixed(2)})`);
   ctx.fillStyle = hg; ctx.fillRect(0, cv.height - 130, cv.width, 130);
   drawSkyCracks(Math.ceil(k * 4), 0.35 + 0.45 * k);
   drawFlameTongues(0.7 + 0.5 * k, Math.ceil(GRASS_SPOTS.length * Math.min(1, k * 1.3)), Math.min(1, 0.35 + k)); // 풀밭이 한 포기씩 불붙는다
@@ -8733,7 +8734,7 @@ function sbGround() { // 싱글 배경 지면: 아트 베이크 1장 (없으면 
   return true;
 }
 function sbPhaseTint(ph) { // 시간대 앰비언트 — 라운드가 흐르면 대지도 함께 저물게 (유저: 계속 초록초록)
-  const t = ['', 'rgba(255,150,70,0.10)', 'rgba(28,48,105,0.22)', 'rgba(150,45,55,0.16)', 'rgba(115,25,20,0.20)'][ph];
+  const t = ['', 'rgba(255,150,70,0.10)', 'rgba(28,48,105,0.22)', 'rgba(150,45,55,0.16)', 'rgba(100,26,16,0.34)'][ph]; // 헬(4)은 진하게 — 용암 절벽과 톤 통일
   if (t) { ctx.fillStyle = t; ctx.fillRect(0, 0, cv.width, cv.height); }
 }
 // 🎨 이미지 기반 베이크: art2.png에서 추출한 타일·스프라이트로 월드 조립 (베끼는 게 아니라 그 픽셀 그대로)
