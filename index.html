@@ -488,7 +488,7 @@
     <span>💰 <b id="tGold"></b></span>
     <span id="tIntWrap" title="📈 투자 — 클릭하면 투자 현황. 장이 열려 있을 때만 예치할 수 있습니다 (만기 전 인출 불가)"><b id="tInterest" style="color:#7ec8ff">📈 0</b> <b id="tMkt" class="mktClock">--:--</b></span>
     <span>⛏️ <b id="tMiner"></b></span>
-    <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 카지노에서 룰렛·슬롯·광부 고용에 사용">🎰 <b id="tChips" style="color:#c9a227">0</b></span>
+    <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 자금 운영에서 룰렛·슬롯·광부 고용에 사용">🎰 <b id="tChips" style="color:#c9a227">0</b></span>
     <span>🏳️ 스테이지 <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
     <div id="bigTimer"><div class="p" id="tPhase"></div></div>
   </div>
@@ -501,7 +501,7 @@
     <div id="mktToast"></div>
     <!-- 좌측 카지노: 칩(보스·결투)으로 룰렛·슬롯·광부, 골드로 비상 물자 -->
     <div id="chipBar">
-      <button class="chipStation" id="stCasino" title="카지노"><span class="ci">🎰</span><span class="cl">카지노</span></button>
+      <button class="chipStation" id="stCasino" title="자금 운영 — 룰렛·슬롯·광부·투자·비상 물자"><span class="ci">💰</span><span class="cl">자금운영</span></button>
     </div>
     <!-- 포커 패널: 캔버스 위로 '샥' 오르내리는 오버레이 (평소엔 캔버스가 이 공간을 전부 쓴다) -->
     <div id="pokerPanel">
@@ -735,7 +735,11 @@ const MAT_SIZE = [0.63, 0.665, 0.784, 0.826, 0.64, 0.595, 0.77, 0.63, 0.63, 0.84
 const MON_GROWTH = 0;
 function monProg(m) { return Math.min(1, ((m.mat || 0) + (m.esc || 0)) / (MATERIALS.length - 1)); }
 function monSize(m) { return (m.boss ? (m.sunBoss ? 104 : 52) : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + monProg(m) * MON_GROWTH); } // 🌞 태양 = 보스 2배
-const PORTAL = { x: 80, y: 78, r: 34 }; // 강화 포털: 같은 유닛 5기를 넣으면 영웅
+// ☁️ 하늘 모퉁이 (2026-08-08 유저 테스트 요청): 좌상단을 라운드로 잘라 하늘로 — 해·달이 초원이 아니라 하늘에 뜬다.
+// 지상이 아니므로 유닛 통행 불가 (blockSky). 없애려면 SKY_CUT = null 한 줄.
+const SKY_CUT = { rx: 265, ry: 175 };
+function inSky(x, y) { if (!SKY_CUT || x < 0 || y < 0) return false; const nx = x / SKY_CUT.rx, ny = y / SKY_CUT.ry; return nx * nx + ny * ny < 1; }
+const PORTAL = { x: 84, y: 224, r: 34 }; // 강화 포털: 같은 유닛 5기를 넣으면 영웅 (하늘 모퉁이에 밀려 y 78 → 224)
 const WAVE_TIME = 90, POKER_TIME = 60;
 const FINAL_ROUND = 80; // 이후는 헬모드
 const SUN_ROUND = 150;  // 🌞 아포칼립스 태양 강림 — 헬모드 최종장 (처치 시 헬모드 클리어)
@@ -959,8 +963,10 @@ function monsterHP(n) {
   // ~30R: 기존 복리 곡선 유지 / 30R 이후: 복리 → 선형 증가 (후반 기하급수 벽 제거 — 업글 화력도 선형이라 결이 맞음)
   const grow = m => m <= 3 ? 14 * Math.pow(1.10, m - 1) : 14 * Math.pow(1.10, 2) * 1.42 * Math.pow(1.15, m - 3);
   let hp = n <= 30 ? grow(n) : grow(30) * (1 + 0.15 * Math.min(n - 30, 10) + 0.09 * Math.max(0, n - 40)); // 30~40R +15%p/R 선형 → 40R부터 +9%p/R (기울기 40%↓)
-  // 헬(80+): 기존 ×1.5 복리는 수학적 즉사벽(R150 도달 불가) → 진입 4라운드 ×1.25 슬랩 + 이후 +1.2%/R 조임 (선형 base 성장과 합쳐 R150 요구 화력 ≈ R80의 ~11배 — 신급 빌드만 태양전 자격)
-  if (n > FINAL_ROUND) hp *= Math.pow(1.25, Math.min(n - FINAL_ROUND, 4)) * Math.pow(1.012, Math.max(0, n - FINAL_ROUND - 4));
+  // 헬(80+): 진입 4라운드 슬랩 + 이후 %/R 조임. 2026-08-08 유저 "헬이 너무 쉬워, 곡선 1.5배 가파르게"
+  // → 라운드당 성장률 ×1.5: 슬랩 25%→37.5%/R, 조임 1.2%→1.8%/R. R150 요구 화력 ≈ R80의 ~24배 (기존 ~11배).
+  // (기존 ×1.5 복리는 수학적 즉사벽이라 부활 불가 — %성장률만 키우는 이 방식이 상한선)
+  if (n > FINAL_ROUND) hp *= Math.pow(1.375, Math.min(n - FINAL_ROUND, 4)) * Math.pow(1.018, Math.max(0, n - FINAL_ROUND - 4));
   // ×0.7 = 전체 난이도 30% 하향 / ×1.6 = 몹 수 절반 보정 (2배가 아닌 이유: 밀도 절반 → 스플래시 효율도 절반이라 2배면 실효 난이도 상승)
   hp *= splitComp(n); // 일반 몹 분열 제거 보정 (R40에 한 번에 곱하면 1.5배 계단벽이 생겨서 R40~R55에 걸쳐 점진 적용)
   // 어려움·지옥: 초반 20% 하향, 대신 라운드마다 0.4%p씩 다시 가팔라진다 (R50에서 원래의 96%, R80부터 원래보다 어렵게)
@@ -1312,6 +1318,10 @@ const ITEM_META = {
   acid:    { icon:'🧪', name:'염산병',     active:true },
   bombard: { icon:'💣', name:'융단폭격',   active:true },
   revive:  { icon:'🔄', name:'부활권',     active:false },
+  // 🛒 비상 물자 3종 (2026-08-08 유저: 즉시 적용 대신 맵 오브젝트로 소환 → 제물대에 넣어 발동)
+  sand:    { icon:'⏱️', name:'시간의 모래', active:true },
+  vbomb:   { icon:'💣', name:'긴급 폭격',   active:true },
+  pray:    { icon:'❤️', name:'생명의 기도', active:true },
   plank:   { icon:'🪵', name:'나무판자',   active:true },
 };
 function spawnItemUnit(key) {
@@ -1325,6 +1335,17 @@ function spawnItemUnit(key) {
   addFloat(x, y - 26, `${meta.icon} ${meta.name} 등장! 제물대로 옮기세요`, '#ffd166', 2);
 }
 function useTimestop() { S.freezeT = 5; addFloat(PEN.x, PEN.y - 60, '⏳ 시간 정지!', '#42a5f5', 2); sfx('jackpot'); logMsg('⏳ 시간정지 모래시계 — 5초간 몬스터 정지!'); }
+// 🛒 비상 물자 발동 (제물대 경유 — 2026-08-08). 전투가 아닐 때 바친 모래·폭격은 다음 전투로 이월(pend)
+function useSandItem() {
+  if (S.phase === 'wave') { S.timer += 15; addFloat(CX, 130, '⏱️ +15초!', '#7ec8ff', 2); logMsg('⏱️ 시간의 모래 — 이번 전투 +15초!'); }
+  else { S.pendSand++; logMsg('⏱️ 시간의 모래 — 다음 전투가 15초 길어집니다.'); }
+  sfx('coin');
+}
+function useVBombItem() {
+  if (S.phase === 'wave' && S.monsters.some(m => !m.entering)) emergencyBomb();
+  else { S.pendBomb++; logMsg('💣 긴급 폭격 — 몬스터가 나타나는 즉시 떨어집니다.'); }
+}
+function usePrayItem() { S.life += 3; addFloat(HOUSE.x, HOUSE.y - 40, '❤️ +3', '#e53935', 2); sfx('reward'); logMsg('❤️ 생명의 기도 — 목숨 +3!'); }
 function useStimpack() { S.stimT = 20; addFloat(CX, CY, '💉 스팀팩! 전군 공속 2배 20초!', '#43a047', 2); sfx('hero'); logMsg('💉 스팀팩 — 20초간 전 아군 공속 2배!'); }
 function useBombard() { // 소환장 전체 즉발 광역
   S.effects.push({ type:'boom', x: PEN.x, y: PEN.y, r: 150, t: 0.6 });
@@ -1514,6 +1535,15 @@ function pushOutOfPen(u) {
 // 이동 목표가 울타리 안이면 바깥 가장자리로 보정
 function clampTargetPos(x, y) {
   if (onPlank(x, y)) return { x, y }; // 🪵 나무판자 위는 이동 목표 허용(소환장 안이어도)
+  if (SKY_CUT && x < SKY_CUT.rx + 20 && y < SKY_CUT.ry + 20) { // ☁️ 하늘(좌상단)을 찍으면 절벽 끝으로
+    // 음수·(0,0) 좌표도 1px로 밀어 넣고 투영 — 0×k=0이라 (0,0)은 투영이 무력화됐고, 음수는 inSky 가드에 걸러져
+    // 무보정 목표가 되어 유닛이 림에서 0.6초 제자리걸음했다 (크로스체크)
+    const cx2 = Math.max(1, x), cy2 = Math.max(1, y);
+    if (inSky(cx2, cy2)) {
+      const d = Math.sqrt((cx2 / SKY_CUT.rx) ** 2 + (cy2 / SKY_CUT.ry) ** 2);
+      const k = 1.04 / d; x = cx2 * k; y = cy2 * k;
+    }
+  }
   const hw = PEN.w / 2 + 14, hh = PEN.h / 2 + 14;
   const dx = x - CX, dy = y - CY;
   if (Math.abs(dx) >= hw || Math.abs(dy) >= hh) return { x, y };
@@ -1574,7 +1604,7 @@ function spawnQuartet(x, y) {
   });
   addFloat(x, y - 30, '📯 콰르텟 강림!! 📯', '#5b48d0', 2.8);
   sfx('jackpot'); sfx('hero');
-  logMsg('📯✨ 히든 조합 발견!! [원·투·트·스트 각2] → 히든 영웅 <b>콰르텟</b>! 반경 50px 아군 공속 +20%!');
+  logMsg('📯✨ 히든 조합 발견!! [원·투·트·스트 각2] → 히든 영웅 <b>콰르텟</b>! 가장 가까운 아군 5기 공속 +20%!');
   markHidden('quartet');
 }
 // ⚔️ 길로틴: 원페어1+투페어2+트리플3+포카드4(10기) → 체력 15% 이하 즉시 처형
@@ -1652,8 +1682,12 @@ function spawnJoker(x, y) {
     // 사거리 110 (2026-08-03 유저: cd 2.0→0.4, 사거리 +10%).
     // ⚠️ 실제 발사 간격은 effCd = cd × 1.4286(히든 조합 공속 페널티) = 0.571초.
     //    견인 지속 0.45초보다 길어 사이클마다 ~0.12초 뭉침이 풀린다 (승급1부터는 0.357초라 유지).
-    dmg: 70, cd: 0.4, range: 110, splash: 60, bounce: 0, atk: 'area', proj: null, vis: 'scythe',
+    // 2026-08-08 너프 (유저: "견인 빼고도 쇼군보다 강해 — 쇼군이 더 만들기 어려우니 약해야"): dmg 70→16 · splash 60→28.
+    // 실측 몹200 군집 DPS 6,510(쇼군의 11배!)이었다 — splash 60이 밀집 군집을 통째로 갈아버림.
+    // dmg 24는 아직 쇼군의 1.25배(852 vs 680)라 16으로 → 568 ≈ 쇼군의 0.84배. 조커의 값어치는 딜이 아니라 견인 스킬(아군 광역 셋업).
+    dmg: 16, cd: 0.4, range: 110, splash: 28, bounce: 0, atk: 'area', proj: null, vis: 'scythe',
     pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 조커', cool: 0, selected: true, walk: 0, speed: 85,
+    jokerCd: 0, jokerT: 0, // 🃏 견인 액티브 스킬 (쿨 60초 · 지속 15초)
   });
   addFloat(x, y - 30, '🃏 조커 강림!! 🃏', '#8c5bff', 2.8);
   sfx('jackpot'); sfx('hero');
@@ -1810,13 +1844,14 @@ function updatePortal() {
 // 🪨 제물대: 위에 올라온 하이카드(tier0 일반)를 제물로 흡수 → 20장이면 투석기 완성
 function updateAltar() {
   // 🎁 아이템 유닛: 제물대에 멈추면 소모되고 발동 (하이카드/투석기 유무와 무관하게 처리)
-  const its = S.units.filter(u => u.item && !u.moving && Math.abs(u.x - ALTAR.x) <= ALTAR.w/2 && Math.abs(u.y - ALTAR.y) <= ALTAR.h/2);
+  const its = S.units.filter(u => u.item && u.altarIntent && !u.moving && Math.abs(u.x - ALTAR.x) <= ALTAR.w/2 && Math.abs(u.y - ALTAR.y) <= ALTAR.h/2); // altarIntent: 유저가 제물대를 직접 찍은 아이템만 (오발동 방지)
   for (const it of its) {
     S.units = S.units.filter(u => u !== it);
     for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 50 + Math.random()*80; S.parts.push({ x: ALTAR.x, y: ALTAR.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 20, t: 0.4, r: 1.5 + Math.random()*2, c: '#ffd166' }); }
     if (it.item === 'revive') { S.reviveArmed = true; addFloat(ALTAR.x, ALTAR.y - 44, '🔄 부활 봉인!', '#43a047', 2); sfx('hero'); logMsg('🔄 부활권 봉인 — 이번 라운드 사망 시 부활! (무사 클리어 시 소멸)'); }
     else if (it.item === 'plank') { S.plank = true; addFloat(CX, CY + PEN.h/2 + 22, '🪵 나무판자 설치!', '#a1887f', 2); sfx('pick'); logMsg('🪵 나무판자 설치 — 소환장 중앙 하단에 발판! 단검(풀하우스)을 올려보세요.'); }
-    else { ({ timestop: useTimestop, stimpack: useStimpack, acid: useAcid, bombard: useBombard })[it.item](); }
+    else { ({ timestop: useTimestop, stimpack: useStimpack, acid: useAcid, bombard: useBombard,
+      sand: useSandItem, vbomb: useVBombItem, pray: usePrayItem })[it.item](); } // 🛒 비상 물자 3종도 제물대 발동
     updateInfoPanel();
   }
   if (S.units.some(u => u.catapult)) return; // 이미 투석기 존재
@@ -1930,6 +1965,7 @@ function update(dt) {
     } else { u.moving = false; u.stuckT = 0; u.nearT = 0; u.lastD = undefined; }
     pushOutOfPen(u);
     blockRoomWalls(u); // 🧱 광석방 담장: 입구 외에는 못 넘는다
+    blockSky(u);       // ☁️ 하늘 모퉁이: 통행 불가
     if (isInRoom(u) && u.x > ORE_LINE) { u.x = ORE_LINE; if (u.tx > ORE_LINE) u.tx = ORE_LINE; } // 💎 광석 앞 통행 금지선 — 광석이 유닛에 가려지지 않게
   }
   // 유닛 분리: 경계가 명확하도록 (간격 20px, 2회 반복 — 살짝 낑기는 것까지만 허용)
@@ -1939,7 +1975,7 @@ function update(dt) {
       const a = U[i];
       for (let j = i + 1; j < U.length; j++) {
         const b = U[j];
-        if (a.miner !== b.miner) continue; // ⛏️ 광부↔전투유닛은 서로 유령 통과 (충돌 제거 — 동선은 갓길로 분리)
+        if (a.miner !== b.miner || !!a.item !== !!b.item) continue; // ⛏️ 광부·🎁 아이템 ↔ 전투유닛 유령 통과 (아이템이 병력에 밀려 제물대로 들어가 오발동하던 문제 — 크로스체크)
         let dx = b.x - a.x, dy = b.y - a.y;
         if (dx * dx + dy * dy < MINSEP * MINSEP) {
           let d = Math.hypot(dx, dy);
@@ -1950,7 +1986,7 @@ function update(dt) {
       }
     }
   }
-  for (const u of U) { pushOutOfPen(u); blockRoomWalls(u); if (isInRoom(u) && u.x > ORE_LINE) u.x = ORE_LINE; }
+  for (const u of U) { pushOutOfPen(u); blockRoomWalls(u); blockSky(u); if (isInRoom(u) && u.x > ORE_LINE) u.x = ORE_LINE; }
   // 🏛️ 결투장: 전투 유닛 1기만 (챔피언). 두 번째부터는 보이지 않는 벽에 막힌다. 광부·아이템 유닛은 무관
   if (S.champion && (S.champion.miner || S.champion.item || !U.includes(S.champion) || Math.hypot(S.champion.x - ARENA.x, S.champion.y - ARENA.y) > ARENA.r + 12)) S.champion = null;
   // 🏛️ 콜로세움: 벽·계단 없음 — 어느 방향에서든 그냥 걸어 들어간다 (유저: 벽에 끼는 버그).
@@ -1972,14 +2008,18 @@ function update(dt) {
     const sdx = u.tx - u.x, sdy = u.ty - u.y;
     if (sdx * sdx + sdy * sdy <= 64) { u.tx = u.x; u.ty = u.y; }
   }
-  // 📯 콰르텟 공속 오라: 사거리 원 안 +20% (승급2: +30%). 여러 콰르텟이면 가장 강한 것 하나만
-  const quartets = U.filter(u => u.quartet).map(q => [q, effRange(q) * effRange(q), (q.ascend || 0) >= 2 ? 0.769 : 0.833]);
-  for (const u of U) {
-    let best = 1;
-    if (!u.miner) for (const [q, r2, f] of quartets)
-      if (q !== u && (q.x - u.x) * (q.x - u.x) + (q.y - u.y) * (q.y - u.y) <= r2) best = Math.min(best, f);
-    u.spdBuff = best;
-    u.junkBuff = false;
+  // 📯 콰르텟 공속 버프: 사거리 안 가장 가까운 유닛 5기만 (2026-08-08 유저 — 고물상과 동일 방식으로 통일)
+  // 승급1: 5→7기 (구 '오라 반경 150→190' 대체), 승급2: +20%→+30%. 여러 콰르텟이면 가장 강한 배율 하나만
+  for (const u of U) { u.spdBuff = 1; u.junkBuff = false; }
+  for (const q of U) {
+    if (!q.quartet) continue;
+    const qr = effRange(q), cap = (q.ascend || 0) >= 1 ? 7 : 5, f = (q.ascend || 0) >= 2 ? 0.769 : 0.833;
+    U.filter(v => v !== q && !v.miner && !v.item && !v.clone)
+      .map(v => [Math.hypot(v.x - q.x, v.y - q.y), v])
+      .filter(([d]) => d <= qr)
+      .sort((a, b) => a[0] - b[0])
+      .slice(0, cap)
+      .forEach(([, v]) => v.spdBuff = Math.min(v.spdBuff, f));
   }
   // 💰 고물상: 사거리 안 가까운 유닛에게 킬 골드 버프 — 승급1: 5→7기, 승급2: ×1.2→×1.35 (junkBuff에 배율 저장)
   for (const j of U) {
@@ -2029,6 +2069,8 @@ function update(dt) {
     }
     if (u.chronoCd > 0) u.chronoCd = Math.max(0, u.chronoCd - dt); // ⏳ 시간술사 스킬 쿨
     if (u.slotCd > 0) u.slotCd = Math.max(0, u.slotCd - dt);       // 🎰 슬롯머신 스킬 쿨
+    if (u.jokerCd > 0) u.jokerCd = Math.max(0, u.jokerCd - dt);    // 🃏 조커 견인 스킬 쿨
+    if (u.jokerT > 0) u.jokerT = Math.max(0, u.jokerT - dt);       // 🃏 견인 지속시간
   }
   // 🌀 분신술 분신: 수명이 다하면 사라진다
   if (S.units.some(u => u.clone)) S.units = S.units.filter(u => { if (u.clone) { u.cloneLife -= dt; return u.cloneLife > 0; } return true; });
@@ -2383,7 +2425,7 @@ function update(dt) {
       }
       if (m.boss) {
         S.chips++; // 보스 처치 → 카지노 칩 지급
-        logMsg(`👹 보스 처치! +${g}G · 🎰 칩 +1 (좌측 카지노에서 사용!)`);
+        logMsg(`👹 보스 처치! +${g}G · 🎰 칩 +1 (좌측 자금 운영에서 사용!)`);
         addFloat(m.x, m.y - 20, `+${g}G · 🎰 칩+1!`, '#ffd54f', 2.6);
         for (let i = 0; i < 3; i++) S.parts.push({ x: m.x, y: m.y, vx: (Math.random()-0.5)*120, vy: -80 - Math.random()*80, coin: true, chipFx: true, t: 1.6, r: 3.4, c: '#ffd54f' });
       }
@@ -2647,7 +2689,7 @@ function areaHit(u, x, y, dmg) {
       if (u.shogun) { m.burnT = 1.5; m.burnDmg = dmg * ((u.ascend || 0) >= 1 ? 0.4 : 0.2); } // 🔥 화상 도트 (승급1: 2배)
     }
   }
-  if (u.joker) { // 🃏 낫이 닿는 범위 안의 몹을 조커 쪽으로 견인 — 상한: 승급 0/1/2 = 70/140/280마리 (가까운 순, 2026-08-03 유저 상향)
+  if (u.joker && (u.jokerT || 0) > 0) { // 🃏 견인은 이제 액티브 스킬 중에만 (2026-08-08 유저: 상시 패시브는 사기 — 쿨 60초·지속 15초)
     const pr = effRange(u), pr2 = pr * pr, asc = u.ascend || 0;
     const pt = asc >= 2 ? 0.7 : 0.45, cap = asc >= 2 ? 280 : asc >= 1 ? 140 : 70;
     const inR = [];
@@ -2812,6 +2854,13 @@ function drawLabel(text, x, y, size, col) {
   ctx.fillStyle = col || '#fff6e4';
   ctx.fillText(text, x, y);
   ctx.lineWidth = 1; ctx.lineJoin = 'miter';
+}
+// ☁️ 하늘 절벽: 유닛이 하늘로 들어가면 절벽 가장자리로 라디얼 밀어내기 (발 디딜 땅이 없다)
+function blockSky(u) {
+  if (!inSky(u.x, u.y)) return;
+  const d = Math.sqrt((u.x / SKY_CUT.rx) ** 2 + (u.y / SKY_CUT.ry) ** 2) || 1e-4;
+  const k = 1.015 / d;
+  u.x *= k; u.y *= k;
 }
 function blockRoomWalls(u) { // 이동 전 위치(u.px,u.py)와 비교해 담장을 가로질렀으면 그 축만 되돌린다 (벽 따라 미끄러져 입구를 찾게)
   const x0 = ROOM.cx - ROOM.w / 2, x1 = ROOM.cx + ROOM.w / 2, y0 = ROOM.cy - ROOM.h / 2, y1 = ROOM.cy + ROOM.h / 2;
@@ -3024,7 +3073,7 @@ const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단
     { needs: [{ tier: 1, hero: true, n: 1 }], mat: '원페어 영웅 1기', desc: '킬 골드 ×1.2 → ×1.35' },
   ],
   quartet: [
-    { needs: [{ tier: 4, n: 2 }], mat: '스트레이트 2기', desc: '오라 반경 150 → 190' },
+    { needs: [{ tier: 4, n: 2 }], mat: '스트레이트 2기', desc: '버프 대상 5기 → 7기 · 범위 +27%' }, // 근접 5기 방식 전환 (2026-08-08) — 반경 190은 리시 범위로 유지
     { needs: [{ tier: 4, n: 3 }], mat: '스트레이트 3기', desc: '공속 버프 +20% → +30%' },
   ],
   execute: [
@@ -3044,8 +3093,9 @@ const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단
     { needs: [{ tier: 3, hero: true, n: 1 }], mat: '트리플 영웅 1기', desc: '쿨타임 75초 → 55초' },
   ],
   joker: [ // 공속은 실제 발사 간격(effCd — 히든 페널티 반영) 기준. 정보창 표기와 일치시킨다
-    { needs: [{ hero: true, n: 1 }], mat: '영웅 1기', desc: '공속 2.8회/초 · 사거리 138 · 견인 최대 140마리' },
-    { needs: [{ hero: true, n: 2 }], mat: '영웅 2기', desc: '공속 4.4회/초 · 사거리 165 · 견인 280마리 + 견인 강화' },
+    // 2026-08-08 유저: 재료를 "아무 영웅"에서 레시피 계열(원페어→투페어 영웅)로 구체화
+    { needs: [{ tier: 1, hero: true, n: 1 }], mat: '원페어 영웅 1기', desc: '공속 2.8회/초 · 사거리 138 · 견인 최대 140마리' },
+    { needs: [{ tier: 1, hero: true, n: 1 }, { tier: 2, hero: true, n: 1 }], mat: '원페어·투페어 영웅 각 1기', desc: '공속 4.4회/초 · 사거리 165 · 견인 280마리 + 견인 강화' },
   ],
   catapult: [
     { needs: [{ tier: 0, n: 10 }], mat: '하이카드 10기', desc: '착탄 시 파편 4방 폭발' },
@@ -3228,6 +3278,46 @@ function skyPhase() {
   const n = S.round;
   return n > FINAL_ROUND ? 4 : n >= 60 ? 3 : n >= 40 ? 2 : n >= 20 ? 1 : 0;
 }
+// ☁️ 하늘 모퉁이 전용 색 (SKY_TINT는 '지면' 톤이라 하늘색이 따로 필요) — [상공, 지평선] 페이즈별
+const SKY_COLS = [
+  ['#7ec3ef', '#dff2ff'],  // 낮: 파란 하늘
+  ['#f5915e', '#ffe3b8'],  // 노을
+  ['#243354', '#4a5c85'],  // 밤: 남색
+  ['#3a2338', '#6e4152'],  // 붉은 달
+  ['#4a1c16', '#84392a'],  // 헬: 핏빛
+  ['#1c0b0e', '#7a2410'],  // 💀 지옥 난이도
+];
+function drawSkyCorner() {
+  if (!SKY_CUT) return;
+  const ph = skyPhase();
+  bakedLayer('skyCut|' + ph, 0, 0, SKY_CUT.rx + 4, SKY_CUT.ry + 4, () => {
+    const { rx, ry } = SKY_CUT, sc = SKY_COLS[ph] || SKY_COLS[0];
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI / 2); ctx.lineTo(0, 0); ctx.closePath();
+    ctx.clip();
+    const g = ctx.createLinearGradient(0, 0, rx * 0.6, ry * 0.75); // 코너(상공) → 림(지평선)
+    g.addColorStop(0, sc[0]); g.addColorStop(1, sc[1]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, rx, ry);
+    // 림을 따라 구름띠 — 절벽 경계를 뭉게구름이 껴안는다 (지옥 페이즈는 연기처럼 어둡게)
+    const cloudA = ph >= 4 ? 'rgba(60,30,25,0.5)' : 'rgba(255,255,255,0.55)';
+    const cloudB = ph >= 4 ? 'rgba(80,40,30,0.35)' : 'rgba(255,255,255,0.35)';
+    ctx.fillStyle = cloudA;
+    for (let i = 0; i <= 7; i++) {
+      const a = (i / 7) * Math.PI / 2;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * (rx - 9), Math.sin(a) * (ry - 9), 12 + (i % 3) * 5, 0, 6.28); ctx.fill();
+    }
+    ctx.fillStyle = cloudB;
+    for (let i = 0; i <= 6; i++) {
+      const a = (i / 6) * Math.PI / 2 + 0.09;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * (rx - 24), Math.sin(a) * (ry - 24), 9 + (i % 2) * 5, 0, 6.28); ctx.fill();
+    }
+    ctx.restore();
+    // 경계: 땅 쪽 어두운 립 (라운드 커팅이 또렷하게)
+    ctx.beginPath(); ctx.ellipse(0, 0, rx + 1, ry + 1, 0, 0, Math.PI / 2);
+    ctx.strokeStyle = 'rgba(40,55,30,0.4)'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.lineWidth = 1;
+  });
+}
 const SKY_TINT = [
   { top: '#f2fae9', bot: '#ddefc9', grass: 'rgba(124,180,95,0.6)' },   // 낮: 밝은 초원
   { top: '#faf1dd', bot: '#e8e6c0', grass: 'rgba(140,170,85,0.6)' },   // 노을: 따뜻한 빛
@@ -3346,6 +3436,7 @@ function drawFlameTongues(fscale, count, aMul) { // 불혀: 풀 자리에서 화
   ctx.globalAlpha = aMul;
   for (let gi = 0; gi < Math.min(count, GRASS_SPOTS.length); gi++) {
     const [gx, gy] = GRASS_SPOTS[gi];
+    if (inSky(gx, gy - 22)) continue; // ☁️ 하늘 림 인접 포기 — 불꽃 꼭짓점이 절벽 너머 하늘 위에서 타오르지 않게 (크로스체크)
     const f1 = Math.sin(T * 6 + gx * 0.7), f2 = Math.cos(T * 8.5 + gx);
     ctx.fillStyle = `rgba(255,${105 + 40 * f2 | 0},25,0.55)`;
     ctx.beginPath(); ctx.moveTo(gx - 5, gy);
@@ -3444,6 +3535,7 @@ function drawSpringscape() {
     });
     ctx.lineWidth = 1;
   }
+  drawSkyCorner(); // ☁️ 하늘 모퉁이 — 해보다 먼저 (해가 하늘 안에 뜬다)
   if (apocK() > 0) { drawApocSun(); } // 🌞 헬모드: 방긋 해 자리에 아포칼립스 태양이 떠오른다
   else {
     // 해 (방긋)
@@ -3505,6 +3597,7 @@ function drawStormscape() {
     rg.addColorStop(0, 'rgba(180,40,20,0)'); rg.addColorStop(1, `rgba(180,40,20,${((k - 0.8) * 0.9).toFixed(2)})`);
     ctx.fillStyle = rg; ctx.fillRect(0, cv.height - 90, cv.width, 90);
   }
+  drawSkyCorner(); // ☁️ 하늘 모퉁이 — 태양·먹구름보다 먼저
   drawApocSun(); // 🌞 헬모드: 먹구름 뒤에서 태양이 다가온다 (구름에 반쯤 가려 더 불길하게)
   // 먹구름: 2덩이 → 후반 4덩이, 점점 낮게 깔린다
   ctx.fillStyle = `rgba(70,66,86,${(0.5 + 0.2 * k).toFixed(2)})`;
@@ -3583,7 +3676,9 @@ function drawHellscape() {
   ctx.fillStyle = hg; ctx.fillRect(0, cv.height - 130, cv.width, 130);
   // 하늘의 붉은 균열 (헬 진입 후): 세계가 갈라진다
   if (hell2 > 0) drawSkyCracks(1 + Math.floor(hell2 * 3.5), 0.4 + hell2 * 0.4);
-  // 유성 (R90+): ~11초마다 하나 떨어지며 섬광
+  // 일식: 갈수록 코로나가 커지고 붉어진다 → 헬모드부터는 다가오는 진짜 태양으로 교체
+  drawSkyCorner(); // ☁️ 하늘 모퉁이 — 일식·태양·유성보다 먼저 (하늘에 뜨는 것들이 하늘 패치에 가려지지 않게)
+  // 유성 (R90+): ~11초마다 하나 떨어지며 섬광 — 하늘 모퉁이 '위'에 그린다 (크로스체크: 예전 위치는 궤적 23%가 하늘 뒤로 사라졌다)
   if (S.round >= 90) {
     const mt = (T * 0.7 + 2) % 11;
     if (mt < 0.5) {
@@ -3596,7 +3691,6 @@ function drawHellscape() {
       if (pr2 > 0.9) { ctx.fillStyle = 'rgba(255,200,120,0.08)'; ctx.fillRect(0, 0, cv.width, cv.height); }
     }
   }
-  // 일식: 갈수록 코로나가 커지고 붉어진다 → 헬모드부터는 다가오는 진짜 태양으로 교체
   if (apocK() > 0) drawApocSun();
   else {
     const sx = 170, sy = 52, cor = 15 + 6 * hk;
@@ -3615,6 +3709,7 @@ function drawHellscape() {
 }
 function drawBackdrop() {
   const ph = skyPhase(), t = SKY_TINT[ph];
+  // ☁️ 변형 배경의 하늘 모퉁이는 각 함수 '안'(태양 그리기 직전)에서 그린다 — 여기서 뒤에 그리면 태양·일식을 덮는다 (크로스체크)
   if (ph === 5) { drawHellscape(); return; }        // 💀 지옥: 아포칼립스 (이미 지옥이라 생지옥화 오버레이 불필요)
   if (DIFF_MUL === 1.4) { drawStormscape(); drawHellCreep(); return; } // 🔥 어려움: 폭풍 전야
   if (DIFF_MUL === 0.7) { drawSpringscape(); drawHellCreep(); return; } // 🌱 쉬움: 봄 소풍
@@ -3647,6 +3742,7 @@ function drawBackdrop() {
     ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(fx + sw, fy, 1.9, 0, Math.PI*2); ctx.fill();
   }
   ctx.lineWidth = 1;
+  drawSkyCorner(); // ☁️ 좌상단 라운드 컷 하늘 — 풀·꽃 위, 해·달 아래 (해·달이 하늘 안에 뜬다)
   // 해 / 달 (좌상단 하늘)
   const sx = 170, sy = 52;
   if (ph <= 1) { // 낮 태양 / 노을 태양
@@ -5377,9 +5473,10 @@ function drawUnit(u) {
       ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
     }
   }
-  drawUnitBody(u, faceX); // 망토→다리→몸통→라벨→모자 (베이크 가능 코어 — 아래 함수)
+  drawUnitBody(u, faceX); // 망토→다리→몸통→라벨 (베이크 가능 코어 — 아래 함수)
   // 🌈 영웅 홀로그램: 시간 애니메이션이라 베이크 불가 — 코어 위에 라이브로 (원래는 몸통과 라벨 사이였으나 위로 올라온 차이는 미세)
   if (u.hero || u.superAce) drawHeroHolo(u);
+  drawHeadgear(u, u.y - bodyShape(u).h / 2 - 1); // 모자도 라이브 — 횃불·왕관 반짝이 애니메이션 유지
   // 팔 + 무기 (4방향: 좌/우/상/하) — 상완만 몸에 고정, 하완+주먹은 무기 변환을 따라 움직인다
   drawUnitArm(u);
   ctx.restore();
@@ -5510,9 +5607,8 @@ function drawUnitCore(u, lw, faceX) {
     ctx.font = 'bold 8px sans-serif'; ctx.fillStyle = '#666';
     ctx.fillText(u.hero ? '★' : u.keyLabel, u.x, u.y + 8);
   }
-  // 카드 위 머리 장식 (모자/투구/왕관)
-  drawHeadgear(u, u.y - B.h/2 - 1);
   ctx.textAlign = 'left';
+  // 모자는 여기 넣지 않는다 — 횃불 불꽃·왕관 반짝이 등 S.time 애니메이션이 많아 베이크하면 얼어붙는다 (drawUnit에서 라이브)
 }
 // 🌈 영웅 홀로그램: 종족색 위에 흐르는 무지개 + 하이라이트 밴드 (슈퍼는 더 진하고 빠르게) — 시간 애니메이션이라 라이브
 function drawHeroHolo(u) {
@@ -5766,6 +5862,25 @@ function drawHeadgear(u, topY) {
       const fw = Math.sin(S.time * 4 + u.jx) * 1.5;
       ctx.beginPath(); ctx.moveTo(cx + 8, topY - 4); ctx.quadraticCurveTo(cx + 13 + fw, topY - 10, cx + 10 + fw, topY - 14); ctx.stroke();
       ctx.lineWidth = 1; return;
+  }
+  if (u.hero && u.tier === 5 && !isHiddenCombo(u)) { // 🔥 플러쉬 영웅: 가스버너 (2026-08-08 유저 — 기본 횃불보다 불이 크고 넓게, 파란 가스 코어)
+    ctx.fillStyle = '#546e7a'; ctx.fillRect(cx - 2.2, topY - 2, 4.4, 4);              // 가스 목
+    ctx.fillStyle = '#78909c'; roundRect(cx - 6, topY - 5, 12, 3.6, 1.6); ctx.fill(); // 버너 헤드 (금속 링)
+    ctx.strokeStyle = '#37474f'; ctx.lineWidth = 1; roundRect(cx - 6, topY - 5, 12, 3.6, 1.6); ctx.stroke();
+    const fl = Math.sin(S.time * 8 + u.jx) * 2.4, fl2 = Math.cos(S.time * 10 + u.jx) * 1.9;
+    ctx.fillStyle = '#ff5722'; // 바깥 불꽃 — 횃불 대비 폭 1.75배·높이 1.4배
+    ctx.beginPath(); ctx.moveTo(cx - 7, topY - 5.5);
+    ctx.quadraticCurveTo(cx - 9 + fl, topY - 14.5, cx + fl2, topY - 22.5 - Math.abs(fl));
+    ctx.quadraticCurveTo(cx + 9 + fl, topY - 14.5, cx + 7, topY - 5.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffb300'; // 속불꽃
+    ctx.beginPath(); ctx.moveTo(cx - 4.2, topY - 6);
+    ctx.quadraticCurveTo(cx - 5 + fl, topY - 13, cx + fl2 * 0.6, topY - 17.5 - Math.abs(fl) * 0.6);
+    ctx.quadraticCurveTo(cx + 5 + fl, topY - 13, cx + 4.2, topY - 6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#4fc3f7'; // 가스 코어 (파란 불 — 버너의 정체성)
+    ctx.beginPath(); ctx.ellipse(cx + fl2 * 0.4, topY - 8.5, 2.6, 4.2, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#e1f5fe';
+    ctx.beginPath(); ctx.ellipse(cx + fl2 * 0.3, topY - 7.5, 1.2, 2, 0, 0, 6.28); ctx.fill();
+    return;
   }
   if (u.hero) { drawCrown(cx, topY, { col:'#ffd54f', points:5, h:11, gem:'#e91e8c', band:'#c9a227', dome:true }); return; }
   switch (t) {
@@ -6243,13 +6358,26 @@ const OBJ_INFO = {
 };
 function showObjInfo(k) {
   S.selMon = null; // 건물 정보 표시 중엔 몬스터 실시간 갱신 안 함
+  S.selObj = k;    // 광석 HP바 실시간 갱신용 (updateHUD)
   const o = OBJ_INFO[k], el = document.getElementById('objInfo');
   const d = k === 'room' ? o.d + oreCap() + o.d2 : o.d;
+  // 💎 광석 방: 몬스터 정보처럼 현재 광석의 HP바를 함께 (2026-08-08 유저)
+  let bar = '';
+  if (k === 'room') {
+    if (S.hunt.done) bar = `<div style="margin-top:6px;color:#c9a227;font-weight:bold">🏆 10단계 완채!</div>`;
+    else {
+      const ore = ORES[Math.min(9, S.hunt.stage - 1)], ratio = Math.max(0, S.hunt.hp / S.hunt.max);
+      bar = `<div style="margin-top:7px"><b style="font-size:11.5px">${S.hunt.stage}단계: ${ore.name}</b>
+        <div style="height:9px;background:#e6e0d4;border:1px solid #b9ae99;border-radius:4px;overflow:hidden;margin-top:3px">
+          <div id="oreObjFill" data-stage="${S.hunt.stage}" style="height:100%;background:${ore.col};width:${(ratio * 100).toFixed(1)}%"></div></div>
+        <div id="oreObjTxt" style="font-size:10.5px;color:#6a5f4c;margin-top:2px">${Math.max(0, Math.round(S.hunt.hp)).toLocaleString()} / ${S.hunt.max.toLocaleString()}</div></div>`;
+    }
+  }
   const tip = o.tip; // 히든 소문은 🐦 새를 잡아야 얻는다 (여기서 공짜로 흘리지 않는다)
-  el.innerHTML = `<b>${o.t}</b><br>${d}<span class="tip">${tip}</span>`;
+  el.innerHTML = `<b>${o.t}</b><br>${d}${bar}<span class="tip">${tip}</span>`;
   el.style.display = 'block';
 }
-function hideObjInfo() { S.selMon = null; document.getElementById('objInfo').style.display = 'none'; }
+function hideObjInfo() { S.selMon = null; S.selObj = null; document.getElementById('objInfo').style.display = 'none'; }
 // 🎯 몬스터 클릭 정보 (스타크래프트처럼 이름·아기자기한 설명·실시간 체력)
 const MAT_DESC = [
   '말랑말랑 물풍선. 톡 터뜨리면 첨벙! 🫧',
@@ -6369,6 +6497,8 @@ function issueMove(px, py) {
     u.tx = t.x;
     u.ty = t.y;
     u.forceTarget = null; u.attackMine = false; u.amove = false; u.hold = false; // 이동 명령은 기존 명령 해제
+    // 🎁 아이템 유닛: 유저가 제물대를 '직접 찍었을 때만' 발동 자격 (밀림·스턱으로 박스에 들어가도 오발동 금지 — 크로스체크)
+    if (u.item) u.altarIntent = Math.abs(p.x - ALTAR.x) <= ALTAR.w / 2 + 12 && Math.abs(p.y - ALTAR.y) <= ALTAR.h / 2 + 12;
   });
   if (sel.length) S.effects.push({ type:'boom', x: p.x, y: p.y, r: 12, t: 0.2 });
 }
@@ -6496,7 +6626,7 @@ function updateInfoPanel() {
     el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>우클릭 이동 · A키+클릭 공격 지정` +
       (sel.some(u => !u.miner) ? priorityRow(commonPri) : '') +
       skHTML +
-      (canFuse ? `<br><span style="color:#8c5bff;font-weight:bold">🌀 같은 유닛 5기! 좌측 상단 포털로 이동시키면 강화!</span>` : '') +
+      (canFuse ? `<br><span style="color:#8c5bff;font-weight:bold">🌀 같은 유닛 5기! 좌측 포털로 이동시키면 강화!</span>` : '') +
       deselBtnHTML();
     wirePriorityButtons(el);
     wireDesel(el);
@@ -6540,8 +6670,8 @@ function updateInfoPanel() {
   if (u.execute) traits.push('⚔️ 빈사 몬스터 즉시 처형');
   if (u.shogun) traits.push('🔥 불타는 참격');
   if (u.chrono) traits.push('⏳ 시간 정지 스킬 (쿨 150초)');
-  if (u.slot) { traits.push('🎰 잭팟 폭격 스킬 (쿨 75초)'); traits.push('7️⃣ 카지노 슬롯의 7이 잘 붙는다'); } // 수치는 노출하지 않는다 (UI 미니멀 원칙)
-  if (u.joker) traits.push('🃏 타격한 몹을 잠깐 끌어당김 (클럼핑)');
+  if (u.slot) { traits.push('🎰 잭팟 폭격 스킬 (쿨 75초)'); traits.push('7️⃣ 자금 운영 슬롯의 7이 잘 붙는다'); } // 수치는 노출하지 않는다 (UI 미니멀 원칙)
+  if (u.joker) traits.push('🃏 견인 스킬 (지속 15초 · 쿨 60초) — 낫에 걸린 몹을 끌어당김');
   if (u.catapult) traits.push('🪨 설치형 공성병기 (이동 불가)');
   if (u.ascend) traits.push(`<b style="color:#ff6b9d">🩸 승급 Lv.${u.ascend}</b>`);
   if (u.heroUpLv) traits.push(`<b style="color:#c9971a">⭐ 단련 Lv.${u.heroUpLv} (총 공격력 +${u.heroUpLv * 15}%)</b>`);
@@ -6571,6 +6701,7 @@ function updateInfoPanel() {
     (u.miner ? '' : priorityRow(u.priority || 'near')) +
     (u.tier === 6 ? skillRow(u) : '') +
     (u.chrono ? chronoRow(u) : '') +
+    (u.joker ? jokerRow(u) : '') +
     (u.slot ? slotRow(u) : '') +
     (isHiddenCombo(u) && !u.clone ? `<br><span style="font-size:10.5px;color:#9a8a60">⭐ 단련·🩸 승급은 🏰 성에서</span>` : '') +
     ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier}) <span style="color:${u.super?'#c62828':u.hero?'#e57373':'#66bb6a'};font-size:11px">성공률 ${Math.round(copyRate(u)*100)}%</span></button>` : '') +
@@ -6581,6 +6712,7 @@ function updateInfoPanel() {
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
   if (el.querySelector('#chronoBtn')) el.querySelector('#chronoBtn').onclick = () => { activateChrono(u); updateInfoPanel(); };
   if (el.querySelector('#slotBtn')) el.querySelector('#slotBtn').onclick = () => { activateSlot(u); updateInfoPanel(); };
+  if (el.querySelector('#jokerBtn')) el.querySelector('#jokerBtn').onclick = () => { activateJoker(u); updateInfoPanel(); };
   if (el.querySelector('#copyBtn')) el.querySelector('#copyBtn').onclick = () => copyUnit(u);
 }
 // 선택 해제 ✕ 버튼 (unitInfo 우상단, 데스크톱/모바일 공용)
@@ -6589,9 +6721,10 @@ function wireDesel(el) {
   const b = el.querySelector('#deselBtn');
   if (b) b.onclick = () => { S.units.forEach(u => u.selected = false); updateInfoPanel(); };
 }
-// ⭐ 히든 영웅 단련 (종족 업글 대체 성장축 — 5000G 시작, ×1.2 완만, 상한 Lv.30 = 총 공격력 ×5.5)
+// ⭐ 히든 영웅 단련 (종족 업글 대체 성장축 — 10000G 시작, 상한 Lv.30 = 총 공격력 ×5.5)
+// ×1.2 → ×1.3 (2026-08-08 유저: 투자 복리로 돈 버는 속도가 빨라져 단련이 너무 쉬웠다). Lv10 62k→138k, Lv20 383k→1.9M.
 const HERO_UP_MAX = 30;
-function heroUpCost(u) { return Math.floor(10000 * Math.pow(1.2, u.heroUpLv || 0)); }
+function heroUpCost(u) { return Math.floor(10000 * Math.pow(1.3, u.heroUpLv || 0)); }
 function heroUpRow(u) {
   const lv = u.heroUpLv || 0;
   if (lv >= HERO_UP_MAX) return `<br><span style="color:#c9971a;font-weight:bold">⭐ 단련 완료 (Lv.${HERO_UP_MAX} · 총 공격력 ×${(1 + 0.15 * HERO_UP_MAX).toFixed(1)})</span>`;
@@ -6688,6 +6821,20 @@ function chronoRow(u) {
   const dis = cd > 0 ? 'disabled' : '';
   return `<br><button id="chronoBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:#1976d2;font-weight:bold">${label}</button>`;
 }
+// 🃏 조커 견인: 액티브 스킬 (2026-08-08 유저 — 상시 패시브는 사기여서 전환. 쿨 60초 · 지속 15초)
+function activateJoker(u) {
+  if (!u.joker || (u.jokerCd || 0) > 0 || (u.jokerT || 0) > 0) return;
+  u.jokerT = 15; u.jokerCd = 60;
+  addFloat(u.x, u.y - 28, '🃏 파티 타임!', '#8c5bff', 1.6);
+  logMsg(`🃏 ${u.weapon} 견인 개시! 15초간 낫에 걸린 몹을 끌어당깁니다.`);
+  sfx('slash');
+}
+function jokerRow(u) {
+  const t = u.jokerT || 0, cd = u.jokerCd || 0;
+  const label = t > 0 ? `🃏 견인 중… ${t.toFixed(0)}초` : (cd > 0 ? `🃏 견인 (재사용 ${cd.toFixed(0)}초)` : '🃏 견인 스킬 (지속 15초 · 쿨 60초)');
+  const dis = (t > 0 || cd > 0) ? 'disabled' : '';
+  return `<br><button id="jokerBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:#8c5bff;font-weight:bold">${label}</button>`;
+}
 // 🎰 슬롯머신: 잭팟 폭격 (소환장 안 무작위 지점에 14~22개 폭탄이 순차 낙하)
 function activateSlot(u) {
   if (!u.slot || (u.slotCd || 0) > 0) return;
@@ -6766,11 +6913,11 @@ const HAND_GUIDE = [
 ];
 // 📖 히든 조합 도감: 발견 전엔 recipe 대신 riddle(hint)을 보여준다 (localStorage dpd_hidden으로 발견 여부 판정)
 const HIDDEN_DEX = [
-  { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '주사위를 던져 1~6회 팅기는 공격 + 카지노 행운 +10%',
+  { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '주사위를 던져 1~6회 팅기는 공격 + 룰렛·슬롯 행운 +10%',
     voice: '운이야말로 실력이지. 내 주사위가 몇 번 튕길지는 나도 몰라 🎲', hint: '아래에서 셋째 칸까지 오르는 계단. 각 칸에는 제 번호만큼 세워야 한다.' },
   { id: 'junk', icon: '💰', name: '고물상', recipe: '하이카드×3 + 원페어×3 + 투페어×3', desc: '가장 가까운 유닛 5기 킬 골드 ×1.2 (지원형)',
     voice: '버려진 것들 속에 돈이 있다네. 내 곁에서 싸워보게나 💰', hint: '가장 낮은 세 족보를, 세 벌씩. 쓰레기 더미에서도 금은 반짝인다.' },
-  { id: 'quartet', icon: '📯', name: '콰르텟', recipe: '원페어·투페어·트리플·스트레이트 각 2', desc: '반경 50px 아군 공속 +20% (비중첩)',
+  { id: 'quartet', icon: '📯', name: '콰르텟', recipe: '원페어·투페어·트리플·스트레이트 각 2', desc: '가장 가까운 아군 5기 공속 +20% (승급 시 7기·+30%)',
     voice: '넷이 모여야 연주가 시작되지. 내 곁에 서면 손이 빨라질 거야 📯', hint: '사중주에는 넷이 필요하다. 아래에서 넷째 칸까지, 저마다 짝을 지어.' },
   { id: 'guillotine', icon: '⚔️', name: '길로틴', recipe: '원1+투2+트3+포4 (10기)', desc: '체력 15% 이하 즉시 처형',
     voice: '빈사의 목은 내가 거둔다. 마무리는 맡겨라 ⚔️', hint: '넷째 칸까지 오르는 계단. 다만 마지막 칸은 한참 위에 있다.' },
@@ -6860,7 +7007,7 @@ const ACHV = [
   { id: 'golden', icon: '✨', name: '황금 사냥꾼', desc: '황금 몬스터 처치' },
   { id: 'revive', icon: '🔄', name: '기사회생', desc: '부활권으로 생환' },
   { id: 'fever', icon: '🎉', name: '피버!', desc: '피버 타임 발동' },
-  { id: 'lotto50', icon: '🎰', name: '대박', desc: '카지노 100만 골드 이상 잭팟' },
+  { id: 'lotto50', icon: '🎰', name: '대박', desc: '슬롯·룰렛 100만 골드 이상 잭팟' },
   { id: 'r40', icon: '🏳️', name: '40 라운드', desc: '' },
   { id: 'r80', icon: '👹', name: '헬 게이트', desc: '80 라운드 돌파' },
   { id: 'hellclear', icon: '🌋', name: '태양 파괴자', desc: '아포칼립스 태양 격파 — 헬모드 클리어' },
@@ -6971,7 +7118,7 @@ function minerItemsHTML() {
   return `
     <div class="rpgItem"><div class="rpgIcon">⛏️</div>
       <div class="rpgInfo"><b>광부 고용</b> <span class="lv">현재 ${n}명</span><br>
-        <span class="desc">광부는 🎰 카지노에서 <b>칩 1개</b>로 고용합니다 (좌측 카지노 버튼)</span></div></div>
+        <span class="desc">광부는 💰 자금 운영에서 <b>칩 1개</b>로 고용합니다 (좌측 자금운영 버튼)</span></div></div>
     <div class="rpgItem"><div class="rpgIcon">🏃</div>
       <div class="rpgInfo"><b>이동속도</b> <span class="lv">Lv.${S.minerMoveLv}/${MINER_MAX_LV}</span> (${moveSpd})</div>
       ${S.minerMoveLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mvBtn" ${S.gold < S.minerMoveCost ? 'disabled' : ''}>💰 ${S.minerMoveCost}G</button>`}</div>
@@ -7204,14 +7351,14 @@ function emergencyBomb() {
   logMsg('💣 긴급 폭격!! 모든 몬스터 최대체력 15% 타격!');
 }
 // ===== 🎰 카지노: 단일 진입 → 메뉴 → 3섹션 =====
-function openCasino() { openChip('🎰 카지노'); casMenu(); }
+function openCasino() { openChip('💰 자금 운영'); casMenu(); }
 function casMenu() {
   // 🛒 비상 물자: 판당 3회 · 살수록 비싸진다 (유저 지정 1만/5만/10만 — 라운드 비례가 아니라 누진이라 미리 쟁여도 이득이 없다)
-  // 포커 중에도 살 수 있다 (유저 리포트: 모래·폭격이 늘 잠겨 있었다) — 전투가 아니면 '다음 전투에 예약'으로 들어간다.
+  // 2026-08-08 유저: 구매 즉시 적용이 아니라 맵에 오브젝트로 소환 → 직접 제물대로 옮겨야 발동 (타이밍 운영이 플레이가 된다)
   const V = [
-    { k: 'sand', icon: '⏱️', name: '시간의 모래', desc: '전투 +15초', max: 3 },
-    { k: 'bomb', icon: '💣', name: '긴급 폭격', desc: '모든 몹 최대체력 15% 타격', max: 3 },
-    { k: 'pray', icon: '❤️', name: '생명의 기도', desc: '목숨 +3', max: 3 },
+    { k: 'sand', it: 'sand',  icon: '⏱️', name: '시간의 모래', desc: '전투 +15초', max: 3 },
+    { k: 'bomb', it: 'vbomb', icon: '💣', name: '긴급 폭격', desc: '모든 몹 최대체력 15% 타격', max: 3 },
+    { k: 'pray', it: 'pray',  icon: '❤️', name: '생명의 기도', desc: '목숨 +3', max: 3 },
   ].map(v => Object.assign(v, { cost: valveCost(v.k) }));
   CB.innerHTML =
     `<div style="text-align:center;font-size:12px;color:#c9b8f0;margin-bottom:8px">보유 🪙 <b style="color:#ffd166">${chipTxt(S.chips)}</b>개 · 💰 <b style="color:#ffd166">${Math.floor(S.gold).toLocaleString()}G</b></div>
@@ -7226,8 +7373,7 @@ function casMenu() {
       <div style="display:flex;gap:6px">` +
     V.map(v => { const left = v.max - S.valves[v.k];
       const can = left > 0 && S.gold >= v.cost;
-      const later = S.phase !== 'wave' && v.k !== 'pray'; // 전투가 아니면 다음 전투에 들어간다
-      return `<button class="chipBtn sub" data-valve="${v.k}" style="flex:1;padding:8px 4px;font-size:11px" ${can ? '' : 'disabled'}>${v.icon} ${v.name}<br><span style="font-size:10px">${v.desc}${later ? ' <span style="color:#c9a75a">(다음 전투)</span>' : ''}</span><br><b>${(v.cost/10000)}만G</b> · 남은 ${left}회</button>`; }).join('') +
+      return `<button class="chipBtn sub" data-valve="${v.k}" style="flex:1;padding:8px 4px;font-size:11px" ${can ? '' : 'disabled'}>${v.icon} ${v.name}<br><span style="font-size:10px">${v.desc}</span><br><b>${(v.cost/10000)}만G</b> · 남은 ${left}회</button>`; }).join('') +
     `</div></div>`;
   CB.querySelector('[data-go="invest"]').onclick = () => casInvest();
   CB.querySelector('[data-go="roulette"]').onclick = () => { if (S.chips < 1) return; casRoulette(); };
@@ -7242,15 +7388,8 @@ function casMenu() {
     const v = V.find(x => x.k === b.dataset.valve);
     if (!v || S.valves[v.k] >= v.max || S.gold < v.cost) return;
     S.gold -= v.cost; S.valves[v.k]++;
-    const now = S.phase === 'wave';
-    if (v.k === 'sand') {
-      if (now) { S.timer += 15; addFloat(CX, 130, '⏱️ +15초!', '#7ec8ff', 2); logMsg('⏱️ 시간의 모래 — 이번 전투 +15초!'); }
-      else { S.pendSand++; logMsg('⏱️ 시간의 모래 — 다음 전투가 15초 길어집니다.'); }
-    } else if (v.k === 'bomb') {
-      // 전투 중이라도 몹이 아직 강림 중(무적)이면 바로 터뜨려 봐야 헛돈 → 예약해두고 대상이 생기면 자동 발동
-      if (now && S.monsters.some(m => !m.entering)) emergencyBomb();
-      else { S.pendBomb++; logMsg('💣 긴급 폭격 — 몬스터가 나타나는 즉시 떨어집니다.'); }
-    } else { S.life += 3; addFloat(HOUSE.x, HOUSE.y - 40, '❤️ +3', '#e53935', 2); logMsg('❤️ 생명의 기도 — 목숨 +3!'); }
+    spawnItemUnit(v.it); // 맵에 오브젝트로 등장 — 제물대로 옮기면 발동 (updateAltar가 처리)
+    logMsg(`🛒 ${v.name} 구매 — 맵에 배치되었습니다. 제물대로 옮기면 발동!`);
     sfx('coin'); casMenu(); updateHUD();
   });
 }
@@ -7269,7 +7408,7 @@ function casInvest() {
        <span style="color:#7ec8ff">${Math.max(0, v.matureRound - S.round)}라운드 뒤 <b style="color:#ffd166">${Math.floor(v.amt * v.mul).toLocaleString()}G</b></span>
      </div>`).join('');
   CB.innerHTML =
-    `<span class="back" onclick="casMenu()">‹ 카지노</span>` +
+    `<span class="back" onclick="casMenu()">‹ 자금 운영</span>` +
     `<div style="text-align:center;font-size:12px;color:#c9b8f0;margin-bottom:8px">보유 💰 <b style="color:#ffd166">${g.toLocaleString()}G</b>${investTotal() ? ` · 예치 중 <b style="color:#7ec8ff">${investTotal().toLocaleString()}G</b>` : ''}</div>` +
     `<div style="display:flex;gap:5px;align-items:center;margin-bottom:8px">
        <input id="invAmt" type="number" min="${INVEST_MIN}" step="100" value="${Math.min(g, Math.max(INVEST_MIN, Math.floor(g / 2)))}"
@@ -7315,7 +7454,7 @@ function casRoulette() {
   const slice = idxs[Math.floor(Math.random() * idxs.length)];
   const seg = 360 / RWHEEL.length;
   CB.innerHTML =
-    `<span class="back" onclick="casMenu()">‹ 카지노</span>` +
+    `<span class="back" onclick="casMenu()">‹ 자금 운영</span>` +
     `<div class="wheelWrap"><div class="wheel" id="wheel"></div><div class="wheelSheen"></div><div class="ballTrack" id="ballTrack"><div class="ball"></div></div><div class="wheelHub"></div><div class="wheelPointer"></div></div>` +
     `<div class="chipResult" id="rlRes">🎡 도는 중…</div>`;
   const wheel = document.getElementById('wheel'), ballTrack = document.getElementById('ballTrack');
@@ -7380,7 +7519,7 @@ function casSlot() {
     + (sevenLuck() > 1 ? '<div style="text-align:center;color:#ffd166;font-weight:bold;font-size:12px;margin-bottom:6px">🎰 슬롯머신이 릴을 봐주고 있다 — 7이 잘 붙는다</div>' : '');
   const can = S.chips >= 1; // 경제 개편: 골드 비용 삭제 — 칩 1개로만 돌린다 (유저 지정)
   CB.innerHTML =
-    `<span class="back" onclick="casMenu()">‹ 카지노</span>` + luckMsg +
+    `<span class="back" onclick="casMenu()">‹ 자금 운영</span>` + luckMsg +
     `<div style="font-size:12px;color:#c9b8f0;text-align:center">보유 <b style="color:#ffd166">${Math.floor(S.gold).toLocaleString()}G</b> · 칩 <b style="color:#ffd166">${chipTxt(S.chips)}</b>개</div>` +
     `<div class="slotBox">` + [0, 1, 2].map(i => `<div class="slotWin"><div class="slotStrip" id="srp${i}">${slotCellHTML(slotPick())}</div></div>`).join('') + `</div>` +
     `<table class="slotPay">
@@ -7584,7 +7723,7 @@ function refreshInfoOnBuffChange() { // 콰르텟/고물상 버프가 붙거나 
   if (!sel.length) { __buffSig = ''; return; }
   // 버프 상태 + 스킬 쿨타임(초 단위) — 쿨이 흐르면 정보창도 같이 갱신되어야 스킬을 제때 쓸 수 있다
   const sig = sel.map(u => `${(u.spdBuff || 1) < 1 ? 1 : 0}${u.junkBuff ? 1 : 0}` +
-    `|${Math.ceil(u.skillCd || 0)},${Math.ceil(u.skillT || 0)},${Math.ceil(u.chronoCd || 0)},${Math.ceil(u.slotCd || 0)},${Math.ceil(S.freezeT || 0)}`).join(',');
+    `|${Math.ceil(u.skillCd || 0)},${Math.ceil(u.skillT || 0)},${Math.ceil(u.chronoCd || 0)},${Math.ceil(u.slotCd || 0)},${Math.ceil(u.jokerCd || 0)},${Math.ceil(u.jokerT || 0)},${Math.ceil(S.freezeT || 0)}`).join(',');
   if (sig !== __buffSig) { __buffSig = sig; updateInfoPanel(); }
 }
 function updateHUD() {
@@ -7594,6 +7733,17 @@ function updateHUD() {
   if (S.selMon) { // 🎯 선택한 몬스터 체력 실시간 갱신 (죽거나 사라지면 팝업 닫기)
     if (S.selMon.hp <= 0 || S.selMon.dead || !S.monsters.includes(S.selMon)) hideObjInfo();
     else showMonsterInfo(S.selMon);
+  }
+  if (S.selObj === 'room') { // 💎 광석 HP바 실시간 갱신 (단계 상승·완채 순간엔 전체 재렌더 — 색·이름·🏆 갱신)
+    const f = document.getElementById('oreObjFill'), t = document.getElementById('oreObjTxt');
+    if (f && t && !S.hunt.done) {
+      if (+f.dataset.stage !== S.hunt.stage) showObjInfo('room');
+      else {
+        const ratio = Math.max(0, S.hunt.hp / S.hunt.max);
+        f.style.width = (ratio * 100).toFixed(1) + '%';
+        t.textContent = `${Math.max(0, Math.round(S.hunt.hp)).toLocaleString()} / ${S.hunt.max.toLocaleString()}`;
+      }
+    } else if (f && S.hunt.done) showObjInfo('room');
   }
   document.getElementById('tLife').textContent = S.life + (S.reviveArmed ? ' 🔄' : '');
   document.getElementById('tGold').textContent = Math.floor(S.gold).toLocaleString() + 'G';
@@ -8061,6 +8211,7 @@ function mtNoDecor(x, y) { // 데코 배치 금지 구역 (건물·레인·광�
   return false;
 }
 function baseNoDecor(lx, ly) { // 싱글맵(사분면 로컬) 데코 금지 — 건물·동선과 겹치지 않게 여유 넉넉히 (유저: 포털 앞 나무 겹침)
+  if (inSky(lx, ly) || inSky(lx, ly - 70)) return true; // ☁️ 하늘 모퉁이 + 스프라이트 높이 여유 — 데코가 하늘에 잘려 보이지 않게 (멀티맵 사분면은 그 구석 데코만 빠지는 정도라 무해)
   if (Math.abs(lx - CX) < 168 && Math.abs(ly - CY) < 126) return true;   // 소환장
   if (Math.abs(lx - ROOM.cx) < ROOM.w / 2 + 26 && Math.abs(ly - ROOM.cy) < ROOM.h / 2 + 26) return true; // 광석방
   if (Math.abs(lx - HOUSE.x) < 78 && Math.abs(ly - HOUSE.y) < 86) return true;   // 성
