@@ -3448,7 +3448,7 @@ const SKY_COLS = [
 // 🏔️ 유저 제작 절벽·폭포 모서리 (2026-08-08, DPD/art3.png 난이도 컨셉시트에서 크롭·타원 페더): art5.png = 4셀 300×210 (easy/normal/hard/hell).
 // 페이즈 매핑 = "같은 장소가 변해간다": 낮(쉬움 난이도=easy, 그 외=normal) → 노을 normal+웜틴트 → 밤·붉은달 hard(+적틴트) → 헬·지옥 hell.
 // 시각 300×210이 차단 타원(265×175)보다 살짝 크지만 초과분은 페더된 풀 가장자리라 통행 유지 — 게임플레이 무변경. BG_CLIFF_ON=false로 원복.
-const BG_CLIFF_ON = true;
+const BG_CLIFF_ON = false; // 2026-08-08 유저: "부자연스럽다, 반영하지 말고 샘플 먼저" — 컨펌 전까지 프로시저럴 하늘로 복귀
 const CLIFFART = { img: null };
 (function cliffLoadArt() {
   if (!BG_CLIFF_ON || !SKY_CUT) return;
