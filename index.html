@@ -164,6 +164,24 @@
   #duelToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
   #duelToast .dtSub { display: block; margin-top: 2px; font-size: 11px; font-weight: normal; color: #f0c39a; letter-spacing: 0; }
 
+  /* 📈 투자 시장 토스트 — 결투 토스트와 같은 형태, 금융 느낌의 초록·금색. 결투와 겹칠 수 있어 한 줄 아래(top 150) */
+  #mktToast { position: absolute; left: 50%; top: 158px; transform: translateX(-50%) translateY(-14px); width: 620px; max-width: 88%;
+    background: linear-gradient(90deg, rgba(10,36,22,0) 0%, rgba(14,48,30,0.94) 12%, rgba(20,66,40,0.96) 50%, rgba(14,48,30,0.94) 88%, rgba(10,36,22,0) 100%);
+    border-top: 1px solid rgba(120,255,180,0.5); border-bottom: 1px solid rgba(120,255,180,0.5);
+    padding: 9px 18px; text-align: center; font-size: 14px; font-weight: bold; color: #d8ffe8; letter-spacing: 0.3px;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.75); pointer-events: none; opacity: 0; z-index: 7;
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 0.9, 0.3, 1); }
+  #mktToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #mktToast .dtSub { display: block; margin-top: 2px; font-size: 11px; font-weight: normal; color: #a8dfc0; letter-spacing: 0; }
+
+  /* 📈 상단 전자시계 — LED 느낌의 개장 카운트다운. 클릭하면 투자 현황 */
+  #tIntWrap { cursor: pointer; }
+  #tIntWrap:hover #tInterest { color: #b8e0ff; }
+  .mktClock { font-family: Consolas, 'Courier New', monospace; background: #0d1a12; color: #4ade80; border: 1px solid #1e3a28;
+    border-radius: 5px; padding: 1px 6px; font-size: 11.5px; letter-spacing: 1.5px; font-weight: bold; vertical-align: 1px; }
+  .mktClock.open { color: #ffd166; border-color: #6a5417; animation: mktPulse 0.7s ease-in-out infinite alternate; }
+  @keyframes mktPulse { from { box-shadow: 0 0 2px rgba(255,209,102,0.3); } to { box-shadow: 0 0 9px 2px rgba(255,209,102,0.75); } }
+
   /* ===== 좌측 카지노 스테이션 ===== */
   #chipBar { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 6; }
   /* 포커 패널이 올라오면 그만큼(--panelH) 위로 비켜선다 — 안 그러면 패널이 통째로 덮어 클릭까지 막는다.
@@ -434,6 +452,9 @@
   .mobile[data-tab="battle"] #pokerPanel, .mobile[data-tab="battle"] #log { display: none; }
   .mobile[data-tab="poker"] #cv, .mobile[data-tab="poker"] #clock, .mobile[data-tab="poker"] #unitInfo,
   .mobile[data-tab="poker"] #objInfo, .mobile[data-tab="poker"] #chipBar { display: none; }
+  .mobile[data-tab="poker"] #mktToast { display: none; } /* 포커 탭에선 카드 위에 얹힌다 (크로스체크) — 시계가 상단에 있으니 토스트는 생략 */
+  .mobile #mktToast, .mobile #duelToast { font-size: 12px; padding: 5px 10px; } /* 모바일 캔버스(~200px)에서 토스트가 하단을 넘지 않게 슬림 */
+  .mobile #mktToast { top: 140px; } /* 모바일 결투 토스트(96+~40)와 안 겹치는 위치 */
 
   /* 📱 모바일 전투 탭: 가로에서만 풀블리드(꽉 찬 화면) — 세로는 일반 흐름 레이아웃 (둘 다 플레이 가능) */
   @media (orientation: landscape) {
@@ -465,7 +486,7 @@
   <div id="topbar">
     <span>❤️ <b id="tLife"></b></span>
     <span>💰 <b id="tGold"></b></span>
-    <span id="tIntWrap" title="📈 투자 — 카지노에서 골드를 묶어두면 만기에 불어서 돌아옵니다 (만기 전 인출 불가)"><b id="tInterest" style="color:#7ec8ff">📈 0</b></span>
+    <span id="tIntWrap" title="📈 투자 — 클릭하면 투자 현황. 장이 열려 있을 때만 예치할 수 있습니다 (만기 전 인출 불가)"><b id="tInterest" style="color:#7ec8ff">📈 0</b> <b id="tMkt" class="mktClock">--:--</b></span>
     <span>⛏️ <b id="tMiner"></b></span>
     <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 카지노에서 룰렛·슬롯·광부 고용에 사용">🎰 <b id="tChips" style="color:#c9a227">0</b></span>
     <span>🏳️ 스테이지 <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
@@ -477,6 +498,7 @@
     <div id="unitInfo"></div>
     <div id="objInfo"></div>
     <div id="duelToast"></div>
+    <div id="mktToast"></div>
     <!-- 좌측 카지노: 칩(보스·결투)으로 룰렛·슬롯·광부, 골드로 비상 물자 -->
     <div id="chipBar">
       <button class="chipStation" id="stCasino" title="카지노"><span class="ci">🎰</span><span class="cl">카지노</span></button>
@@ -595,7 +617,9 @@ const RACES = [
 const RACE_OF_RANK = [0, 1, 2, 0, 1, 2, 0, 1, 2, 0];
 const HAND_NAMES = ['하이카드','원페어','투페어','트리플','스트레이트','플러쉬','풀하우스','포카드','스트레이트 플러쉬','로얄 스트레이트 플러쉬'];
 // ♠ 에이스 배수: 두 패 일치 확률이 티어마다 수백 배씩 희귀해지므로 배수도 티어 사다리로 (기존 일괄 1.5는 투페어+ 일치가 손해였음). 슈퍼에이스 = ×2
-const ACE_MUL = [1.5, 1.5, 2.2, 3.0, 4.5, 5.5, 6.5, 8, 10, 12];
+// [4] 스트레이트 4.5 → 5.5 (2026-08-08 유저: 에이스 기관총 추가 상향). T5와 동률이 상한 — 넘기면 티어 사다리(단조 증가)가 깨진다.
+// 에이스 DPS는 상위 2종족 업글 합산이 지배해서 이 배수는 초반 체감용이다 (L0 +22%, L13 +9%).
+const ACE_MUL = [1.5, 1.5, 2.2, 3.0, 5.5, 5.5, 6.5, 8, 10, 12];
 // 족보 → 무기. atk = 공격 방식, hero = 영웅(5기 강화) 시 변형.
 // splash 계열은 다수를 동시 타격하므로 per-hit 데미지를 낮게 잡음(기존 대비 대폭 하향).
 const HERO_DMG = 5;   // 영웅 공격력 = 기본 유닛 × 5
@@ -701,7 +725,9 @@ function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > C
 // 몬스터 크기 (2배 스케일) — drawMonster/deathPop 공용
 // 크기: 밴드 진행도(esc)만큼 커진다 (③ 시각적 난이도 신호)
 // 재질별 크기 배율: 실제 공 크기 싱크 (야구공 작게 ~ 농구공 크게). 천체는 웅장하게
-const MAT_SIZE = [0.9, 0.95, 1.12, 1.18, 0.8, 0.85, 1.1, 0.9, 0.9, 1.2, 1.15, 1.25, 1.3, 1.1];
+// 2026-08-08 유저: 전체 30% 축소, 야구공(idx 4)만 20% 축소 (이미 가장 작아서 덜 줄임). 보스(52/104)는 별도 상수라 그대로.
+// 이 배열이 스프라이트 굽는 크기(matSpriteSz)와 그리는 크기(monSize) 양쪽의 유일한 원천이라 여기만 바꾸면 무손실(k=1) 유지.
+const MAT_SIZE = [0.63, 0.665, 0.784, 0.826, 0.64, 0.595, 0.77, 0.63, 0.63, 0.84, 0.805, 0.875, 0.91, 0.77];
 // 크기 성장은 '재질 밴드 안'이 아니라 '사다리 전체 진행도' 기준 (2026-08-03 유저: 축구공이 농구공보다 커 보인다).
 // 🔧 2026-08-04 유저: "같은 공인데 라운드가 지날수록 커지고, 너무 커지니 화질도 나빠진다" → 성장 0.32 → 0.
 //    크기는 이제 재질(공 종류)로만 정해진다. 이 상수만 되돌리면 성장이 살아난다 (0.12 정도가 순한 맛).
@@ -716,9 +742,22 @@ const SUN_ROUND = 150;  // 🌞 아포칼립스 태양 강림 — 헬모드 최�
 const ARENA = { x: 838, y: 278, r: 85 }; // 🏛️ 결투장: 로마 콜로세움 (×1.7) — 우측 잘림·광석방 밀착 없게 (838,278)
 // 벽·계단 없음: 어느 방향에서든 걸어 들어간다 (예전 남쪽 계단 전용 입구는 벽에 끼는 버그로 폐기)
 const DUEL_EVERY = 7;    // 도전자 주기 (보스 라운드와 겹치면 그 주는 휴장)
-// 도전자 체력: 몹HP가 아니라 "단일 유닛 DPS 성장"에 앵커 (몹HP는 유닛 수로 커버되는 곡선이라 배수로 쓰면 후반 도달 불가)
-// 실측(집중업글 단품): 스트레이트 DPS ≈ 69+3.2R → ×78초 = 스트레이트 풀타임 아슬아슬 / 풀하우스(보스판정 ×2) 26~36초 / 투페어 이하 135초+(불가능 벽)
-function duelHP(n) { return Math.floor(5400 + 250 * n); }
+// 도전자 체력 (2026-08-08 전면 재설계 — 유저: "영웅이 나오면 DPS가 확 뛰니 그걸 예상해서 확 뛰어야, 잘 큰 단일공격만 절반 안에")
+// 앵커 = 그 라운드에 현실적으로 가질 수 있는 "가장 강한 단일 유닛"의 결투 DPS(보스 ×2 포함) × 38초(신속 판정 반토막 창).
+// 실측 앵커 (강한 케이스): R7 단검 L2 230 / R14 단검 L5 280 / R21 소총영웅 L8 600 / R28 소총영웅 L10 671
+//                       / R35 저격영웅 L13 2209 / R49 저격영웅 L17 2409 / R63 쌍단검영웅 L20 7667 / 헬 = 슈퍼영웅 전용.
+// 4구간 지수 — R7~14를 2.92%/R로 낮춘 이유(크로스체크): 단일 지수(5.25%)면 R14가 자체 앵커(280×38=10,640)를 17% 초과해
+// "잘 컸을 때만 절반 안에"가 R14에서만 이론상 불가능해진다. 기본 유닛 성장(+22%/7R)이 영웅 진입기보다 완만한 걸 그대로 반영.
+// 검산: R7 8,698 / R14 10,637 / R21 16,453 / R28 25,450 (소총영웅 671 → 정확히 38초) / R35 저격영웅 17.6초·소총영웅은 ½칩
+//      / R49 90,905 저격영웅 38초 턱걸이 / R63부턴 쌍단검영웅, 헬(R84+)은 슈퍼영웅이어야 신속 판정.
+//      구곡선(5400+250n) 대비 R21 +55% · R49 +415% · R77 +1914%.
+function duelHP(n) {
+  let hp = 6080 * Math.pow(1.0525, Math.min(n, 7));        // ~R7: 기본 유닛 초창기
+  if (n > 7)  hp *= Math.pow(1.0292, Math.min(n, 14) - 7);  // R7~14: 기본 유닛 성장기 (완만)
+  if (n > 14) hp *= Math.pow(1.0643, Math.min(n, 28) - 14); // R14~28: 저티어 영웅 진입기
+  if (n > 28) hp *= Math.pow(1.0625, n - 28);               // R28+: 진짜 영웅 시대 — 여기부터 "확" 뛴다
+  return Math.floor(hp);
+}
 
 const cv = document.getElementById('cv');
 let ctx = cv.getContext('2d'); // 스프라이트 캐시 빌드 시 임시 스왑 가능하도록 let
@@ -826,7 +865,7 @@ let S;
 // 🎰 카지노 지연 보상(룰렛 5.1s·슬롯 3s·교환 0.9s)은 창을 닫아도 계속 흘러 보상을 지급한다(의도).
 // 다만 그 사이 재시작하면 '다음 판'에 골드·영웅이 꽂히므로, 판마다 세대 번호를 올려 무효화한다.
 let gameGen = 0, casTimers = [];
-let duelToastTimer = null; // 🏛️ 결투 예고 토스트 (resetTransientUI가 먼저 참조하므로 여기서 선언 — TDZ 방지)
+let duelToastTimer = null, mktToastTimer = null; // 🏛️ 결투 예고 / 📈 개장 토스트 (resetTransientUI가 먼저 참조하므로 여기서 선언 — TDZ 방지)
 function casTimeout(fn, ms) {
   const gen = gameGen;
   const id = setTimeout(() => { if (gen === gameGen) fn(); }, ms);
@@ -850,6 +889,8 @@ function resetTransientUI() {
   const rt = document.getElementById('rewardToast'); if (rt) rt.style.display = 'none';
   clearTimeout(duelToastTimer);             // 🏛️ 결투 예고가 새 판까지 걸려 있지 않게
   const dt = document.getElementById('duelToast'); if (dt) dt.classList.remove('on');
+  clearTimeout(mktToastTimer);              // 📈 개장 예고도 동일
+  const mt = document.getElementById('mktToast'); if (mt) mt.classList.remove('on');
 }
 function reset() {
   resetTransientUI();
@@ -861,6 +902,8 @@ function reset() {
     pendSand: 0, pendBomb: 0, // 포커 중에 산 모래·폭격: 다음 전투 시작에 자동 적용 (전투 중 구매는 즉시)
     duelCall: false,          // 🏛️ 모바일 전용: 포커 때 못 띄운 결투 예고를 전투 시작으로 이월
     invests: [],              // 📈 예치금 [{amt, term, mul, matureRound}] — 만기 전 인출 불가(유저 지정)
+    // 📈 투자 시장: 게임 시간 400초마다 30초 개장 (유저 지정 — 개장 때만 예치 가능, 시간을 재며 굴리는 사람의 극한 효율 보상)
+    mktNext: MKT_PERIOD, mktOpen: false, mktClose: 0, mktWarn: false,
     hunt: null, items: { reroll: 0, copier: 0 }, groups: {},
     upg: [0,0,0], upgCost: [50,50,50],
     units: [], monsters: [], effects: [], floats: [], parts: [], projs: [],
@@ -946,6 +989,18 @@ function newDeck(salt) {
     [d[i], d[j]] = [d[j], d[i]];
   }
   return d;
+}
+// 📈 투자 시장 주기 (2026-08-08 유저 지정): 게임 시간 400초마다 한 번, 30초 동안만 예치할 수 있다.
+// 개장 10초 전에 토스트로 예고("10초 뒤 장이 시작됩니다"). S.paused 동안엔 S.time이 멈추므로 시계도 같이 멈춘다
+// (카지노를 열면 게임이 멈추니, 개장 중에 창을 열고 고민하는 시간은 창구가 닫히지 않는다 — 의도).
+const MKT_PERIOD = 400, MKT_OPEN_DUR = 30;
+function showMktToast(head, line) {
+  const el = document.getElementById('mktToast');
+  if (!el) return;
+  el.innerHTML = `${head}<span class="dtSub">${line}</span>`;
+  el.classList.add('on');
+  clearTimeout(mktToastTimer);
+  mktToastTimer = casTimeout(() => el.classList.remove('on'), 5000); // 세대 토큰 경유 — 재시작 이월 방지
 }
 // 🏛️ 결투 예고 토스트 — 다음 전투가 결투장 라운드면 포커(준비) 시간에 도전자가 우리를 부른다.
 // 주기·체력 같은 수치는 노출하지 않는다 (UI 설명 미니멀 원칙) — 부르는 목소리만.
@@ -1085,6 +1140,16 @@ function confirmHand() {
       }
     });
     logMsg(res.map(r => `🃏 ${r.bs ? 'B 빽스트레이트' : rankLabel(r.keyRank) + ' ' + HAND_NAMES[r.rank]} → ${RACES[r.race].name} [${WEAPONS[r.rank].name}]`).join('  /  '));
+  }
+  // 🅰️ 에이스 탑카드 보너스 (2026-08-08 유저): 핵심 카드가 A인 족보(A원페어·A투페어·A플러쉬…)는 덤으로 A새총 1기.
+  // A하이카드(무족보+A탑)도 포함 — 유저 지정이 "등등 모두다"라 문자 그대로. 이 경우 패 자체(A새총)+보너스 = 새총 2기.
+  // 과하면 조건에 r.rank > 0 한 줄만 추가하면 유족보로 좁혀진다. 빽스트레이트는 A가 밑으로 깔린 패라 제외(keyRank 5).
+  // 에이스 잭팟 판에도 각 패 기준으로 지급. 새총은 제물대(투석기) 재료라, A패를 노리는 것이 곧 제물 수급이 된다.
+  const aceTops = res.filter(r => r.keyRank === 14 && !r.bs).length;
+  if (aceTops) {
+    for (let i = 0; i < aceTops; i++) spawnUnit(0, RACE_OF_RANK[0], false, 14);
+    logMsg(`🅰️ 에이스 탑카드 보너스! 새총 ${aceTops}기 지급`);
+    addFloat(CX, CY - 96, `🅰️ 보너스 새총 +${aceTops}`, '#ffd166', 1.6);
   }
   startWave();
 }
@@ -1559,7 +1624,10 @@ function spawnSlot(x, y) {
     keyRank: 14, keyLabel: '🎰', kills: 0,
     jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
     forceTarget: null, attackMine: false, amove: false, priority: 'near',
-    dmg: 12, cd: 1.0, range: 160, splash: 0, bounce: 0, atk: 'shot', proj: 'chip', vis: null,
+    // 2026-08-08 유저: "DPS도 쓸만하게" — 12/1.0(실효 8) → 40/0.45(실효 62). 지원 히든 중 상위, 갬블러(82)보다는 아래.
+    // ⚠️ 단일 대상(결투·보스)에선 쇼군(42)을 넘는다 — 쇼군의 무대는 무제한 광역이라 의도적으로 수용 (크로스체크에서 확인).
+    // 히든은 종족 업글을 안 받아 이 수치가 거의 전부다 (단련 +15%/Lv만 성장).
+    dmg: 40, cd: 0.45, range: 190, splash: 0, bounce: 0, atk: 'shot', proj: 'chip', vis: null,
     pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 슬롯머신', cool: 0, selected: true, walk: 0, speed: 85,
     slotCd: 0,
   });
@@ -1767,6 +1835,25 @@ function updateAltar() {
 // ==================== 게임 루프 ====================
 function update(dt) {
   S.time += dt;
+  // 📈 투자 시장 사이클: 400초마다 30초 개장. 10초 전 예고 → 개장 → 마감 (서브스텝 중복 발동은 플래그로 차단)
+  // 게임오버 가드 (크로스체크): 사망 화면은 S.paused를 안 켜므로 이 블록이 계속 돌아 죽은 화면 뒤에서 chirp·coin이 반복 재생됐다
+  if (S.phase !== 'gameover') {
+    if (!S.mktOpen) {
+      if (!S.mktWarn && S.time >= S.mktNext - 10) {
+        S.mktWarn = true;
+        showMktToast('📈 10초 뒤 장이 시작됩니다', '“돈은 준비됐겠지?”');
+        sfx('chirp');
+      }
+      if (S.time >= S.mktNext) {
+        S.mktOpen = true; S.mktClose = S.time + MKT_OPEN_DUR; S.mktWarn = false;
+        showMktToast('📈 개장! 30초 동안만 받습니다', '“기회는 기다려주지 않는다.”');
+        sfx('coin'); logMsg('📈 투자 시장 개장 — 30초 동안 예치할 수 있습니다!');
+      }
+    } else if (S.time >= S.mktClose) {
+      S.mktOpen = false; S.mktNext += MKT_PERIOD; // 개장 시각 앵커 — 주기가 밀리지 않는다
+      logMsg('📈 장 마감. 다음 개장은 시계를 볼 것.');
+    }
+  }
   if (S.hellClearT > 0) { // 🌋 태양 격파 여운 → 클리어 화면 (포커 전환 후에도 이어서 카운트)
     S.hellClearT -= dt;
     if (S.hellClearT <= 0) { S.hellClearT = 0; S.paused = true; document.getElementById('hellOverlay').style.display = 'flex'; }
@@ -2775,6 +2862,7 @@ function fireAtDuel(u) {
   const dmg = effDmg(u) * (crack ? 2 : 1);
   u.aimX = d.x; u.aimY = d.y; u.atkAnim = 1;
   d.hp -= dmg; d.hitT = 0.09;
+  sfx(u.vis === 'sword' ? 'slash' : 'shoot'); // 🔊 결투도 타격음 (2026-08-08 유저 — 일반 전투의 fireAt과 동일 규칙, 스로틀은 sfx가 처리)
   if (crack && Math.random() < 0.12) addFloat(d.x, d.y - 34, '💎 CRACK! ×2', '#7ab8ff', 0.6); // 보스 판정 표기 (가끔만 — 도배 방지)
   const m = muzzle(u);
   const col = MATERIALS[d.mat].col;
@@ -6091,7 +6179,7 @@ function monsterAt(x, y) {
   let best = null, bd = Infinity;
   for (const m of S.monsters) {
     if (m.hp <= 0 || m.dead) continue;
-    const rad = monSize(m) + (IS_MOBILE ? 16 : 8);
+    const rad = monSize(m) + (IS_MOBILE ? 21 : 12); // 패드 16/8 → 21/12: 몹 30% 축소(≈5px)로 줄어든 절대 탭 반경 보상 (크로스체크)
     const d = Math.hypot(m.x - x, m.y - y);
     if (d < rad && d < bd) { bd = d; best = m; }
   }
@@ -7002,10 +7090,14 @@ function settleInvests() {
   const due = S.invests.filter(v => S.round >= v.matureRound);
   if (!due.length) return;
   S.invests = S.invests.filter(v => S.round < v.matureRound);
-  let sum = 0;
-  for (const v of due) sum += Math.floor(v.amt * v.mul);
+  let principal = 0, sum = 0;
+  for (const v of due) { principal += v.amt; sum += Math.floor(v.amt * v.mul); }
   S.gold += sum;
-  logMsg(`📈 투자 만기! +${sum.toLocaleString()}G (${due.length}건 회수)`);
+  const rate = Math.round((sum / principal - 1) * 100);
+  logMsg(`📈 투자 만기! ${principal.toLocaleString()} → ${sum.toLocaleString()}G (+${rate}%, ${due.length}건 회수)`);
+  // 짜잔 토스트 (2026-08-08 유저: 회수할 때 "얼마 → 얼마 (수익률 몇%)"를 확실히 보여줄 것)
+  // 1.6초 지연 (크로스체크): 같은 동기 스택의 클리어/스피드 토스트를 즉시 덮어써 그쪽이 0프레임 만에 사라졌다 — 순서대로 보여준다
+  casTimeout(() => rewardToast('📈', `${principal.toLocaleString()} → ${sum.toLocaleString()}G (+${rate}%)`, '#2e9e5b', '투 자 만 기'), 1600);
   // 캔버스 상단 중앙 — 하단에 띄우면 포커 패널이 덮는다 (구 이자 플로트와 같은 이유)
   addFloat(CX, 120, `📈 만기 +${sum.toLocaleString()}G`, '#7ec8ff', 2.4);
   sfx('coin');
@@ -7071,6 +7163,12 @@ function casMenu() {
   });
 }
 // --- 📈 투자: 금액을 정하고 기간을 고르면 그 라운드 수만큼 잠긴다 (중도 인출 없음) ---
+// 예치는 개장(400초마다 30초) 중에만 — 닫혀 있으면 현황판 + 다음 개장 카운트다운만 보여준다.
+function mktClockTxt() {
+  if (S.mktOpen) return `개장 중 — ${Math.max(0, Math.ceil(S.mktClose - S.time))}초 남음`;
+  const s = Math.max(0, Math.ceil(S.mktNext - S.time));
+  return `장 마감 — 다음 개장 ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
 function casInvest() {
   const g = Math.floor(S.gold);
   const rows = S.invests.slice().sort((a, b) => a.matureRound - b.matureRound).map(v =>
@@ -7088,16 +7186,18 @@ function casInvest() {
        <button class="chipBtn sub" id="invAll" style="padding:6px 8px;font-size:11px">전액</button>
      </div>` +
     `<div style="display:flex;gap:6px">` +
-    INVEST_TERMS.map(t => `<button class="chipBtn sub" data-term="${t.term}" style="flex:1;padding:9px 4px;font-size:12px">
+    INVEST_TERMS.map(t => `<button class="chipBtn sub" data-term="${t.term}" style="flex:1;padding:9px 4px;font-size:12px" ${S.mktOpen ? '' : 'disabled'}>
         <b style="color:#ffd166">${t.term}라운드</b><br><span style="font-size:14px;font-weight:bold">×${t.mul}</span></button>`).join('') +
     `</div>` +
-    `<div style="text-align:center;font-size:10.5px;color:#9a8a60;margin-top:7px">묶는 동안엔 꺼내 쓸 수 없습니다</div>` +
+    `<div style="text-align:center;font-size:11px;margin-top:7px;font-weight:bold;color:${S.mktOpen ? '#4ade80' : '#c98a8a'}">⏱ ${mktClockTxt()}</div>` +
+    `<div style="text-align:center;font-size:10.5px;color:#9a8a60;margin-top:3px">묶는 동안엔 꺼내 쓸 수 없습니다</div>` +
     (rows ? `<div style="margin-top:10px;border-top:1px dashed rgba(201,167,90,0.4);padding-top:6px">
        <div style="font-size:12px;color:#c9a75a;font-weight:bold;margin-bottom:3px">📈 예치 중</div>${rows}</div>` : '');
   const amtEl = document.getElementById('invAmt');
   document.getElementById('invHalf').onclick = () => { amtEl.value = Math.floor(S.gold / 2); };
   document.getElementById('invAll').onclick = () => { amtEl.value = Math.floor(S.gold); };
   CB.querySelectorAll('[data-term]').forEach(b => b.onclick = () => {
+    if (!S.mktOpen) return; // 개장 중에만 (버튼 disabled와 이중 방어 — 열어둔 채 마감된 경우)
     const t = INVEST_TERMS.find(x => x.term === +b.dataset.term);
     const amt = Math.floor(+amtEl.value || 0);
     if (!t || !(amt >= INVEST_MIN) || amt > Math.floor(S.gold)) { // NaN·음수·초과 전부 여기서 걸린다
@@ -7266,6 +7366,8 @@ function doExchange() {
   }, 900);
 }
 document.getElementById('stCasino').onclick = () => { initAudio(); openCasino(); };
+// 📈 상단 투자 위젯 클릭 → 투자 현황 바로 열기 (2026-08-08 유저 지정)
+document.getElementById('tIntWrap').onclick = () => { initAudio(); openChip('📈 투자'); casInvest(); };
 
 // ==================== 라운드 이벤트 (난이도 곡선 사이 변주) ====================
 const EVENTS = [
@@ -7409,6 +7511,16 @@ function updateHUD() {
     const near = Math.min(...S.invests.map(v => v.matureRound)) - S.round;
     iv.textContent = `📈 ${investTotal().toLocaleString()}G (${Math.max(0, near)}R)`;
   } else iv.textContent = '📈 0';
+  // ⏱ 개장 전자시계: 닫힘 = 다음 개장까지 m:ss / 개장 중 = 남은 초 (금색 펄스)
+  const mk = document.getElementById('tMkt');
+  if (S.mktOpen) {
+    mk.textContent = 'OPEN ' + Math.max(0, Math.ceil(S.mktClose - S.time)) + 's';
+    mk.classList.add('open');
+  } else {
+    const s = Math.max(0, Math.ceil(S.mktNext - S.time));
+    mk.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    mk.classList.remove('open');
+  }
   document.getElementById('tMiner').textContent = S.units.filter(u => u.miner).length + '명';
   document.getElementById('tChips').textContent = chipTxt(S.chips); // 결투 반 개 칩 표기 (½·1½…)
   // 좌측 카지노 스테이션: 칩 있으면 활성 + 빛남
@@ -7521,11 +7633,13 @@ function sfx(type, arg) {
   else if (type === 'thud') { tone(88, 0.16, 'sine', sfxGain, 0.28); noiseBurst(0.1, 0.13, 500, 'lowpass'); } // 쿵
   else if (type === 'chirp') { tone(900, 0.05, 'sine', sfxGain, 0.10); tone(1400, 0.05, 'sine', sfxGain, 0.10, AC.currentTime + 0.055); } // 🐦 힌트 새 짹짹
 }
-const MELODY = [293.7,0,440,349.2, 392,0,440,349.2, 261.6,0,329.6,392, 293.7,349.2,440,0]; // D 도리안 (A파트)
-const BASS =   [146.8,0,0,0, 130.8,0,0,0, 174.6,0,0,0, 146.8,0,0,0];
-// B파트 변주: 같은 D 도리안, 위로 뻗었다 내려오는 프레이즈 (AABA 구성으로 지루함 방지)
-const MELODY_B = [349.2,0,523.3,440, 392,0,349.2,329.6, 293.7,0,440,523.3, 587.3,523.3,440,0];
-const BASS_B =   [174.6,0,0,0, 196,0,0,0, 146.8,0,0,0, 110,0,0,0];
+// 🏰 중세 트랙 (2026-08-08 유저: "지브리톤 → 중세 느낌, 새소리·바람, 잔잔하지만 중독성 있게")
+// D 도리안, AABA. A = 묻는 프레이즈(D에서 떠올라 F에 걸침 — 해소를 원하게), B = 답(C5에서 D4로 내려와 종지).
+// 후크는 8~11스텝의 F–G–A–C 상승 러닝 — 매 A마디마다 반복되어 귀에 남는다.
+const MELODY = [293.7,0,349.2,392, 440,0,440,392, 349.2,392,440,523.3, 440,392,349.2,0]; // A파트
+const BASS =   [146.8,0,0,0, 174.6,0,0,0, 196,0,0,0, 146.8,0,0,0];
+const MELODY_B = [523.3,0,587.3,523.3, 440,0,392,440, 349.2,0,392,329.6, 293.7,0,293.7,0]; // B파트 (D 종지)
+const BASS_B =   [130.8,0,0,0, 110,0,0,0, 196,0,0,0, 146.8,0,0,0];
 // 💀 지옥: D 프리지안 (b2가 만드는 불길함) — 낮은 옥타브, 느린 프레이즈
 const MELODY_HELL   = [146.8,0,0,155.6, 146.8,0,116.5,0, 130.8,0,0,146.8, 155.6,0,146.8,0];
 const MELODY_HELL_B = [174.6,0,155.6,0, 146.8,0,0,130.8, 116.5,0,0,110, 146.8,0,0,0];
@@ -7545,24 +7659,55 @@ function startMusic() {
       if (i % 8 === 4) { tone(49, 0.35, 'sine', musicGain, 0.5); noiseBurst(0.08, 0.05); } // 멀리서 쿵… 하는 북
       if (Math.random() < 0.012) tone(58, 1.6, 'sawtooth', musicGain, 0.07); // 가끔 낮은 우르릉
     } else {
-      // 🏰 중세 판타지: 류트 아르페지오 + 허디거디 드론 + 하프 배음 + 평화로울 땐 새소리
+      // 🏰 중세: 류트(디튠 더블) + 오르가눔 평행 5도 + 백파이프 드론 + 상시 바람 + 평화로울 땐 새
       const MEL = bar === 2 ? MELODY_B : MELODY, BS = bar === 2 ? BASS_B : BASS;
-      if (i === 0) { tone(73.4, 4.3, 'sine', musicGain, 0.14); tone(110, 4.3, 'sine', musicGain, 0.09); } // 드론 (D2+A2, 백파이프처럼 마디 내내)
+      if (i === 0) { tone(73.4, 4.3, 'sine', musicGain, 0.14); tone(110, 4.3, 'sine', musicGain, 0.09); } // 드론 (D2+A2, 마디 내내)
       if (MEL[i]) {
-        tone(MEL[i], 0.22, 'triangle', musicGain, 0.45);                 // 류트 본음
-        tone(MEL[i] * 2, 0.14, 'sine', musicGain, 0.13);                 // 하프 배음 (한 옥타브 위 반짝)
+        tone(MEL[i], 0.26, 'triangle', musicGain, 0.4);                  // 류트 본음
+        tone(MEL[i] * 1.005, 0.22, 'triangle', musicGain, 0.13);         // 살짝 디튠 더블 — 현악 합주의 온기
+        tone(MEL[i] * 2, 0.12, 'sine', musicGain, 0.1);                  // 하프 배음 반짝
+        if (i % 4 === 0) tone(MEL[i] * 2 / 3, 0.32, 'triangle', musicGain, 0.14); // 오르가눔: 강박마다 평행 5도 아래 — 즉석 중세
       }
-      if (BS[i]) tone(BS[i], 0.42, 'sine', musicGain, 0.6);
-      if (i === 8 && bar !== 2) tone(220, 0.3, 'triangle', musicGain, 0.12); // 마디 중간 5도 장식음
+      if (BS[i]) tone(BS[i], 0.5, 'sine', musicGain, 0.55);
       if (S && S.phase === 'wave' && i % 4 === 2) noiseBurst(0.03, 0.05); // 전투 중엔 은은한 셰이커로 긴장감
-      else if (S && S.phase !== 'wave' && Math.random() < 0.025) {       // 🐦 평화로울 땐 이따금 새가 짹짹
-        const f = 1250 + Math.random() * 650, t0 = AC.currentTime;
-        tone(f, 0.05, 'sine', musicGain, 0.09); tone(f * 1.25, 0.06, 'sine', musicGain, 0.08, t0 + 0.07);
-        if (Math.random() < 0.5) tone(f * 1.1, 0.05, 'sine', musicGain, 0.06, t0 + 0.16);
-      }
+      else if (S && S.phase !== 'wave' && Math.random() < 0.055) birdCall(); // 🐦 평화로울 땐 새 (빈도 0.025→0.055)
     }
+    windTick(); // 🌬️ 바람은 페이즈·난이도 무관 상시 (지옥에서도 스산하게 분다)
     musicStep++;
   }, 250);
+  startWind();
+}
+// 🌬️ 바람: 루프 노이즈 → 저역 필터 → 게인. 세기는 musicStep을 따라 천천히 출렁이고 가끔 돌풍.
+// musicGain을 거치므로 음악 토글로 함께 꺼진다.
+let windSrc = null, windGainNode = null;
+function startWind() {
+  if (windSrc || !AC) return;
+  const buf = AC.createBuffer(1, AC.sampleRate * 3, AC.sampleRate);
+  const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  windSrc = AC.createBufferSource(); windSrc.buffer = buf; windSrc.loop = true;
+  const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 420; f.Q.value = 0.4;
+  windGainNode = AC.createGain(); windGainNode.gain.value = 0.05;
+  windSrc.connect(f); f.connect(windGainNode); windGainNode.connect(musicGain);
+  windSrc.start();
+}
+function windTick() {
+  if (!windGainNode) return;
+  const target = 0.04 + 0.035 * (0.5 + 0.5 * Math.sin(musicStep * 0.11)) + (Math.random() < 0.02 ? 0.06 : 0);
+  windGainNode.gain.linearRampToValueAtTime(target, AC.currentTime + 0.25);
+}
+// 🐦 새: 위로 감아 올리는 짧은 지저귐 2~4음 (매번 음높이·리듬이 조금씩 다르다)
+function birdCall() {
+  const t0 = AC.currentTime, base = 1900 + Math.random() * 900, n = 2 + (Math.random() * 3 | 0);
+  for (let k = 0; k < n; k++) {
+    const t = t0 + k * (0.09 + Math.random() * 0.05);
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(base * (0.9 + Math.random() * 0.2), t);
+    o.frequency.exponentialRampToValueAtTime(base * (1.25 + Math.random() * 0.3), t + 0.05);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.07, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    o.connect(g); g.connect(musicGain); o.start(t); o.stop(t + 0.09);
+  }
 }
 document.getElementById('bMusic').onclick = () => {
   initAudio();
@@ -8673,7 +8818,9 @@ let perfU = 0, perfD = 0, perfN = 0, perfText = '';
 let last = performance.now();
 const BASE_SPEED = 1.3; // 게임 기본 진행 속도 (2배속 시 실질 2.6배)
 function frame(now) {
-  let dt = Math.min((now - last) / 1000, 0.05) * BASE_SPEED;
+  // dt 하한 0: 시계가 어떤 이유로든 되감기면(rAF 타임스탬프 혼선·테스트 하네스) 음수 dt가 born 등을 크게 음수로 만들어
+  // 캔버스 음수 반지름 → draw 프레임 통째 취소로 이어진다. 실플레이에선 단조 증가지만 클램프 한 줄로 부류 전체를 차단.
+  let dt = Math.max(0, Math.min((now - last) / 1000, 0.05)) * BASE_SPEED;
   last = now;
   if (S.mapTest) { // 🏗️ 멀티맵 미리보기: 실게임 update/draw/HUD 전부 우회
     try { updateMapTest(dt); drawMapTest(); } catch (e) { reportLoopError('maptest', e); }
