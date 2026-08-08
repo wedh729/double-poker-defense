@@ -3456,16 +3456,87 @@ const CLIFFART = { img: null };
   im.onload = () => { CLIFFART.img = im; for (const k of [...bldgLayers.keys()]) if (k.startsWith('skyCut|')) bldgLayers.delete(k); }; // 프로시저럴로 구운 하늘만 무효화
   im.src = 'assets/art5.png';
 })();
+// 셀별 메타: g = 경계 잔디톤(주변 블렌드·질감 반점용, art5 경계 실측 평균) / fx±fw·fy = 폭포 밴드 / w1·w2 = 물줄기 색(진한, 밝은)
+const CLIFF_META = [
+  { g: [106,131,31], fx: 115, fw: 14, fy: 72, w1: 'rgba(205,238,255,', w2: 'rgba(255,255,255,' }, // easy: 청량한 폭포 (짧은 낙차 — 베이스 y72)
+  { g: [55,74,29],   fx: 124, fw: 14, fy: 108, w1: 'rgba(185,222,255,', w2: 'rgba(255,255,255,' }, // normal
+  { g: [17,46,64],   fx: 81,  fw: 16, fy: 148, w1: 'rgba(140,195,255,', w2: 'rgba(215,238,255,' }, // hard: 폭풍 속 푸른 폭포
+  { g: [75,31,22],   fx: 121, fw: 16, fy: 140, w1: 'rgba(255,140,30,',  w2: 'rgba(255,215,80,'  }, // hell: 용암 폭포 (느리게). fy 140 = 물보라가 차단 타원 안에 온전히 들어가는 상한 (155면 보행 지면 침범 — 크로스체크)
+];
+// 💧☁️ 라이브 오버레이 — S.time 애니메이션이라 베이크 금지 (베이크했다 얼어붙은 횃불 회귀의 교훈)
+function drawCliffLive(cell, ph) {
+  const m = CLIFF_META[cell], t = S.time;
+  // 폭포 물줄기: 아래로 흐르는 하이라이트 3줄 (용암은 절반 속도)
+  const spd = cell === 3 ? 36 : 92;
+  for (let i = 0; i < 3; i++) {
+    const sx = m.fx + (i - 1) * m.fw * 0.55 + Math.sin(t * 0.8 + i * 2.1) * 1.5;
+    const len = 30 + i * 9;
+    const yOff = ((t * spd * (1 + i * 0.18) + i * 47) % (m.fy + len)) - len;
+    const y0 = Math.max(0, yOff), y1 = Math.min(m.fy, yOff + len);
+    if (y1 <= y0) continue;
+    const gr = ctx.createLinearGradient(0, yOff, 0, yOff + len);
+    const col = i === 1 ? m.w2 : m.w1;
+    gr.addColorStop(0, col + '0)'); gr.addColorStop(0.5, col + (cell === 3 ? '0.5)' : '0.38)')); gr.addColorStop(1, col + '0)');
+    ctx.fillStyle = gr;
+    roundRect(sx - 2.2, y0, 4.4, y1 - y0, 2.2); ctx.fill();
+  }
+  // 물보라: 낙하점 안개 + 튀는 물방울 (맥동)
+  ctx.fillStyle = m.w2 + (0.09 + 0.05 * Math.sin(t * 5)).toFixed(2) + ')';
+  ctx.beginPath(); ctx.ellipse(m.fx, m.fy, m.fw * 1.15, 5.5, 0, 0, 6.28); ctx.fill();
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = m.w2 + ((0.5 + 0.5 * Math.sin(t * 6 + i * 2.09)) * 0.45).toFixed(2) + ')';
+    const px = m.fx + Math.sin(t * 3.1 + i * 2.7) * m.fw * 0.8;
+    ctx.beginPath(); ctx.arc(px, m.fy - 2 - Math.abs(Math.sin(t * 4 + i)) * 5, 1.6, 0, 6.28); ctx.fill();
+  }
+  // 구름 2점: 하늘을 천천히 드리프트 (페이즈색, 코너 타원 클립 + 우측 진입 전 페이드)
+  const cc = ph >= 4 ? '80,48,40' : ph >= 2 ? '182,192,224' : '255,255,255';
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(0, 0, 296, 207, 0, 0, Math.PI / 2); ctx.lineTo(0, 0); ctx.closePath(); ctx.clip();
+  for (let i = 0; i < 2; i++) {
+    const cx2 = ((t * (5.5 + i * 3) + i * 170) % 340) - 40, cy2 = 15 + i * 21, cw2 = 26 - i * 7;
+    const fade = Math.max(0, Math.min(1, (262 - cx2) / 50));
+    if (!fade) continue;
+    ctx.fillStyle = `rgba(${cc},${((0.34 - i * 0.08) * fade).toFixed(2)})`;
+    ctx.beginPath();
+    ctx.arc(cx2, cy2, cw2 * 0.42, 0, 6.28);
+    ctx.arc(cx2 - cw2 * 0.42, cy2 + 3, cw2 * 0.3, 0, 6.28);
+    ctx.arc(cx2 + cw2 * 0.45, cy2 + 2.5, cw2 * 0.33, 0, 6.28);
+    ctx.fill();
+  }
+  ctx.restore();
+}
 function drawSkyCorner() {
   if (!SKY_CUT) return;
   const ph = skyPhase();
   if (CLIFFART.img) {
     const cell = ph >= 4 ? 3 : ph >= 2 ? 2 : ph === 1 ? 1 : (DIFF_MUL === 0.7 ? 0 : 1);
-    bakedLayer('skyCut|A' + ph + cell, 0, 0, 300, 210, () => {
+    const gc = CLIFF_META[cell].g;
+    bakedLayer('skyCut|A' + ph + cell, 0, 0, 470, 330, () => {
+      // ① 주변 지면을 아트 잔디톤으로 수렴 — 아트 페더 밖 ~1.5배 타원까지 양방향 블렌드 (유저: "한 이미지로 연결")
+      ctx.save();
+      ctx.scale(1, 0.7); // 원형 그라데이션 → (465, 326) 타원
+      const bg2 = ctx.createRadialGradient(0, 0, 232, 0, 0, 465);
+      bg2.addColorStop(0, `rgba(${gc[0]},${gc[1]},${gc[2]},0.55)`);
+      bg2.addColorStop(0.55, `rgba(${gc[0]},${gc[1]},${gc[2]},0.28)`);
+      bg2.addColorStop(1, `rgba(${gc[0]},${gc[1]},${gc[2]},0)`);
+      ctx.fillStyle = bg2; ctx.fillRect(0, 0, 470, 472);
+      ctx.restore();
+      // ② 질감 다리: 아트 톤 풀 반점을 전환부(반경 0.92~1.34)에 흩뿌림 — 시드 고정 LCG라 베이크 결정적
+      let sd = 7;
+      const rnd = () => (sd = (Math.imul(sd, 1103515245) + 12345) & 0x7fffffff) / 0x7fffffff; // imul: 53비트 초과 정밀도 손실 방지
+      for (let i = 0; i < 26; i++) {
+        const a = 0.09 + rnd() * 1.42, rr = 0.92 + rnd() * 0.42;
+        const px = Math.cos(a) * 300 * rr, py = Math.sin(a) * 210 * rr;
+        const dk = rnd() < 0.5 ? -22 : 16;
+        ctx.fillStyle = `rgba(${gc[0]+dk},${gc[1]+dk},${gc[2]+dk},${(0.25 + rnd() * 0.3).toFixed(2)})`;
+        ctx.beginPath(); ctx.ellipse(px, py, 2 + rnd() * 3.5, 1.2 + rnd() * 2, rnd() * 3.14, 0, 6.28); ctx.fill();
+      }
+      // ③ 절벽 아트
       ctx.drawImage(CLIFFART.img, cell * 300, 0, 300, 210, 0, 0, 300, 210);
-      const tint = ph === 1 ? 'rgba(245,145,94,0.20)' : ph === 3 ? 'rgba(150,30,60,0.25)' : null; // 노을·붉은달은 hard/normal 셀 위 틴트로 변주
-      if (tint) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = tint; ctx.fillRect(0, 0, 300, 210); ctx.globalCompositeOperation = 'source-over'; }
+      const tint = ph === 1 ? 'rgba(245,145,94,0.20)' : ph === 3 ? 'rgba(150,30,60,0.25)' : null; // 노을·붉은달은 틴트 변주 (블렌드·반점까지 함께 물든다)
+      if (tint) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = tint; ctx.fillRect(0, 0, 470, 330); ctx.globalCompositeOperation = 'source-over'; }
     });
+    drawCliffLive(cell, ph); // 💧☁️ 폭포·구름은 매 프레임
     return;
   }
   bakedLayer('skyCut|' + ph, 0, 0, SKY_CUT.rx + 4, SKY_CUT.ry + 4, () => {
