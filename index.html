@@ -5047,7 +5047,25 @@ function drawMatStatic(x, y, sz, mat, esc, c, broken = 0) {
 }
 // 장비 (밴드 후반부 대체): 미니멀 투구·갑옷 — 프로시저럴·아트 몹 공용 (난이도 신호는 아트 위에도 얹는다)
 // gearCount: 0=맨몸 1=투구 2=투구+갑옷. broken: 부서진 개수(갑옷 먼저, 그다음 투구) — 부서진 장비는 그리지 않는다.
+// 🎨 유저 제작 아트 (2026-08-08, DPD_gear_helmet_armor): 1024² 투명 PNG, 캔버스 중앙 지름 800 원이 공 몸통 기준.
+//    두 장이 다 로드되면 프로시저럴 대신 이미지 컴포지트 — GEAR_ART_ON = false 한 줄로 즉시 원복.
+const GEAR_ART_ON = true;
+const GEARART = { helmet: null, armor: null, n: 0 };
+(function gearLoadArt() {
+  if (!GEAR_ART_ON) return;
+  for (const k of ['helmet', 'armor']) {
+    const im = new Image();
+    im.onload = () => { GEARART[k] = im; if (++GEARART.n === 2) Object.keys(matSprites).forEach(kk => delete matSprites[kk]); }; // 로드 완료 → 구운 스프라이트 무효화
+    im.src = 'assets/gear_' + k + '.png';
+  }
+})();
 function drawMonGear(x, y, sz, gearCount, broken) {
+  if (GEARART.n === 2) { // 이미지 아트: 지름 800 기준 → k = sz/400, 이미지 중심(512,512) = 공 중심
+    const k = sz / 400;
+    if (gearCount >= 2 && broken < 1) ctx.drawImage(GEARART.armor, x - 512 * k, y - 512 * k, 1024 * k, 1024 * k);
+    if (gearCount >= 1 && broken < gearCount) ctx.drawImage(GEARART.helmet, x - 512 * k, y - 512 * k, 1024 * k, 1024 * k);
+    return;
+  }
   if (gearCount >= 2 && broken < 1) { // 갑옷: 하단 ~40% 판금 (원에 클립된 하단 현)
     ctx.save(); ctx.beginPath(); ctx.arc(x, y, sz, 0, 6.28); ctx.clip();
     ctx.fillStyle = '#7e8694';
