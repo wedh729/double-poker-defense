@@ -3504,11 +3504,11 @@ function sampleTerrainTone() {
 }
 // 셀별 메타: fx±fw·fy = 폭포 밴드(art5 픽셀 실측) / w1·w2 = 물줄기 색(진한, 밝은)
 const CLIFF_META = [
-  { fx: 115, fw: 14, fy: 72, w1: 'rgba(205,238,255,', w2: 'rgba(255,255,255,' }, // easy: 청량한 폭포 (짧은 낙차 — 베이스 y72)
-  { fx: 124, fw: 14, fy: 108, w1: 'rgba(185,222,255,', w2: 'rgba(255,255,255,' }, // normal
-  { fx: 81,  fw: 16, fy: 148, w1: 'rgba(140,195,255,', w2: 'rgba(215,238,255,' }, // hard (현재 미사용 — 밤 무드는 앰비언트 담당)
-  { fx: 121, fw: 16, fy: 140, w1: 'rgba(255,140,30,',  w2: 'rgba(255,215,80,'  }, // hell: 용암 폭포 (느리게). fy 140 = 물보라가 차단 타원 안 상한 (155면 보행 지면 침범 — 크로스체크)
-];
+  { fx: 115, fw: 14, fy: 72, fy0: 0, fy1: 72, w1: 'rgba(205,238,255,', w2: 'rgba(255,255,255,' }, // easy: 청량한 폭포 (짧은 낙차 — 베이스 y72)
+  { fx: 124, fw: 14, fy: 108, fy0: 0, fy1: 108, w1: 'rgba(185,222,255,', w2: 'rgba(255,255,255,' }, // normal
+  { fx: 81,  fw: 16, fy: 148, fy0: 0, fy1: 148, w1: 'rgba(140,195,255,', w2: 'rgba(215,238,255,' }, // hard (현재 미사용 — 밤 무드는 앰비언트 담당)
+  { fx: 121, fw: 16, fy: 140, fy0: 0, fy1: 140, slow: true, w1: 'rgba(255,140,30,',  w2: 'rgba(255,215,80,'  }, // hell: 용암 폭포 (느리게). fy 140 = 물보라가 차단 타원 안 상한 (155면 보행 지면 침범 — 크로스체크)
+]; // ⚠️ fy0/fy1/slow는 drawCliffLive 신 스키마 필수 — 빠지면 span NaN → createLinearGradient throw → 폴백 화면 전체 사망 (08-10 크로스체크 P0)
 // 🖼️ 유저 제작 풀맵 배경 (2026-08-09, DPD_backgrounds_revised): 빈 지형 4장 1880×1000 webp — 지면 전체 교체 (합성 이음새 원천 제거).
 // sbGround()가 진입점이라 기존 if(!art) 가드들이 프로시저럴 베이스·풀·꽃을 자동 생략. BG_FULL_ON=false 한 줄로 이전 경로 복귀.
 const BG_FULL_ON = true;
@@ -3622,8 +3622,11 @@ function bgFallPrep(key) {
   const ty = centers[0][0], by = centers[centers.length - 1][0];
   const tx = m * ty + c0, bx = m * by + c0;
   const len = Math.hypot(bx - tx, by - ty);
+  let exs = 0; const tn = Math.min(4, centers.length);
+  for (let i = centers.length - tn; i < centers.length; i++) exs += centers[i][1];
+  const ex = exs / tn; // 낙하점 = 마스크 꼬리 실제 중심 평균 — 직선 외삽은 곡선 폭포(hard)에서 물줄기 밖으로 벗어남 (08-10 크로스체크 P2)
   const off = document.createElement('canvas'); off.width = w; off.height = h;
-  store[key] = { x0, y0, w, h, mask, off, tx, ty, ux: (bx - tx) / len, uy: (by - ty) / len, len, hw: 16, lava: !!a.lava };
+  store[key] = { x0, y0, w, h, mask, off, tx, ty, ux: (bx - tx) / len, uy: (by - ty) / len, len, hw: 16, lava: !!a.lava, ex, ey: by };
   return store[key];
 }
 function drawFallFlow(key) {
@@ -3650,8 +3653,8 @@ function drawFallFlow(key) {
   og.drawImage(F.mask, 0, 0);
   og.globalCompositeOperation = 'source-over';
   ctx.drawImage(F.off, F.x0, F.y0);
-  // 낙하점 물방울 (마스크 하단 = bx,by 부근 맥동)
-  const bx2 = F.tx + F.ux * F.len, by2 = F.ty + F.uy * F.len;
+  // 낙하점 물방울 (마스크 꼬리 실측 중심 부근 맥동)
+  const bx2 = F.ex, by2 = F.ey;
   for (let i = 0; i < 3; i++) {
     const col = F.lava ? '255,215,80' : '255,255,255';
     ctx.fillStyle = `rgba(${col},${((0.5 + 0.5 * Math.sin(t * 6 + i * 2.09)) * 0.4).toFixed(2)})`;
@@ -3833,6 +3836,7 @@ const SKY_TINT = [
 const GRASS_SPOTS = [[60,180],[150,325],[245,140],[330,462],[425,95],[545,425],[625,185],[700,335],[185,462],[762,472],[520,152],[885,245],[70,300],[890,120]];
 const FLOWER_SPOTS = [[112,252,'#f06292'],[592,302,'#ba68c8'],[825,398,'#f06292']];
 const STAR_SPOTS = [[95,42],[140,72],[228,38],[262,88],[330,52],[560,42],[610,92],[650,60],[210,120],[370,105]];
+const STAR_SPOTS_FULL = [[14,12],[38,26],[66,10],[92,6],[12,48],[30,68],[58,44],[84,20]]; // 풀맵: 좌상단 구석 하늘 안 전용 — hell의 좁은 하늘에도 안전(전 지점 분산<3 실측), 달(100,44) 글로우 회피
 function drawBird(b) {
   ctx.save();
   ctx.translate(b.x, b.y);
@@ -3902,7 +3906,8 @@ function drawApocSun() {
   const k = apocK(); if (k <= 0) return;
   if (S.round >= SUN_ROUND && S.phase === 'wave') return; // 강림했다 — 하늘엔 없다 (보스로 전투 중)
   const T = S.time, e = k * k; // 다가올수록 가속 (원근감)
-  const x = 170 + (CX - 170) * e, y = 52 + 30 * e, r = 11 + 93 * Math.pow(k, 1.6);
+  const ax = bgFullKeyDrawn ? 100 : 170, ay = bgFullKeyDrawn ? 44 : 52; // 풀맵은 하늘이 좌상단 구석뿐 — 해·달과 같은 앵커
+  const x = ax + (CX - ax) * e, y = ay + 30 * e, r = 11 + 93 * Math.pow(k, 1.6);
   const nH = 2 + Math.round(k * 5); // 🌫️ 아지랑이: 열기가 스멀스멀 피어오른다 (다가올수록 짙고 크게)
   ctx.lineWidth = 1.4;
   for (let i = 0; i < nH; i++) {
@@ -4265,8 +4270,7 @@ function drawBackdrop() {
     ctx.fillStyle = col; ctx.beginPath(); ctx.arc(sx, sy, 9, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(sx - 2.5, sy - 2.5, 3, 0, Math.PI*2); ctx.fill();
   } else { // 밤: 별 + 달
-    for (const [zx, zy] of STAR_SPOTS) {
-      if (bgFullKeyDrawn && ((zx / 150) ** 2 + (zy / 112) ** 2) > 1) continue; // 풀맵: 하늘(좌상단 구석) 밖 잔디 위 별 방지
+    for (const [zx, zy] of (bgFullKeyDrawn ? STAR_SPOTS_FULL : STAR_SPOTS)) { // 풀맵은 전용 별자리 (타원 필터는 10개 중 9개를 걸러 별이 사라졌었다 — 08-10 크로스체크)
       ctx.fillStyle = `rgba(255,252,235,${(0.3 + 0.4*Math.abs(Math.sin(S.time*2 + zx))).toFixed(2)})`;
       ctx.beginPath(); ctx.arc(zx, zy, 1.2, 0, Math.PI*2); ctx.fill();
     }
@@ -8987,7 +8991,15 @@ function sbBake() {
 }
 function sbGround() { // 싱글 배경 지면: 풀맵 이미지 > 아트 베이크 > false(기존 경로). 풀맵이면 bgFullKeyDrawn에 키 기록
   const fk = bgFullReady();
-  if (fk) { ctx.drawImage(bgFullBaked(fk), 0, 0); bgFullKeyDrawn = fk; return true; } // 선명화 베이크(940×500) — 매 프레임 다운스케일보다 빠르고 또렷
+  if (fk) { // 선명화 베이크(온로드 예약)가 아직이면 원본 다운스케일로 임시 표시 — 동기 베이크 ~60ms 히치 방지 (08-10 크로스체크 P2)
+    const bk = BGFULL.baked && BGFULL.baked[fk];
+    if (bk) ctx.drawImage(bk, 0, 0);
+    else {
+      ctx.drawImage(BGFULL[fk], 0, 0, 940, 500);
+      if (!BGFULL.bakeQ) { BGFULL.bakeQ = true; setTimeout(() => { try { bgFullBaked(fk); bgFallPrep(fk); } catch (e) {} BGFULL.bakeQ = false; }, 0); } // 예약 유실 대비 재예약 (프레임 밖에서 1회)
+    }
+    bgFullKeyDrawn = fk; return true;
+  }
   bgFullKeyDrawn = null;
   const b = sbBake();
   if (!b) return false;
