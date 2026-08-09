@@ -3515,11 +3515,11 @@ const BG_FULL_ON = true;
 const BGFULL = { easy: null, normal: null, hard: null, hell: null };
 (function bgFullLoad() {
   if (!BG_FULL_ON) return;
-  for (const k of ['easy', 'normal', 'hard', 'hell']) {
+  ['easy', 'normal', 'hard', 'hell'].forEach((k, i) => {
     const im = new Image();
-    im.onload = () => { BGFULL[k] = im; };
+    im.onload = () => { BGFULL[k] = im; setTimeout(() => { try { bgFullBaked(k); bgFallPrep(k); } catch (e) {} }, 120 + i * 160); }; // 미리 선명화 베이크+폭포 마스크 (첫 프레임 히치 방지)
     im.src = 'assets/bg_' + k + '.webp';
-  }
+  });
 })();
 let bgFullKeyDrawn = null; // 이번 프레임 지면으로 그린 풀맵 키 (null = 풀맵 미사용) — sbGround가 매 프레임 갱신
 function bgFullReady() {
@@ -3528,13 +3528,137 @@ function bgFullReady() {
   const key = (ph === 5 || (ph === 4 && !S.hellCleared)) ? 'hell' : DIFF_MUL === 0.7 ? 'easy' : DIFF_MUL === 1.4 ? 'hard' : 'normal';
   return BGFULL[key] ? key : null;
 }
-// 풀맵별 폭포 밴드 (그리드 실측, 게임좌표) — fy0~fy1 구간에 낙수, fy1에 물보라. slow = 용암
-const BGFALL = {
-  easy:   { fx: 143, fw: 13, fy0: 58, fy1: 142, w1: 'rgba(205,238,255,', w2: 'rgba(255,255,255,' },
-  normal: { fx: 145, fw: 13, fy0: 72, fy1: 162, w1: 'rgba(205,238,255,', w2: 'rgba(255,255,255,' },
-  hard:   { fx: 168, fw: 14, fy0: 55, fy1: 148, w1: 'rgba(160,205,255,', w2: 'rgba(225,242,255,' },
-  hell:   { fx: 195, fw: 15, fy0: 60, fy1: 155, w1: 'rgba(255,140,30,',  w2: 'rgba(255,215,80,', slow: true },
+// 🔪 선명화 베이크: 1880→940 다운스케일 + 언샤프 마스크 — AI 그림의 소프트함을 게임 오브젝트 선명도에 맞춤 (유저: "배경만 뿌옇다")
+function bgFullBaked(key) {
+  const store = BGFULL.baked || (BGFULL.baked = {});
+  if (store[key]) return store[key];
+  const im = BGFULL[key];
+  if (!im) return null;
+  const c = document.createElement('canvas'); c.width = 940; c.height = 500;
+  const g = c.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(im, 0, 0, 940, 500);
+  const id = g.getImageData(0, 0, 940, 500), s = id.data;
+  const out = g.createImageData(940, 500), o = out.data;
+  const A = 0.42, C0 = 1 + 4 * A, W = 940;
+  for (let y = 0; y < 500; y++) {
+    const up = y ? -W * 4 : 0, dn = y < 499 ? W * 4 : 0;
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      const lf = x ? -4 : 0, rt = x < W - 1 ? 4 : 0;
+      for (let ch = 0; ch < 3; ch++) {
+        const v = s[i + ch] * C0 - (s[i + up + ch] + s[i + dn + ch] + s[i + lf + ch] + s[i + rt + ch]) * A;
+        o[i + ch] = v < 0 ? 0 : v > 255 ? 255 : v;
+      }
+      o[i + 3] = 255;
+    }
+  }
+  g.putImageData(out, 0, 0);
+  store[key] = c;
+  return c;
+}
+// 💧 폭포 흐름: 그림의 물 픽셀을 마스크로 추출해 그 모양 안에서만 밝기 파도가 흐른다.
+// 축은 수동 추정 대신 행별 물 클러스터 추적으로 자동 유도 (수동 축이 그림과 계속 어긋나던 문제의 최종 해법):
+// 코리도(대략 범위) 안에서 y행마다 물색 픽셀 런을 찾고, 직전 행 중심과 이어지는 런만 채택 → 중심선·마스크 동시 획득.
+const BGFALL_CORR = { // topX@yTop → botX@yBot 코리도 (±slack) — 하늘·연못이 코리도 밖이라 자연 배제
+  easy:   { yTop: 58, yBot: 175, topX: 205, botX: 170, slack: 34 },
+  normal: { yTop: 74, yBot: 178, topX: 192, botX: 152, slack: 34 },
+  hard:   { yTop: 56, yBot: 192, topX: 190, botX: 136, slack: 36 },
+  hell:   { yTop: 56, yBot: 165, topX: 196, botX: 160, slack: 30, lava: true }, // 실측: 중간(y112~140)은 어두운 껍질 뒤로 흘러 마스크 공백 — 의도적 단절
+
 };
+function bgFallPrep(key) {
+  const store = BGFULL.falls || (BGFULL.falls = {});
+  if (store[key] !== undefined) return store[key];
+  const baked = bgFullBaked(key);
+  if (!baked) return null;
+  const a = BGFALL_CORR[key];
+  const x0 = 100, y0 = Math.max(0, a.yTop - 8), x1 = 260, y1 = a.yBot + 10;
+  const w = x1 - x0, h = y1 - y0;
+  const d = baked.getContext('2d').getImageData(x0, y0, w, h).data;
+  const isW = i => {
+    const r = d[i], g2 = d[i + 1], b = d[i + 2];
+    return a.lava ? ((r > 110 && r - b > 60 && g2 > 40 && g2 < r * 0.8) || (r > 235 && g2 > 190 && b < 190))
+                  : (b > r + 16 && b > 102 && g2 > 72);
+  };
+  const mask = document.createElement('canvas'); mask.width = w; mask.height = h;
+  const mg = mask.getContext('2d');
+  const mid = mg.createImageData(w, h);
+  const centers = []; // [y, centerX] — 흐름 축 피팅용
+  let prevC = null;
+  for (let gy = a.yTop; gy <= a.yBot; gy++) {
+    const y = gy - y0;
+    const guide = a.topX + (a.botX - a.topX) * (gy - a.yTop) / (a.yBot - a.yTop); // 코리도 중심
+    const ref = prevC != null ? prevC : guide;
+    // 행에서 물색 런 수집 (코리도 안)
+    let best = null, runS = -1;
+    for (let gx = Math.max(x0, guide - a.slack) | 0; gx <= Math.min(x1 - 1, guide + a.slack); gx++) {
+      const x = gx - x0, on = isW((y * w + x) * 4);
+      if (on && runS < 0) runS = gx;
+      if ((!on || gx === (guide + a.slack | 0)) && runS >= 0) {
+        const runE = on ? gx : gx - 1, c = (runS + runE) / 2, wd = runE - runS + 1;
+        if (wd >= 3 && (!best || Math.abs(c - ref) < Math.abs(best.c - ref))) best = { c, s: runS, e: runE, wd };
+        runS = -1;
+      }
+    }
+    if (!best || Math.abs(best.c - ref) > 24) { prevC = prevC != null ? prevC : null; continue; } // 단절 행 (바위 뒤 통과 등)
+    prevC = best.c;
+    centers.push([gy, best.c]);
+    // 마스크: 채택 런 ±2 여유 내 물픽셀
+    for (let gx = best.s - 2; gx <= best.e + 2; gx++) {
+      const x = gx - x0;
+      if (x < 0 || x >= w) continue;
+      if (!isW((y * w + x) * 4) && !(gx >= best.s && gx <= best.e)) continue;
+      const o = (y * w + x) * 4;
+      mid.data[o] = 255; mid.data[o + 1] = 255; mid.data[o + 2] = 255; mid.data[o + 3] = 255;
+    }
+  }
+  if (centers.length < 25) { store[key] = null; return null; } // 추적 실패 — 흐름 생략 (마스크 없인 안 그린다)
+  mg.putImageData(mid, 0, 0);
+  // 중심선 최소자승 직선 피팅 (x = m·y + c) → 흐름 축
+  let Sy = 0, Sx = 0, Syy = 0, Syx = 0, n = centers.length;
+  for (const [yy, xx] of centers) { Sy += yy; Sx += xx; Syy += yy * yy; Syx += yy * xx; }
+  const m = (n * Syx - Sy * Sx) / (n * Syy - Sy * Sy), c0 = (Sx - m * Sy) / n;
+  const ty = centers[0][0], by = centers[centers.length - 1][0];
+  const tx = m * ty + c0, bx = m * by + c0;
+  const len = Math.hypot(bx - tx, by - ty);
+  const off = document.createElement('canvas'); off.width = w; off.height = h;
+  store[key] = { x0, y0, w, h, mask, off, tx, ty, ux: (bx - tx) / len, uy: (by - ty) / len, len, hw: 16, lava: !!a.lava };
+  return store[key];
+}
+function drawFallFlow(key) {
+  const F = bgFallPrep(key);
+  if (!F) return;
+  const t = S.time, og = F.off.getContext('2d');
+  og.clearRect(0, 0, F.w, F.h);
+  og.save();
+  og.translate(F.tx - F.x0, F.ty - F.y0);
+  og.rotate(Math.atan2(F.uy, F.ux)); // +x = 흐름 방향
+  const spd = F.lava ? 26 : 66;
+  for (let i = 0; i < 4; i++) {
+    const cyc = F.len + 34;
+    const pos = ((t * spd * (1 + i * 0.13) + i * 41) % cyc) - 17;
+    const bw = 15 + (i % 2) * 8;
+    const gr = og.createLinearGradient(pos - bw, 0, pos + bw, 0);
+    const col = F.lava ? '255,235,140' : '255,255,255';
+    gr.addColorStop(0, `rgba(${col},0)`); gr.addColorStop(0.5, `rgba(${col},${F.lava ? 0.34 : 0.3})`); gr.addColorStop(1, `rgba(${col},0)`);
+    og.fillStyle = gr;
+    og.fillRect(pos - bw, -F.hw - 8, bw * 2, F.hw * 2 + 16);
+  }
+  og.restore();
+  og.globalCompositeOperation = 'destination-in';
+  og.drawImage(F.mask, 0, 0);
+  og.globalCompositeOperation = 'source-over';
+  ctx.drawImage(F.off, F.x0, F.y0);
+  // 낙하점 물방울 (마스크 하단 = bx,by 부근 맥동)
+  const bx2 = F.tx + F.ux * F.len, by2 = F.ty + F.uy * F.len;
+  for (let i = 0; i < 3; i++) {
+    const col = F.lava ? '255,215,80' : '255,255,255';
+    ctx.fillStyle = `rgba(${col},${((0.5 + 0.5 * Math.sin(t * 6 + i * 2.09)) * 0.4).toFixed(2)})`;
+    const px = bx2 + Math.sin(t * 3.1 + i * 2.7) * F.hw * 0.6;
+    ctx.beginPath(); ctx.arc(px, by2 - 2 - Math.abs(Math.sin(t * 4 + i)) * 5, 1.5, 0, 6.28); ctx.fill();
+  }
+}
 // 💧☁️ 라이브 오버레이 — S.time 애니메이션이라 베이크 금지 (베이크했다 얼어붙은 횃불 회귀의 교훈)
 function drawCliffLive(m, ph) {
   const t = S.time, fy0 = m.fy0 || 0, span = m.fy1 - fy0;
@@ -3560,9 +3684,12 @@ function drawCliffLive(m, ph) {
     const px = m.fx + Math.sin(t * 3.1 + i * 2.7) * m.fw * 0.8;
     ctx.beginPath(); ctx.arc(px, m.fy1 - 2 - Math.abs(Math.sin(t * 4 + i)) * 5, 1.6, 0, 6.28); ctx.fill();
   }
-  // 구름 2점: 하늘을 천천히 드리프트 (페이즈색, 코너 타원 클립 + 하늘 밖 진입 전 페이드)
+  drawSkyClouds(ph, 262);
+}
+// ☁️ 드리프트 구름 (풀맵·합성 공용): 페이즈색, 코너 타원 클립 + 하늘 밖 진입 전 페이드 (xLim = 하늘 폭)
+function drawSkyClouds(ph, xLim) {
+  const t = S.time;
   const cc = ph >= 4 ? '80,48,40' : ph >= 2 ? '182,192,224' : '255,255,255';
-  const xLim = bgFullKeyDrawn ? 168 : 262; // 풀맵은 하늘이 더 좁다 (구름이 초원 위로 나가지 않게)
   ctx.save();
   ctx.beginPath(); ctx.ellipse(0, 0, 296, 207, 0, 0, Math.PI / 2); ctx.lineTo(0, 0); ctx.closePath(); ctx.clip();
   for (let i = 0; i < 2; i++) {
@@ -3637,7 +3764,7 @@ function drawMeadowDecor(tone, hellish) {
 function drawSkyCorner() {
   if (!SKY_CUT) return;
   const ph = skyPhase();
-  if (bgFullKeyDrawn) { drawCliffLive(BGFALL[bgFullKeyDrawn], ph); return; } // 🖼️ 풀맵: 절벽·하늘이 지면에 그려져 있음 — 낙수·구름 애니만
+  if (bgFullKeyDrawn) { drawFallFlow(bgFullKeyDrawn); drawSkyClouds(ph, 168); return; } // 🖼️ 풀맵: 절벽·하늘이 지면에 있음 — 폭포 흐름·구름 애니만
   if (CLIFFART.img && CLIFFART.cells.length) {
     // 🎯 지형이 기준 (유저 최종 지침): 절벽의 지면 픽셀을 '지금 화면의 실제 지형 색'으로 재염색한다.
     //    노을·밤·붉은달 무드는 이 뒤에 오는 앰비언트(sbPhaseTint 등)가 지형과 절벽에 똑같이 내려앉아 처리 —
@@ -8860,7 +8987,7 @@ function sbBake() {
 }
 function sbGround() { // 싱글 배경 지면: 풀맵 이미지 > 아트 베이크 > false(기존 경로). 풀맵이면 bgFullKeyDrawn에 키 기록
   const fk = bgFullReady();
-  if (fk) { ctx.drawImage(BGFULL[fk], 0, 0, cv.width, cv.height); bgFullKeyDrawn = fk; return true; }
+  if (fk) { ctx.drawImage(bgFullBaked(fk), 0, 0); bgFullKeyDrawn = fk; return true; } // 선명화 베이크(940×500) — 매 프레임 다운스케일보다 빠르고 또렷
   bgFullKeyDrawn = null;
   const b = sbBake();
   if (!b) return false;
