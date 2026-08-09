@@ -3509,38 +3509,65 @@ const CLIFF_META = [
   { fx: 81,  fw: 16, fy: 148, w1: 'rgba(140,195,255,', w2: 'rgba(215,238,255,' }, // hard (현재 미사용 — 밤 무드는 앰비언트 담당)
   { fx: 121, fw: 16, fy: 140, w1: 'rgba(255,140,30,',  w2: 'rgba(255,215,80,'  }, // hell: 용암 폭포 (느리게). fy 140 = 물보라가 차단 타원 안 상한 (155면 보행 지면 침범 — 크로스체크)
 ];
+// 🖼️ 유저 제작 풀맵 배경 (2026-08-09, DPD_backgrounds_revised): 빈 지형 4장 1880×1000 webp — 지면 전체 교체 (합성 이음새 원천 제거).
+// sbGround()가 진입점이라 기존 if(!art) 가드들이 프로시저럴 베이스·풀·꽃을 자동 생략. BG_FULL_ON=false 한 줄로 이전 경로 복귀.
+const BG_FULL_ON = true;
+const BGFULL = { easy: null, normal: null, hard: null, hell: null };
+(function bgFullLoad() {
+  if (!BG_FULL_ON) return;
+  for (const k of ['easy', 'normal', 'hard', 'hell']) {
+    const im = new Image();
+    im.onload = () => { BGFULL[k] = im; };
+    im.src = 'assets/bg_' + k + '.webp';
+  }
+})();
+let bgFullKeyDrawn = null; // 이번 프레임 지면으로 그린 풀맵 키 (null = 풀맵 미사용) — sbGround가 매 프레임 갱신
+function bgFullReady() {
+  if (!BG_FULL_ON) return null;
+  const ph = skyPhase();
+  const key = (ph === 5 || (ph === 4 && !S.hellCleared)) ? 'hell' : DIFF_MUL === 0.7 ? 'easy' : DIFF_MUL === 1.4 ? 'hard' : 'normal';
+  return BGFULL[key] ? key : null;
+}
+// 풀맵별 폭포 밴드 (그리드 실측, 게임좌표) — fy0~fy1 구간에 낙수, fy1에 물보라. slow = 용암
+const BGFALL = {
+  easy:   { fx: 143, fw: 13, fy0: 58, fy1: 142, w1: 'rgba(205,238,255,', w2: 'rgba(255,255,255,' },
+  normal: { fx: 145, fw: 13, fy0: 72, fy1: 162, w1: 'rgba(205,238,255,', w2: 'rgba(255,255,255,' },
+  hard:   { fx: 168, fw: 14, fy0: 55, fy1: 148, w1: 'rgba(160,205,255,', w2: 'rgba(225,242,255,' },
+  hell:   { fx: 195, fw: 15, fy0: 60, fy1: 155, w1: 'rgba(255,140,30,',  w2: 'rgba(255,215,80,', slow: true },
+};
 // 💧☁️ 라이브 오버레이 — S.time 애니메이션이라 베이크 금지 (베이크했다 얼어붙은 횃불 회귀의 교훈)
-function drawCliffLive(cell, ph) {
-  const m = CLIFF_META[cell], t = S.time;
+function drawCliffLive(m, ph) {
+  const t = S.time, fy0 = m.fy0 || 0, span = m.fy1 - fy0;
   // 폭포 물줄기: 아래로 흐르는 하이라이트 3줄 (용암은 절반 속도)
-  const spd = cell === 3 ? 36 : 92;
+  const spd = m.slow ? 36 : 92;
   for (let i = 0; i < 3; i++) {
     const sx = m.fx + (i - 1) * m.fw * 0.55 + Math.sin(t * 0.8 + i * 2.1) * 1.5;
     const len = 30 + i * 9;
-    const yOff = ((t * spd * (1 + i * 0.18) + i * 47) % (m.fy + len)) - len;
-    const y0 = Math.max(0, yOff), y1 = Math.min(m.fy, yOff + len);
+    const yOff = fy0 + ((t * spd * (1 + i * 0.18) + i * 47) % (span + len)) - len;
+    const y0 = Math.max(fy0, yOff), y1 = Math.min(m.fy1, yOff + len);
     if (y1 <= y0) continue;
     const gr = ctx.createLinearGradient(0, yOff, 0, yOff + len);
     const col = i === 1 ? m.w2 : m.w1;
-    gr.addColorStop(0, col + '0)'); gr.addColorStop(0.5, col + (cell === 3 ? '0.5)' : '0.38)')); gr.addColorStop(1, col + '0)');
+    gr.addColorStop(0, col + '0)'); gr.addColorStop(0.5, col + (m.slow ? '0.5)' : '0.38)')); gr.addColorStop(1, col + '0)');
     ctx.fillStyle = gr;
     roundRect(sx - 2.2, y0, 4.4, y1 - y0, 2.2); ctx.fill();
   }
   // 물보라: 낙하점 안개 + 튀는 물방울 (맥동)
   ctx.fillStyle = m.w2 + (0.09 + 0.05 * Math.sin(t * 5)).toFixed(2) + ')';
-  ctx.beginPath(); ctx.ellipse(m.fx, m.fy, m.fw * 1.15, 5.5, 0, 0, 6.28); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(m.fx, m.fy1, m.fw * 1.15, 5.5, 0, 0, 6.28); ctx.fill();
   for (let i = 0; i < 3; i++) {
     ctx.fillStyle = m.w2 + ((0.5 + 0.5 * Math.sin(t * 6 + i * 2.09)) * 0.45).toFixed(2) + ')';
     const px = m.fx + Math.sin(t * 3.1 + i * 2.7) * m.fw * 0.8;
-    ctx.beginPath(); ctx.arc(px, m.fy - 2 - Math.abs(Math.sin(t * 4 + i)) * 5, 1.6, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(px, m.fy1 - 2 - Math.abs(Math.sin(t * 4 + i)) * 5, 1.6, 0, 6.28); ctx.fill();
   }
-  // 구름 2점: 하늘을 천천히 드리프트 (페이즈색, 코너 타원 클립 + 우측 진입 전 페이드)
+  // 구름 2점: 하늘을 천천히 드리프트 (페이즈색, 코너 타원 클립 + 하늘 밖 진입 전 페이드)
   const cc = ph >= 4 ? '80,48,40' : ph >= 2 ? '182,192,224' : '255,255,255';
+  const xLim = bgFullKeyDrawn ? 168 : 262; // 풀맵은 하늘이 더 좁다 (구름이 초원 위로 나가지 않게)
   ctx.save();
   ctx.beginPath(); ctx.ellipse(0, 0, 296, 207, 0, 0, Math.PI / 2); ctx.lineTo(0, 0); ctx.closePath(); ctx.clip();
   for (let i = 0; i < 2; i++) {
-    const cx2 = ((t * (5.5 + i * 3) + i * 170) % 340) - 40, cy2 = 15 + i * 21, cw2 = 26 - i * 7;
-    const fade = Math.max(0, Math.min(1, (262 - cx2) / 50));
+    const cx2 = ((t * (5.5 + i * 3) + i * 170) % (xLim + 110)) - 40, cy2 = 15 + i * 21, cw2 = 26 - i * 7;
+    const fade = Math.max(0, Math.min(1, (xLim - cx2) / 48));
     if (!fade) continue;
     ctx.fillStyle = `rgba(${cc},${((0.34 - i * 0.08) * fade).toFixed(2)})`;
     ctx.beginPath();
@@ -3610,6 +3637,7 @@ function drawMeadowDecor(tone, hellish) {
 function drawSkyCorner() {
   if (!SKY_CUT) return;
   const ph = skyPhase();
+  if (bgFullKeyDrawn) { drawCliffLive(BGFALL[bgFullKeyDrawn], ph); return; } // 🖼️ 풀맵: 절벽·하늘이 지면에 그려져 있음 — 낙수·구름 애니만
   if (CLIFFART.img && CLIFFART.cells.length) {
     // 🎯 지형이 기준 (유저 최종 지침): 절벽의 지면 픽셀을 '지금 화면의 실제 지형 색'으로 재염색한다.
     //    노을·밤·붉은달 무드는 이 뒤에 오는 앰비언트(sbPhaseTint 등)가 지형과 절벽에 똑같이 내려앉아 처리 —
@@ -3636,7 +3664,7 @@ function drawSkyCorner() {
       g.putImageData(img, 0, 0);
       ctx.drawImage(t, 0, 0);
     });
-    drawCliffLive(cell, ph); // 💧☁️ 폭포·구름은 매 프레임
+    drawCliffLive(CLIFF_META[cell], ph); // 💧☁️ 폭포·구름은 매 프레임
     return;
   }
   bakedLayer('skyCut|' + ph, 0, 0, SKY_CUT.rx + 4, SKY_CUT.ry + 4, () => {
@@ -3836,7 +3864,8 @@ function drawSmokeColumns(nP, baseA) { // 지평선 검은 연기 기둥: 세계
 function drawHellCreep() {
   const k = apocK(); if (k <= 0) return;
   // 기본 그을림을 진입부터 진하게 (유저: "헬 페이즈도 지옥처럼" — 용암 절벽과 지형 톤 통일). 진행감은 불꽃·잿가루·균열의 k 램프가 담당
-  ctx.fillStyle = `rgba(64,10,6,${(0.26 + 0.26 * k).toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height); // 세계가 그을린다
+  const washA = bgFullKeyDrawn === 'hell' ? 0.05 + 0.10 * k : 0.26 + 0.26 * k; // 풀맵 헬 지면은 이미 그을려 있음 — 살짝만
+  ctx.fillStyle = `rgba(64,10,6,${washA.toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height); // 세계가 그을린다
   const hg = ctx.createLinearGradient(0, cv.height - 130, 0, cv.height); // 지평선이 타오른다
   hg.addColorStop(0, 'rgba(255,110,20,0)');
   hg.addColorStop(1, `rgba(255,120,25,${(0.14 + 0.22 * k + 0.06 * Math.sin(S.time * 1.7)).toFixed(2)})`);
@@ -3858,7 +3887,7 @@ function drawSpringscape() {
   }
   // 옅은 무지개 (좌상단 큰 호) — 끝자락은 하늘에 녹아들듯 옅어지며 빛 알갱이로 흩어진다
   const rbFade = Math.max(0, 1 - apocK() * 1.6); // 태양이 다가오면 무지개도 바랜다
-  if (rbFade > 0.01) {
+  if (rbFade > 0.01 && !bgFullKeyDrawn) { // 풀맵엔 무지개가 그림에 있음 — 이중 방지
     const RB = ['255,120,120', '255,200,80', '120,200,130', '120,160,255'];
     const A0 = Math.PI * 1.09, A1 = Math.PI * 1.75, SEG = 26, FADE = 0.2; // 양끝 20% 구간이 서서히 옅어짐
     ctx.lineWidth = 7;
@@ -3888,13 +3917,14 @@ function drawSpringscape() {
   drawSkyCorner(); // ☁️ 하늘 모퉁이 — 해보다 먼저 (해가 하늘 안에 뜬다)
   if (apocK() > 0) { drawApocSun(); } // 🌞 헬모드: 방긋 해 자리에 아포칼립스 태양이 떠오른다
   else {
-    // 해 (방긋)
+    // 해 (방긋) — 풀맵은 하늘이 좌상단 구석뿐이라 그 안으로
+    const hx = bgFullKeyDrawn ? 100 : 170, hy = bgFullKeyDrawn ? 44 : 52;
     ctx.strokeStyle = 'rgba(255,193,7,0.55)'; ctx.lineWidth = 1.6; // 보통 낮 태양과 동일 디자인
     for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + T * 0.3;
-      ctx.beginPath(); ctx.moveTo(170 + Math.cos(a) * 12, 52 + Math.sin(a) * 12); ctx.lineTo(170 + Math.cos(a) * 17, 52 + Math.sin(a) * 17); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(hx + Math.cos(a) * 12, hy + Math.sin(a) * 12); ctx.lineTo(hx + Math.cos(a) * 17, hy + Math.sin(a) * 17); ctx.stroke(); }
     ctx.lineWidth = 1;
-    ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(170, 52, 9, 0, 6.28); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(167.5, 49.5, 3, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(hx, hy, 9, 0, 6.28); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(hx - 2.5, hy - 2.5, 3, 0, 6.28); ctx.fill();
   }
   // 풀 (밝은 초록, 살랑) — 아트 지면엔 이미 질감이 있어 생략
   ctx.strokeStyle = 'rgba(110,190,90,0.65)'; ctx.lineWidth = 1.3;
@@ -3924,7 +3954,7 @@ function drawSpringscape() {
     ctx.beginPath(); ctx.ellipse(bx + 2.6 * flap, by - 1, 3 * flap, 2.2, 0.5, 0, 6.28); ctx.fill();
     ctx.fillStyle = '#5d4037'; ctx.fillRect(bx - 0.6, by - 2.4, 1.2, 4.4); // 몸통
   }
-  sbPhaseTint(skyPhase()); // 🌅 쉬움도 라운드 따라 저물어간다 (낮→노을→밤→붉은 달)
+  if (bgFullKeyDrawn !== 'hell') sbPhaseTint(skyPhase()); // 🌅 쉬움도 라운드 따라 저물어간다 (풀맵 헬 지면엔 헬 틴트 불필요)
 }
 // 🔥 어려움: 폭풍 전야 — 회보라 하늘 + 흐르는 먹구름 + 눕는 풀·낙엽 + 멀리 번개 + 까마귀
 function drawStormscape() {
@@ -3937,9 +3967,11 @@ function drawStormscape() {
     g.addColorStop(0, lightning ? '#8f8da6' : '#7d7b93');
     g.addColorStop(0.55, '#a39aa2'); g.addColorStop(1, '#bdb098');
     ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
-  } else {
+  } else if (!bgFullKeyDrawn) {
     ctx.fillStyle = lightning ? 'rgba(143,141,166,0.42)' : 'rgba(112,108,135,0.42)';
     ctx.fillRect(0, 0, cv.width, cv.height);
+  } else if (lightning) { // 풀맵(이미 폭풍톤)엔 번개 섬광만
+    ctx.fillStyle = 'rgba(200,205,235,0.26)'; ctx.fillRect(0, 0, cv.width, cv.height);
   }
   if (k > 0.05) { ctx.fillStyle = `rgba(28,26,44,${(0.22 * k).toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height); } // 점점 잿빛으로
   if (k > 0.8) { // 말기: 지평선에 스미는 붉은 기운 — 전쟁이 다가온다
@@ -4015,7 +4047,7 @@ function drawHellscape() {
     const g = ctx.createLinearGradient(0, 0, 0, cv.height);           // 검붉은 하늘 → 타는 대지 (갈수록 더 검게)
     g.addColorStop(0, hell2 > 0 ? '#140609' : '#200d10'); g.addColorStop(0.5, '#48150f'); g.addColorStop(1, '#772812');
     ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
-  } else {
+  } else if (!bgFullKeyDrawn) { // 풀맵 헬 지면은 이미 용암 세계 — 워시 불필요
     const g = ctx.createLinearGradient(0, 0, 0, cv.height);
     g.addColorStop(0, hell2 > 0 ? 'rgba(20,6,9,0.78)' : 'rgba(32,13,16,0.72)'); g.addColorStop(0.5, 'rgba(72,21,15,0.6)'); g.addColorStop(1, 'rgba(119,40,18,0.5)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
@@ -4043,7 +4075,7 @@ function drawHellscape() {
   }
   if (apocK() > 0) drawApocSun();
   else {
-    const sx = 170, sy = 52, cor = 15 + 6 * hk;
+    const sx = bgFullKeyDrawn ? 100 : 170, sy = bgFullKeyDrawn ? 44 : 52, cor = 15 + 6 * hk; // 풀맵은 하늘이 좌상단 구석뿐 — 해도 그리로
     ctx.fillStyle = `rgba(255,${60 - 25 * hk | 0},10,${(0.3 + 0.15 * hk + 0.1 * Math.sin(T * 2.3)).toFixed(2)})`;
     ctx.beginPath(); ctx.arc(sx, sy, cor, 0, 6.28); ctx.fill();
     ctx.fillStyle = '#ff8a3d'; ctx.beginPath(); ctx.arc(sx, sy, 11 + 2 * hk, 0, 6.28); ctx.fill();
@@ -4093,8 +4125,8 @@ function drawBackdrop() {
   }
   ctx.lineWidth = 1;
   drawSkyCorner(); // ☁️ 좌상단 라운드 컷 하늘 — 풀·꽃 위, 해·달 아래 (해·달이 하늘 안에 뜬다)
-  // 해 / 달 (좌상단 하늘)
-  const sx = 170, sy = 52;
+  // 해 / 달 (좌상단 하늘) — 풀맵은 하늘이 좌상단 구석뿐이라 해·달도 그 안으로
+  const sx = bgFullKeyDrawn ? 100 : 170, sy = bgFullKeyDrawn ? 44 : 52;
   if (ph <= 1) { // 낮 태양 / 노을 태양
     const col = ph === 0 ? '#ffd54f' : '#ff9e40';
     ctx.strokeStyle = ph === 0 ? 'rgba(255,193,7,0.55)' : 'rgba(255,110,40,0.5)'; ctx.lineWidth = 1.6;
@@ -4107,6 +4139,7 @@ function drawBackdrop() {
     ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(sx - 2.5, sy - 2.5, 3, 0, Math.PI*2); ctx.fill();
   } else { // 밤: 별 + 달
     for (const [zx, zy] of STAR_SPOTS) {
+      if (bgFullKeyDrawn && ((zx / 150) ** 2 + (zy / 112) ** 2) > 1) continue; // 풀맵: 하늘(좌상단 구석) 밖 잔디 위 별 방지
       ctx.fillStyle = `rgba(255,252,235,${(0.3 + 0.4*Math.abs(Math.sin(S.time*2 + zx))).toFixed(2)})`;
       ctx.beginPath(); ctx.arc(zx, zy, 1.2, 0, Math.PI*2); ctx.fill();
     }
@@ -4130,7 +4163,7 @@ function drawBackdrop() {
       ctx.beginPath(); ctx.arc(sx + 1, sy - 4.5, 1.2, 0, Math.PI*2); ctx.fill();
     }
   }
-  if (art) sbPhaseTint(ph); // 🌅 시간대가 대지에도 내려앉는다
+  if (art && bgFullKeyDrawn !== 'hell') sbPhaseTint(ph); // 🌅 시간대가 대지에도 내려앉는다 (풀맵 헬 지면엔 헬 틴트 불필요)
   drawHellCreep(); // 🔥 보통 난이도도 헬모드부터는 세계가 불탄다
 }
 // 🏛️ 결투장: 로마 콜로세움 (¾ 원근) — 회색 석재, 뒤쪽 관중석 2단 아케이드, 일부 붕괴, 앞은 관전용 개방
@@ -8825,7 +8858,10 @@ function sbBake() {
   } finally { ctx = old; }
   return sbWorldBake;
 }
-function sbGround() { // 싱글 배경 지면: 아트 베이크 1장 (없으면 false → 기존 경로)
+function sbGround() { // 싱글 배경 지면: 풀맵 이미지 > 아트 베이크 > false(기존 경로). 풀맵이면 bgFullKeyDrawn에 키 기록
+  const fk = bgFullReady();
+  if (fk) { ctx.drawImage(BGFULL[fk], 0, 0, cv.width, cv.height); bgFullKeyDrawn = fk; return true; }
+  bgFullKeyDrawn = null;
   const b = sbBake();
   if (!b) return false;
   ctx.drawImage(b, 0, 0);
