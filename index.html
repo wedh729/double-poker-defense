@@ -3448,21 +3448,66 @@ const SKY_COLS = [
 // 🏔️ 유저 제작 절벽·폭포 모서리 (2026-08-08, DPD/art3.png 난이도 컨셉시트에서 크롭·타원 페더): art5.png = 4셀 300×210 (easy/normal/hard/hell).
 // 페이즈 매핑 = "같은 장소가 변해간다": 낮(쉬움 난이도=easy, 그 외=normal) → 노을 normal+웜틴트 → 밤·붉은달 hard(+적틴트) → 헬·지옥 hell.
 // 시각 300×210이 차단 타원(265×175)보다 살짝 크지만 초과분은 페더된 풀 가장자리라 통행 유지 — 게임플레이 무변경. BG_CLIFF_ON=false로 원복.
-const BG_CLIFF_ON = true; // 2026-08-08 유저 재컨펌: "현행(광역 블렌드) 자연스럽다, 문제는 헬 톤" → 헬 셀만 블렌드 강화(bl 파라미터)
-const CLIFFART = { img: null };
+const BG_CLIFF_ON = true; // 2026-08-08 유저 최종 지침: "지형이 기준 — 절벽 색감을 지형에 완전히 맞춰라" → 런타임 지형 샘플 재염색 방식
+const CLIFFART = { img: null, cells: [] }; // cells[i] = { mask(지면 픽셀), mean(지면 평균색) } — 로드 시 1회 분류
+// 셀별 지면 분류 색상창 (HSV): easy/normal = 초록 잔디, hell = 그을린 적갈 땅 (밝은 용암·회색 바위 제외)
+const CLIFF_CLS = [
+  { h0: 50, h1: 165, s0: 0.2, v0: 0.28, v1: 1.01 },
+  { h0: 50, h1: 165, s0: 0.2, v0: 0.28, v1: 1.01 },
+  null, // hard 셀은 미사용 (밤 무드는 앰비언트가 담당)
+  { h0: -1, h1: 40, s0: 0.25, v0: 0.05, v1: 0.62 },
+];
 (function cliffLoadArt() {
   if (!BG_CLIFF_ON || !SKY_CUT) return;
   const im = new Image();
-  im.onload = () => { CLIFFART.img = im; for (const k of [...bldgLayers.keys()]) if (k.startsWith('skyCut|')) bldgLayers.delete(k); }; // 프로시저럴로 구운 하늘만 무효화
+  im.onload = () => {
+    CLIFFART.img = im;
+    // 지면 마스크·평균 분류 (셀 0,1,3)
+    const c = document.createElement('canvas'); c.width = 300; c.height = 210;
+    const g = c.getContext('2d');
+    for (let cell = 0; cell < 4; cell++) {
+      const cls = CLIFF_CLS[cell];
+      if (!cls) { CLIFFART.cells[cell] = null; continue; }
+      g.clearRect(0, 0, 300, 210); g.drawImage(im, cell * 300, 0, 300, 210, 0, 0, 300, 210);
+      const d = g.getImageData(0, 0, 300, 210).data;
+      const mask = new Uint8Array(300 * 210);
+      let mr = 0, mg = 0, mb = 0, n = 0;
+      for (let i = 0; i < 300 * 210; i++) {
+        const o = i * 4;
+        if (d[o + 3] < 40) continue;
+        const r = d[o], g2 = d[o + 1], b = d[o + 2];
+        const mx = Math.max(r, g2, b), mn = Math.min(r, g2, b), df = mx - mn;
+        let h = 0;
+        if (df) { if (mx === r) h = ((g2 - b) / df + 6) % 6; else if (mx === g2) h = (b - r) / df + 2; else h = (r - g2) / df + 4; h *= 60; }
+        const s = mx ? df / mx : 0, v = mx / 255;
+        if (h > cls.h0 && h < cls.h1 && s > cls.s0 && v > cls.v0 && v < cls.v1) { mask[i] = 1; mr += r; mg += g2; mb += b; n++; }
+      }
+      CLIFFART.cells[cell] = { mask, mean: [mr / n, mg / n, mb / n] };
+    }
+    for (const k of [...bldgLayers.keys()]) if (k.startsWith('skyCut|')) bldgLayers.delete(k); // 프로시저럴로 구운 하늘만 무효화
+  };
   im.src = 'assets/art5.png';
 })();
-// 셀별 메타: g = 경계 잔디톤(주변 블렌드·질감 반점용, art5 경계 실측 평균) / fx±fw·fy = 폭포 밴드 / w1·w2 = 물줄기 색(진한, 밝은)
-// bl = [내측 α, 중간 α, 외곽 반경] 블렌드 세기 — 헬은 검붉은 화산톤 vs 초원 대비가 커서(유저: "헬 톤이 안 맞아") 더 넓고 진하게 그을린 땅처럼 번지게
+// 지형 톤 샘플: 모퉁이 밖 두 사각형(절벽 우측·하단)의 평균색 — 배경이 갓 칠해진 시점(drawSkyCorner 직전)이라 순수 지형.
+// getImageData 스톨 방지 1초 스로틀. 페이즈·난이도가 바뀌면 다음 샘플에서 자연 갱신 → 키가 바뀌며 재베이크.
+let cliffToneT = -9, cliffTone = [120, 130, 60];
+function sampleTerrainTone() {
+  if (S.time - cliffToneT < 1 && cliffToneT >= 0) return cliffTone;
+  cliffToneT = S.time;
+  let r = 0, g = 0, b = 0, n = 0;
+  for (const [sx, sy, sw, sh] of [[320, 50, 88, 88], [60, 252, 120, 64]]) {
+    const d = ctx.getImageData(sx, sy, sw, sh).data;
+    for (let i = 0; i < d.length; i += 16) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
+  }
+  cliffTone = [r / n, g / n, b / n];
+  return cliffTone;
+}
+// 셀별 메타: fx±fw·fy = 폭포 밴드(art5 픽셀 실측) / w1·w2 = 물줄기 색(진한, 밝은)
 const CLIFF_META = [
-  { g: [106,131,31], fx: 115, fw: 14, fy: 72, w1: 'rgba(205,238,255,', w2: 'rgba(255,255,255,', bl: [0.55, 0.28, 465] }, // easy: 청량한 폭포 (짧은 낙차 — 베이스 y72)
-  { g: [55,74,29],   fx: 124, fw: 14, fy: 108, w1: 'rgba(185,222,255,', w2: 'rgba(255,255,255,', bl: [0.55, 0.28, 465] }, // normal
-  { g: [17,46,64],   fx: 81,  fw: 16, fy: 148, w1: 'rgba(140,195,255,', w2: 'rgba(215,238,255,', bl: [0.55, 0.28, 465] }, // hard: 폭풍 속 푸른 폭포
-  { g: [75,31,22],   fx: 121, fw: 16, fy: 140, w1: 'rgba(255,140,30,',  w2: 'rgba(255,215,80,',  bl: [0.75, 0.44, 620] }, // hell: 용암 폭포 (느리게). fy 140 = 물보라가 차단 타원 안 상한 (155면 보행 지면 침범 — 크로스체크)
+  { fx: 115, fw: 14, fy: 72, w1: 'rgba(205,238,255,', w2: 'rgba(255,255,255,' }, // easy: 청량한 폭포 (짧은 낙차 — 베이스 y72)
+  { fx: 124, fw: 14, fy: 108, w1: 'rgba(185,222,255,', w2: 'rgba(255,255,255,' }, // normal
+  { fx: 81,  fw: 16, fy: 148, w1: 'rgba(140,195,255,', w2: 'rgba(215,238,255,' }, // hard (현재 미사용 — 밤 무드는 앰비언트 담당)
+  { fx: 121, fw: 16, fy: 140, w1: 'rgba(255,140,30,',  w2: 'rgba(255,215,80,'  }, // hell: 용암 폭포 (느리게). fy 140 = 물보라가 차단 타원 안 상한 (155면 보행 지면 침범 — 크로스체크)
 ];
 // 💧☁️ 라이브 오버레이 — S.time 애니메이션이라 베이크 금지 (베이크했다 얼어붙은 횃불 회귀의 교훈)
 function drawCliffLive(cell, ph) {
@@ -3509,34 +3554,30 @@ function drawCliffLive(cell, ph) {
 function drawSkyCorner() {
   if (!SKY_CUT) return;
   const ph = skyPhase();
-  if (CLIFFART.img) {
-    const cell = ph >= 4 ? (ph === 4 && S.hellCleared ? 1 : 3) : ph >= 2 ? 2 : ph === 1 ? 1 : (DIFF_MUL === 0.7 ? 0 : 1); // 헬 클리어 후엔 세계가 회복 — 절벽도 초원으로
-    const gc = CLIFF_META[cell].g, bl = CLIFF_META[cell].bl;
-    const LW = bl[2] + 8, LH = Math.ceil(LW * 0.7);
-    bakedLayer('skyCut|A' + ph + cell, 0, 0, LW, LH, () => {
-      // ① 주변 지면을 아트 잔디톤으로 수렴 — 아트 페더 밖까지 양방향 블렌드 (유저: "한 이미지로 연결"), 세기·범위는 셀별 bl
-      ctx.save();
-      ctx.scale(1, 0.7); // 원형 그라데이션 → (bl[2], bl[2]*0.7) 타원
-      const bg2 = ctx.createRadialGradient(0, 0, 232, 0, 0, bl[2]);
-      bg2.addColorStop(0, `rgba(${gc[0]},${gc[1]},${gc[2]},${bl[0]})`);
-      bg2.addColorStop(0.55, `rgba(${gc[0]},${gc[1]},${gc[2]},${bl[1]})`);
-      bg2.addColorStop(1, `rgba(${gc[0]},${gc[1]},${gc[2]},0)`);
-      ctx.fillStyle = bg2; ctx.fillRect(0, 0, LW, Math.ceil(LH / 0.7));
-      ctx.restore();
-      // ② 질감 다리: 아트 톤 풀 반점을 전환부(반경 0.92~1.34)에 흩뿌림 — 시드 고정 LCG라 베이크 결정적
-      let sd = 7;
-      const rnd = () => (sd = (Math.imul(sd, 1103515245) + 12345) & 0x7fffffff) / 0x7fffffff; // imul: 53비트 초과 정밀도 손실 방지
-      for (let i = 0; i < 26; i++) {
-        const a = 0.09 + rnd() * 1.42, rr = 0.92 + rnd() * 0.42;
-        const px = Math.cos(a) * 300 * rr, py = Math.sin(a) * 210 * rr;
-        const dk = rnd() < 0.5 ? -22 : 16;
-        ctx.fillStyle = `rgba(${gc[0]+dk},${gc[1]+dk},${gc[2]+dk},${(0.25 + rnd() * 0.3).toFixed(2)})`;
-        ctx.beginPath(); ctx.ellipse(px, py, 2 + rnd() * 3.5, 1.2 + rnd() * 2, rnd() * 3.14, 0, 6.28); ctx.fill();
+  if (CLIFFART.img && CLIFFART.cells.length) {
+    // 🎯 지형이 기준 (유저 최종 지침): 절벽의 지면 픽셀을 '지금 화면의 실제 지형 색'으로 재염색한다.
+    //    노을·밤·붉은달 무드는 이 뒤에 오는 앰비언트(sbPhaseTint 등)가 지형과 절벽에 똑같이 내려앉아 처리 —
+    //    그래서 셀은 낮(쉬움=easy, 그 외=normal)과 헬(지형이 그을린 뒤)뿐이다. 밤 전용 셀을 쓰면 지형과 어긋난다.
+    const hellish = ph >= 4 && !(ph === 4 && S.hellCleared); // 클리어 후엔 세계 회복 — 절벽도 초원으로
+    const cell = hellish ? 3 : (DIFF_MUL === 0.7 ? 0 : 1);
+    const tone = sampleTerrainTone(); // drawSkyCorner 직전 = 갓 칠해진 순수 지형 (앰비언트·건물 이전)
+    const key = 'skyCut|A' + cell + '|' + (tone[0] / 8 | 0) + ',' + (tone[1] / 8 | 0) + ',' + (tone[2] / 8 | 0);
+    bakedLayer(key, 0, 0, 304, 214, () => {
+      const info = CLIFFART.cells[cell];
+      const t = document.createElement('canvas'); t.width = 300; t.height = 210;
+      const g = t.getContext('2d');
+      g.drawImage(CLIFFART.img, cell * 300, 0, 300, 210, 0, 0, 300, 210);
+      const img = g.getImageData(0, 0, 300, 210);
+      const ratio = [tone[0] / info.mean[0], tone[1] / info.mean[1], tone[2] / info.mean[2]];
+      for (let i = 0; i < 300 * 210; i++) {
+        if (!info.mask[i]) continue;
+        const o = i * 4;
+        img.data[o] = Math.min(255, img.data[o] * ratio[0]);
+        img.data[o + 1] = Math.min(255, img.data[o + 1] * ratio[1]);
+        img.data[o + 2] = Math.min(255, img.data[o + 2] * ratio[2]);
       }
-      // ③ 절벽 아트
-      ctx.drawImage(CLIFFART.img, cell * 300, 0, 300, 210, 0, 0, 300, 210);
-      const tint = ph === 1 ? 'rgba(245,145,94,0.20)' : ph === 3 ? 'rgba(150,30,60,0.25)' : null; // 노을·붉은달은 틴트 변주 (블렌드·반점까지 함께 물든다)
-      if (tint) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = tint; ctx.fillRect(0, 0, LW, LH); ctx.globalCompositeOperation = 'source-over'; }
+      g.putImageData(img, 0, 0);
+      ctx.drawImage(t, 0, 0);
     });
     drawCliffLive(cell, ph); // 💧☁️ 폭포·구름은 매 프레임
     return;
