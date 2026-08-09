@@ -815,8 +815,8 @@ let RS = Math.round(Math.min(2, Math.max(1, window.devicePixelRatio || 1)) * 4) 
 function rsTarget() {
   const dpr = window.devicePixelRatio || 1;
   const r = cv.getBoundingClientRect();
-  const css = r.width > 50 ? r.width / VW : 1; // 캔버스 숨김(타이틀·포커 탭)이면 CSS 배율 미상 → 1
-  return Math.round(Math.min(2, Math.max(1, dpr * css)) * 4) / 4; // ¼ 양자화 — 드래그 리사이즈마다 전체 리베이크 방지
+  if (r.width < 50) return RS; // 캔버스 숨김(타이틀·모바일 포커 탭) = 배율 미상 → 현행 유지 (탭 전환마다 RS가 널뛰며 캐시 스래시하는 것 방지)
+  return Math.round(Math.min(2, Math.max(1, dpr * (r.width / VW))) * 4) / 4; // ¼ 양자화 — 드래그 리사이즈마다 전체 리베이크 방지
 }
 function rsSetCanvas() {
   cv.width = Math.round(VW * RS); cv.height = Math.round(VH * RS); // width 대입 = 컨텍스트 상태 리셋 → transform 재설정 필수
