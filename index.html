@@ -815,13 +815,14 @@ let RS = Math.round(Math.min(2, Math.max(1, window.devicePixelRatio || 1)) * 4) 
 function rsTarget() {
   const dpr = window.devicePixelRatio || 1;
   const r = cv.getBoundingClientRect();
-  if (r.width < 50) return RS; // 캔버스 숨김(타이틀·모바일 포커 탭) = 배율 미상 → 현행 유지 (탭 전환마다 RS가 널뛰며 캐시 스래시하는 것 방지)
+  if (r.width < 50) return RS; // 캔버스 미표시(모바일 포커 탭 display:none 등) = 배율 미상 → 현행 유지 (탭 전환마다 RS가 널뛰며 캐시 스래시하는 것 방지)
   return Math.round(Math.min(2, Math.max(1, dpr * (r.width / VW))) * 4) / 4; // ¼ 양자화 — 드래그 리사이즈마다 전체 리베이크 방지
 }
 function rsSetCanvas() {
   cv.width = Math.round(VW * RS); cv.height = Math.round(VH * RS); // width 대입 = 컨텍스트 상태 리셋 → transform 재설정 필수
-  ctx.setTransform(RS, 0, 0, RS, 0, 0);
-  ctx.imageSmoothingQuality = 'high';
+  const g = cv.getContext('2d'); // 전역 ctx는 베이크 중 임시 스왑될 수 있으니 메인 컨텍스트를 직접 집는다 (동일 객체)
+  g.setTransform(RS, 0, 0, RS, 0, 0);
+  g.imageSmoothingQuality = 'high';
 }
 function rsMaybe() { // RS 의존 베이크 전부 무효화 후 재적용 — 게임 도중 호출돼도 다음 프레임에 게으르게 재베이크된다
   const t = rsTarget();
@@ -832,8 +833,7 @@ function rsMaybe() { // RS 의존 베이크 전부 무효화 후 재적용 — �
   sbWorldBake = null;
   bldgLayers.clear();
   for (const k in matSprites) delete matSprites[k];
-  unitSprites.clear();
-  if (S && S.units) for (const u of S.units) u._us = null;
+  // unitSprites·u._us는 RS 무관(USPR 128 고정 2x 베이크)이라 무효화 불필요 — 지우면 순수 낭비 (크로스체크 P2)
 }
 rsSetCanvas(); // 부팅 즉시 DPR 반영 (캐시는 아직 없어 무효화 불필요)
 window.addEventListener('resize', () => setTimeout(rsMaybe, 200));
@@ -919,7 +919,7 @@ function queueFitGameSize() {
   requestAnimationFrame(() => { refitQueued = false; fitGameSize(); });
 }
 window.addEventListener('resize', fitGameSize);
-requestAnimationFrame(() => { fitGameSize(); requestAnimationFrame(fitGameSize); }); // 2패스 — 폭이 바뀌며 제목/로그가 접히는 경우 보정
+requestAnimationFrame(() => { fitGameSize(); requestAnimationFrame(() => { fitGameSize(); rsMaybe(); }); }); // 2패스 — 폭이 바뀌며 제목/로그가 접히는 경우 보정. RS 부팅 보정은 반드시 2패스 뒤 (--chrome이 r.width를 바꾼다 — 크로스체크 P2)
 
 // 죽음 얼룩 데칼 레이어 (오프스크린 — 매 프레임 drawImage 1회, 서서히 페이드)
 const decalCv = document.createElement('canvas');
@@ -3605,15 +3605,39 @@ const BGFALL_CORR = { // topX@yTop → botX@yBot 코리도 (±slack) — 하늘�
 function bgFallPrep(key) {
   const store = BGFULL.falls || (BGFULL.falls = {});
   if (store[key] !== undefined) return store[key];
-  const baked = bgFullBaked(key);
-  if (!baked) return null;
+  const im = BGFULL[key];
+  if (!im) return null;
   const a = BGFALL_CORR[key];
   const x0 = 100, y0 = Math.max(0, a.yTop - 8), x1 = 260, y1 = a.yBot + 10;
   const w = x1 - x0, h = y1 - y0;
-  const srcCv = document.createElement('canvas'); srcCv.width = w; srcCv.height = h; // 마스크는 논리 1x 고정 — RS 베이크를 논리 크기로 크롭해 읽는다 (RS=1이면 무손실 복사 = 기존과 동일)
+  // ⚠️ 마스크 유도는 RS 불변이어야 한다 (08-10 크로스체크 P1): RS 베이크에서 읽으면 리샘플·언샤프 강도가
+  //    디스플레이(DPR)마다 달라져 폭포 축·낙하점이 사용자마다 다르게 유도된다. → 항상 원본에서 1x 다운스케일
+  //    + 언샤프 0.42 고정 (= 검증된 RS=1 파이프라인 재현). 크롭 영역만 처리하므로 ~1ms.
+  const PAD = 2; // 언샤프 이웃 참조용 패딩 (경계 왜곡 방지)
+  const sxK = im.width / VW, syK = im.height / VH;
+  const px0 = Math.max(0, x0 - PAD), py0 = Math.max(0, y0 - PAD);
+  const pw = w + (x0 - px0) + PAD, ph = h + (y0 - py0) + PAD;
+  const srcCv = document.createElement('canvas'); srcCv.width = pw; srcCv.height = ph;
   const sg2 = srcCv.getContext('2d');
-  sg2.drawImage(baked, x0 * RS, y0 * RS, w * RS, h * RS, 0, 0, w, h);
-  const d = sg2.getImageData(0, 0, w, h).data;
+  sg2.imageSmoothingQuality = 'high';
+  sg2.drawImage(im, px0 * sxK, py0 * syK, pw * sxK, ph * syK, 0, 0, pw, ph);
+  const sid = sg2.getImageData(0, 0, pw, ph), ss = sid.data;
+  const A2 = 0.42, C2 = 1 + 4 * A2; // 고정 강도 — bgFullBaked의 RS 가변 A와 무관
+  const usp = sg2.createImageData(pw, ph), us = usp.data;
+  for (let y = 0; y < ph; y++) {
+    const up = y ? -pw * 4 : 0, dn = y < ph - 1 ? pw * 4 : 0;
+    for (let x = 0; x < pw; x++) {
+      const i = (y * pw + x) * 4;
+      const lf = x ? -4 : 0, rt = x < pw - 1 ? 4 : 0;
+      for (let ch = 0; ch < 3; ch++) {
+        const v = ss[i + ch] * C2 - (ss[i + up + ch] + ss[i + dn + ch] + ss[i + lf + ch] + ss[i + rt + ch]) * A2;
+        us[i + ch] = v < 0 ? 0 : v > 255 ? 255 : v;
+      }
+      us[i + 3] = 255;
+    }
+  }
+  sg2.putImageData(usp, 0, 0);
+  const d = sg2.getImageData(x0 - px0, y0 - py0, w, h).data; // 패딩 벗기고 안쪽만 — 이하 인덱스는 기존 (y*w+x) 그대로
   const isW = i => {
     const r = d[i], g2 = d[i + 1], b = d[i + 2];
     return a.lava ? ((r > 110 && r - b > 60 && g2 > 40 && g2 < r * 0.8) || (r > 235 && g2 > 190 && b < 190))
@@ -5543,6 +5567,8 @@ function matSprite(mat, bucket, golden, broken) {
   monReady(); // 아트 로드 완료 순간 1회: 추출 + 캐시 무효화
   const key = (mat * 20 + bucket * 2 + (golden ? 1 : 0)) * 3 + broken; // 기존 키(유일) × 3 + broken(0~2) → 충돌 없음
   if (!matSprites[key]) {
+    const mks = Object.keys(matSprites);
+    if (mks.length > 96) for (const k2 of mks) delete matSprites[k2]; // 폭주 방어 (bldgLayers 관례) — RS=2에선 엔트리당 124KB라 상한 필수 (크로스체크 P2)
     const cnv = document.createElement('canvas'); cnv.width = cnv.height = Math.ceil(SPR * RS); // RS배 베이크 (내용은 논리 SPR 좌표 — scale이 흡수)
     const old = ctx; ctx = cnv.getContext('2d');
     try {
@@ -9005,8 +9031,8 @@ function sbBake() {
   const c = document.createElement('canvas'); c.width = Math.round(940 * RS); c.height = Math.round(500 * RS); // RS배 베이크
   sbWorldBake = c; // 실패해도 캐시 유지 (재시도 폭주 방지)
   const old = ctx; ctx = c.getContext('2d');
-  ctx.scale(RS, RS); ctx.imageSmoothingQuality = 'high';
   try {
+    ctx.scale(RS, RS); ctx.imageSmoothingQuality = 'high';
     const rnd = mulberry32(729), sp = MTART.sp, g = sp.grass;
     for (let y = 0; y < 500; y += g.height) for (let x = 0; x < 940; x += g.width) ctx.drawImage(g, x, y);
     mtGrassStamps(rnd, 940, 500, 26);
