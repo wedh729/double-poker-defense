@@ -746,7 +746,7 @@ const MINER_SPEED = 42;          // 광부 기본 이동속도 (느릿느릿)
 const MINER_LOAD = 150;          // 배달 1회 기본 골드. 45 → 90(칩 전용화) → 150 (유저: 광부를 구하기 힘들어진 만큼 1기 가치를 더 올린다)
 const DIG_RATE = 30;             // 광부가 캐는 동안 광산 체력 감소/초
 const MINER_MAX_LV = 5;          // 광부 업그레이드 최대 레벨
-const PEN = { x: CX, y: CY, w: 264, h: 176 }; // 몬스터 소환장 울타리 (2배 확장 — 몬스터도 2배, 카타르시스 업)
+const PEN = { x: CX, y: CY, w: 198, h: 132 }; // 몬스터 소환장 울타리 (2026-08-09 유저: 화면 부족+몹 30% 축소에 맞춰 25% 축소. 264×176 → 198×132 — 밀집도 ↑79%라 광역 유닛 실효 상승 주의)
 const ALTAR = { x: CX - PEN.w/2 - 58, y: CY, w: 64, h: 78 }; // 🪨 제물대: 소환장 왼쪽. 하이카드를 바쳐 투석기 완성
 const PLANK_W = 48, PLANK_DEPTH = 12; // 🪵 나무판자: 소환장 중앙 하단 발판. 폭 48(2기 낑김), 깊이 12(짧게) — 유닛이 올라가 소환장 안을 직접 타격
 // 판정 상한 -26 = 발 위치 보정: 유닛 중심이 판자 위끝보다 26px 위까지 허용 → "발"이 판자 끝단에 딱 서는 그림
@@ -1508,7 +1508,7 @@ function spawnMonster(hp, isBoss, opt) {
   const { ci } = stageInfo(S.round);
   const m = {
     ang: Math.random() * Math.PI * 2,
-    baseR: (opt.child ? 12 : 16) + Math.random() * (opt.child ? 60 : 76),
+    baseR: (opt.child ? 9 : 12) + Math.random() * (opt.child ? 45 : 57), // 소환장 25% 축소에 맞춰 배회 반경도 75% (벽에 눌리지 않게)
     phase: Math.random() * Math.PI * 2,
     spin: (Math.random() < 0.5 ? -1 : 1) * (0.15 + Math.random() * 0.35),
     x: opt.x != null ? opt.x : CX, y: opt.y != null ? opt.y : CY, rot: Math.random() * Math.PI,
