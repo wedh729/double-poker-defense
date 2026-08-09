@@ -3551,6 +3551,62 @@ function drawCliffLive(cell, ph) {
   }
   ctx.restore();
 }
+// 🌼 초원 데코: 절벽 아트의 꽃·수풀 밀도가 지형과 뚝 끊기지 않게 (유저: "이어지게 밸런스") —
+// 맵 전체에 아트풍 꽃·풀·덤불을 심되 절벽 근처는 빽빽, 멀수록 성기게. 색은 지형 샘플 파생이라 난이도 불문 자동 조화.
+// 헬(그을린 세계)은 꽃 없이 덤불·풀만. 시드 고정 스캐터 + 오브젝트 회피 → 전부 베이크(프레임 비용 = drawImage 1회).
+function drawMeadowDecor(tone, hellish) {
+  const key = 'meadow|' + (hellish ? 'h' : 'd') + '|' + (tone[0] / 8 | 0) + ',' + (tone[1] / 8 | 0) + ',' + (tone[2] / 8 | 0);
+  bakedLayer(key, 0, 0, 940, 500, () => {
+    let sd = 41;
+    const rnd = () => (sd = (Math.imul(sd, 1103515245) + 12345) & 0x7fffffff) / 0x7fffffff;
+    const inRect = (x, y, rx, ry, rw, rh, m) => x > rx - m && x < rx + rw + m && y > ry - m && y < ry + rh + m;
+    const t = tone;
+    for (let i = 0; i < 390; i++) {
+      const x = rnd() * 940, y = rnd() * 500;
+      if (y > 450) continue; // 하단 길 위엔 심지 않는다
+      const d = Math.hypot(x / 300, y / 210); // 절벽 타원 기준 거리 (1 = 절벽 가장자리)
+      if (d < 1.04) continue; // 절벽 위는 아트가 담당
+      const p = 0.13 + 0.87 * Math.exp(-(((d - 1) / 0.8) ** 2)); // 절벽에서 멀수록 성기게
+      if (rnd() > p) continue;
+      // 오브젝트 회피: 소환장·제물대·광석방·결투장·광산·포털
+      if (inRect(x, y, PEN.x - PEN.w / 2, PEN.y - PEN.h / 2, PEN.w, PEN.h, 12)) continue;
+      if (inRect(x, y, ALTAR.x - ALTAR.w / 2, ALTAR.y - ALTAR.h / 2, ALTAR.w, ALTAR.h, 10)) continue;
+      if (inRect(x, y, ROOM.cx - ROOM.w / 2, ROOM.cy - ROOM.h / 2, ROOM.w, ROOM.h, 12)) continue;
+      if (Math.hypot(x - ARENA.x, y - ARENA.y) < ARENA.r + 14) continue;
+      if (Math.hypot(x - PORTAL.x, y - PORTAL.y) < PORTAL.r + 14) continue;
+      if (Math.hypot(x - MINE_POS.x, y - MINE_POS.y) < 52) continue;
+      const kind = rnd();
+      if (kind < 0.52) { // 풀 다발 (정적 — 살랑이는 기존 GRASS_SPOTS와 공존)
+        ctx.strokeStyle = `rgba(${t[0] * 0.66 | 0},${t[1] * 0.74 | 0},${t[2] * 0.5 | 0},0.7)`;
+        ctx.lineWidth = 1.2;
+        for (const o of [-2.6, 0, 2.6]) {
+          ctx.beginPath(); ctx.moveTo(x + o, y);
+          ctx.quadraticCurveTo(x + o + 1.2, y - 4, x + o * 0.5 + (rnd() - 0.5) * 2, y - 6.5 - Math.abs(o));
+          ctx.stroke();
+        }
+      } else if (kind < 0.82 && !hellish) { // 꽃 (아트풍: 흰/분홍 5잎 + 노란 수술)
+        const fc = rnd() < 0.55 ? '#fbfbf2' : '#f5b8cc';
+        ctx.fillStyle = fc;
+        const fr = 2.1 + rnd() * 0.9;
+        for (let pt = 0; pt < 5; pt++) {
+          const a = pt * 1.257 + rnd() * 0.3;
+          ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * fr, y + Math.sin(a) * fr, fr * 0.62, fr * 0.4, a, 0, 6.28); ctx.fill();
+        }
+        ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(x, y, fr * 0.42, 0, 6.28); ctx.fill();
+      } else { // 덤불 (아트풍: 두 톤 + 옅은 외곽)
+        const br = 4 + rnd() * 3;
+        ctx.fillStyle = `rgb(${t[0] * 0.55 | 0},${t[1] * 0.64 | 0},${t[2] * 0.45 | 0})`;
+        ctx.beginPath();
+        ctx.arc(x, y, br, 0, 6.28); ctx.arc(x - br * 0.8, y + 1.5, br * 0.7, 0, 6.28); ctx.arc(x + br * 0.8, y + 1, br * 0.65, 0, 6.28);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(20,30,10,0.22)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = `rgb(${t[0] * 0.78 | 0},${t[1] * 0.88 | 0},${t[2] * 0.62 | 0})`;
+        ctx.beginPath(); ctx.arc(x - br * 0.3, y - br * 0.35, br * 0.55, 0, 6.28); ctx.fill();
+      }
+    }
+    ctx.lineWidth = 1;
+  });
+}
 function drawSkyCorner() {
   if (!SKY_CUT) return;
   const ph = skyPhase();
@@ -3561,6 +3617,7 @@ function drawSkyCorner() {
     const hellish = ph >= 4 && !(ph === 4 && S.hellCleared); // 클리어 후엔 세계 회복 — 절벽도 초원으로
     const cell = hellish ? 3 : (DIFF_MUL === 0.7 ? 0 : 1);
     const tone = sampleTerrainTone(); // drawSkyCorner 직전 = 갓 칠해진 순수 지형 (앰비언트·건물 이전)
+    drawMeadowDecor(tone, hellish); // 🌼 절벽 아래(먼저) — 꽃·수풀 밀도가 절벽에서 지형으로 이어진다
     const key = 'skyCut|A' + cell + '|' + (tone[0] / 8 | 0) + ',' + (tone[1] / 8 | 0) + ',' + (tone[2] / 8 | 0);
     bakedLayer(key, 0, 0, 304, 214, () => {
       const info = CLIFFART.cells[cell];
