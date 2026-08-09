@@ -806,6 +806,38 @@ function duelWindowActive() { return !!S.duel || (S.phase === 'poker' && S.round
 
 const cv = document.getElementById('cv');
 let ctx = cv.getContext('2d'); // 스프라이트 캐시 빌드 시 임시 스왑 가능하도록 let
+// ── 🔬 해상도 통일 (2026-08-10 유저: "배경·건물·유닛·몬스터 해상도가 제각각, 최대한 선명하게"):
+//    게임 논리 좌표는 VW×VH(940×500) 고정, 백킹스토어만 RS배(디스플레이 실픽셀)로 키우고 setTransform(RS)로 흡수.
+//    베이크(배경·건물·몬스터)도 RS배로 구워 디바이스 픽셀 1:1 — 유닛 코어는 원래 2x 베이크라 RS=2에서 자동 1:1.
+//    상한 2 = 유닛 베이크(2x)·풀맵 원본(1880×1000)과 일치하는 스위트 스폿 (그 이상은 스프라이트가 도로 확대됨).
+const VW = 940, VH = 500;
+let RS = Math.round(Math.min(2, Math.max(1, window.devicePixelRatio || 1)) * 4) / 4; // 부팅: 레이아웃 전이라 CSS 확대율은 모름 → DPR만(¼ 양자화). 이후 rsMaybe가 보정
+function rsTarget() {
+  const dpr = window.devicePixelRatio || 1;
+  const r = cv.getBoundingClientRect();
+  const css = r.width > 50 ? r.width / VW : 1; // 캔버스 숨김(타이틀·포커 탭)이면 CSS 배율 미상 → 1
+  return Math.round(Math.min(2, Math.max(1, dpr * css)) * 4) / 4; // ¼ 양자화 — 드래그 리사이즈마다 전체 리베이크 방지
+}
+function rsSetCanvas() {
+  cv.width = Math.round(VW * RS); cv.height = Math.round(VH * RS); // width 대입 = 컨텍스트 상태 리셋 → transform 재설정 필수
+  ctx.setTransform(RS, 0, 0, RS, 0, 0);
+  ctx.imageSmoothingQuality = 'high';
+}
+function rsMaybe() { // RS 의존 베이크 전부 무효화 후 재적용 — 게임 도중 호출돼도 다음 프레임에 게으르게 재베이크된다
+  const t = rsTarget();
+  if (t === RS) return;
+  RS = t;
+  rsSetCanvas();
+  BGFULL.baked = {};
+  sbWorldBake = null;
+  bldgLayers.clear();
+  for (const k in matSprites) delete matSprites[k];
+  unitSprites.clear();
+  if (S && S.units) for (const u of S.units) u._us = null;
+}
+rsSetCanvas(); // 부팅 즉시 DPR 반영 (캐시는 아직 없어 무효화 불필요)
+window.addEventListener('resize', () => setTimeout(rsMaybe, 200));
+setInterval(rsMaybe, 1500); // 캔버스가 뒤늦게 보이는 경우(타이틀→게임, 탭 전환) 포착 — getBoundingClientRect 1회라 비용 무시 가능
 
 // ==================== 모바일 지원 ====================
 const IS_MOBILE = matchMedia('(pointer: coarse)').matches || innerWidth <= 700;
@@ -3496,7 +3528,8 @@ function sampleTerrainTone() {
   cliffToneT = S.time;
   let r = 0, g = 0, b = 0, n = 0;
   for (const [sx, sy, sw, sh] of [[320, 50, 88, 88], [60, 252, 120, 64]]) {
-    const d = ctx.getImageData(sx, sy, sw, sh).data;
+    const d = ctx.getImageData(Math.round(sx * RS), Math.round(sy * RS), Math.round(sw * RS), Math.round(sh * RS)).data; // getImageData는 transform 무시 — 디바이스 좌표로
+
     for (let i = 0; i < d.length; i += 16) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
   }
   cliffTone = [r / n, g / n, b / n];
@@ -3534,15 +3567,17 @@ function bgFullBaked(key) {
   if (store[key]) return store[key];
   const im = BGFULL[key];
   if (!im) return null;
-  const c = document.createElement('canvas'); c.width = 940; c.height = 500;
+  const W = Math.round(VW * RS), H = Math.round(VH * RS); // RS=2면 원본(1880×1000)과 정확히 1:1 — 다운스케일 소실 0
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d');
   g.imageSmoothingQuality = 'high';
-  g.drawImage(im, 0, 0, 940, 500);
-  const id = g.getImageData(0, 0, 940, 500), s = id.data;
-  const out = g.createImageData(940, 500), o = out.data;
-  const A = 0.42, C0 = 1 + 4 * A, W = 940;
-  for (let y = 0; y < 500; y++) {
-    const up = y ? -W * 4 : 0, dn = y < 499 ? W * 4 : 0;
+  g.drawImage(im, 0, 0, W, H);
+  const id = g.getImageData(0, 0, W, H), s = id.data;
+  const out = g.createImageData(W, H), o = out.data;
+  const A = RS >= 1.75 ? 0.30 : 0.42; // 1:1에 가까울수록 다운스케일 소프트닝이 없어 언샤프를 줄인다 (과예리 방지)
+  const C0 = 1 + 4 * A;
+  for (let y = 0; y < H; y++) {
+    const up = y ? -W * 4 : 0, dn = y < H - 1 ? W * 4 : 0;
     for (let x = 0; x < W; x++) {
       const i = (y * W + x) * 4;
       const lf = x ? -4 : 0, rt = x < W - 1 ? 4 : 0;
@@ -3575,7 +3610,10 @@ function bgFallPrep(key) {
   const a = BGFALL_CORR[key];
   const x0 = 100, y0 = Math.max(0, a.yTop - 8), x1 = 260, y1 = a.yBot + 10;
   const w = x1 - x0, h = y1 - y0;
-  const d = baked.getContext('2d').getImageData(x0, y0, w, h).data;
+  const srcCv = document.createElement('canvas'); srcCv.width = w; srcCv.height = h; // 마스크는 논리 1x 고정 — RS 베이크를 논리 크기로 크롭해 읽는다 (RS=1이면 무손실 복사 = 기존과 동일)
+  const sg2 = srcCv.getContext('2d');
+  sg2.drawImage(baked, x0 * RS, y0 * RS, w * RS, h * RS, 0, 0, w, h);
+  const d = sg2.getImageData(0, 0, w, h).data;
   const isW = i => {
     const r = d[i], g2 = d[i + 1], b = d[i + 2];
     return a.lava ? ((r > 110 && r - b > 60 && g2 > 40 && g2 < r * 0.8) || (r > 235 && g2 > 190 && b < 190))
@@ -3962,8 +4000,8 @@ function drawEmbers(nE, aMul) { // 떠오르는 불씨
   const T = S.time;
   for (let i = 0; i < nE; i++) {
     const seed = i * 79.3;
-    const ex = (seed * 7.7) % cv.width + Math.sin(T * 1.3 + i) * 14;
-    const ey = cv.height - ((T * (26 + i * 3.5) + seed) % (cv.height + 40));
+    const ex = (seed * 7.7) % VW + Math.sin(T * 1.3 + i) * 14;
+    const ey = VH - ((T * (26 + i * 3.5) + seed) % (VH + 40));
     const a = 0.5 * (0.5 + 0.5 * Math.sin(T * 5 + i * 2)) * aMul;
     ctx.fillStyle = `rgba(255,${150 + (i % 3) * 40},60,${a.toFixed(2)})`;
     ctx.beginPath(); ctx.arc(ex, ey, 1.4 + (i % 3) * 0.7, 0, 6.28); ctx.fill();
@@ -3974,15 +4012,15 @@ function drawAshFall(nA, aMul) { // 잿가루: 눈처럼 천천히 내린다
   ctx.fillStyle = `rgba(185,178,172,${(0.4 * aMul).toFixed(2)})`;
   for (let i = 0; i < nA; i++) {
     const seed = i * 211.4;
-    const ax = (seed * 3.3) % cv.width + Math.sin(T * 0.8 + i * 1.7) * 22;
-    const ay = ((T * (14 + i * 2) + seed) % (cv.height + 30)) - 15;
+    const ax = (seed * 3.3) % VW + Math.sin(T * 0.8 + i * 1.7) * 22;
+    const ay = ((T * (14 + i * 2) + seed) % (VH + 30)) - 15;
     ctx.beginPath(); ctx.arc(ax, ay, 1.1 + (i % 2) * 0.6, 0, 6.28); ctx.fill();
   }
 }
 function drawSmokeColumns(nP, baseA) { // 지평선 검은 연기 기둥: 세계가 탄다
   const T = S.time;
   for (let i = 0; i < nP; i++) {
-    const bx = 150 + i * 330 + (i * 97 % 120), by = cv.height - 96;
+    const bx = 150 + i * 330 + (i * 97 % 120), by = VH - 96;
     ctx.fillStyle = `rgba(25,18,16,${baseA.toFixed(2)})`;
     ctx.beginPath(); ctx.moveTo(bx - 7, by + 96);
     for (let sg = 0; sg <= 6; sg++) { const yy = by + 96 - sg * 30, wob = Math.sin(T * 1.4 + i * 2 + sg) * (5 + sg * 2.6);
@@ -3997,11 +4035,11 @@ function drawHellCreep() {
   const k = apocK(); if (k <= 0) return;
   // 기본 그을림을 진입부터 진하게 (유저: "헬 페이즈도 지옥처럼" — 용암 절벽과 지형 톤 통일). 진행감은 불꽃·잿가루·균열의 k 램프가 담당
   const washA = bgFullKeyDrawn === 'hell' ? 0.05 + 0.10 * k : 0.26 + 0.26 * k; // 풀맵 헬 지면은 이미 그을려 있음 — 살짝만
-  ctx.fillStyle = `rgba(64,10,6,${washA.toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height); // 세계가 그을린다
-  const hg = ctx.createLinearGradient(0, cv.height - 130, 0, cv.height); // 지평선이 타오른다
+  ctx.fillStyle = `rgba(64,10,6,${washA.toFixed(2)})`; ctx.fillRect(0, 0, VW, VH); // 세계가 그을린다
+  const hg = ctx.createLinearGradient(0, VH - 130, 0, VH); // 지평선이 타오른다
   hg.addColorStop(0, 'rgba(255,110,20,0)');
   hg.addColorStop(1, `rgba(255,120,25,${(0.14 + 0.22 * k + 0.06 * Math.sin(S.time * 1.7)).toFixed(2)})`);
-  ctx.fillStyle = hg; ctx.fillRect(0, cv.height - 130, cv.width, 130);
+  ctx.fillStyle = hg; ctx.fillRect(0, VH - 130, VW, 130);
   drawSkyCracks(Math.ceil(k * 4), 0.35 + 0.45 * k);
   drawFlameTongues(0.7 + 0.5 * k, Math.ceil(GRASS_SPOTS.length * Math.min(1, k * 1.3)), Math.min(1, 0.35 + k)); // 풀밭이 한 포기씩 불붙는다
   drawEmbers(4 + Math.round(18 * k), Math.min(1, 0.4 + k));
@@ -4013,9 +4051,9 @@ function drawSpringscape() {
   const T = S.time;
   const art = sbGround(); // 🎨 아트 지면 (없으면 기존 파스텔)
   if (!art) {
-    const g = ctx.createLinearGradient(0, 0, 0, cv.height);
+    const g = ctx.createLinearGradient(0, 0, 0, VH);
     g.addColorStop(0, '#f2fbff'); g.addColorStop(0.5, '#ecfaea'); g.addColorStop(1, '#daf2c6');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
   }
   // 옅은 무지개 (좌상단 큰 호) — 끝자락은 하늘에 녹아들듯 옅어지며 빛 알갱이로 흩어진다
   const rbFade = Math.max(0, 1 - apocK() * 1.6); // 태양이 다가오면 무지개도 바랜다
@@ -4095,21 +4133,21 @@ function drawStormscape() {
   const lightning = ((T * 0.9 + 3) % period) < 0.14;
   const art = sbGround(); // 🎨 아트 지면 + 폭풍 무드 틴트
   if (!art) {
-    const g = ctx.createLinearGradient(0, 0, 0, cv.height);
+    const g = ctx.createLinearGradient(0, 0, 0, VH);
     g.addColorStop(0, lightning ? '#8f8da6' : '#7d7b93');
     g.addColorStop(0.55, '#a39aa2'); g.addColorStop(1, '#bdb098');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
   } else if (!bgFullKeyDrawn) {
     ctx.fillStyle = lightning ? 'rgba(143,141,166,0.42)' : 'rgba(112,108,135,0.42)';
-    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillRect(0, 0, VW, VH);
   } else if (lightning) { // 풀맵(이미 폭풍톤)엔 번개 섬광만
-    ctx.fillStyle = 'rgba(200,205,235,0.26)'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = 'rgba(200,205,235,0.26)'; ctx.fillRect(0, 0, VW, VH);
   }
-  if (k > 0.05) { ctx.fillStyle = `rgba(28,26,44,${(0.22 * k).toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height); } // 점점 잿빛으로
+  if (k > 0.05) { ctx.fillStyle = `rgba(28,26,44,${(0.22 * k).toFixed(2)})`; ctx.fillRect(0, 0, VW, VH); } // 점점 잿빛으로
   if (k > 0.8) { // 말기: 지평선에 스미는 붉은 기운 — 전쟁이 다가온다
-    const rg = ctx.createLinearGradient(0, cv.height - 90, 0, cv.height);
+    const rg = ctx.createLinearGradient(0, VH - 90, 0, VH);
     rg.addColorStop(0, 'rgba(180,40,20,0)'); rg.addColorStop(1, `rgba(180,40,20,${((k - 0.8) * 0.9).toFixed(2)})`);
-    ctx.fillStyle = rg; ctx.fillRect(0, cv.height - 90, cv.width, 90);
+    ctx.fillStyle = rg; ctx.fillRect(0, VH - 90, VW, 90);
   }
   drawSkyCorner(); // ☁️ 하늘 모퉁이 — 태양·먹구름보다 먼저
   drawApocSun(); // 🌞 헬모드: 먹구름 뒤에서 태양이 다가온다 (구름에 반쯤 가려 더 불길하게)
@@ -4126,7 +4164,7 @@ function drawStormscape() {
     ctx.fill();
   }
   if (lightning) { // ⚡ 번개: 후반엔 가끔 두 줄기
-    ctx.fillStyle = `rgba(255,255,255,${(0.10 + 0.05 * k).toFixed(2)})`; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = `rgba(255,255,255,${(0.10 + 0.05 * k).toFixed(2)})`; ctx.fillRect(0, 0, VW, VH);
     const strikes = k > 0.7 && ((T / period) | 0) % 3 === 0 ? 2 : 1;
     for (let si = 0; si < strikes; si++) {
       const lx = 180 + (((T / period) | 0) * 367 + si * 251) % 600;
@@ -4139,7 +4177,7 @@ function drawStormscape() {
   if (k > 0.55) { // 🌧️ 가는 빗줄기 (후반)
     ctx.strokeStyle = `rgba(200,205,225,${((k - 0.55) * 0.5).toFixed(2)})`; ctx.lineWidth = 1;
     for (let i = 0; i < 14; i++) {
-      const rx = ((i * 149.3 + T * 300) % (cv.width + 80)) - 40, ry = (i * 83.7 + T * 560) % cv.height;
+      const rx = ((i * 149.3 + T * 300) % (VW + 80)) - 40, ry = (i * 83.7 + T * 560) % VH;
       ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 5, ry + 13); ctx.stroke();
     }
   }
@@ -4153,7 +4191,7 @@ function drawStormscape() {
   // 🍂 낙엽: 갈수록 빨리 날아간다
   for (let i = 0; i < 8; i++) {
     const seed = i * 137.5;
-    const lx2 = ((T * (55 + i * 9) * (1 + 0.8 * k) + seed * 3) % (cv.width + 60)) - 30;
+    const lx2 = ((T * (55 + i * 9) * (1 + 0.8 * k) + seed * 3) % (VW + 60)) - 30;
     const ly = 60 + (seed % 380) + Math.sin(T * 2.4 + i) * 16;
     ctx.save(); ctx.translate(lx2, ly); ctx.rotate(T * (2 + i * 0.4));
     ctx.fillStyle = i % 2 ? 'rgba(160,110,50,0.7)' : 'rgba(190,140,60,0.65)';
@@ -4176,18 +4214,18 @@ function drawHellscape() {
   const T = S.time, hk = Math.min(1, S.round / 80), hell2 = Math.max(0, Math.min(1, (S.round - FINAL_ROUND) / 40)); // 진행도 / 헬 심화
   const art = sbGround(); // 🎨 아트 지면 + 지옥 틴트 (탄 대지 질감이 비쳐 보인다)
   if (!art) {
-    const g = ctx.createLinearGradient(0, 0, 0, cv.height);           // 검붉은 하늘 → 타는 대지 (갈수록 더 검게)
+    const g = ctx.createLinearGradient(0, 0, 0, VH);           // 검붉은 하늘 → 타는 대지 (갈수록 더 검게)
     g.addColorStop(0, hell2 > 0 ? '#140609' : '#200d10'); g.addColorStop(0.5, '#48150f'); g.addColorStop(1, '#772812');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
   } else if (!bgFullKeyDrawn) { // 풀맵 헬 지면은 이미 용암 세계 — 워시 불필요
-    const g = ctx.createLinearGradient(0, 0, 0, cv.height);
+    const g = ctx.createLinearGradient(0, 0, 0, VH);
     g.addColorStop(0, hell2 > 0 ? 'rgba(20,6,9,0.78)' : 'rgba(32,13,16,0.72)'); g.addColorStop(0.5, 'rgba(72,21,15,0.6)'); g.addColorStop(1, 'rgba(119,40,18,0.5)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
   }
-  const hg = ctx.createLinearGradient(0, cv.height - 130, 0, cv.height); // 지평선 화염 글로우 (갈수록 강하게)
+  const hg = ctx.createLinearGradient(0, VH - 130, 0, VH); // 지평선 화염 글로우 (갈수록 강하게)
   hg.addColorStop(0, 'rgba(255,110,20,0)');
   hg.addColorStop(1, `rgba(255,120,25,${(0.22 + 0.15 * hk + 0.08 * Math.sin(T * 1.7)).toFixed(2)})`);
-  ctx.fillStyle = hg; ctx.fillRect(0, cv.height - 130, cv.width, 130);
+  ctx.fillStyle = hg; ctx.fillRect(0, VH - 130, VW, 130);
   // 하늘의 붉은 균열 (헬 진입 후): 세계가 갈라진다
   if (hell2 > 0) drawSkyCracks(1 + Math.floor(hell2 * 3.5), 0.4 + hell2 * 0.4);
   // 일식: 갈수록 코로나가 커지고 붉어진다 → 헬모드부터는 다가오는 진짜 태양으로 교체
@@ -4202,7 +4240,7 @@ function drawHellscape() {
       ctx.beginPath(); ctx.moveTo(mx - 34, my - 46); ctx.lineTo(mx, my); ctx.stroke();
       ctx.lineCap = 'butt'; ctx.lineWidth = 1;
       ctx.fillStyle = '#fff3d0'; ctx.beginPath(); ctx.arc(mx, my, 2.6, 0, 6.28); ctx.fill();
-      if (pr2 > 0.9) { ctx.fillStyle = 'rgba(255,200,120,0.08)'; ctx.fillRect(0, 0, cv.width, cv.height); }
+      if (pr2 > 0.9) { ctx.fillStyle = 'rgba(255,200,120,0.08)'; ctx.fillRect(0, 0, VW, VH); }
     }
   }
   if (apocK() > 0) drawApocSun();
@@ -4229,9 +4267,9 @@ function drawBackdrop() {
   if (DIFF_MUL === 0.7) { drawSpringscape(); drawHellCreep(); return; } // 🌱 쉬움: 봄 소풍
   const art = sbGround(); // 🎨 아트 지면 (보통 난이도) — 시간대 무드는 아래 sbPhaseTint
   if (!art) {
-    const g = ctx.createLinearGradient(0, 0, 0, cv.height);
+    const g = ctx.createLinearGradient(0, 0, 0, VH);
     g.addColorStop(0, t.top); g.addColorStop(1, t.bot);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
   }
   // 풀 포기 (고정 위치, 바람에 살랑) — 아트 지면엔 생략
   ctx.strokeStyle = t.grass; ctx.lineWidth = 1.3;
@@ -4434,7 +4472,7 @@ function drawDuelist() {
   }
 }
 function draw() {
-  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.clearRect(0, 0, VW, VH);
   ctx.save();
   // 화면 흔들림 제거 (울렁임 유발) — 타격감은 이펙트·파티클로만 표현
   drawBackdrop(); // 초원 + 스테이지별 하늘
@@ -4869,13 +4907,13 @@ const bldgLayers = new Map();
 function bakedLayer(key, x0, y0, w, h, drawFn) {
   let c = bldgLayers.get(key);
   if (!c) {
-    c = document.createElement('canvas'); c.width = w; c.height = h;
+    c = document.createElement('canvas'); c.width = Math.ceil(w * RS); c.height = Math.ceil(h * RS); // RS배 베이크 — 디바이스 픽셀 1:1
     const old = ctx; ctx = c.getContext('2d');
-    try { ctx.translate(-x0, -y0); drawFn(); } finally { ctx = old; }
+    try { ctx.scale(RS, RS); ctx.imageSmoothingQuality = 'high'; ctx.translate(-x0, -y0); drawFn(); } finally { ctx = old; }
     if (bldgLayers.size > 24) bldgLayers.clear(); // 폭주 방어 (실사용 키는 몇 개 안 된다)
     bldgLayers.set(key, c);
   }
-  ctx.drawImage(c, x0, y0);
+  ctx.drawImage(c, x0, y0, w, h); // 목적지는 논리 크기 — RS transform이 디바이스로 환산
 }
 function drawBarrack() { // 울타리·라벨 전부 정적 — 통째로 베이크 (키 = 아트 로드 여부)
   const b = PEN;
@@ -5505,9 +5543,10 @@ function matSprite(mat, bucket, golden, broken) {
   monReady(); // 아트 로드 완료 순간 1회: 추출 + 캐시 무효화
   const key = (mat * 20 + bucket * 2 + (golden ? 1 : 0)) * 3 + broken; // 기존 키(유일) × 3 + broken(0~2) → 충돌 없음
   if (!matSprites[key]) {
-    const cnv = document.createElement('canvas'); cnv.width = cnv.height = SPR;
+    const cnv = document.createElement('canvas'); cnv.width = cnv.height = Math.ceil(SPR * RS); // RS배 베이크 (내용은 논리 SPR 좌표 — scale이 흡수)
     const old = ctx; ctx = cnv.getContext('2d');
     try {
+      ctx.scale(RS, RS); ctx.imageSmoothingQuality = 'high'; // 장비 아트(384²셀) 다운스케일 품질
       const escB = bucket / 7;
       const sz = matSpriteSz(mat);
       if (MONART.ready && MONART.sp[mat]) { // 🎨 아트 몹: 원형 크롭 스프라이트 + esc 그을림·황금 틴트·장비 오버레이
@@ -6890,7 +6929,7 @@ function catchBird() {
 }
 function mpos(e) {
   const r = cv.getBoundingClientRect();
-  return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height };
+  return { x: (e.clientX - r.left) * VW / r.width, y: (e.clientY - r.top) * VH / r.height };
 }
 function pressStart(x, y) {
   pokerPeekOnMapUse(); // 포커 중 맵을 누르면 포커판이 먼저 비켜선다 (클릭 자체는 그대로 처리)
@@ -7105,7 +7144,7 @@ cv.addEventListener('dblclick', e => {
 function touchPos(e) {
   const t = e.touches[0] || e.changedTouches[0];
   const r = cv.getBoundingClientRect();
-  return { x: (t.clientX - r.left) * cv.width / r.width, y: (t.clientY - r.top) * cv.height / r.height };
+  return { x: (t.clientX - r.left) * VW / r.width, y: (t.clientY - r.top) * VH / r.height };
 }
 let longPressTimer = null, longPressFired = false;
 let lastTapTime = 0, lastTapPos = null;
@@ -8963,9 +9002,10 @@ function mtGrassStamps(rnd, W, H, count) { // 잔디 페더 스탬프 (격자 �
 let sbWorldBake = null;
 function sbBake() {
   if (sbWorldBake || !mtEnsureArt()) return sbWorldBake;
-  const c = document.createElement('canvas'); c.width = 940; c.height = 500;
+  const c = document.createElement('canvas'); c.width = Math.round(940 * RS); c.height = Math.round(500 * RS); // RS배 베이크
   sbWorldBake = c; // 실패해도 캐시 유지 (재시도 폭주 방지)
   const old = ctx; ctx = c.getContext('2d');
+  ctx.scale(RS, RS); ctx.imageSmoothingQuality = 'high';
   try {
     const rnd = mulberry32(729), sp = MTART.sp, g = sp.grass;
     for (let y = 0; y < 500; y += g.height) for (let x = 0; x < 940; x += g.width) ctx.drawImage(g, x, y);
@@ -8993,9 +9033,9 @@ function sbGround() { // 싱글 배경 지면: 풀맵 이미지 > 아트 베이�
   const fk = bgFullReady();
   if (fk) { // 선명화 베이크(온로드 예약)가 아직이면 원본 다운스케일로 임시 표시 — 동기 베이크 ~60ms 히치 방지 (08-10 크로스체크 P2)
     const bk = BGFULL.baked && BGFULL.baked[fk];
-    if (bk) ctx.drawImage(bk, 0, 0);
+    if (bk) ctx.drawImage(bk, 0, 0, VW, VH); // 목적지 논리 크기 — RS transform이 디바이스 1:1로 환산
     else {
-      ctx.drawImage(BGFULL[fk], 0, 0, 940, 500);
+      ctx.drawImage(BGFULL[fk], 0, 0, VW, VH);
       if (!BGFULL.bakeQ) { BGFULL.bakeQ = true; setTimeout(() => { try { bgFullBaked(fk); bgFallPrep(fk); } catch (e) {} BGFULL.bakeQ = false; }, 0); } // 예약 유실 대비 재예약 (프레임 밖에서 1회)
     }
     bgFullKeyDrawn = fk; return true;
@@ -9003,12 +9043,12 @@ function sbGround() { // 싱글 배경 지면: 풀맵 이미지 > 아트 베이�
   bgFullKeyDrawn = null;
   const b = sbBake();
   if (!b) return false;
-  ctx.drawImage(b, 0, 0);
+  ctx.drawImage(b, 0, 0, VW, VH);
   return true;
 }
 function sbPhaseTint(ph) { // 시간대 앰비언트 — 라운드가 흐르면 대지도 함께 저물게 (유저: 계속 초록초록)
   const t = ['', 'rgba(255,150,70,0.10)', 'rgba(28,48,105,0.22)', 'rgba(150,45,55,0.16)', 'rgba(100,26,16,0.34)'][ph]; // 헬(4)은 진하게 — 용암 절벽과 톤 통일
-  if (t) { ctx.fillStyle = t; ctx.fillRect(0, 0, cv.width, cv.height); }
+  if (t) { ctx.fillStyle = t; ctx.fillRect(0, 0, VW, VH); }
 }
 // 🎨 이미지 기반 베이크: art2.png에서 추출한 타일·스프라이트로 월드 조립 (베끼는 게 아니라 그 픽셀 그대로)
 function mtBakeArt() {
@@ -9608,7 +9648,7 @@ function mtBindWheel() { // 나가기 = location.reload라 해제 코드는 불�
 }
 // 모바일: 한 손가락 = 미니맵 드래그 / 두 손가락 = 핀치 줌 + 화면 끌기
 function mtTouchPt(t) { const r = cv.getBoundingClientRect();
-  return { x: (t.clientX - r.left) * cv.width / r.width, y: (t.clientY - r.top) * cv.height / r.height }; }
+  return { x: (t.clientX - r.left) * VW / r.width, y: (t.clientY - r.top) * VH / r.height }; }
 function mtPinchOf(e) { // 두 손가락의 중점과 간격
   const a = mtTouchPt(e.touches[0]), b = mtTouchPt(e.touches[1]);
   return { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) };
