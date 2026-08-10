@@ -3620,7 +3620,7 @@ const BGFULL = { easy: null, normal: null, hard: null, hell: null };
   ['easy', 'normal', 'hard', 'hell'].forEach((k, i) => {
     const im = new Image();
     im.onload = () => { BGFULL[k] = im; setTimeout(() => { try { bgFullBaked(k); bgFallPrep(k); } catch (e) {} }, 120 + i * 160); }; // 미리 선명화 베이크+폭포 마스크 (첫 프레임 히치 방지)
-    im.src = 'assets/bg_' + k + '.webp?v=2'; // v=2: 08-10 재인코딩(q95)+normal 얼룩·hard 번개 패치 — 쿼리로 구캐시 즉시 무효화
+    im.src = 'assets/bg_' + k + '.webp?v=3'; // v=3: 08-10 Real-ESRGAN(x4 anime) 업스케일→1880 재응축 — AI 생성 노이즈 제거+가장자리 선명화. 쿼리로 구캐시 즉시 무효화
   });
 })();
 let bgFullKeyDrawn = null; // 이번 프레임 지면으로 그린 풀맵 키 (null = 풀맵 미사용) — sbGround가 매 프레임 갱신
@@ -5335,7 +5335,7 @@ function drawOreRoom() {
   const R = ROOM, x0 = R.cx - R.w / 2, y0 = R.cy - R.h / 2;
   const anyIn = S.units.some(u => !u.miner && isInRoom(u));
   // 담장은 (입장 여부 × 아트 여부)로만 변하는 정적 그림 — 베이크. 광석·게이지·라벨은 아래에서 라이브
-  bakedLayer('oreWall|' + (anyIn ? 1 : 0) + (artSp('wall') ? 'a' : 'v'), x0 - 18, y0 - 34, R.w + 36, R.h + 56, () => drawOreWalls(anyIn));
+  bakedLayer('oreWall|' + (anyIn ? 1 : 0) + (WALLART.img ? 'w' : artSp('wall') ? 'a' : 'v'), x0 - 26, y0 - 34, R.w + 56, R.h + 64, () => drawOreWalls(anyIn)); // 여백 26/34/30/30 — 통짜 돌담 돌출분 실측 커버
   const ore = ORES[Math.min(9, S.hunt.stage - 1)];
   const ox = OREPOS.x, oy = OREPOS.y;
   if (S.hunt.done) {
@@ -5360,11 +5360,27 @@ function drawOreRoom() {
   drawLabel(S.hunt.done ? '광석 방 (완료)' : `${S.hunt.stage}단계: ${ore.name} · ⛏ ${nMine}/${oreCap()}`, R.cx, y0 - 5, 11);
   ctx.textAlign = 'left';
 }
+// 🧱 통짜 입체 돌담 아트 (2026-08-10 유저 GPT 제작): 안뜰 사각 매핑, 입구(좌벽 y60~141)가 ROOM_GATE(60~140)와 실측 일치
+const WALL_ORE_ON = true;
+const WALLART = { img: null, meta: { w: 847, h: 658, hx: 79, hy: 71, hw: 675, hh: 497 } };
+if (WALL_ORE_ON) { const wim = new Image(); wim.onload = () => { WALLART.img = wim; }; wim.src = 'assets/wall_ore.webp?v=1'; }
 function drawOreWalls(anyIn) {
   const R = ROOM, x0 = R.cx - R.w / 2, y0 = R.cy - R.h / 2;
   // 🧱 벽돌 담장 (내부는 배경이 그대로 비친다 — 지옥·폭풍 배경과도 자연스럽게 어울림). 왼쪽 벽 가운데가 입구
   const BW = 8, gateY0 = R.cy - ROOM_GATE, gateY1 = R.cy + ROOM_GATE; // 담 두께 / 입구 구간 (충돌 판정과 공유)
   ctx.fillStyle = 'rgba(250,245,232,0.10)'; ctx.fillRect(x0, y0, R.w, R.h); // 내부: 아주 옅은 밝음 (게이지 가독용)
+  const wp = WALLART.img;
+  if (wp) { // 🧱 통짜 돌담 (타일 짜집기 폴백은 아래 잔존)
+    const m = WALLART.meta, kx = R.w / m.hw, ky = R.h / m.hh;
+    ctx.drawImage(wp, x0 - m.hx * kx, y0 - m.hy * ky, m.w * kx, m.h * ky);
+    if (anyIn) { // 입장 중 어둡힘 (기존 벽돌 몰탈색 변화 대응) — 그려진 픽셀만 틴트
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = 'rgba(60,40,20,0.16)';
+      ctx.fillRect(x0 - m.hx * kx, y0 - m.hy * ky, m.w * kx, m.h * ky);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    return;
+  }
   const ws = artSp('wall');
   const brick = ws ? (bx, by, horiz, len) => { // 🎨 돌담 블록: 변 길이를 정수 개수로 나눠 딱 맞게 (끊김·삐침 없음)
     const wh = 24;
