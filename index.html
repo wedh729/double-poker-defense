@@ -466,6 +466,8 @@
   .mobile #modeRow { flex-direction: column; }
   .mobile #coopRow { flex-direction: column; }
   .mobile #diffBtnRow { flex-wrap: wrap; justify-content: center; }
+  .mobile .rbTxt { display: none; } /* 다시하기 = 아이콘만 (유저: "글씨 삭제해도 될듯" 2026-08-10) */
+  .mobile .shopIcon.restartBtn { width: 42px; padding: 0; }
   .mobile #unitInfo { max-width: 38vw; font-size: 10px; bottom: 6px; left: 6px; max-height: 168px; }
   .mobile #objInfo { max-width: 46vw; font-size: 11px; }
   /* 포커 패널은 데스크톱에선 캔버스 위 슬라이드 오버레이지만, 모바일은 탭 전환이라 일반 흐름으로 되돌린다 */
@@ -540,11 +542,28 @@
       .mobile[data-tab="battle"] #bigTimer .t { font-size: 15px; }
       .mobile[data-tab="battle"] #mobTabs {
         left: auto; right: calc(2px + env(safe-area-inset-right, 0px));
-        top: 50%; bottom: auto; transform: translateY(-50%);
+        top: auto; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); transform: none;
         flex-direction: column; border-radius: 18px; padding: 3px;
       }
       .mobile[data-tab="battle"] #mobTabs button { padding: 0 7px; font-size: 16px; }
       .mobile[data-tab="battle"] .mtTxt { display: none; } /* 레일 모드는 아이콘 전용 — 좁은 레일 침범 방지 */
+      /* ⏱️🎛️ 시계·툴바 = 우측 레일 세로 열 (유저 지정 2026-08-10: "전부 오른쪽으로") — 위에서부터 시계·버튼들, 탭은 맨 아래 */
+      .mobile[data-tab="battle"] #cvWrap { overflow: visible; } /* 시계가 캔버스 밖 레일에 걸린다 (cvWrap은 transform 조상이라 fixed 불가 → absolute 음수 right) */
+      .mobile[data-tab="battle"] #clock {
+        left: auto; transform: none;
+        right: calc((var(--railW) + 50px) / -2);
+        top: calc(4px + env(safe-area-inset-top, 0px));
+      }
+      .mobile[data-tab="battle"] #toolbar {
+        position: fixed; left: auto; right: env(safe-area-inset-right, 0px);
+        top: calc(58px + env(safe-area-inset-top, 0px)); bottom: auto;
+        width: var(--railW); margin: 0; padding: 0; z-index: 21;
+        flex-direction: column; justify-content: flex-start; align-items: center; gap: 2px;
+        max-height: calc(100svh - 150px); overflow-y: auto; /* 초저높이 기기에서 탭과 겹치는 대신 스크롤 */
+      }
+      .mobile[data-tab="battle"] .tbGroup { flex-direction: column; gap: 2px; }
+      /* 29px = 시계(50)+버튼6+탭(75)이 아이폰 가로 실높이(~340svh)에 한 화면으로 들어가는 상한 */
+      .mobile[data-tab="battle"] #toolbar .shopIcon { width: 29px; height: 29px; font-size: 15px; border-radius: 8px; padding: 0; }
     }
   }
 </style>
@@ -611,7 +630,7 @@
       <button class="shopIcon" id="bSfx" title="타격음 켜기/끄기">🔊</button>
       <button class="shopIcon" id="bSpeed" title="배속">⏩</button>
       <button class="shopIcon" id="btnFull" title="전체화면">⛶</button>
-      <button class="shopIcon restartBtn" id="btnRestart" title="처음부터 다시">🔄 다시하기</button>
+      <button class="shopIcon restartBtn" id="btnRestart" title="처음부터 다시">🔄<span class="rbTxt"> 다시하기</span></button>
     </div>
   </div>
   <div id="log"></div>
