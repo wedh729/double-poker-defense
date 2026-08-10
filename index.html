@@ -431,6 +431,18 @@
   @keyframes mtAlert { from { box-shadow: inset 0 0 0 0 rgba(255,209,102,0); } to { box-shadow: inset 0 0 0 4px rgba(255,209,102,0.9); } }
   .mobHint { display: none; }
   .mobile .mobHint { display: block; font-size: 12px; color: #b6a8e8; margin-top: -8px; }
+  #pwaHint { /* 아이폰 홈 화면 추가 안내 (1회) */
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px)); z-index: 30;
+    background: rgba(13,8,32,0.92); color: #e8e2ff; font-size: 12px; line-height: 1.5;
+    padding: 10px 34px 10px 14px; border-radius: 12px; border: 1px solid #5b48d0;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5); text-align: center; max-width: 88vw;
+  }
+  #pwaHint b { color: #ffd166; }
+  #pwaHint button {
+    position: absolute; top: 4px; right: 6px; width: 22px; height: 22px;
+    border: none; background: transparent; color: #9c92c8; font-size: 13px; cursor: pointer; padding: 0;
+  }
 
   body.mobile { padding-bottom: 0; overflow-x: hidden; padding-left: 0; padding-right: 0; }
   .mobile #page { width: 100vw; }
@@ -478,24 +490,51 @@
   .mobile #duelConfirm .dcBody { font-size: 11px; }
   .mobile #duelConfirm button { font-size: 12px; padding: 8px 6px; }
 
-  /* 📱 모바일 전투 탭: 가로에서만 풀블리드(꽉 찬 화면) — 세로는 일반 흐름 레이아웃 (둘 다 플레이 가능) */
+  /* 📱 모바일 전투 탭 (가로): 비율 1.88 고정 uniform scale — 세로는 일반 흐름 레이아웃 (둘 다 플레이 가능)
+     ⚠️ 예전 스트레치(width/height 100%)는 폰마다 13~27% 세로 눌림을 만들었다 (2026-08-10 유저 리포트로 폐지).
+     높이는 svh(주소창 표시 상태 기준 최소) — 주소창이 접혀도 크기가 안 출렁인다. 구형 폴백 = vh. */
   @media (orientation: landscape) {
     .mobile[data-tab="battle"] #wrap {
-      position: fixed; inset: 0; margin: 0; padding: 0; width: 100vw; height: 100dvh; max-width: none; overflow: hidden;
+      position: fixed; inset: 0; margin: 0; padding: 0; width: 100vw; max-width: none; overflow: hidden;
+      height: 100vh; height: 100svh;
+      background: #0d0820; /* 레터박스/레일 바탕 */
+      --railW: 0px; --railW: max(0px, calc((100vw - 100svh * 1.88) / 2)); /* 캔버스 좌우 남는 폭 (svh 미지원이면 0 = 레일 없음) */
     }
     .mobile[data-tab="battle"] h1 { display: none; }
     .mobile[data-tab="battle"] #cvWrap {
-      position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; overflow: hidden;
+      position: absolute; top: 0; bottom: 0; left: var(--railW); right: var(--railW);
+      width: auto; height: auto; margin: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
     }
     .mobile[data-tab="battle"] #cv {
-      width: 100%; height: 100%; display: block; border-radius: 0; /* 화면 꽉 채움 — 종횡비 무시 스트레치 */
+      width: 100%; width: min(100%, calc(100svh * 1.88));
+      height: auto; aspect-ratio: 940 / 500; /* 비율 고정 — 원은 어떤 폰에서도 정원 */
+      display: block; border-radius: 0;
     }
-    /* 상태바: 캔버스 위 상단 반투명 오버레이 (높이를 뺏지 않음 → 캔버스가 전체 높이 차지) */
+    /* 상태바 기본형(레일 폭이 안 나오는 화면비 ~1.88 기기): 상단 반투명 오버레이 (기존 방식) */
     .mobile[data-tab="battle"] #topbar {
       position: fixed; top: 0; left: 0; right: 0; z-index: 20;
       background: rgba(13,8,32,0.5); font-size: 12px; padding: 4px 8px;
       padding-top: calc(4px + env(safe-area-inset-top, 0px));
     }
+  }
+  /* 화면비가 넉넉한 기기(≥2.05 — 현대 폰 대부분): 좌우 여백을 UI 레일로 활용 (유저 확정 2026-08-10) */
+  @media (orientation: landscape) and (min-aspect-ratio: 41/20) {
+    .mobile[data-tab="battle"] #topbar {
+      top: 0; bottom: 0; right: auto; width: var(--railW);
+      flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: flex-start;
+      gap: 5px; font-size: 11px; overflow-y: auto; overflow-x: hidden;
+      background: rgba(13,8,32,0.6);
+      padding: calc(6px + env(safe-area-inset-top, 0px)) 4px 6px calc(4px + env(safe-area-inset-left, 0px));
+    }
+    .mobile[data-tab="battle"] #topbar > * { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* 좁은 레일에서 어색한 중간 줄바꿈 방지 */
+    .mobile[data-tab="battle"] #mobTabs {
+      left: auto; right: calc(6px + env(safe-area-inset-right, 0px));
+      top: 50%; bottom: auto; transform: translateY(-50%);
+      flex-direction: column; border-radius: 18px;
+    }
+    .mobile[data-tab="battle"] #mobTabs button { padding: 0 9px; font-size: 16px; }
+    .mobile[data-tab="battle"] .mtTxt { display: none; } /* 레일 모드는 아이콘 전용 — 좁은 레일 침범 방지 */
   }
 </style>
 </head>
@@ -568,7 +607,7 @@
 </div>
 <aside class="adRail"><div class="adSlot" id="adSlotRight">AD<br>300×600</div></aside>
 </div>
-<div id="mobTabs"><button id="mtBattle" class="mobTabBtn">⚔️ 전투</button><button id="mtPoker" class="mobTabBtn">🃏 포커</button></div>
+<div id="mobTabs"><button id="mtBattle" class="mobTabBtn">⚔️<span class="mtTxt"> 전투</span></button><button id="mtPoker" class="mobTabBtn">🃏<span class="mtTxt"> 포커</span></button></div>
 <div id="startOverlay">
   <h2>♠♥ 더블 포커 디펜스 ♦♣</h2>
   <div class="sub">포커로 유닛을 뽑아 몰려오는 몬스터를 막아라!</div>
@@ -8286,6 +8325,22 @@ document.getElementById('btnFull').onclick = () => {
   if (!document.fullscreenElement) { lockLandscape(); }
   else { (document.exitFullscreen || document.webkitExitFullscreen || (()=>{})).call(document); }
 };
+// 📱 아이폰 사파리는 전체화면 API 미지원(2026 현재 iPhone 불가·iPad만) → 주소창 제거 수단은 홈 화면 추가(PWA)뿐.
+//    게임 시작 시 1회만 안내 (localStorage 플래그, 닫으면 다시 안 나옴)
+function iosPwaHint() {
+  const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
+  const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  if (!isIPhone || standalone) return;
+  let seen = null; try { seen = localStorage.getItem('dpd_pwa_hint'); } catch (e) {}
+  if (seen) return;
+  try { localStorage.setItem('dpd_pwa_hint', '1'); } catch (e) {}
+  const d = document.createElement('div');
+  d.id = 'pwaHint';
+  d.innerHTML = '📱 사파리 <b>공유 버튼 → 홈 화면에 추가</b>로 실행하면<br>주소창 없는 전체화면으로 즐길 수 있어요!<button id="pwaHintX">✕</button>';
+  document.body.appendChild(d);
+  document.getElementById('pwaHintX').onclick = () => d.remove();
+  setTimeout(() => { if (d.parentNode) d.remove(); }, 14000);
+}
 
 // ==================== 포커 UI ====================
 function renderPoker(spin) {
@@ -9774,7 +9829,7 @@ document.getElementById('btnSolo').onclick = () => {
   document.getElementById('diffRow').style.display = 'flex';
 };
 document.querySelectorAll('.diffBtn').forEach(b => b.onclick = () => {
-  if (IS_MOBILE) lockLandscape();
+  if (IS_MOBILE) { lockLandscape(); iosPwaHint(); }
   dailySeed = null; // 일반 난이도 = 시드 해제
   DIFF_MUL = +b.dataset.mul;
   DIFF_NAME = b.textContent.trim().replace(/^\S+\s/, '');
