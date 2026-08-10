@@ -5120,15 +5120,24 @@ function bakedLayer(key, x0, y0, w, h, drawFn) {
 }
 function drawBarrack() { // 울타리·라벨 전부 정적 — 통째로 베이크 (키 = 아트 로드 여부)
   const b = PEN;
-  bakedLayer('barrack|' + (artSp('fence') ? 'a' : 'v'), b.x - b.w / 2 - 30, b.y - b.h / 2 - 44, b.w + 60, b.h + 80, drawBarrackRaw);
+  bakedLayer('barrack|' + (FENCEART.img ? 'f' : artSp('fence') ? 'a' : 'v'), b.x - b.w / 2 - 30, b.y - b.h / 2 - 44, b.w + 60, b.h + 80, drawBarrackRaw);
 }
+// 🪵 통짜 입체 울타리 아트 (2026-08-10 유저 GPT 제작 — FENCE_WALL_ART_REQUEST 패턴):
+//    안뜰(내부 구멍) 사각을 PEN 사각에 매핑. meta = 추출 시 실측 (트림 906×614, 안뜰 x78 y102 748×408).
+//    스케일 kx 0.265 / ky 0.324 (안뜰비 1.83 vs PEN 1.5 — 세로 22% 스트레치, 원근 그림이라 허용. 어색하면 재요청)
+const FENCE_PEN_ON = true;
+const FENCEART = { img: null, meta: { w: 906, h: 614, hx: 78, hy: 102, hw: 748, hh: 408 } };
+if (FENCE_PEN_ON) { const fim = new Image(); fim.onload = () => { FENCEART.img = fim; }; fim.src = 'assets/fence_pen.webp?v=1'; }
 function drawBarrackRaw() {
   // 몬스터 소환장 울타리 (몹들이 이 안에서 뒤엉킨다)
   const b = PEN, x0 = b.x - b.w / 2, y0 = b.y - b.h / 2;
   ctx.fillStyle = 'rgba(150,100,180,0.06)';
   ctx.fillRect(x0, y0, b.w, b.h);
-  const fc = artSp('fence');
-  if (fc) { // 🎨 통나무 울타리: 네 변을 정확히 채워 모서리에서 삐져나오지 않게 (세로변은 가로변 사이에 끼워 넣는다)
+  const fp = FENCEART.img, fc = artSp('fence');
+  if (fp) { // 🪵 통짜 울타리 — 안뜰 사각 = PEN 사각 (타일 짜집기 폴백은 아래 잔존)
+    const m = FENCEART.meta, kx = b.w / m.hw, ky = b.h / m.hh;
+    ctx.drawImage(fp, x0 - m.hx * kx, y0 - m.hy * ky, m.w * kx, m.h * ky);
+  } else if (fc) { // 🎨 통나무 울타리: 네 변을 정확히 채워 모서리에서 삐져나오지 않게 (세로변은 가로변 사이에 끼워 넣는다)
     const fh = 28;
     artTileLine(fc, x0, y0 - fh + 7, b.w, fh, false);            // 윗변
     artTileLine(fc, x0, y0 + b.h - 9, b.w, fh, false);           // 아랫변
@@ -5150,7 +5159,7 @@ function drawBarrackRaw() {
     }
   }
   ctx.textAlign = 'center';
-  drawLabel('👹 소환장', b.x, y0 - (fc ? 26 : 9), 10);
+  drawLabel('👹 소환장', b.x, y0 - (fp ? 40 : fc ? 26 : 9), 10); // 통짜 울타리는 윗변이 33px까지 솟아 라벨을 더 위로
   ctx.textAlign = 'left';
 }
 function drawPortal() {
