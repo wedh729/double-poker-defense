@@ -5120,7 +5120,7 @@ function bakedLayer(key, x0, y0, w, h, drawFn) {
 }
 function drawBarrack() { // 울타리·라벨 전부 정적 — 통째로 베이크 (키 = 아트 로드 여부)
   const b = PEN;
-  bakedLayer('barrack|' + (FENCEART.img ? 'f' : artSp('fence') ? 'a' : 'v'), b.x - b.w / 2 - 30, b.y - b.h / 2 - 44, b.w + 60, b.h + 80, drawBarrackRaw);
+  bakedLayer('barrack|' + (FENCEART.img ? 'f' : artSp('fence') ? 'a' : 'v'), b.x - b.w / 2 - 30, b.y - b.h / 2 - 58, b.w + 60, b.h + 94, drawBarrackRaw); // 위 여백 58 — 통짜 울타리 라벨(y0-40)의 글리프 상단이 44를 넘어 잘렸었다
 }
 // 🪵 통짜 입체 울타리 아트 (2026-08-10 유저 GPT 제작 — FENCE_WALL_ART_REQUEST 패턴):
 //    안뜰(내부 구멍) 사각을 PEN 사각에 매핑. meta = 추출 시 실측 (트림 906×614, 안뜰 x78 y102 748×408).
