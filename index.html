@@ -4737,6 +4737,7 @@ function draw() {
       ctx.save(); ctx.globalAlpha = 0.55; drawUnit(u); ctx.restore();
     } else drawUnit(u);
   }
+  drawBarrackCap(); // 🪵 울타리 윗변을 유닛 위에 재그림 — 뒤에 선 유닛 반쯤 가림 (오클루전)
   drawMutter(); // 💬 히든 혼잣말 말풍선
   if (S.bird) drawBird(S.bird); // 🐦 힌트 새 (유닛 위에 그려짐)
   // 이펙트
@@ -5161,6 +5162,17 @@ function drawBarrackRaw() {
   ctx.textAlign = 'center';
   drawLabel('👹 소환장', b.x, y0 - (fp ? 40 : fc ? 26 : 9), 10); // 통짜 울타리는 윗변이 33px까지 솟아 라벨을 더 위로
   ctx.textAlign = 'left';
+}
+// 🪵 울타리 상단 오클루전 캡: 윗변 슬라이스(안뜰 직전까지)를 유닛·몹 위에 한 번 더 그린다 —
+//    북쪽(울타리 뒤)에 선 유닛이 울타리에 반쯤 가려져 "뒤에 서 있다"로 읽힌다 (2026-08-10 유저 요청).
+//    울타리 안엔 유닛이 못 들어가므로(이동 차단) 이 영역에 걸치는 유닛 = 전부 뒤 → 무조건 재그림이 정확하다.
+function drawBarrackCap() {
+  const fp = FENCEART.img;
+  if (!fp) return;
+  const b = PEN, x0 = b.x - b.w / 2, y0 = b.y - b.h / 2;
+  const m = FENCEART.meta, kx = b.w / m.hw, ky = b.h / m.hh;
+  const srcH = m.hy - 6; // 안뜰 상단 6px 전까지 — 펜 안쪽 몹 상단을 침범하지 않게
+  ctx.drawImage(fp, 0, 0, m.w, srcH, x0 - m.hx * kx, y0 - m.hy * ky, m.w * kx, srcH * ky);
 }
 function drawPortal() {
   const p = PORTAL;
