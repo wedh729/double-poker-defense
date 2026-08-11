@@ -1733,14 +1733,20 @@ function endWave() {
 }
 
 // 울타리 충돌: 안에 들어오면 가까운 가장자리로 밀어낸다 (돌격 스킬 중인 유닛은 예외)
+// ⚠️ 북쪽은 비대칭으로 더 넓게 — 통짜 울타리 윗변 그림이 y0-33까지 솟아 있어, 대칭 여유(10)면
+//    유닛 몸이 울타리 그림에 겹쳐 "안에 들어간 것처럼" 보였다 (2026-08-10 유저: 다리도 안 가리게 아예 차단)
+function penTopEx() { return FENCEART.img ? 52 : 10; } // 52 = 울타리 그림 솟음 33 + 유닛 발끝 반경 ~17 + 여유
 function pushOutOfPen(u) {
   if (u.inPen || onPlank(u.x, u.y)) return; // 돌격 중이거나 나무판자 위면 소환장 안 허용
-  const hw = PEN.w / 2 + 10, hh = PEN.h / 2 + 10;
-  const dx = u.x - CX, dy = u.y - CY;
-  if (Math.abs(dx) < hw && Math.abs(dy) < hh) {
-    const px = hw - Math.abs(dx), py = hh - Math.abs(dy);
-    if (px < py) u.x = CX + (dx >= 0 ? 1 : -1) * hw;
-    else u.y = CY + (dy >= 0 ? 1 : -1) * hh;
+  const hw = PEN.w / 2 + 10;
+  const yTop = CY - PEN.h / 2 - penTopEx(), yBot = CY + PEN.h / 2 + 10;
+  const dx = u.x - CX;
+  if (Math.abs(dx) < hw && u.y > yTop && u.y < yBot) {
+    const px = hw - Math.abs(dx);
+    const pyT = u.y - yTop, pyB = yBot - u.y;
+    if (px < Math.min(pyT, pyB)) u.x = CX + (dx >= 0 ? 1 : -1) * hw;
+    else if (pyT < pyB) u.y = yTop;
+    else u.y = yBot;
   }
 }
 // 이동 목표가 울타리 안이면 바깥 가장자리로 보정
@@ -1755,11 +1761,13 @@ function clampTargetPos(x, y) {
       const k = 1.04 / d; x = cx2 * k; y = cy2 * k;
     }
   }
-  const hw = PEN.w / 2 + 14, hh = PEN.h / 2 + 14;
-  const dx = x - CX, dy = y - CY;
-  if (Math.abs(dx) >= hw || Math.abs(dy) >= hh) return { x, y };
-  if (Math.abs(dx) / hw > Math.abs(dy) / hh) return { x: CX + (dx >= 0 ? 1 : -1) * hw, y };
-  return { x, y: CY + (dy >= 0 ? 1 : -1) * hh };
+  const hw = PEN.w / 2 + 14;
+  const yTop = CY - PEN.h / 2 - penTopEx() - 4, yBot = CY + PEN.h / 2 + 14;
+  const dx = x - CX;
+  if (Math.abs(dx) >= hw || y <= yTop || y >= yBot) return { x, y };
+  const px = hw - Math.abs(dx), pyT = y - yTop, pyB = yBot - y;
+  if (px < Math.min(pyT, pyB)) return { x: CX + (dx >= 0 ? 1 : -1) * hw, y };
+  return { x, y: pyT < pyB ? yTop : yBot };
 }
 // 합성 가능한 그룹 키 (일반=티어+히든, 영웅=티어+영웅). 슈퍼영웅은 합성 대상 아님
 function fuseKey(u) {
