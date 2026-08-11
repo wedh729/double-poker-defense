@@ -812,7 +812,10 @@ const ORES = [
 ];
 const MINE_TIME = 5;              // 광부 기본 채굴 시간(초)
 const MINER_SPEED = 42;          // 광부 기본 이동속도 (느릿느릿)
-const MINER_LOAD = 150;          // 배달 1회 기본 골드. 45 → 90(칩 전용화) → 150 (유저: 광부를 구하기 힘들어진 만큼 1기 가치를 더 올린다)
+const MINER_LOAD = 150;          // 배달 1회 기본 골드 상한. 45 → 90(칩 전용화) → 150 (유저: 광부 1기 가치를 올린다)
+// 💰 초반 램프 (2026-08-11 유저: "초반 광부 몰빵이 너무 잘 벌림" — 밸런스 검토 A안): R1 66G에서 시작해
+//    R15에 150 도달, 이후 기존과 완전 동일. 몰빵 누적 R5 -27% / R10 -18% / R15+ 0% — 초반만 정밀 타격, 후반 스케일 보존.
+function minerLoad() { return Math.min(MINER_LOAD, 60 + 6 * S.round); }
 const DIG_RATE = 30;             // 광부가 캐는 동안 광산 체력 감소/초
 const MINER_MAX_LV = 5;          // 광부 업그레이드 최대 레벨
 const PEN = { x: CX, y: CY, w: 198, h: 132 }; // 몬스터 소환장 울타리 (2026-08-09 유저: 화면 부족+몹 30% 축소에 맞춰 25% 축소. 264×176 → 198×132 — 밀집도 ↑79%라 광역 유닛 실효 상승 주의)
@@ -1462,7 +1465,7 @@ function updateMiner(u, dt) {
       // ⚒️ 채굴속도 업글은 '한 번에 캐 오는 양'도 늘린다 (레벨당 +20%).
       // 순수 시간 단축만으론 왕복 37초 중 채굴 5초라 배달 횟수가 안 늘어 업글이 무의미했다 (실측 Lv5에서 수입 변화 0)
       const digMul = 1 + 0.20 * S.minerMineLv;
-      const dep = Math.round((MINER_LOAD + S.mineBonus) * digMul * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1));
+      const dep = Math.round((minerLoad() + S.mineBonus) * digMul * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1));
       S.gold += dep;
       addFloat(HOUSE.x, HOUSE.y - 34, `+${dep}G`, (u.sminer || u.hminer) ? '#c9a227' : '#b8860b', 1.1);
       sfx('coin');
@@ -3007,7 +3010,7 @@ function mineReward() {
   S.mineBonus += inc;
   S.mineLayer++;
   logMsg(`⛰️💥 광산 ${S.mineLayer - 1}겹 파괴! 채굴량 +${inc} — 이제 배달마다 골드 +${S.mineBonus}`);
-  addFloat(MINE_POS.x, MINE_POS.y - 34, `채굴량 +${inc}! (배달 ${MINER_LOAD + S.mineBonus}G)`, '#b8860b', 2.2);
+  addFloat(MINE_POS.x, MINE_POS.y - 34, `채굴량 +${inc}! (배달 ${minerLoad() + S.mineBonus}G)`, '#b8860b', 2.2);
   sfx('reward');
   S.mineMax = S.mineHp = mineHP(S.mineLayer);
 }
@@ -8019,7 +8022,7 @@ function minerItemsHTML() {
       <div class="rpgInfo"><b>이동속도</b> <span class="lv">Lv.${S.minerMoveLv}/${MINER_MAX_LV}</span> (${moveSpd})</div>
       ${S.minerMoveLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mvBtn" ${S.gold < S.minerMoveCost ? 'disabled' : ''}>💰 ${S.minerMoveCost}G</button>`}</div>
     <div class="rpgItem"><div class="rpgIcon">⚒️</div>
-      <div class="rpgInfo"><b>채굴량</b> <span class="lv">Lv.${S.minerMineLv}/${MINER_MAX_LV}</span> (${mineSec}초 · 배달 ${Math.round((MINER_LOAD + S.mineBonus) * (1 + 0.20 * S.minerMineLv))}G)</div>
+      <div class="rpgInfo"><b>채굴량</b> <span class="lv">Lv.${S.minerMineLv}/${MINER_MAX_LV}</span> (${mineSec}초 · 배달 ${Math.round((minerLoad() + S.mineBonus) * (1 + 0.20 * S.minerMineLv))}G)</div>
       ${S.minerMineLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mnBtn" ${S.gold < S.minerMineCost ? 'disabled' : ''}>💰 ${S.minerMineCost}G</button>`}</div>
     `;
 }
