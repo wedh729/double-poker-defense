@@ -816,10 +816,9 @@ const ORES = [
 ];
 const MINE_TIME = 5;              // 광부 기본 채굴 시간(초)
 const MINER_SPEED = 42;          // 광부 기본 이동속도 (느릿느릿)
-const MINER_LOAD = 150;          // 배달 1회 기본 골드 상한. 45 → 90(칩 전용화) → 150 (유저: 광부 1기 가치를 올린다)
-// 💰 초반 램프 (2026-08-11 유저: "초반 광부 몰빵이 너무 잘 벌림" — 밸런스 검토 A안): R1 66G에서 시작해
-//    R15에 150 도달, 이후 기존과 완전 동일. 몰빵 누적 R5 -27% / R10 -18% / R15+ 0% — 초반만 정밀 타격, 후반 스케일 보존.
-function minerLoad() { return Math.min(MINER_LOAD, 60 + 6 * S.round); }
+const MINER_LOAD = 60;           // 배달 1회 기본 골드. 채굴량 성장은 오직 광산 겹(mineBonus)으로 —
+// 💰 스노우볼 구조 (2026-08-11 유저 확정, 라운드 램프 대체): 광부 머릿수·업글 투자 → 광산이 빨리 깎임 →
+//    겹 파괴마다 배달액 영구 상승 → 수급 증가. 인과가 '투자→단계→수급' 하나로 통일된다.
 const DIG_RATE = 30;             // 광부가 캐는 동안 광산 체력 감소/초
 const MINER_MAX_LV = 5;          // 광부 업그레이드 최대 레벨
 const PEN = { x: CX, y: CY, w: 198, h: 132 }; // 몬스터 소환장 울타리 (2026-08-09 유저: 화면 부족+몹 30% 축소에 맞춰 25% 축소. 264×176 → 198×132 — 밀집도 ↑79%라 광역 유닛 실효 상승 주의)
@@ -1437,14 +1436,13 @@ function spawnMiner() {
 // 광부 채굴 사이클: 광산에서 5초 캐고 → 광물을 들고 집으로 → 배달 시 골드
 function updateMiner(u, dt) {
   const spdMul = u.sminer ? 3 : (u.hminer ? 1.6 : 1);
-  const mineMul = u.sminer ? 3 : 1; // 슈퍼광부는 채굴도 3배 빠름
   u.speed = MINER_SPEED * (1 + 0.25 * S.minerMoveLv) * spdMul;
   if (u.mjob === 'toMine') {
     u.tx = MINE_POS.x - 36 + u.jx * 0.35; u.ty = MINE_POS.y + 26 + u.jy * 0.2; // 광산 서쪽 갓길에 선다 (y≈474 도로 위)
     // 도착 판정 74: 개별 오프셋(jy ±20 + 세로 40) 최대 대각 ~63px + 유닛 분리 밀림 여유
     // (58이던 시절 오프셋이 큰 광부는 목표에 서고도 채굴을 시작 못 하고 영영 멈춰 있었다)
     if (Math.hypot(MINE_POS.x - u.x, MINE_POS.y - u.y) < 74) {
-      u.mjob = 'mine'; u.mtimer = MINE_TIME / (1 + 0.25 * S.minerMineLv) / mineMul;
+      u.mjob = 'mine'; u.mtimer = MINE_TIME; // 채굴 체류는 고정 5초 — 채굴Lv·슈퍼는 아래 곡괭이 효율(깎는 속도)로 반영
       u.tx = u.x; u.ty = u.y;
     }
   } else if (u.mjob === 'mine') {
@@ -1452,7 +1450,7 @@ function updateMiner(u, dt) {
     u.swing = 0.3; // 곡괭이질 유지
     u.pkT = (u.pkT || 0) + dt;
     if (u.pkT >= 0.55) { u.pkT = 0; sfx('pick'); } // 곡괭이 타격음 (전역 스로틀로 여러 광부여도 과하지 않음)
-    S.mineHp -= DIG_RATE * dt;
+    S.mineHp -= DIG_RATE * (1 + 0.4 * S.minerMineLv) * (u.sminer ? 3 : 1) * dt; // ⚒️ 곡괭이 효율 = 스노우볼 입력 — 광산을 빨리 깎을수록 겹 보너스가 빨리 붙는다
     if (Math.random() < 0.12) {
       const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 70;
       S.parts.push({ x: MINE_POS.x + (Math.random()*26-13), y: MINE_POS.y + (Math.random()*14-2),
@@ -1466,10 +1464,8 @@ function updateMiner(u, dt) {
     // 도착 판정 76: 개별 오프셋 최대 hypot(26+16, 42+8) ≈ 65px + 유닛 분리 밀림 여유
     // (60이던 시절 오프셋 큰 광부는 목표에 서고도 배달을 못 하고 광물을 든 채 영영 멈춰 있었다 — toMine 74와 같은 병)
     if (Math.hypot(HOUSE.x - u.x, HOUSE.y - u.y) < 76) {
-      // ⚒️ 채굴속도 업글은 '한 번에 캐 오는 양'도 늘린다 (레벨당 +20%).
-      // 순수 시간 단축만으론 왕복 37초 중 채굴 5초라 배달 횟수가 안 늘어 업글이 무의미했다 (실측 Lv5에서 수입 변화 0)
-      const digMul = 1 + 0.20 * S.minerMineLv;
-      const dep = Math.round((minerLoad() + S.mineBonus) * digMul * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1));
+      // 배달액 = 기본 60 + 광산 겹 보너스 — 레벨·라운드 배수 없음. 성장 축은 오직 광산 단계 (스노우볼 구조)
+      const dep = Math.round((MINER_LOAD + S.mineBonus) * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1));
       S.gold += dep;
       addFloat(HOUSE.x, HOUSE.y - 34, `+${dep}G`, (u.sminer || u.hminer) ? '#c9a227' : '#b8860b', 1.1);
       sfx('coin');
@@ -3008,13 +3004,13 @@ function monGearBreakFx(x, y, sz) {
 }
 
 function mineReward() {
-  // 겹이 깊어질수록 배달 보너스가 기하급수로 커진다 (+4, +6, +8, +11, +16 … 10겹째 +83)
-  // 광산 HP도 ×1.4씩 커서 깊이 파려면 시간이 필요 → "포커 시간을 벌며 채굴하는 운영"이 수익의 축
-  const inc = Math.ceil(14 * Math.pow(1.4, S.mineLayer - 1)); // 4 → 8 → 14×1.4^ — 겹을 팔수록 배달액이 불어나는 '복리' 체감을 크게
+  // 겹이 깊어질수록 배달 보너스가 기하급수로 커진다 (22 → 31 → 44 → 61 → 86 … 10겹째 +455)
+  // 배달액 성장은 이것 하나뿐 (2026-08-11 스노우볼 구조) — 광부·업글 투자가 겹 파괴 속도로, 겹이 수급으로 이어진다
+  const inc = Math.ceil(22 * Math.pow(1.4, S.mineLayer - 1)); // 14→22 상향: 단독 성장축이 된 만큼 겹 하나의 보상을 굵게
   S.mineBonus += inc;
   S.mineLayer++;
   logMsg(`⛰️💥 광산 ${S.mineLayer - 1}겹 파괴! 채굴량 +${inc} — 이제 배달마다 골드 +${S.mineBonus}`);
-  addFloat(MINE_POS.x, MINE_POS.y - 34, `채굴량 +${inc}! (배달 ${minerLoad() + S.mineBonus}G)`, '#b8860b', 2.2);
+  addFloat(MINE_POS.x, MINE_POS.y - 34, `채굴량 +${inc}! (배달 ${MINER_LOAD + S.mineBonus}G)`, '#b8860b', 2.2);
   sfx('reward');
   S.mineMax = S.mineHp = mineHP(S.mineLayer);
 }
@@ -8017,16 +8013,16 @@ function showGambleResult(host, perfect, win, detail, refresh) {
 function minerItemsHTML() {
   const n = S.units.filter(u => u.miner).length;
   const moveSpd = Math.round(MINER_SPEED * (1 + 0.25 * S.minerMoveLv));
-  const mineSec = (MINE_TIME / (1 + 0.25 * S.minerMineLv)).toFixed(1);
+  const digRate = Math.round(DIG_RATE * (1 + 0.4 * S.minerMineLv));
   return `
     <div class="rpgItem"><div class="rpgIcon">⛏️</div>
-      <div class="rpgInfo"><b>광부 고용</b> <span class="lv">현재 ${n}명</span><br>
-        <span class="desc">광부는 💰 자금 운영에서 <b>칩 1개</b>로 고용합니다 (좌측 자금운영 버튼)</span></div></div>
+      <div class="rpgInfo"><b>광부 고용</b> <span class="lv">현재 ${n}명 · 배달 ${MINER_LOAD + S.mineBonus}G</span><br>
+        <span class="desc">💰 자금 운영에서 <b>칩 1개</b>로 고용. 배달액은 <b>광산 겹을 깰수록</b> 커집니다</span></div></div>
     <div class="rpgItem"><div class="rpgIcon">🏃</div>
       <div class="rpgInfo"><b>이동속도</b> <span class="lv">Lv.${S.minerMoveLv}/${MINER_MAX_LV}</span> (${moveSpd})</div>
       ${S.minerMoveLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mvBtn" ${S.gold < S.minerMoveCost ? 'disabled' : ''}>💰 ${S.minerMoveCost}G</button>`}</div>
     <div class="rpgItem"><div class="rpgIcon">⚒️</div>
-      <div class="rpgInfo"><b>채굴량</b> <span class="lv">Lv.${S.minerMineLv}/${MINER_MAX_LV}</span> (${mineSec}초 · 배달 ${Math.round((minerLoad() + S.mineBonus) * (1 + 0.20 * S.minerMineLv))}G)</div>
+      <div class="rpgInfo"><b>곡괭이 효율</b> <span class="lv">Lv.${S.minerMineLv}/${MINER_MAX_LV}</span> (광산 깎기 ${digRate}/초)</div>
       ${S.minerMineLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mnBtn" ${S.gold < S.minerMineCost ? 'disabled' : ''}>💰 ${S.minerMineCost}G</button>`}</div>
     `;
 }
@@ -8045,7 +8041,7 @@ function wireMiner(el) {
     if (S.minerMineLv >= MINER_MAX_LV || S.gold < S.minerMineCost) return;
     S.gold -= S.minerMineCost; S.minerMineLv++;
     S.minerMineCost = Math.floor(S.minerMineCost * (MINER_COST_MUL[S.minerMineLv - 1] || 3));
-    logMsg(`⛏️ 광부 채굴속도 Lv.${S.minerMineLv}`); renderShop();
+    logMsg(`⚒️ 광부 곡괭이 효율 Lv.${S.minerMineLv}`); renderShop();
   });
 }
 function renderShop() {
