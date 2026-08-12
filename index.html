@@ -752,7 +752,7 @@ const WEAPONS = [
    hero:{name:'저격총', atk:'sniper', cd:0.8, dmgMul:18, range:470, proj:'sniper'}},
   // 5 플러쉬 — 화염방사기 (사거리 80: 소환장 정중앙엔 못 닿음. 사거리 손해분은 dmg↑로 보정)
   //   영웅(대형)은 폭·길이 각 1.5배 → 확실히 강해지고 정중앙까지 태움
-  {name:'화염방사기', dmg:1.0, cd:0.24, range:96, splash:44, bounce:0, atk:'area', vis:'flame', // dmg 0.24→1.0 — 딜 대부분이 업글 가산이라 기본치를 크게 올려야 티어5 자리 (실측 74→~105)
+  {name:'화염방사기', dmg:1.0, cd:0.20, range:96, splash:48, bounce:0, atk:'area', vis:'flame', // dmg 0.24→1.0 — 딜 대부분이 업글 가산이라 기본치를 크게 올려야 티어5 자리. cd 0.24→0.20·불길 44→48 (08-13 유저: 조커 -20% 대신 플러쉬 상향 — 공속이 업글 가산까지 +20%라 실질 레버)
    hero:{name:'대형 화염방사기', splash:66, range:120, cd:0.125, dmgMul:2.5}}, // 공속 8/초 + 데미지 ×2.5 + 불길 폭 2배 (기본 dmg 인상분 반영해 3→2.5, 밀집 ~1.6k = 티어 5.5 자리)
   // 6 풀하우스 — 단검 (암살자: 사거리 짧게 + 초고속 난도질 + 암살 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
@@ -1482,6 +1482,7 @@ function upgPer(u) {
   if (u.catapult) return 0.15 * u.cd; // 🪨 투석기: splash 130이 소환장(264×176)의 대부분을 덮어 실측 발당 76마리 → 스플래시가 아니라 전체타격 계수
   const single = (u.vis === 'sword' || u.vis === 'twin') && !u.shogun; // 🗡️ 풀하우스 라인(단검·쌍단검)은 단일 타격 → 단일 계수
   if (u.atk === 'pen') return 0.15 * u.cd;             // 소환장 전체타격: 타격 수가 많아 공속 비례로 억제
+  if (u.vis === 'flame') return 0.80 * u.cd;            // 🔥 플러쉬 상향 (08-13 유저: 조커 -20% 재분배) — 화염만 업글 계수 0.55→0.80 (군집 실측 +20% 목표. cd 비례 정규화라 cd 인하로는 안 오른다 — 0.66은 cd 0.24→0.20과 정확 상쇄돼 무효였음)
   if (!single && u.splash > 0) return 0.55 * u.cd;      // 스플래시: 다수 타격이므로 공속 비례로 억제
   return 2.5; // 단일 공격: 공속과 무관하게 레벨당 동일 상승 (족보가 높아 공속이 빠른 무기가 손해 보지 않도록)
 }
@@ -1854,7 +1855,7 @@ function spawnShogun(x, y) {
     keyRank: 14, keyLabel: '🔥', kills: 0,
     jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
     forceTarget: null, attackMine: false, amove: false, priority: 'near',
-    dmg: 66, cd: 1.1, range: 100, splash: 100, bounce: 0, atk: 'area', proj: null, vis: 'sword', // dmg 95→66 (-30%, 사기 너프) · 사거리 130→100
+    dmg: 66, cd: 1.0, range: 100, splash: 100, bounce: 0, atk: 'area', proj: null, vis: 'sword', // dmg 95→66 (-30%, 사기 너프) · 사거리 130→100 · cd 1.1→1.0 (08-13 유저: 공속 상향)
     pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 쇼군', cool: 0, selected: true, walk: 0, speed: 85,
   });
   addFloat(x, y - 30, '🔥 쇼군 강림!! 🔥', '#e53935', 2.8);
@@ -1910,7 +1911,8 @@ function spawnJoker(x, y) {
     // 2026-08-08 너프 (유저: "견인 빼고도 쇼군보다 강해 — 쇼군이 더 만들기 어려우니 약해야"): dmg 70→16 · splash 60→28.
     // 실측 몹200 군집 DPS 6,510(쇼군의 11배!)이었다 — splash 60이 밀집 군집을 통째로 갈아버림.
     // dmg 24는 아직 쇼군의 1.25배(852 vs 680)라 16으로 → 568 ≈ 쇼군의 0.84배. 조커의 값어치는 딜이 아니라 견인 스킬(아군 광역 셋업).
-    dmg: 16, cd: 0.4, range: 110, splash: 28, bounce: 0, atk: 'area', proj: null, vis: 'scythe',
+    // 08-13 유저: 공속 20% 하향 (cd 0.4→0.5) — 대신 플러쉬(화염방사기) 상향으로 광역 축 재분배
+    dmg: 16, cd: 0.5, range: 110, splash: 28, bounce: 0, atk: 'area', proj: null, vis: 'scythe',
     pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 조커', cool: 0, selected: true, walk: 0, speed: 85,
     jokerCd: 0, jokerT: 0, // 🃏 견인 액티브 스킬 (쿨 60초 · 지속 15초)
   });
