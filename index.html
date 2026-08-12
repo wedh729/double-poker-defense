@@ -1467,6 +1467,7 @@ function updateMiner(u, dt) {
       // 배달액 = 기본 60 + 광산 겹 보너스 — 레벨·라운드 배수 없음. 성장 축은 오직 광산 단계 (스노우볼 구조)
       const dep = Math.round((MINER_LOAD + S.mineBonus) * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1));
       S.gold += dep;
+      S.minerGold = (S.minerGold || 0) + dep; // ⛏️ 누적 광부 수입 (통계 표시용 — 2026-08-11 유저)
       addFloat(HOUSE.x, HOUSE.y - 34, `+${dep}G`, (u.sminer || u.hminer) ? '#c9a227' : '#b8860b', 1.1);
       sfx('coin');
       u.carry = false; u.mjob = 'toMine';
@@ -1704,8 +1705,9 @@ function endWave() {
       const fmt = v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(1)+'k' : Math.round(v);
       const top = Object.entries(S.stats).sort((a,b) => b[1].dmg - a[1].dmg).slice(0, 6);
       const maxD = top.length ? top[0][1].dmg : 1;
-      const statsHTML = top.length ? `<div style="margin-top:12px;text-align:left;font-size:12px"><b style="color:#ffd166">🏆 이번 판 MVP: ${top[0][0]}</b>` +
-        top.map(([nm, st]) => `<div style="margin-top:5px">${nm} — 딜 ${fmt(st.dmg)} · 킬 ${st.kills}<div style="height:6px;background:#2a2340;border-radius:3px;margin-top:2px"><div style="height:100%;border-radius:3px;width:${Math.max(3, 100*st.dmg/maxD).toFixed(0)}%;background:linear-gradient(90deg,#8c5bff,#ff6b9d)"></div></div></div>`).join('') + '</div>' : '';
+      const statsHTML = (top.length ? `<div style="margin-top:12px;text-align:left;font-size:12px"><b style="color:#ffd166">🏆 이번 판 MVP: ${top[0][0]}</b>` +
+        top.map(([nm, st]) => `<div style="margin-top:5px">${nm} — 딜 ${fmt(st.dmg)} · 킬 ${st.kills}<div style="height:6px;background:#2a2340;border-radius:3px;margin-top:2px"><div style="height:100%;border-radius:3px;width:${Math.max(3, 100*st.dmg/maxD).toFixed(0)}%;background:linear-gradient(90deg,#8c5bff,#ff6b9d)"></div></div></div>`).join('') + '</div>' : '') +
+        (S.minerGold ? `<div style="margin-top:8px;text-align:left;font-size:12px;color:#e6c36a">⛏️ 광부 총 수입: <b>${fmt(S.minerGold)}G</b> (${S.units.filter(u => u.miner).length}명 · 광산 ${S.mineLayer - 1}겹 파괴)</div>` : '');
       document.getElementById('finalScore').innerHTML =
         `도달 스테이지: <b>${S.round}</b> (${stageInfo(S.round).name})<br>` +
         `🏆 최고 기록: <b>${best}</b> 스테이지` + (isNew ? ' <span style="color:#ffd166">★ 신기록! ★</span>' : '') +
@@ -8016,7 +8018,7 @@ function minerItemsHTML() {
   const digRate = Math.round(DIG_RATE * (1 + 0.4 * S.minerMineLv));
   return `
     <div class="rpgItem"><div class="rpgIcon">⛏️</div>
-      <div class="rpgInfo"><b>광부 고용</b> <span class="lv">현재 ${n}명 · 배달 ${MINER_LOAD + S.mineBonus}G</span><br>
+      <div class="rpgInfo"><b>광부 고용</b> <span class="lv">현재 ${n}명 · 배달 ${MINER_LOAD + S.mineBonus}G · 누적 ${(S.minerGold || 0).toLocaleString()}G</span><br>
         <span class="desc">💰 자금 운영에서 <b>칩 1개</b>로 고용. 배달액은 <b>광산 겹을 깰수록</b> 커집니다</span></div></div>
     <div class="rpgItem"><div class="rpgIcon">🏃</div>
       <div class="rpgInfo"><b>이동속도</b> <span class="lv">Lv.${S.minerMoveLv}/${MINER_MAX_LV}</span> (${moveSpd})</div>
