@@ -1073,10 +1073,10 @@ function reset() {
     mineLayer: 1, mineHp: 0, mineMax: 0, mineBonus: 0,
     roomVirgin: true, hiAceGiven: false, // 🥚 이스터에그: 라운드 첫 광석방 입장이 하이카드 단독이면 하이카드 에이스
 
-    minerMoveLv: 0, minerMoveCost: 6000, minerMineLv: 0, minerMineCost: 6000, // 광부 업글은 비싸다 (×5 등비 — 6k·30k·150k·750k·3.75M)
+    minerMoveLv: 0, minerMoveCost: 12000, minerMineLv: 0, minerMineCost: 12000, // 광부 업글은 비싸다 (×5·×5·×7·×8 — 12k·60k·300k·2.1M·16.8M. 08-15 유저: 광산 특별보상 도입 대응 밸런스)
     poker: null, portalA: 0,
     speed: 1, time: 0, paused: false,
-    combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0,
+    combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0, slowT: 0,
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
     stimT: 0, acidPools: [],  // 💉 스팀팩 남은시간 / 🧪 염산 장판
     reviveArmed: false, // 🔄 부활권 봉인 여부
@@ -1474,7 +1474,11 @@ function updateMiner(u, dt) {
     u.mtimer -= dt;
     if (u.mtimer <= 0) {
       u.carry = true; u.mjob = 'toHouse';
-      if (Math.random() < MINER_TICKET_P) { // 🎟️ 광산에서 재변경권 발굴 — 머리에 이고 가서 배달 시 지급
+      // 단일 롤 사다리: 특별 발굴(희귀순) → 재변경권 — 서로 배타, 확률은 각자 명시값 그대로
+      let roll = Math.random(), special = null;
+      for (const [k, p] of MINER_SPECIALS) { if (roll < p) { special = k; break; } roll -= p; }
+      if (special) minerSpecial(special, u);
+      else if (roll < MINER_TICKET_P) { // 🎟️ 재변경권 발굴 — 머리에 이고 가서 배달 시 지급
         u.carryTicket = true;
         mutter = { u, txt: ['럭키~', '대박~', '심봤다~'][(Math.random() * 3) | 0], t: 4 }; // 혼잣말 말풍선 재사용 (히든 혼잣말과 겹치면 덮어씀 — 희귀)
       }
@@ -1554,7 +1558,14 @@ const ITEM_META = {
   vbomb:   { icon:'💣', name:'긴급 폭격',   active:true },
   pray:    { icon:'❤️', name:'생명의 기도', active:true },
   plank:   { icon:'🪵', name:'나무판자',   active:true },
+  // 👑 광산 특별 발굴 뽑기권 4종 (08-15 유저) — 제물대에 넣으면 개봉
+  gachaHero:    { icon:'👑', name:'영웅 뽑기권', active:true },
+  gachaAce:     { icon:'👑', name:'에이스 뽑기권', active:true },
+  gachaAceHero: { icon:'👑', name:'에이스 영웅 뽑기권', active:true },
+  gachaSuper:   { icon:'👑', name:'슈퍼에이스 영웅 뽑기권', active:true },
 };
+// 👑 뽑기권 링 색 (드로잉·구분용)
+const GACHA_COL = { gachaHero:'#c9a227', gachaAce:'#e91e8c', gachaAceHero:'#8c5bff', gachaSuper:'#ff2d95' };
 function spawnItemUnit(key) {
   const meta = ITEM_META[key];
   const x = CX + (Math.random() - 0.5) * 70, y = CY + 150;
@@ -1565,6 +1576,48 @@ function spawnItemUnit(key) {
     weapon: meta.name });
   addFloat(x, y - 26, `${meta.icon} ${meta.name} 등장! 제물대로 옮기세요`, '#ffd166', 2);
 }
+// ⛏️👑 광산 특별 발굴 (08-15 유저 — 재변경권과 배타적 단일 롤 사다리, 희귀한 것부터)
+const MINER_SPECIALS = [
+  ['gachaSuper',   1 / 200000],
+  ['gachaAceHero', 1 / 50000],
+  ['gachaHero',    1 / 30000],
+  ['gachaAce',     1 / 20000],
+  ['copier',       1 / 10000],
+  ['aceHigh',      1 / 3000],
+];
+function minerSpecial(kind, u) {
+  const M = {
+    gachaSuper:   ['👑', '슈퍼에이스 영웅 뽑기권', '#ff2d95', () => spawnItemUnit('gachaSuper')],
+    gachaAceHero: ['👑', '에이스 영웅 뽑기권', '#8c5bff', () => spawnItemUnit('gachaAceHero')],
+    gachaHero:    ['👑', '영웅 뽑기권', '#c9a227', () => spawnItemUnit('gachaHero')],
+    gachaAce:     ['👑', '에이스 뽑기권', '#e91e8c', () => spawnItemUnit('gachaAce')],
+    copier:       ['📑', '복사권 +1', '#5b48d0', () => { S.items.copier++; }],
+    aceHigh:      ['♠', '에이스 새총', '#e91e8c', () => spawnUnit(0, 0, true, 14)],
+  }[kind];
+  M[3]();
+  // 🎺 빵빠레: 결산 토스트 + 잭팟 골드 섬광 + 2초 슬로우모션
+  rewardToast(M[0], M[1], M[2], '⛏️✨ 광산 특별 발굴!');
+  logMsg(`⛏️✨ 광부가 광산에서 <b>${M[1]}</b>을(를) 캐냈습니다!`);
+  if (u) mutter = { u, txt: '심봤다~!!', t: 4 };
+  sfx('jackpot'); sfx('hero');
+  S.goldFlash = 0.7;
+  S.slowT = 2;
+}
+// 👑 뽑기권 개봉: 족보 티어 룰렛 (원페어40 투페어30 트리플20 스트9 5 플러쉬2 풀하2 포카0.5 SF0.3 로얄0.2 — %)
+const GACHA_W = [[1, 40], [2, 30], [3, 20], [4, 5], [5, 2], [6, 2], [7, 0.5], [8, 0.3], [9, 0.2]];
+function gachaTier() { let r = Math.random() * 100; for (const [t, w] of GACHA_W) { r -= w; if (r < 0) return t; } return 1; }
+function gachaReveal(t, label, mkUnit) {
+  mkUnit(t);
+  const hot = t >= 4; // 스트레이트 이상 = 상위 5% 당첨
+  rewardToast('👑', `${HAND_NAMES[t]} ${label}!`, hot ? '#ff6b9d' : '#c9a227', '👑 뽑기권 개봉');
+  logMsg(`👑 뽑기권 개봉 — <b>${HAND_NAMES[t]} ${label}</b>!`);
+  sfx(hot ? 'jackpot' : 'reward'); sfx('hero');
+  if (hot) S.goldFlash = 0.55;
+}
+function useGachaHero()    { const t = gachaTier(); gachaReveal(t, '영웅', tt => spawnHero(tt, RACE_OF_RANK[tt], ALTAR.x, ALTAR.y - 66, 1)); }
+function useGachaAce()     { const t = gachaTier(); gachaReveal(t, '에이스', tt => spawnUnit(tt, 0, true, 14)); }
+function useGachaAceHero() { const t = gachaTier(); gachaReveal(t, '에이스 영웅', tt => spawnHero(tt, RACE_OF_RANK[tt], ALTAR.x, ALTAR.y - 66, (ACE_MUL[tt] || 1.5) * 1.2)); } // 에이스 5기 합성과 동일 배수
+function useGachaSuper()   { const t = gachaTier(); gachaReveal(t, '슈퍼에이스 영웅', tt => spawnHero(tt, RACE_OF_RANK[tt], ALTAR.x, ALTAR.y - 66, (ACE_MUL[tt] || 1.5) * 1.2 * 2, true)); } // 슈퍼에이스 5기 합성과 동일 배수
 function useTimestop() { S.freezeT = 5; addFloat(PEN.x, PEN.y - 60, '⏳ 시간 정지!', '#42a5f5', 2); sfx('jackpot'); logMsg('⏳ 시간정지 모래시계 — 5초간 몬스터 정지!'); }
 // 🛒 비상 물자 발동 (제물대 경유 — 2026-08-08). 전투가 아닐 때 바친 모래·폭격은 다음 전투로 이월(pend)
 function useSandItem() {
@@ -2102,7 +2155,8 @@ function updateAltar() {
     if (it.item === 'revive') { S.reviveArmed = true; addFloat(ALTAR.x, ALTAR.y - 44, '🔄 부활 봉인!', '#43a047', 2); sfx('hero'); logMsg('🔄 부활권 봉인 — 이번 라운드 사망 시 부활! (무사 클리어 시 소멸)'); }
     else if (it.item === 'plank') { S.plank = true; addFloat(CX, CY + PEN.h/2 + 22, '🪵 나무판자 설치!', '#a1887f', 2); sfx('pick'); logMsg('🪵 나무판자 설치 — 소환장 중앙 하단에 발판! 단검(풀하우스)을 올려보세요.'); }
     else { ({ timestop: useTimestop, stimpack: useStimpack, acid: useAcid, bombard: useBombard,
-      sand: useSandItem, vbomb: useVBombItem, pray: usePrayItem })[it.item](); } // 🛒 비상 물자 3종도 제물대 발동
+      sand: useSandItem, vbomb: useVBombItem, pray: usePrayItem,
+      gachaHero: useGachaHero, gachaAce: useGachaAce, gachaAceHero: useGachaAceHero, gachaSuper: useGachaSuper })[it.item](); } // 🛒 비상 물자 3종 + 👑 뽑기권 4종도 제물대 발동
     updateInfoPanel();
   }
   if (S.units.some(u => u.catapult)) return; // 이미 투석기 존재
@@ -6620,9 +6674,18 @@ function drawItemUnit(u) {
   if (u.selected) { ctx.strokeStyle = '#43a047'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(u.x, u.y + 14, 13, 5, 0, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1; }
   ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 16, 11, 4, 0, 0, 6.28); ctx.fill();
   ctx.fillStyle = `rgba(255,214,102,${(0.15 + 0.1*Math.sin(S.time*5)).toFixed(2)})`; ctx.beginPath(); ctx.arc(u.x, y, 16, 0, 6.28); ctx.fill();
-  ctx.fillStyle = '#2a2340'; ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(u.x, y, 13, 0, 6.28); ctx.fill(); ctx.stroke(); ctx.lineWidth = 1;
-  ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(ITEM_META[u.item].icon, u.x, y);
+  const gc = GACHA_COL[u.item]; // 👑 뽑기권: 등급색 링 + '?' 위에 왕관
+  ctx.fillStyle = '#2a2340'; ctx.strokeStyle = gc || '#c9a227'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(u.x, y, 13, 0, 6.28); ctx.fill(); ctx.stroke(); ctx.lineWidth = 1;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (gc) {
+    ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = gc;
+    ctx.fillText('?', u.x, y + 1);
+    ctx.font = '11px sans-serif';
+    ctx.fillText('👑', u.x, y - 17); // 원 위에 얹힌 왕관
+  } else {
+    ctx.font = '16px sans-serif'; ctx.fillStyle = '#fff';
+    ctx.fillText(ITEM_META[u.item].icon, u.x, y);
+  }
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 // 티어별 몸통 크기/모양 — 유닛의 tier/hero/vis는 스폰 후 불변이라 유닛 객체에 메모이즈 (프레임당 128회 객체 생성이 GC를 긁었다)
@@ -8078,8 +8141,8 @@ function minerItemsHTML() {
 function wireMiner(el) {
   const wire = (id, fn) => { const b = el.querySelector(id); if (b) b.onclick = fn; };
   // (경제 개편: 골드 고용 버튼 제거 — 광부는 카지노에서 칩 1개로. 이 창은 광부 '업그레이드' 전용)
-  // 비용 사다리: 6,000 → ×5 등비 = 30k, 150k, 750k, 3.75M (08-14 유저: "기하급수적으로, 전 비용의 5배씩")
-  const MINER_COST_MUL = [5, 5, 5, 5];
+  // 비용 사다리: 12,000 → ×5, ×5, ×7, ×8 = 60k, 300k, 2.1M, 16.8M (08-15 유저: 재변경권 등 특별보상 대응 — 더 가파르게)
+  const MINER_COST_MUL = [5, 5, 7, 8];
   wire('#mvBtn', () => {
     if (S.minerMoveLv >= MINER_MAX_LV || S.gold < S.minerMoveCost) return;
     S.gold -= S.minerMoveCost; S.minerMoveLv++;
@@ -10062,7 +10125,8 @@ const BASE_SPEED = 1.3; // 게임 기본 진행 속도 (2배속 시 실질 2.6�
 function frame(now) {
   // dt 하한 0: 시계가 어떤 이유로든 되감기면(rAF 타임스탬프 혼선·테스트 하네스) 음수 dt가 born 등을 크게 음수로 만들어
   // 캔버스 음수 반지름 → draw 프레임 통째 취소로 이어진다. 실플레이에선 단조 증가지만 클램프 한 줄로 부류 전체를 차단.
-  let dt = Math.max(0, Math.min((now - last) / 1000, 0.05)) * BASE_SPEED;
+  const rawDt = Math.max(0, Math.min((now - last) / 1000, 0.05));
+  let dt = rawDt * BASE_SPEED;
   last = now;
   if (S.mapTest) { // 🏗️ 멀티맵 미리보기: 실게임 update/draw/HUD 전부 우회
     try { updateMapTest(dt); drawMapTest(); } catch (e) { reportLoopError('maptest', e); }
@@ -10071,6 +10135,7 @@ function frame(now) {
   }
   const t0 = performance.now();
   if (!S.paused) {
+    if (S.slowT > 0) { S.slowT = Math.max(0, S.slowT - rawDt); dt *= 0.3; } // ⛏️✨ 특별 발굴 슬로우모션 — 실시간 2초, 배속·히트스톱과 독립
     if (S.hitstop > 0) S.hitstop -= dt; // 보스 킬 히트스톱: 잠깐 세상이 멈춘다
     else {
       // 배속은 큰 스텝 1번이 아니라 작은 스텝 여러 번(서브스텝)으로 → 모션 부드럽고 물리 안정
