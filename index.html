@@ -579,6 +579,7 @@
     <span>💰 <b id="tGold"></b></span>
     <span>⛏️ <b id="tMiner"></b></span>
     <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 자금 운영에서 룰렛·슬롯·광부 고용에 사용">🎰 <b id="tChips" style="color:#c9a227">0</b></span>
+    <span title="재변경권 — 교환을 마친 카드를 한 번 더 교환">🎟️ <b id="tTickets" style="color:#e0525e">0</b></span>
     <span>🏳️ 스테이지 <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
     <div id="bigTimer"><div class="p" id="tPhase"></div></div>
   </div>
@@ -8724,6 +8725,7 @@ function updateHUD() {
   }
   document.getElementById('tMiner').textContent = S.units.filter(u => u.miner).length + '명';
   document.getElementById('tChips').textContent = chipTxt(S.chips); // 결투 반 개 칩 표기 (½·1½…)
+  document.getElementById('tTickets').textContent = S.items.reroll; // 🎟️ 재변경권 보유 수 (08-14 유저)
   // 좌측 카지노 스테이션: 칩 있으면 활성 + 빛남
   // 칩이 없어도 비상 물자(골드)는 살 수 있으므로 카지노는 항상 열린다. 정수 칩이 있을 때만 발광
   document.querySelectorAll('.chipStation').forEach(b => { b.disabled = false; b.classList.toggle('ready', S.chips >= 1); });
