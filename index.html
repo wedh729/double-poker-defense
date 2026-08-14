@@ -7263,8 +7263,10 @@ cv.addEventListener('mousedown', e => {
   pressStart(p.x, p.y);
 });
 cv.addEventListener('mousemove', e => {
-  if (!drag) return;
   const p = mpos(e);
+  // 🏃 도망 버튼 호버 = 👆 검지 커서 (08-14 유저. 공격 대기 칼 커서가 우선 — setAttackMode가 인라인 커서를 관리)
+  if (!attackMode) cv.style.cursor = hitDuelFleeBtn(p.x, p.y) ? 'pointer' : '';
+  if (!drag) return;
   pressMove(p.x, p.y);
 });
 // 건물/오브젝트 설명 + 팁 (아이콘 밑 상시 설명 대신, 클릭하면 보인다)
