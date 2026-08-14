@@ -2748,6 +2748,10 @@ function nearestMob(x, y, exclude, rad) {
 }
 function fireAt(u, target) {
   let dmg = effDmg(u);
+  // 🏹💣 원페어(활·석궁)·포카드(바주카·탱크): 멀수록 아프다 — 사거리 끝에서 최대 ×1.1 (08-14 유저. 활·폭탄의 낙차 픽션)
+  // isHiddenCombo 제외: 조커가 tier 1, 투석기가 tier 7을 공유한다
+  if ((u.tier === 1 || u.tier === 7) && !isHiddenCombo(u))
+    dmg *= 1 + 0.1 * Math.min(1, Math.hypot(target.x - u.x, target.y - u.y) / effRange(u));
   let gambleBounce = 0;
   if (u.gamble) { // 🎲 갬블러: 주사위를 던져 1~6회 팅기는 공격 (6=잭팟 / 승급1: 최소2 / 승급2: 잭팟 8연타)
     gambleBounce = (u.ascend || 0) >= 1 ? 2 + Math.floor(Math.random() * 5) : 1 + Math.floor(Math.random() * 6);
