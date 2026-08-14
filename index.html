@@ -43,6 +43,9 @@
   .adSlot { width: 300px; height: 600px; border-radius: 12px; background: #fff; border: 2px dashed #dcdce8; color: #c2c2d0;
     display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; letter-spacing: 1px; line-height: 1.8; }
   @media (max-width: 1639px) { .adSlot { width: 160px; } }   /* 960 + 300×2가 안 들어가면 160×600으로 */
+  /* 🗺️ 멀티 미리보기 미니맵 — 우측 광고칸 밑 (08-15 유저: 캔버스 우하단 미니맵이 P2 광산을 가림) */
+  #mmCv { display: none; margin-top: 12px; width: 100%; max-width: 300px; border: 2px solid #c9a75a; border-radius: 10px; background: #0e0a1a; cursor: pointer; }
+  body.mtMode .adRail #mmCv { display: block; }
   @media (max-width: 1339px) { .adRail { display: none; } }  /* 160×600도 안 들어가면 숨김 */
   h1 { font-size: 17px; margin-bottom: 6px; color: #5b48d0; }
   h1 small { color: #999; font-weight: normal; font-size: 11px; }
@@ -216,8 +219,9 @@
   @keyframes chipGlow { from { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.7), 0 0 6px 1px rgba(255,193,7,0.5); } to { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.9), 0 0 16px 4px rgba(255,193,7,0.85); } }
   .chipStation:disabled { filter: grayscale(0.75) brightness(0.92); opacity: 0.6; cursor: default; }
   .chipStation .ci.spin { animation: spin360 3.5s linear infinite; }
-  /* 📊 딜 순위 미니 위젯 (자금운영 아래, 접으면 ▶만 남는다) */
-  #dpsRank { max-width: 108px; background: rgba(20,16,34,0.72); border: 1px solid rgba(201,167,90,0.35); border-radius: 10px; padding: 4px 7px; font-size: 10px; color: #e8e2d2; }
+  /* 📊 딜 순위 미니 위젯 (자금운영 아래, 접으면 ▶만 남는다)
+     — 절대배치로 아래로 뺀다: 흐름에 두면 강화 포털(84,224 부근)과 겹친다 (08-15 유저) */
+  #dpsRank { position: absolute; left: 0; top: calc(100% + 58px); max-width: 108px; background: rgba(20,16,34,0.72); border: 1px solid rgba(201,167,90,0.35); border-radius: 10px; padding: 4px 7px; font-size: 10px; color: #e8e2d2; }
   #dpsRank #dpsHead { cursor: pointer; font-weight: bold; color: #ffd166; font-size: 11px; user-select: none; white-space: nowrap; }
   #dpsRank .dr { margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 94px; }
   @keyframes spin360 { to { transform: rotate(360deg); } }
@@ -664,7 +668,7 @@
   </div>
   <div id="log"></div>
 </div>
-<aside class="adRail"><div class="adSlot" id="adSlotRight">AD<br>300×600</div></aside>
+<aside class="adRail"><div class="adSlot" id="adSlotRight">AD<br>300×600</div><canvas id="mmCv" width="220" height="140"></canvas></aside>
 </div>
 <div id="mobTabs"><button id="mtBattle" class="mobTabBtn">⚔️<span class="mtTxt"> 전투</span></button><button id="mtPoker" class="mobTabBtn">🃏<span class="mtTxt"> 포커</span></button></div>
 <div id="startOverlay">
@@ -9145,32 +9149,32 @@ function mtSetup(players) {
     MT.ROT = [0, 0]; MT.PH = 0; // 2인은 회전 없음 · 왕국이 레인 안에 있어 광장 사각(PH) 개념이 없다
     MT.TERR = MT.ORIGIN.map(([ox, oy]) => [ox, oy, QW, QH]); // 영토 = 기지 그대로
   } else {
-    // 4인: 십자 레인이 사분면 4개를 가르고 교차점에 왕국. 게이트 12·3·6·9시
-    // 정사각 월드 — 기지(940×500)는 안쪽(왕국 쪽)에 붙고, 남는 세로 여유 440은 기지 바깥
-    // '앞마당'(YARD)으로. 12·6시 몹도 진격 내내 누군가의 영토를 지난다.
-    // (풍차 배치를 시도했다가 유저 반려로 이 버전 복원 — 2026-08-03. 변환 쌍(QUAD/rot) 인프라는 유지)
+    // 4인 (08-15 A안): 십자 레인 + 상·하 '가장자리 도로'. 게이트는 각 진영 바깥 모서리 쪽 —
+    // ㄱ자 경로(도로 356 + 세로 레인 588)로 진격 거리 944를 그대로 유지하며 앞마당 패딩 제거 (1968² → 1968×1264, 세로 -36%).
+    // 구 설계의 정사각+앞마당 440은 '게이트 등거리'를 위한 패딩이었다 — 등거리는 경로 길이로 맞추면 된다.
+    // (풍차 배치는 유저 반려로 금지. 변환 쌍(QUAD/rot) 인프라는 유지)
     const LN = { a: QW, b: QW + LANE };
-    MT.W = QW * 2 + LANE; MT.H = MT.W;                                  // 1968 × 1968
-    const LM = { a: (MT.H - LANE) / 2, b: (MT.H + LANE) / 2 };           // 가로 레인 = 월드 정중앙
-    const YARD = LM.a - QH;                                              // 440 — 기지 바깥 앞마당 깊이
-    MT.ORIGIN = [[LN.b, YARD], [LN.b, LM.b], [0, LM.b], [0, YARD]];      // P1(1시)·P2(5시)·P3(7시)·P4(11시)
+    MT.W = QW * 2 + LANE;                                                // 1968
+    MT.H = QH * 2 + LANE * 3;                                            // 1264 — 상단 도로+기지+중앙 레인+기지+하단 도로
+    const LM = { a: LANE + QH, b: LANE + QH + LANE };                    // 가로 중앙 레인 y
+    MT.ORIGIN = [[LN.b, LANE], [LN.b, LM.b], [0, LM.b], [0, LANE]];      // P1(1시)·P2(5시)·P3(7시)·P4(11시)
     MT.ROT = [0, 0, 0, 0]; MT.PH = 0; // 회전 없음 · 광장 = 두 레인의 교차부라 PH 불필요
     MT.PNAMES = ['P1 · 내 진영', 'P2', 'P3', 'P4'];
     MT.PCOLS = ['#1D9E75', '#378ADD', '#D4537E', '#BA7517'];
-    MT.LANES = [{ vert: true, x: LN.a, y: 0, w: LANE, h: MT.H },   // 세로 레인 (12↔6시)
-                { vert: false, x: 0, y: LM.a, w: MT.W, h: LANE }]; // 가로 레인 (9↔3시)
+    MT.LANES = [{ vert: true, x: LN.a, y: 0, w: LANE, h: MT.H },        // 세로 레인 (상하 도로 ↔ 왕국)
+                { vert: false, x: 0, y: LM.a, w: MT.W, h: LANE },        // 가로 중앙 레인 (9↔3시)
+                { vert: false, x: 0, y: 0, w: MT.W, h: LANE },           // 상단 가장자리 도로
+                { vert: false, x: 0, y: MT.H - LANE, w: MT.W, h: LANE }]; // 하단 가장자리 도로
     MT.KING = { x: LN.a + LANE / 2, y: LM.a + LANE / 2 };
-    MT.GATES = [[MT.KING.x, 40, Math.PI], [MT.W - 40, MT.KING.y, -Math.PI / 2],
-                [MT.KING.x, MT.H - 40, 0], [40, MT.KING.y, Math.PI / 2]];
-    // 세로 다리: 기지 구간 로컬 y=392(서쪽 착지가 콜로세움 아래 클리어 존, 동쪽은 성 옆 개활지)
-    //            + 앞마당 한가운데 — 건물이 없는 개활지라 제약 없이 놓인다 (세로 레인 여유 확보)
+    const GOFF = 944 - (MT.KING.y - LANE / 2); // ㄱ자 경로 = 도로 GOFF + 세로 588 = 944 (구 진격 거리 보존)
+    MT.GATES = [[MT.KING.x + GOFF, LANE / 2, Math.PI], [MT.KING.x + GOFF, MT.H - LANE / 2, 0],
+                [MT.KING.x - GOFF, MT.H - LANE / 2, 0], [MT.KING.x - GOFF, LANE / 2, Math.PI]]; // P1·P2·P3·P4 바깥 모서리 쪽
+    // 세로 다리: 기지 구간 로컬 y=392 두 곳 (앞마당 다리 2개는 앞마당과 함께 소멸)
     // 가로 다리: 로컬 x=625 수직 회랑 — 건넌 뒤 위아래 어디로든 통행 가능
-    MT.BRIDGES = [{ x: MT.KING.x, y: YARD / 2, vert: true }, { x: MT.KING.x, y: YARD + 392, vert: true },
-                  { x: MT.KING.x, y: LM.b + 392, vert: true }, { x: MT.KING.x, y: MT.H - YARD / 2, vert: true },
+    MT.BRIDGES = [{ x: MT.KING.x, y: LANE + 392, vert: true }, { x: MT.KING.x, y: LM.b + 392, vert: true },
                   { x: 625, y: MT.KING.y, vert: false }, { x: LN.b + 625, y: MT.KING.y, vert: false }];
-    // 영토 = 기지 + 앞마당 (사분면 전체 940×940) — 미니맵에 옅게 칠해 소유권이 읽히게
-    const TH = LM.a;
-    MT.TERR = [[LN.b, 0, QW, TH], [LN.b, LM.b, QW, TH], [0, LM.b, QW, TH], [0, 0, QW, TH]];
+    // 영토 = 기지 + 인접 가장자리 도로까지 — 미니맵에 옅게 칠해 소유권이 읽히게
+    MT.TERR = [[LN.b, 0, QW, LM.a], [LN.b, LM.b, QW, MT.H - LM.b], [0, LM.b, QW, MT.H - LM.b], [0, 0, QW, LM.a]];
   }
   MT.QUAD = MT.ORIGIN.map(([ox, oy], i) => mtQuad(ox, oy, (MT.ROT && MT.ROT[i]) || 0, i));
   // 다리마다 '자기가 건너는 레인'을 붙인다 — 다리 좌표를 품은 레인으로 (같은 방향 레인이 여럿이어도 안전)
@@ -9925,29 +9929,61 @@ function mtBossDraw(b) {
   ctx.fillText('보스 (데모 · 아주 느림)', b.x, b.y - 40); ctx.textAlign = 'left';
   drawBar(b.x - 30, b.y - 36, 60, 0.8, '#e05a2b');
 }
-function mtMinimap() {
-  const M = MT.MM, s = M.w / MT.W;
-  ctx.fillStyle = 'rgba(14,10,26,0.88)'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.fill();
-  ctx.strokeStyle = '#c9a75a'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.stroke(); // 금테 — 게임 UI 관례
-  ctx.fillStyle = '#2e4b28'; ctx.fillRect(M.x, M.y, M.w, M.h); // 지형(잔디) 톤 베이스 — 원색 블록 대신 지도처럼 읽히게
-  MT.TERR.forEach(([tx, ty, tw, th], i) => { ctx.fillStyle = MT.PCOLS[i] + (i ? '14' : '26'); ctx.fillRect(M.x + tx * s, M.y + ty * s, tw * s, th * s); }); // 영토(기지+앞마당) 옅게
-  MT.QUAD.forEach(q => { ctx.fillStyle = MT.PCOLS[q.i] + (q.i ? '22' : '3a'); ctx.fillRect(M.x + q.ox * s, M.y + q.oy * s, q.w * s, q.h * s); }); // 기지는 진하게
-  ctx.fillStyle = 'rgba(200,190,170,0.75)';
-  for (const L of MT.LANES) ctx.fillRect(M.x + L.x * s, M.y + L.y * s, L.w * s, L.h * s);
-  ctx.fillStyle = '#EF9F27';
-  for (const b of MT.BRIDGES) ctx.fillRect(M.x + (b.x - 22) * s, M.y + (b.y - 22) * s, 44 * s, 44 * s);
-  ctx.fillStyle = '#8c5bff'; ctx.fillRect(M.x + (MT.KING.x - 32) * s, M.y + (MT.KING.y - 32) * s, 64 * s, 64 * s);
-  ctx.fillStyle = '#ff5252';
-  ctx.fillRect(M.x + MT.raider.x * s - 2, M.y + MT.raider.y * s - 2, 4, 4);
-  ctx.fillRect(M.x + MT.boss.x * s - 2.5, M.y + MT.boss.y * s - 2.5, 5, 5);
-  ctx.fillStyle = '#43e0a0';
-  for (const u of S.units) ctx.fillRect(M.x + u.x * s - 1.5, M.y + u.y * s - 1.5, 3, 3);
-  ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 1.5;
+// 🗺️ 미니맵 코어: 대상 컨텍스트 (mx,my) 기준으로 내용만 그린다 — 캔버스 우하단/우측 레일 DOM 양쪽 공용
+function mtMinimapCore(tc, mx, my, mw) {
+  const s = mw / MT.W, mh = mw * MT.H / MT.W;
+  tc.fillStyle = '#2e4b28'; tc.fillRect(mx, my, mw, mh); // 지형(잔디) 톤 베이스 — 원색 블록 대신 지도처럼 읽히게
+  MT.TERR.forEach(([tx, ty, tw, th], i) => { tc.fillStyle = MT.PCOLS[i] + (i ? '14' : '26'); tc.fillRect(mx + tx * s, my + ty * s, tw * s, th * s); }); // 영토 옅게
+  MT.QUAD.forEach(q => { tc.fillStyle = MT.PCOLS[q.i] + (q.i ? '22' : '3a'); tc.fillRect(mx + q.ox * s, my + q.oy * s, q.w * s, q.h * s); }); // 기지는 진하게
+  tc.fillStyle = 'rgba(200,190,170,0.75)';
+  for (const L of MT.LANES) tc.fillRect(mx + L.x * s, my + L.y * s, L.w * s, L.h * s);
+  tc.fillStyle = '#EF9F27';
+  for (const b of MT.BRIDGES) tc.fillRect(mx + (b.x - 22) * s, my + (b.y - 22) * s, 44 * s, 44 * s);
+  tc.fillStyle = '#8c5bff'; tc.fillRect(mx + (MT.KING.x - 32) * s, my + (MT.KING.y - 32) * s, 64 * s, 64 * s);
+  tc.fillStyle = '#ff5252';
+  tc.fillRect(mx + MT.raider.x * s - 2, my + MT.raider.y * s - 2, 4, 4);
+  tc.fillRect(mx + MT.boss.x * s - 2.5, my + MT.boss.y * s - 2.5, 5, 5);
+  tc.fillStyle = '#43e0a0';
+  for (const u of S.units) tc.fillRect(mx + u.x * s - 1.5, my + u.y * s - 1.5, 3, 3);
+  tc.strokeStyle = '#ffd166'; tc.lineWidth = 1.5;
   // 줌아웃하면 뷰가 월드보다 커진다 → 월드 경계로 교집합 (안 그러면 사각이 미니맵 박스 밖으로 삐져나온다)
   const rx0 = Math.max(0, MT.cam.x), ry0 = Math.max(0, MT.cam.y);
   const rx1 = Math.min(MT.W, MT.cam.x + mtViewW()), ry1 = Math.min(MT.H, MT.cam.y + mtViewH());
-  ctx.strokeRect(M.x + rx0 * s, M.y + ry0 * s, (rx1 - rx0) * s, (ry1 - ry0) * s); ctx.lineWidth = 1;
+  tc.strokeRect(mx + rx0 * s, my + ry0 * s, (rx1 - rx0) * s, (ry1 - ry0) * s); tc.lineWidth = 1;
 }
+// 우측 광고칸 밑 DOM 미니맵이 보이면 그쪽으로, 아니면(모바일·좁은 창) 기존 캔버스 우하단 폴백
+function mmDomActive() { const el = document.getElementById('mmCv'); return !IS_MOBILE && el && el.offsetParent !== null; }
+function mtMinimap() {
+  if (mmDomActive()) { // 🗺️ 캔버스 우하단을 비운다 — P2(우하단) 광산 가림 해소 (08-15 유저)
+    const el = document.getElementById('mmCv');
+    const ih = Math.max(40, Math.round(220 * MT.H / MT.W));
+    if (el.width !== 220 || el.height !== ih) { el.width = 220; el.height = ih; }
+    const tc = el.getContext('2d');
+    tc.clearRect(0, 0, el.width, el.height);
+    mtMinimapCore(tc, 0, 0, 220);
+    return;
+  }
+  const M = MT.MM;
+  ctx.fillStyle = 'rgba(14,10,26,0.88)'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.fill();
+  ctx.strokeStyle = '#c9a75a'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.stroke(); // 금테 — 게임 UI 관례
+  mtMinimapCore(ctx, M.x, M.y, M.w);
+}
+// DOM 미니맵 입력: 클릭/드래그 = 카메라 점프 (캔버스 미니맵의 mtMMJump와 동일 동작)
+(() => {
+  const el = document.getElementById('mmCv');
+  if (!el) return;
+  const jump = e => {
+    if (!S || !S.mapTest) return;
+    const r = el.getBoundingClientRect();
+    MT.cam.x = (e.clientX - r.left) * (MT.W / r.width) - mtViewW() / 2;
+    MT.cam.y = (e.clientY - r.top) * (MT.H / r.height) - mtViewH() / 2;
+    mtClampCam();
+  };
+  let dn = false;
+  el.addEventListener('mousedown', e => { dn = true; jump(e); e.preventDefault(); });
+  window.addEventListener('mousemove', e => { if (dn) jump(e); });
+  window.addEventListener('mouseup', () => { dn = false; });
+})();
 function drawMapTest() {
   const P = mtPatterns(), cam = MT.cam, z = MT.zoom;
   // 🌌 월드 밖 공허: 밋밋한 단색 대신 은은한 비네트 (08-15 유저: "비율 맞추느라 엉망" — 여백을 무대 조명처럼)
@@ -10029,7 +10065,7 @@ function drawMapTest() {
 }
 // --- 미리보기 입력: 캡처 단계에서 가로채 기존 게임 입력과 완전 분리 ---
 function mtScreenToWorld(p) { return { x: p.x / MT.zoom + MT.cam.x, y: p.y / MT.zoom + MT.cam.y }; }
-function mtInMM(p) { const M = MT.MM; return p.x >= M.x - 4 && p.x <= M.x + M.w + 4 && p.y >= M.y - 4 && p.y <= M.y + M.h + 4; }
+function mtInMM(p) { if (mmDomActive()) return false; const M = MT.MM; return p.x >= M.x - 4 && p.x <= M.x + M.w + 4 && p.y >= M.y - 4 && p.y <= M.y + M.h + 4; } // DOM 미니맵 사용 중엔 캔버스 우하단이 일반 월드 클릭
 function mtMMJump(p) {
   const M = MT.MM, s = M.w / MT.W;
   MT.cam.x = (p.x - M.x) / s - mtViewW() / 2; MT.cam.y = (p.y - M.y) / s - mtViewH() / 2; // 클릭 지점이 화면 중앙에 오게
