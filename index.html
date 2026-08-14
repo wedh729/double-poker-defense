@@ -276,6 +276,29 @@
   .flipWrap { perspective: 700px; width: 100px; height: 140px; margin: 10px auto; }
   .flipCard { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.7s; }
   .flipCard.flipped { transform: rotateY(180deg); }
+  /* 👑 뽑기 상자 연출: 펄떡펄떡 → 쩍 → 빛 폭발 → 짜잔 (08-15 유저) */
+  .gbxStage { position: relative; width: 180px; height: 190px; margin: 4px auto 0; perspective: 520px; }
+  .gbxStage.ovl { position: absolute; left: 50%; top: 46%; margin: 0; transform: translate(-50%, -50%); z-index: 8; pointer-events: none; }
+  .gbxStage.ovl::before { content: ''; position: absolute; inset: -70px; background: radial-gradient(circle, rgba(10,6,20,0.55), transparent 70%); }
+  .gbx { position: absolute; left: 50%; bottom: 30px; width: 88px; height: 60px; margin-left: -44px; transform-style: preserve-3d; transform: rotateX(6deg); animation: gbxHop 0.42s ease-in-out 3; }
+  @keyframes gbxHop { 0%, 100% { transform: rotateX(6deg) translateY(0) scale(1, 1); } 35% { transform: rotateX(10deg) translateY(-30px) scale(0.96, 1.06) rotateZ(-2.5deg); } 72% { transform: rotateX(4deg) translateY(2px) scale(1.08, 0.88); } }
+  .gbxShadow { position: absolute; left: 50%; bottom: 22px; width: 104px; height: 16px; transform: translateX(-50%); background: radial-gradient(ellipse at center, rgba(0,0,0,0.5), transparent 66%); animation: gbxShHop 0.42s ease-in-out 3; }
+  @keyframes gbxShHop { 0%, 100% { transform: translateX(-50%) scaleX(1); opacity: 0.85; } 35% { transform: translateX(-50%) scaleX(0.5); opacity: 0.35; } }
+  .gbxBody { position: absolute; inset: 0; border: 2px solid #b8944a; border-radius: 7px; background: linear-gradient(158deg, #33265a 0%, #1a1230 55%, #0f0a1d 100%); box-shadow: inset 0 -10px 18px rgba(0,0,0,0.55), inset 0 4px 8px rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 900; color: #c9a75a; text-shadow: 0 0 10px rgba(201,167,90,0.55); }
+  .gbxLid { position: absolute; left: -6px; top: -26px; width: 100px; height: 30px; border: 2px solid #d4b06a; border-radius: 8px 8px 4px 4px; background: linear-gradient(180deg, #46356f, #241a42 80%); box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.12); transform-origin: 50% 100%; transition: transform 0.4s cubic-bezier(0.25, 1.5, 0.45, 1); display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .gbxStage.open .gbxLid { transform: rotateX(112deg) translateY(-6px); }
+  .gbxGlow { position: absolute; left: 50%; top: 42%; width: 130px; height: 130px; margin: -65px; border-radius: 50%; background: radial-gradient(circle, rgba(255,240,180,0.95) 0%, rgba(255,205,90,0.55) 40%, transparent 70%); opacity: 0; pointer-events: none; }
+  .gbxStage.winfx .gbxGlow { animation: gbxBurst 0.8s ease-out forwards; }
+  @keyframes gbxBurst { 0% { opacity: 0; transform: scale(0.15); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(3); } }
+  .gbxRays { position: absolute; left: 50%; top: 42%; width: 210px; height: 210px; margin: -105px; border-radius: 50%; background: repeating-conic-gradient(rgba(255,220,120,0.5) 0deg 7deg, transparent 7deg 24deg); -webkit-mask-image: radial-gradient(circle, black 18%, transparent 68%); mask-image: radial-gradient(circle, black 18%, transparent 68%); opacity: 0; pointer-events: none; }
+  .gbxStage.winfx .gbxRays { animation: gbxRaySpin 1.5s ease-out forwards; }
+  @keyframes gbxRaySpin { 0% { opacity: 0; transform: rotate(0deg) scale(0.4); } 20% { opacity: 0.95; } 100% { opacity: 0; transform: rotate(70deg) scale(1.25); } }
+  .gbxReveal { position: absolute; left: 0; right: 0; top: 4px; text-align: center; opacity: 0; }
+  .gbxStage.winfx .gbxReveal, .gbxStage.failfx .gbxReveal { animation: gbxPop 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) forwards; }
+  @keyframes gbxPop { 0% { opacity: 0; transform: scale(0.2) translateY(26px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+  .gbxIco { font-size: 34px; filter: drop-shadow(0 0 10px rgba(255,214,102,0.8)); }
+  .gbxTxt { font-size: 14px; font-weight: 900; margin-top: 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.7); }
+  .gbxStage.failfx .gbx { transform: rotateX(6deg) rotateZ(3deg); }
   .flipFace { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 46px;
     box-shadow: 0 6px 16px rgba(0,0,0,0.5); }
   .flipFront { background: linear-gradient(150deg, #5b48d0, #8c5bff); color: #fff; border: 2px solid #b39ddb; }
@@ -1607,12 +1630,18 @@ function minerSpecial(kind, u) {
 const GACHA_W = [[1, 40], [2, 30], [3, 20], [4, 5], [5, 2], [6, 2], [7, 0.5], [8, 0.3], [9, 0.2]];
 function gachaTier() { let r = Math.random() * 100; for (const [t, w] of GACHA_W) { r -= w; if (r < 0) return t; } return 1; }
 function gachaReveal(t, label, mkUnit) {
-  mkUnit(t);
   const hot = t >= 4; // 스트레이트 이상 = 상위 5% 당첨
-  rewardToast('👑', `${HAND_NAMES[t]} ${label}!`, hot ? '#ff6b9d' : '#c9a227', '👑 뽑기권 개봉');
-  logMsg(`👑 뽑기권 개봉 — <b>${HAND_NAMES[t]} ${label}</b>!`);
-  sfx(hot ? 'jackpot' : 'reward'); sfx('hero');
-  if (hot) S.goldFlash = 0.55;
+  // 🎁 캔버스 위 상자 개봉 연출 — 유닛 지급은 상자가 열리는 순간(onReveal)
+  gachaBoxAnim(document.getElementById('cvWrap'), {
+    ovl: true, win: true, revealIcon: '👑',
+    revealText: `${HAND_NAMES[t]} ${label}!`, color: hot ? '#ff6b9d' : '#ffd166',
+    onReveal: () => {
+      mkUnit(t);
+      logMsg(`👑 뽑기권 개봉 — <b>${HAND_NAMES[t]} ${label}</b>!`);
+      sfx(hot ? 'jackpot' : 'reward'); sfx('hero');
+      if (hot) S.goldFlash = 0.55;
+    },
+  });
 }
 function useGachaHero()    { const t = gachaTier(); gachaReveal(t, '영웅', tt => spawnHero(tt, RACE_OF_RANK[tt], ALTAR.x, ALTAR.y - 66, 1)); }
 function useGachaAce()     { const t = gachaTier(); gachaReveal(t, '에이스', tt => spawnUnit(tt, 0, true, 14)); }
@@ -8290,37 +8319,8 @@ function closeChip() { CM.style.display = 'none'; if (!chipWasPaused && S.phase 
 document.getElementById('chipClose').onclick = closeChip;
 CM.onclick = e => { if (e.target.id === 'chipModal') closeChip(); };
 
-// 뽑기 유닛: 낮은 족보일수록 잘 나오는 가중 랜덤
-function weightedTier() {
-  const w = [26, 22, 17, 12, 8, 6, 4, 3, 1.5, 0.5]; let s = w.reduce((a, b) => a + b, 0), r = Math.random() * s;
-  for (let i = 0; i < 10; i++) { r -= w[i]; if (r < 0) return i; } return 0;
-}
 function gamblerLuck() { return S.units.some(u => u.gamble) ? 1.1 : 1; } // 🎲 도박의 신 가호
-// 🎟️ 복권 보상 롤 (아이콘 + 라벨 + 적용)
-// 🎁 룰렛 아이템 풀 (구 아이템뽑기 통합): 능동/보조 아이템 전부
-const CAS_ITEM_POOL = [ ['reroll',20], ['copier',18], ['timestop',13], ['stimpack',13], ['acid',13], ['bombard',12], ['revive',6], ['plank',5] ];
-function rollCasItem() { let s = CAS_ITEM_POOL.reduce((a,b)=>a+b[1],0), r = Math.random()*s; for (const [k,w] of CAS_ITEM_POOL) { r -= w; if (r < 0) return k; } return 'reroll'; }
-function rollLottery() {
-  const L = gamblerLuck();
-  const r = Math.random() * 1000;
-  const goldEnd = 1000 - 455 * L;        // 좋은보상(유닛220+광부100+아이템70+영웅65=455) ×L, 골드가 흡수
-  const smallEnd = goldEnd * (400 / 575); // 골드 소액/뭉치 비율 유지
-  if (r < smallEnd) { const g = 100 + Math.floor(Math.random() * 201); return { icon: '💰', label: `골드 +${g}`, apply: () => S.gold += g }; }
-  if (r < goldEnd)  { const g = 500 + Math.floor(Math.random() * 301); return { icon: '💰', label: `골드 뭉치 +${g}`, apply: () => S.gold += g }; }
-  let acc = goldEnd;
-  acc += 220 * L; if (r < acc) { const t = weightedTier(); return { icon: '⚔️', label: `${HAND_NAMES[t]} 유닛`, apply: () => spawnUnit(t, RACE_OF_RANK[t], false, 2 + Math.floor(Math.random() * 13)) }; }
-  acc += 100 * L; if (r < acc) return { icon: '⛏️', label: '광부 1명', apply: () => spawnMiner() };
-  acc += 70  * L; if (r < acc) { // 🎁 아이템 (구 아이템뽑기 풀 통합)
-    const key = rollCasItem();
-    if (key === 'reroll') return { icon: '🎟️', label: '재변경권', apply: () => S.items.reroll++ };
-    if (key === 'copier') return { icon: '📑', label: '복사권', apply: () => S.items.copier++ };
-    const meta = ITEM_META[key];
-    return { icon: '🎁', label: `${meta.icon} ${meta.name}`, apply: () => spawnItemUnit(key) };
-  }
-  const t = weightedTier();
-  return { icon: '⭐', label: `${HAND_NAMES[t]} 영웅!!`, apply: () => spawnHero(t, RACE_OF_RANK[t], PORTAL.x, PORTAL.y + PORTAL.r + 30, 1), rare: true };
-}
-const LOTTO_ICONS = ['💰', '💰', '⚔️', '⛏️', '🎟️', '⭐', '💰', '⚔️'];
+// (구 룰렛·복권 시스템은 08-15 유저 지시로 제거 — 칩 소비처는 👑 뽑기권 도박·광부 고용·슬롯으로 재편)
 // ==================== 📈 투자 (구 이자 시스템 대체 · 2026-08-04 유저 확정) ====================
 // 이자는 "가만히 있으면 8%"라 결정이 없었다. 투자는 골드를 실제로 못 쓰게 잠그므로 비용이 생긴다.
 // 유저 확정: 안정형 수익 · **만기 전 인출 불가** — "지금 이 돈이 없어도 버틸 수 있나"가 매 예치의 질문이 된다.
@@ -8376,7 +8376,6 @@ function casMenu() {
   CB.innerHTML =
     `<div style="text-align:center;font-size:12px;color:#c9b8f0;margin-bottom:8px">보유 🪙 <b style="color:#ffd166">${chipTxt(S.chips)}</b>개 · 💰 <b style="color:#ffd166">${Math.floor(S.gold).toLocaleString()}G</b></div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="chipBtn casItem" data-go="roulette" style="text-align:left;padding:12px" ${S.chips < 1 ? 'disabled' : ''}><span style="font-size:26px;vertical-align:middle">🎡</span> <b style="color:#ffd166">룰렛</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 휠을 돌려 랜덤 보상 (골드·유닛·영웅·광부·아이템)</span></button>
       <button class="chipBtn casItem" data-go="slot" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎰</span> <b style="color:#ffd166">777 슬롯</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 7️⃣7️⃣7️⃣이 뜨면 <b>1000만 골드</b></span></button>
       <button class="chipBtn casItem" data-go="miner" style="text-align:left;padding:12px" ${S.chips < 1 ? 'disabled' : ''}><span style="font-size:26px;vertical-align:middle">⛏️</span> <b style="color:#ffd166">광부 고용</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 확실한 투자. 광산에서 꾸준히 골드를 캐 온다 (현재 ${S.units.filter(u => u.miner).length}명)</span></button>
       <button class="chipBtn casItem" data-go="invest" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">📈</span> <b style="color:#ffd166">투자</b><br><span style="font-size:11px;color:#c9b8f0">골드를 묶어 불린다. 오래 묶을수록 많이 붙지만 <b>만기 전엔 못 뺀다</b>${investTotal() ? ` · 예치 중 <b style="color:#7ec8ff">${investTotal().toLocaleString()}G</b>` : ''}</span></button>
@@ -8398,7 +8397,6 @@ function casMenu() {
       return `<button class="chipBtn sub" data-valve="${v.k}" style="flex:1;padding:8px 4px;font-size:11px" ${can ? '' : 'disabled'}>${v.icon} ${v.name}<br><span style="font-size:10px">${v.desc}</span><br><b>${(v.cost/10000)}만G</b> · 남은 ${left}회</button>`; }).join('') +
     `</div></div>`;
   CB.querySelector('[data-go="invest"]').onclick = () => casInvest();
-  CB.querySelector('[data-go="roulette"]').onclick = () => { if (S.chips < 1) return; casRoulette(); };
   CB.querySelector('[data-go="slot"]').onclick = () => casSlot();
   CB.querySelector('[data-go="miner"]').onclick = () => {
     if (S.chips < 1) return;
@@ -8479,36 +8477,6 @@ function casInvest() {
     sfx('coin');
     casInvest(); updateHUD();
   });
-}
-// --- 🎡 룰렛: 칩 1개 → 휠 돌려 보상 (rollLottery 재사용) ---
-const RCAT = { gs:{icon:'💰',c:'#3a2f52'}, gb:{icon:'💰',c:'#c98a2f'}, u:{icon:'⚔️',c:'#2f9e44'}, mi:{icon:'⛏️',c:'#b8860b'}, it:{icon:'🎁',c:'#8e44ad'}, hero:{icon:'⭐',c:'#e53935'} };
-const RWHEEL = ['gs','u','gs','gb','gs','u','mi','gs','it','gs','u','gb','gs','hero','gs','u','mi','gb']; // 18칸
-function rewardCat(rw) { if (rw.rare) return 'hero'; if (rw.icon === '⚔️') return 'u'; if (rw.icon === '⛏️') return 'mi'; if (rw.icon === '🎟️' || rw.icon === '📑' || rw.icon === '🎁') return 'it'; return (rw.label && rw.label.includes('뭉치')) ? 'gb' : 'gs'; }
-function casRoulette() {
-  S.chips--; sfx('coin');
-  const reward = rollLottery(); // gamblerLuck 이미 반영됨
-  const cat = rewardCat(reward);
-  let idxs = []; RWHEEL.forEach((k, i) => { if (k === cat) idxs.push(i); });
-  const slice = idxs[Math.floor(Math.random() * idxs.length)];
-  const seg = 360 / RWHEEL.length;
-  CB.innerHTML =
-    `<span class="back" onclick="casMenu()">‹ 자금 운영</span>` +
-    `<div class="wheelWrap"><div class="wheel" id="wheel"></div><div class="wheelSheen"></div><div class="ballTrack" id="ballTrack"><div class="ball"></div></div><div class="wheelHub"></div><div class="wheelPointer"></div></div>` +
-    `<div class="chipResult" id="rlRes">🎡 도는 중…</div>`;
-  const wheel = document.getElementById('wheel'), ballTrack = document.getElementById('ballTrack');
-  const stops = []; RWHEEL.forEach((k, i) => { stops.push(`${RCAT[k].c} ${i*seg}deg ${(i+1)*seg-0.8}deg`, `#141024 ${(i+1)*seg-0.8}deg ${(i+1)*seg}deg`); });
-  wheel.style.background = `conic-gradient(from -${seg/2}deg, ${stops.join(',')})`;
-  const R = Math.max(78, wheel.clientWidth/2 - 26);
-  wheel.innerHTML = RWHEEL.map((k, i) => `<div class="lab" style="transform:translate(-50%,-50%) rotate(${i*seg}deg) translateY(-${R}px) rotate(${-i*seg}deg);font-size:17px">${RCAT[k].icon}</div>`).join('');
-  requestAnimationFrame(() => { wheel.style.transform = `rotate(${360*6 - slice*seg}deg)`; ballTrack.style.transform = 'rotate(-3240deg)'; });
-  casTimeout(() => {
-    reward.apply(); updateInfoPanel();
-    const el = document.getElementById('rlRes');
-    if (!el) { logMsg(`🎡 룰렛 당첨: <b>${reward.label}</b> (창을 닫는 사이 지급되었습니다)`); return; } // 회전 중 창을 닫아도 보상은 지급 — 예전엔 여기서 TypeError
-    el.innerHTML = (reward.rare ? '🌟🌟 ' : '🎉 ') + `<span style="color:${reward.rare ? '#ff6b9d' : '#ffd166'}">${reward.label}</span> 당첨!`;
-    if (reward.rare) sfx('hero'); else sfx('reward');
-    el.insertAdjacentHTML('afterend', `<div style="margin-top:8px;text-align:center"><button class="chipBtn" onclick="casMenu()">메뉴</button>${S.chips >= 1 ? `<button class="chipBtn sub" onclick="casRoulette()">한 번 더 (칩 ${chipTxt(S.chips)})</button>` : ''}</div>`);
-  }, 5100);
 }
 // --- 🎰 777 슬롯: 칩 1개 → 클래식 3릴. 결과 선(先)추첨 후 릴이 맞춰 멈춤 (확률 정확 + 연출 자유) ---
 // (경제 개편: 슬롯 골드 비용 5000G 삭제 — 칩 1개 전용)
@@ -8634,7 +8602,29 @@ function doExchange() {
     document.getElementById('exBtns').innerHTML = `<button class="chipBtn" onclick="closeChip()">확인</button>${S.chips >= 1 ? `<button class="chipBtn sub" onclick="doExchange()">한 번 더 (칩 ${chipTxt(S.chips)})</button>` : ''}`;
   }, 900);
 }
-// 👑 뽑기권 도박: 카드교환권과 같은 플립 연출 (성공 = 맵에 뽑기권 배치 / 실패 = 칩 소멸)
+// 👑 뽑기 상자 연출: 검은 상자가 펄떡펄떡 뛰다 쩍 열리고 — 당첨이면 빛 폭발 + 짜잔, 꽝이면 텅 빈 상자
+// 시각 타임라인은 plain setTimeout(리셋에도 무해한 DOM 전용), 게임 상태(지급·로그·사운드)는 casTimeout(세대 토큰) 분리
+function gachaBoxAnim(host, opts) {
+  const st = document.createElement('div');
+  st.className = 'gbxStage' + (opts.ovl ? ' ovl' : '');
+  st.innerHTML = `<div class="gbxRays"></div><div class="gbxGlow"></div><div class="gbxShadow"></div>
+    <div class="gbx"><div class="gbxLid">👑</div><div class="gbxBody">?</div></div><div class="gbxReveal"></div>`;
+  host.appendChild(st);
+  sfx('thud'); casTimeout(() => sfx('thud'), 420); casTimeout(() => sfx('thud'), 840); // 펄떡펄떡
+  setTimeout(() => st.classList.add('open'), 1300);
+  casTimeout(() => sfx('slash'), 1300); // 쩍
+  setTimeout(() => {
+    st.classList.add(opts.win ? 'winfx' : 'failfx');
+    const rv = st.querySelector('.gbxReveal');
+    rv.innerHTML = opts.win
+      ? `<div class="gbxIco">${opts.revealIcon || '👑'}</div><div class="gbxTxt" style="color:${opts.color || '#ffd166'}">${opts.revealText}</div>`
+      : `<div class="gbxTxt" style="color:#9a8a98">텅… 💨</div>`;
+  }, 1700);
+  casTimeout(() => { if (opts.onReveal) opts.onReveal(); }, 1700); // 지급·로그·사운드
+  if (opts.ovl) setTimeout(() => st.remove(), 3600); // 오버레이는 자동 정리 (리셋과 무관하게 DOM만 제거)
+  return st;
+}
+// 👑 뽑기권 도박 (성공 = 맵에 뽑기권 배치 / 실패 = 칩 소멸)
 function doGachaBet(cost, p, kind, label) {
   if (S.chips < cost) return;
   S.chips -= cost; sfx('coin');
@@ -8642,22 +8632,21 @@ function doGachaBet(cost, p, kind, label) {
   const succ = p * gamblerLuck();
   const win = Math.random() < succ;
   const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '';
-  CB.innerHTML = luckMsg + `<div class="flipWrap"><div class="flipCard" id="flipCard"><div class="flipFace flipFront">👑</div><div class="flipFace flipBack">${win ? '👑' : '💨'}</div></div></div><div class="chipResult" id="gbRes">카드를 뒤집는 중…</div><div id="gbBtns"></div>`;
-  requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('flipCard').classList.add('flipped')));
-  casTimeout(() => {
-    if (win) {
-      spawnItemUnit(kind);
-      logMsg(`👑 <b>${label}</b> 획득! 제물대로 옮기면 개봉합니다.`);
-      sfx('jackpot');
-    } else { logMsg(`👑💨 ${label} 도박 실패… 칩 ${cost}개가 사라졌습니다.`); sfx('leak'); }
-    updateHUD();
-    const res = document.getElementById('gbRes'); if (!res) return; // 창을 닫았어도 보상은 지급 완료
-    res.innerHTML = win ? `<span style="color:#43a047">성공! ${label} 획득 — 제물대에서 개봉!</span>` : '<span style="color:#e57373">아쉽게 소멸…</span>';
-    const again = S.chips >= cost;
-    document.getElementById('gbBtns').innerHTML = `<button class="chipBtn" id="gbBack">확인</button>${again ? `<button class="chipBtn sub" id="gbAgain">한 번 더 (🪙 ${cost})</button>` : ''}`;
-    document.getElementById('gbBack').onclick = () => casMenu();
-    const ag = document.getElementById('gbAgain'); if (ag) ag.onclick = () => doGachaBet(cost, p, kind, label);
-  }, 900);
+  CB.innerHTML = luckMsg + `<div id="gbHost"></div><div class="chipResult" id="gbRes">상자가 꿈틀거린다…</div><div id="gbBtns"></div>`;
+  gachaBoxAnim(document.getElementById('gbHost'), {
+    win, revealIcon: '👑', revealText: label + ' 획득!', color: '#ffd166',
+    onReveal: () => {
+      if (win) { spawnItemUnit(kind); logMsg(`👑 <b>${label}</b> 획득! 제물대로 옮기면 개봉합니다.`); sfx('jackpot'); }
+      else { logMsg(`👑💨 ${label} 도박 실패… 칩 ${cost}개가 사라졌습니다.`); sfx('leak'); }
+      updateHUD();
+      const res = document.getElementById('gbRes'); if (!res) return; // 창을 닫았어도 보상은 지급 완료
+      res.innerHTML = win ? `<span style="color:#43a047">성공! ${label} 획득 — 제물대에서 개봉!</span>` : '<span style="color:#e57373">아쉽게 소멸…</span>';
+      const again = S.chips >= cost;
+      document.getElementById('gbBtns').innerHTML = `<button class="chipBtn" id="gbBack">확인</button>${again ? `<button class="chipBtn sub" id="gbAgain">한 번 더 (🪙 ${cost})</button>` : ''}`;
+      document.getElementById('gbBack').onclick = () => casMenu();
+      const ag = document.getElementById('gbAgain'); if (ag) ag.onclick = () => doGachaBet(cost, p, kind, label);
+    },
+  });
 }
 document.getElementById('stCasino').onclick = () => { initAudio(); openCasino(); };
 // 📊 딜 순위 미니 위젯 — 누적 딜 1~3위 (S.stats 재사용). 접으면 ▶만 남는다 (08-14 유저)
