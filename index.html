@@ -1073,7 +1073,7 @@ function reset() {
     mineLayer: 1, mineHp: 0, mineMax: 0, mineBonus: 0,
     roomVirgin: true, hiAceGiven: false, // 🥚 이스터에그: 라운드 첫 광석방 입장이 하이카드 단독이면 하이카드 에이스
 
-    minerMoveLv: 0, minerMoveCost: 6000, minerMineLv: 0, minerMineCost: 6000, // 광부 업글은 비싸다 (누진 ×4,×5,×6,×7)
+    minerMoveLv: 0, minerMoveCost: 6000, minerMineLv: 0, minerMineCost: 6000, // 광부 업글은 비싸다 (×5 등비 — 6k·30k·150k·750k·3.75M)
     poker: null, portalA: 0,
     speed: 1, time: 0, paused: false,
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0,
@@ -8078,8 +8078,8 @@ function minerItemsHTML() {
 function wireMiner(el) {
   const wire = (id, fn) => { const b = el.querySelector(id); if (b) b.onclick = fn; };
   // (경제 개편: 골드 고용 버튼 제거 — 광부는 카지노에서 칩 1개로. 이 창은 광부 '업그레이드' 전용)
-  // 비용 사다리: 6,000 → ×3 → ×2 → ×2 → ×3 = 18k, 36k, 72k, 216k
-  const MINER_COST_MUL = [3, 2, 2, 3];
+  // 비용 사다리: 6,000 → ×5 등비 = 30k, 150k, 750k, 3.75M (08-14 유저: "기하급수적으로, 전 비용의 5배씩")
+  const MINER_COST_MUL = [5, 5, 5, 5];
   wire('#mvBtn', () => {
     if (S.minerMoveLv >= MINER_MAX_LV || S.gold < S.minerMoveCost) return;
     S.gold -= S.minerMoveCost; S.minerMoveLv++;
