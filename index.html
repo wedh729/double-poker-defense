@@ -8382,6 +8382,15 @@ function casMenu() {
       <button class="chipBtn casItem" data-go="invest" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">📈</span> <b style="color:#ffd166">투자</b><br><span style="font-size:11px;color:#c9b8f0">골드를 묶어 불린다. 오래 묶을수록 많이 붙지만 <b>만기 전엔 못 뺀다</b>${investTotal() ? ` · 예치 중 <b style="color:#7ec8ff">${investTotal().toLocaleString()}G</b>` : ''}</span></button>
     </div>
     <div style="margin-top:12px;border-top:1px dashed rgba(201,167,90,0.4);padding-top:8px">
+      <div style="font-size:12px;color:#c9a75a;font-weight:bold;margin-bottom:6px">👑 뽑기권 도박 <span style="font-weight:normal;color:#9a8a60">— 칩으로 지른다 · 개봉은 제물대에서</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px">
+        <button class="chipBtn sub" data-gacha="ace" style="padding:8px 4px;font-size:11px" ${S.chips < 1 ? 'disabled' : ''}>👑 에이스 뽑기권<br><span style="font-size:10px">🪙 1개 — <b>70%</b></span></button>
+        <button class="chipBtn sub" data-gacha="hero" style="padding:8px 4px;font-size:11px" ${S.chips < 4 ? 'disabled' : ''}>👑 영웅 뽑기권<br><span style="font-size:10px">🪙 4개 — <b>60%</b></span></button>
+        <button class="chipBtn sub" data-gacha="aceHero" style="padding:8px 4px;font-size:11px" ${S.chips < 7 ? 'disabled' : ''}>👑 에이스 영웅 뽑기권<br><span style="font-size:10px">🪙 7개 — <b>40%</b></span></button>
+        <button class="chipBtn sub" data-gacha="super" style="padding:8px 4px;font-size:11px" ${S.chips < 20 ? 'disabled' : ''}>👑 슈퍼에이스 영웅 뽑기권<br><span style="font-size:10px">🪙 20개 — <b style="color:#4ade80">확정</b></span></button>
+      </div>
+    </div>
+    <div style="margin-top:8px;border-top:1px dashed rgba(201,167,90,0.4);padding-top:8px">
       <div style="font-size:12px;color:#c9a75a;font-weight:bold;margin-bottom:6px">🛒 비상 물자 <span style="font-weight:normal;color:#9a8a60">— 골드 구매 · 판당 수량 한정</span></div>
       <div style="display:flex;gap:6px">` +
     V.map(v => { const left = v.max - S.valves[v.k];
@@ -8397,6 +8406,22 @@ function casMenu() {
     logMsg(`⛏️ 광부 고용! (칩 1개 — 총 ${S.units.filter(u => u.miner).length}명)`);
     casMenu(); updateHUD();
   };
+  // 👑 뽑기권 도박 (08-15 유저: 1칩 70% 에이스 / 4칩 60% 영웅 / 7칩 40% 에이스영웅 / 20칩 확정 슈퍼 — 갬블러 가호 적용)
+  const GBETS = { ace: [1, 0.70, 'gachaAce', '에이스 뽑기권'], hero: [4, 0.60, 'gachaHero', '영웅 뽑기권'], aceHero: [7, 0.40, 'gachaAceHero', '에이스 영웅 뽑기권'] };
+  CB.querySelectorAll('[data-gacha]').forEach(b => b.onclick = () => {
+    if (b.dataset.gacha === 'super') {
+      if (S.chips < 20) return;
+      S.chips -= 20;
+      spawnItemUnit('gachaSuper');
+      rewardToast('👑', '슈퍼에이스 영웅 뽑기권', '#ff2d95', '💰 칩 20개 확정 구매');
+      sfx('jackpot'); sfx('hero');
+      logMsg('👑 <b>슈퍼에이스 영웅 뽑기권</b> 구매! 제물대로 옮기면 개봉합니다.');
+      casMenu(); updateHUD();
+      return;
+    }
+    const [cost, p, kind, label] = GBETS[b.dataset.gacha];
+    doGachaBet(cost, p, kind, label);
+  });
   CB.querySelectorAll('[data-valve]').forEach(b => b.onclick = () => {
     const v = V.find(x => x.k === b.dataset.valve);
     if (!v || S.valves[v.k] >= v.max || S.gold < v.cost) return;
@@ -8607,6 +8632,31 @@ function doExchange() {
     const exR = document.getElementById('exRes'); if (!exR) return; // 창을 닫으면 보상만 지급하고 종료
     exR.innerHTML = out.txt;
     document.getElementById('exBtns').innerHTML = `<button class="chipBtn" onclick="closeChip()">확인</button>${S.chips >= 1 ? `<button class="chipBtn sub" onclick="doExchange()">한 번 더 (칩 ${chipTxt(S.chips)})</button>` : ''}`;
+  }, 900);
+}
+// 👑 뽑기권 도박: 카드교환권과 같은 플립 연출 (성공 = 맵에 뽑기권 배치 / 실패 = 칩 소멸)
+function doGachaBet(cost, p, kind, label) {
+  if (S.chips < cost) return;
+  S.chips -= cost; sfx('coin');
+  openChip('👑 ' + label + ' 도박');
+  const succ = p * gamblerLuck();
+  const win = Math.random() < succ;
+  const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '';
+  CB.innerHTML = luckMsg + `<div class="flipWrap"><div class="flipCard" id="flipCard"><div class="flipFace flipFront">👑</div><div class="flipFace flipBack">${win ? '👑' : '💨'}</div></div></div><div class="chipResult" id="gbRes">카드를 뒤집는 중…</div><div id="gbBtns"></div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('flipCard').classList.add('flipped')));
+  casTimeout(() => {
+    if (win) {
+      spawnItemUnit(kind);
+      logMsg(`👑 <b>${label}</b> 획득! 제물대로 옮기면 개봉합니다.`);
+      sfx('jackpot');
+    } else { logMsg(`👑💨 ${label} 도박 실패… 칩 ${cost}개가 사라졌습니다.`); sfx('leak'); }
+    updateHUD();
+    const res = document.getElementById('gbRes'); if (!res) return; // 창을 닫았어도 보상은 지급 완료
+    res.innerHTML = win ? `<span style="color:#43a047">성공! ${label} 획득 — 제물대에서 개봉!</span>` : '<span style="color:#e57373">아쉽게 소멸…</span>';
+    const again = S.chips >= cost;
+    document.getElementById('gbBtns').innerHTML = `<button class="chipBtn" id="gbBack">확인</button>${again ? `<button class="chipBtn sub" id="gbAgain">한 번 더 (🪙 ${cost})</button>` : ''}`;
+    document.getElementById('gbBack').onclick = () => casMenu();
+    const ag = document.getElementById('gbAgain'); if (ag) ag.onclick = () => doGachaBet(cost, p, kind, label);
   }, 900);
 }
 document.getElementById('stCasino').onclick = () => { initAudio(); openCasino(); };
