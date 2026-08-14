@@ -1462,7 +1462,13 @@ function updateMiner(u, dt) {
     }
     if (S.mineHp <= 0) mineReward();
     u.mtimer -= dt;
-    if (u.mtimer <= 0) { u.carry = true; u.mjob = 'toHouse'; }
+    if (u.mtimer <= 0) {
+      u.carry = true; u.mjob = 'toHouse';
+      if (Math.random() < MINER_TICKET_P) { // 🎟️ 광산에서 재변경권 발굴 — 머리에 이고 가서 배달 시 지급
+        u.carryTicket = true;
+        mutter = { u, txt: ['럭키~', '대박~', '심봤다~'][(Math.random() * 3) | 0], t: 4 }; // 혼잣말 말풍선 재사용 (히든 혼잣말과 겹치면 덮어씀 — 희귀)
+      }
+    }
   } else { // toHouse (하단 갓길을 따라 배달 — 부대와 동선 분리)
     u.tx = HOUSE.x + 26 + u.jx * 0.5; u.ty = HOUSE.y + 42 + u.jy * 0.25;
     // 도착 판정 76: 개별 오프셋 최대 hypot(26+16, 42+8) ≈ 65px + 유닛 분리 밀림 여유
@@ -1474,10 +1480,11 @@ function updateMiner(u, dt) {
       S.minerGold = (S.minerGold || 0) + dep; // ⛏️ 누적 광부 수입 (통계 표시용 — 2026-08-11 유저)
       addFloat(HOUSE.x, HOUSE.y - 34, `+${dep}G`, (u.sminer || u.hminer) ? '#c9a227' : '#b8860b', 1.1);
       sfx('coin');
-      if (Math.random() < MINER_TICKET_P) { // 🎟️ 광부가 배달길에 가끔 티켓을 주워 온다 — 수급이 광부 수·이속·슈퍼(배달 3배)에 비례하는 스노우볼 축
+      if (u.carryTicket) { // 🎟️ 광산에서 발굴해 이고 온 재변경권 지급 — 수급이 광부 수·이속·슈퍼에 비례하는 스노우볼 축
+        u.carryTicket = false;
         S.items.reroll++;
         addFloat(HOUSE.x, HOUSE.y - 52, '🎟️ 재변경권!', '#c0392b', 1.7);
-        logMsg('🎟️ 광부가 배달길에 <b>재변경권</b>을 주워 왔습니다!');
+        logMsg('🎟️ 광부가 광산에서 캐낸 <b>재변경권</b>을 배달했습니다!');
         sfx('reward');
       }
       u.carry = false; u.mjob = 'toMine';
@@ -6857,7 +6864,21 @@ function drawHeadgear(u, topY) {
 }
 function drawWeapon(u, x, y) {
   if (u.miner) {
-    if (u.carry) { // 광물을 들고 집으로 (머리 위 크리스탈)
+    if (u.carry) { // 광물을 들고 집으로 (머리 위 크리스탈 / 🎟️ 티켓 발굴 시엔 티켓)
+      if (u.carryTicket) { // 벡터 티켓 (이모지는 OS별 글리프 위치·크기 편차가 커서 부적합)
+        ctx.save();
+        ctx.setTransform(RS, 0, 0, RS, 0, 0); // ⚠️ drawWeapon은 팔 회전 컨텍스트 안에서 불린다 — 머리 위 고정을 위해 베이스로 리셋
+        ctx.translate(u.x, u.y - 14);
+        ctx.fillStyle = '#e0525e';
+        roundRect(-7, -5, 14, 10, 2); ctx.fill();
+        ctx.strokeStyle = '#a83240'; ctx.lineWidth = 1; roundRect(-7, -5, 14, 10, 2); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.setLineDash([1.5, 1.5]);
+        ctx.beginPath(); ctx.moveTo(0, -4.5); ctx.lineTo(0, 4.5); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+        return;
+      }
       ctx.fillStyle = '#3fd0e0';
       ctx.beginPath();
       ctx.moveTo(u.x, u.y - 20); ctx.lineTo(u.x + 5, u.y - 13); ctx.lineTo(u.x, u.y - 7); ctx.lineTo(u.x - 5, u.y - 13);
@@ -8535,8 +8556,8 @@ function rollEvent() { S.event = null; S.eventMods = null; return; // 라운드 
 function effRange(u) { return u.range * ((S.eventMods && S.eventMods.rangeMul) || 1) * (isHiddenCombo(u) ? 0.8 : 1); } // 히든 조합 유닛 사거리 20%↓
 
 document.getElementById('bSpeed').onclick = () => {
-  S.speed = S.speed >= 2 ? 1 : S.speed + 1; // 최대 2배 (3배는 너무 빨라 조작이 어려움)
-  document.getElementById('bSpeed').textContent = ['⏩', '⏩²'][S.speed - 1];
+  S.speed = S.speed >= 3 ? 1 : S.speed + 1; // 최대 3배 (08-14 유저: 개발 중 빠른 진행용 — 서브스텝 구조라 물리는 안정)
+  document.getElementById('bSpeed').textContent = ['⏩', '⏩²', '⏩³'][S.speed - 1];
 };
 document.getElementById('btnRestart').onclick = () => {
   if (confirm('처음부터 다시 시작할까요? 현재 진행 상황은 사라집니다.')) reset();
