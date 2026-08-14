@@ -816,6 +816,7 @@ const ORES = [
 ];
 const MINE_TIME = 5;              // 광부 기본 채굴 시간(초)
 const MINER_SPEED = 42;          // 광부 기본 이동속도 (느릿느릿)
+const MINER_TICKET_P = 1 / 80;   // 🎟️ 배달 1회당 재변경권 확률 (08-14 유저: 무캡 — 배달이 물리 왕복이라 라운드당 ~1.2장에서 자연 수렴)
 const MINER_LOAD = 60;           // 배달 1회 기본 골드. 채굴량 성장은 오직 광산 겹(mineBonus)으로 —
 // 💰 스노우볼 구조 (2026-08-11 유저 확정, 라운드 램프 대체): 광부 머릿수·업글 투자 → 광산이 빨리 깎임 →
 //    겹 파괴마다 배달액 영구 상승 → 수급 증가. 인과가 '투자→단계→수급' 하나로 통일된다.
@@ -1123,8 +1124,10 @@ function monsterHP(n) {
   // 어려움·지옥: 초반 20% 하향, 라운드마다 0.8%p씩 가팔라진다 (08-11 감사 레버 A: 0.004→0.008 —
   // 풀 활용 기준 어려움 클리어율 40~70%→목표 5% 부근, 지옥 8~25%→목표 2% 부근. 쉬움·보통 무손상)
   const dm = DIFF_MUL > 1 ? DIFF_MUL * 0.8 * (1 + 0.008 * n) : DIFF_MUL;
-  return Math.max(1, Math.floor(hp * dm * 0.7 * 1.6));
+  // ×1.2 = 🎟️ 재변경권 드립 도입 보정 (08-14 유저 지정 +20%, 전 라운드·보스·태양 공통 — 되돌리려면 TICKET_HP_COMP=1)
+  return Math.max(1, Math.floor(hp * dm * 0.7 * 1.6 * TICKET_HP_COMP));
 }
+const TICKET_HP_COMP = 1.2;
 // 분열 제거 보정 계수: R39까지 1.0 → R55에서 1.45로 선형 증가 (보스는 분열과 무관하므로 이 값으로 나눠 상쇄한다)
 function splitComp(n) { return 1 + 0.45 * Math.max(0, Math.min(1, (n - 39) / 16)); }
 // 몬스터 수: 렉 저감을 위해 절반 (최대 200) — 대신 개체 HP ×1.6 + 킬 골드 ×2로 보정
@@ -1471,6 +1474,12 @@ function updateMiner(u, dt) {
       S.minerGold = (S.minerGold || 0) + dep; // ⛏️ 누적 광부 수입 (통계 표시용 — 2026-08-11 유저)
       addFloat(HOUSE.x, HOUSE.y - 34, `+${dep}G`, (u.sminer || u.hminer) ? '#c9a227' : '#b8860b', 1.1);
       sfx('coin');
+      if (Math.random() < MINER_TICKET_P) { // 🎟️ 광부가 배달길에 가끔 티켓을 주워 온다 — 수급이 광부 수·이속·슈퍼(배달 3배)에 비례하는 스노우볼 축
+        S.items.reroll++;
+        addFloat(HOUSE.x, HOUSE.y - 52, '🎟️ 재변경권!', '#c0392b', 1.7);
+        logMsg('🎟️ 광부가 배달길에 <b>재변경권</b>을 주워 왔습니다!');
+        sfx('reward');
+      }
       u.carry = false; u.mjob = 'toMine';
     }
   }
