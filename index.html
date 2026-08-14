@@ -9928,9 +9928,10 @@ function mtBossDraw(b) {
 function mtMinimap() {
   const M = MT.MM, s = M.w / MT.W;
   ctx.fillStyle = 'rgba(14,10,26,0.88)'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.fill();
-  ctx.strokeStyle = '#5a5278'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.stroke();
-  MT.TERR.forEach(([tx, ty, tw, th], i) => { ctx.fillStyle = MT.PCOLS[i] + (i ? '22' : '3c'); ctx.fillRect(M.x + tx * s, M.y + ty * s, tw * s, th * s); }); // 영토(기지+앞마당) 옅게
-  MT.QUAD.forEach(q => { ctx.fillStyle = MT.PCOLS[q.i] + (q.i ? '30' : '55'); ctx.fillRect(M.x + q.ox * s, M.y + q.oy * s, q.w * s, q.h * s); }); // 기지는 진하게
+  ctx.strokeStyle = '#c9a75a'; roundRect(M.x - 4, M.y - 4, M.w + 8, M.h + 8, 6); ctx.stroke(); // 금테 — 게임 UI 관례
+  ctx.fillStyle = '#2e4b28'; ctx.fillRect(M.x, M.y, M.w, M.h); // 지형(잔디) 톤 베이스 — 원색 블록 대신 지도처럼 읽히게
+  MT.TERR.forEach(([tx, ty, tw, th], i) => { ctx.fillStyle = MT.PCOLS[i] + (i ? '14' : '26'); ctx.fillRect(M.x + tx * s, M.y + ty * s, tw * s, th * s); }); // 영토(기지+앞마당) 옅게
+  MT.QUAD.forEach(q => { ctx.fillStyle = MT.PCOLS[q.i] + (q.i ? '22' : '3a'); ctx.fillRect(M.x + q.ox * s, M.y + q.oy * s, q.w * s, q.h * s); }); // 기지는 진하게
   ctx.fillStyle = 'rgba(200,190,170,0.75)';
   for (const L of MT.LANES) ctx.fillRect(M.x + L.x * s, M.y + L.y * s, L.w * s, L.h * s);
   ctx.fillStyle = '#EF9F27';
@@ -9949,7 +9950,10 @@ function mtMinimap() {
 }
 function drawMapTest() {
   const P = mtPatterns(), cam = MT.cam, z = MT.zoom;
-  ctx.fillStyle = '#171326'; ctx.fillRect(0, 0, 940, 500); // 줌아웃하면 월드 밖이 드러난다 — 흰 캔버스 대신 어두운 여백
+  // 🌌 월드 밖 공허: 밋밋한 단색 대신 은은한 비네트 (08-15 유저: "비율 맞추느라 엉망" — 여백을 무대 조명처럼)
+  const voidBg = ctx.createRadialGradient(470, 250, 60, 470, 250, 640);
+  voidBg.addColorStop(0, '#211a3c'); voidBg.addColorStop(0.55, '#151027'); voidBg.addColorStop(1, '#0a0714');
+  ctx.fillStyle = voidBg; ctx.fillRect(0, 0, 940, 500);
   ctx.save();
   try { // 월드 그리기 중 예외가 나도 카메라 save가 프레임마다 누적되지 않게 (Opus)
   ctx.scale(z, z); ctx.translate(-cam.x, -cam.y); // 월드점 → 화면: (w - cam) × zoom
@@ -9957,12 +9961,27 @@ function drawMapTest() {
   // 월드 밖까지 보이는 줌아웃에서도 베이크 서브렉트가 캔버스를 벗어나지 않게 클램프
   const vx0 = Math.max(0, cam.x), vy0 = Math.max(0, cam.y);
   const vx1 = Math.min(MT.W, cam.x + vw), vy1 = Math.min(MT.H, cam.y + vh);
+  // 🏝️ 떠 있는 전장: 월드가 공허에 드리우는 그림자 (섀도우는 디바이스 공간이라 줌 무관 고정 블러)
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12;
+  ctx.fillStyle = '#241708'; ctx.fillRect(-9, -9, MT.W + 18, MT.H + 18);
+  ctx.restore();
   // 🎨 페인터리 월드 (잔디·데코·레인·광장 바닥 — 전부 1회 베이크, 매 프레임 drawImage 1번)
   ctx.drawImage(mtBakeWorld(), vx0, vy0, vx1 - vx0, vy1 - vy0, vx0, vy0, vx1 - vx0, vy1 - vy0);
+  // 🧱 흙 단면 테두리: 잔디가 뚝 끊기지 않게 섬 가장자리 프레임
+  ctx.strokeStyle = '#241708'; ctx.lineWidth = 14; ctx.strokeRect(-7, -7, MT.W + 14, MT.H + 14);
+  ctx.strokeStyle = '#4a3520'; ctx.lineWidth = 7; ctx.strokeRect(-3.5, -3.5, MT.W + 7, MT.H + 7);
+  ctx.strokeStyle = 'rgba(222,200,132,0.45)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, MT.W - 2, MT.H - 2);
+  ctx.lineWidth = 1;
   const vis = q => !(q.ox > vx1 || q.oy > vy1 || q.ox + q.w < vx0 || q.oy + q.h < vy0); // 컬링 (회전해도 발자국은 축 정렬)
-  MT.QUAD.forEach(q => { // 사분면 경계 + 이름표 (이름표는 회전 없이 — 읽을 수 있게)
+  MT.QUAD.forEach(q => { // 사분면 경계: 꽉 찬 격자 대신 모서리 브래킷 (자연스럽게) + 이름표 (회전 없이 — 읽을 수 있게)
     if (!vis(q)) return;
-    ctx.strokeStyle = MT.PCOLS[q.i] + '44'; ctx.lineWidth = 3; ctx.strokeRect(q.ox + 3, q.oy + 3, q.w - 6, q.h - 6); ctx.lineWidth = 1;
+    ctx.strokeStyle = MT.PCOLS[q.i] + '66'; ctx.lineWidth = 3.5;
+    const BR = 34;
+    [[q.ox + 5, q.oy + 5, 1, 1], [q.ox + q.w - 5, q.oy + 5, -1, 1], [q.ox + 5, q.oy + q.h - 5, 1, -1], [q.ox + q.w - 5, q.oy + q.h - 5, -1, -1]].forEach(([bx, by, sx2, sy2]) => {
+      ctx.beginPath(); ctx.moveTo(bx + BR * sx2, by); ctx.lineTo(bx, by); ctx.lineTo(bx, by + BR * sy2); ctx.stroke();
+    });
+    ctx.lineWidth = 1;
     ctx.fillStyle = MT.PCOLS[q.i]; ctx.font = 'bold 15px sans-serif';
     ctx.fillText(MT.PNAMES[q.i], q.ox + 14, q.oy + 26);
   });
