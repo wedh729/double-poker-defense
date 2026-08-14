@@ -1485,6 +1485,7 @@ function updateMiner(u, dt) {
         S.items.reroll++;
         addFloat(HOUSE.x, HOUSE.y - 52, '🎟️ 재변경권!', '#c0392b', 1.7);
         logMsg('🎟️ 광부가 광산에서 캐낸 <b>재변경권</b>을 배달했습니다!');
+        showMktToast('🎟️ 재변경권 획득!', `광부가 광산에서 캐 왔어요 — 보유 ${S.items.reroll}장`); // 08-14 유저: 개장 예고와 같은 양식의 상단 토스트
         sfx('reward');
       }
       u.carry = false; u.mjob = 'toMine';
