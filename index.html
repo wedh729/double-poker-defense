@@ -1654,8 +1654,15 @@ function gachaReveal(t, label, mkUnit) {
 }
 function useGachaHero()    { const t = gachaTier(); gachaReveal(t, '영웅', tt => spawnHero(tt, RACE_OF_RANK[tt], ALTAR.x, ALTAR.y - 66, 1)); }
 function useGachaAce()     { const t = gachaTier(); gachaReveal(t, '에이스', tt => spawnUnit(tt, 0, true, 14)); }
-function useGachaAceHero() { const t = gachaTier(); gachaReveal(t, '에이스 영웅', tt => spawnHero(tt, RACE_OF_RANK[tt], ALTAR.x, ALTAR.y - 66, (ACE_MUL[tt] || 1.5) * 1.2)); } // 에이스 5기 합성과 동일 배수
-function useGachaSuper()   { const t = gachaTier(); gachaReveal(t, '슈퍼에이스 영웅', tt => spawnHero(tt, RACE_OF_RANK[tt], ALTAR.x, ALTAR.y - 66, (ACE_MUL[tt] || 1.5) * 1.2 * 2, true)); } // 슈퍼에이스 5기 합성과 동일 배수
+// ⚠️ 에이스 정체성(.ace + 이름)은 배수만으론 안 생긴다 — 합성 경로(2175)와 동일하게 부여해야 검은 에이스 디자인 + 상위 2종족 업글 합산이 적용된다 (08-15 유저 버그 제보)
+function useGachaAceHero() { const t = gachaTier(); gachaReveal(t, '에이스 영웅', tt => {
+  spawnHero(tt, RACE_OF_RANK[tt], ALTAR.x, ALTAR.y - 66, (ACE_MUL[tt] || 1.5) * 1.2); // 에이스 5기 합성과 동일 배수
+  const h = S.units[S.units.length - 1]; h.ace = true; h.weapon = '에이스 영웅 ' + WEAPONS[tt].hero.name;
+}); }
+function useGachaSuper()   { const t = gachaTier(); gachaReveal(t, '슈퍼에이스 영웅', tt => {
+  spawnHero(tt, RACE_OF_RANK[tt], ALTAR.x, ALTAR.y - 66, (ACE_MUL[tt] || 1.5) * 1.2 * 2, true); // 슈퍼에이스 5기 합성과 동일 배수
+  const h = S.units[S.units.length - 1]; h.ace = true; h.weapon = '에이스 슈퍼영웅 ' + WEAPONS[tt].hero.name;
+}); }
 function useTimestop() { S.freezeT = 5; addFloat(PEN.x, PEN.y - 60, '⏳ 시간 정지!', '#42a5f5', 2); sfx('jackpot'); logMsg('⏳ 시간정지 모래시계 — 5초간 몬스터 정지!'); }
 // 🛒 비상 물자 발동 (제물대 경유 — 2026-08-08). 전투가 아닐 때 바친 모래·폭격은 다음 전투로 이월(pend)
 function useSandItem() {
@@ -8673,8 +8680,8 @@ function updateDpsRank() {
   body.style.display = dpsMode === 2 ? 'none' : '';
   if (dpsMode === 2) return;
   const fmt = v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'k' : Math.round(v);
-  // 접두어를 지우지 않고 압축 — '에이스 화염방사기'가 그냥 "화염방사기"로 보이면 어느 유닛 딜인지 오인한다 (08-15 유저 제보 관련)
-  const shortNm = nm => nm.replace('♠♠ 슈퍼에이스 ', '♠♠ ').replace('슈퍼 영웅 ', '★ ').replace('히든 영웅 ', '').replace('에이스 ', '♠ ').replace('영웅 ', '').replace(/^빽 /, 'B ');
+  // 접두어 압축 (08-15 유저 표기 확정): 석궁 = 원페어 영웅 / S석궁 = 슈퍼영웅 / A석궁 = 에이스 영웅 / SA·AS = 슈퍼에이스 계열
+  const shortNm = nm => nm.replace('♠♠ 슈퍼에이스 ', 'SA').replace('에이스 슈퍼영웅 ', 'AS').replace('슈퍼 영웅 ', 'S').replace('에이스 영웅 ', 'A').replace('히든 영웅 ', '').replace('에이스 ', 'A').replace('영웅 ', '').replace(/^빽 /, 'B');
   const all = Object.entries(S.stats).sort((a, b) => b[1].dmg - a[1].dmg);
   const top = dpsMode === 1 ? all : all.slice(0, 5);
   const maxD = top.length ? top[0][1].dmg : 1;
