@@ -893,7 +893,7 @@ function inSky(x, y) { if (!SKY_CUT || x < 0 || y < 0) return false; const nx = 
 const PORTAL = { x: 84, y: 224, r: 34 }; // 강화 포털: 같은 유닛 5기를 넣으면 영웅 (하늘 모퉁이에 밀려 y 78 → 224)
 const WAVE_TIME = 90, POKER_TIME = 60;
 const FINAL_ROUND = 80; // 이후는 헬모드
-const SUN_ROUND = 150;  // 🌞 아포칼립스 태양 강림 — 헬모드 최종장 (처치 시 헬모드 클리어)
+const SUN_ROUND = 190;  // 🌞 아포칼립스 태양 강림 — 헬모드 최종장 (처치 시 헬모드 클리어. 08-15 유저: 150→190 — 헬 곡선 완만화의 라운드 연장분, 하늘 연출 진행도(sunK)도 자동 재스케일)
 const ARENA = { x: 838, y: 278, r: 85 }; // 🏛️ 결투장: 로마 콜로세움 (×1.7) — 우측 잘림·광석방 밀착 없게 (838,278)
 // 벽·계단 없음: 어느 방향에서든 걸어 들어간다 (예전 남쪽 계단 전용 입구는 벽에 끼는 버그로 폐기)
 const DUEL_EVERY = 7;    // 도전자 주기 (보스 라운드와 겹치면 그 주는 휴장)
@@ -1154,7 +1154,9 @@ function monsterHP(n) {
   hp *= 1 + 0.35 * Math.max(0, 1 - (n - 1) / 22); // 🌱 초반 램프 (08-11 유저: "초반에 업글을 일정 수준 해야 클리어되게 — 투자 잠금에 리스크를") — R1 +35% → R12 +17% → R23부터 0 (중후반 무변화, 전 난이도 공통)
   // 헬(80+): 진입 4라운드 슬랩 + 이후 %/R 조임. 08-08 "1.5배 가파르게"(1.375/1.018)는 08-11 감사에서 발산 판정
   // (요구/공급 격차가 R150에 ×11.6 — 잡몹 웨이브조차 도달 불가) → 유저 승인으로 경사로화: R150 슬랩 ×3.5 (여유율 ~1.2, 도달 가능하되 극악)
-  if (n > FINAL_ROUND) hp *= Math.pow(1.20, Math.min(n - FINAL_ROUND, 4)) * Math.pow(1.008, Math.max(0, n - FINAL_ROUND - 4));
+  // 08-15 유저: 헬 진입 경사 40%가량 완만하게, 대신 태양을 R150→R190으로 미뤄 종착점(구 R150 수준) 유지
+  // 슬랩 1.2⁴(4R) → 1.11⁷(7R, 라운드당 20%→11%) · 조임 0.8%→0.25%/R (기본 곡선의 선형항이 R190까지 계속 자라 총 경사 ~45% 완만)
+  if (n > FINAL_ROUND) hp *= Math.pow(1.11, Math.min(n - FINAL_ROUND, 7)) * Math.pow(1.0025, Math.max(0, n - FINAL_ROUND - 7));
   // ×0.7 = 전체 난이도 30% 하향 / ×1.6 = 몹 수 절반 보정 (2배가 아닌 이유: 밀도 절반 → 스플래시 효율도 절반이라 2배면 실효 난이도 상승)
   hp *= splitComp(n); // 일반 몹 분열 제거 보정 (R40에 한 번에 곱하면 1.5배 계단벽이 생겨서 R40~R55에 걸쳐 점진 적용)
   // 어려움·지옥: 초반 20% 하향, 라운드마다 0.8%p씩 가팔라진다 (08-11 감사 레버 A: 0.004→0.008 —
@@ -1190,7 +1192,7 @@ function newDeck(salt) {
 // 📈 투자 시장 주기 (2026-08-08 유저 지정): 게임 시간 400초마다 한 번, 30초 동안만 예치할 수 있다.
 // 개장 10초 전에 토스트로 예고("10초 뒤 장이 시작됩니다"). S.paused 동안엔 S.time이 멈추므로 시계도 같이 멈춘다
 // (카지노를 열면 게임이 멈추니, 개장 중에 창을 열고 고민하는 시간은 창구가 닫히지 않는다 — 의도).
-const MKT_PERIOD = 600, MKT_OPEN_DUR = 30; // 08-11 유저: 400→600 — 재예치 체인 감속(다음 투자까지 대기 ↑), 첫 개장도 ~R5로 지연
+const MKT_PERIOD = 780, MKT_OPEN_DUR = 30; // 08-15 유저: 600→780(13분) — 재예치 체인 추가 감속
 function showMktToast(head, line) {
   const el = document.getElementById('mktToast');
   if (!el) return;
@@ -8671,7 +8673,8 @@ function updateDpsRank() {
   body.style.display = dpsMode === 2 ? 'none' : '';
   if (dpsMode === 2) return;
   const fmt = v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'k' : Math.round(v);
-  const shortNm = nm => nm.replace(/^(♠♠ 슈퍼에이스 |슈퍼 영웅 |영웅 |에이스 |히든 영웅 |빽 )/, '');
+  // 접두어를 지우지 않고 압축 — '에이스 화염방사기'가 그냥 "화염방사기"로 보이면 어느 유닛 딜인지 오인한다 (08-15 유저 제보 관련)
+  const shortNm = nm => nm.replace('♠♠ 슈퍼에이스 ', '♠♠ ').replace('슈퍼 영웅 ', '★ ').replace('히든 영웅 ', '').replace('에이스 ', '♠ ').replace('영웅 ', '').replace(/^빽 /, 'B ');
   const all = Object.entries(S.stats).sort((a, b) => b[1].dmg - a[1].dmg);
   const top = dpsMode === 1 ? all : all.slice(0, 5);
   const maxD = top.length ? top[0][1].dmg : 1;
