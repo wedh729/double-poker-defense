@@ -2223,6 +2223,31 @@ function updateAltar() {
   updateInfoPanel();
 }
 
+// 🥚 이스터에그 (08-15 유저): 투석기는 스스로 못 걷지만 아군이 밀면 밀린다 — 폭포 밑까지 밀어 데려가면 돌이 물을 먹는다.
+// 배경이 hell(헬 페이즈 진입·지옥 난이도)이면 폭포가 용암이라 '용암 묻은 돌'. 물먹은 돌 상태로 용암에 다시 담그면 승격(둘 효과 겸비).
+function updateStoneDip() {
+  const key = bgFullKeyDrawn;                 // 풀맵 배경 사용 중일 때만 (폭포가 실제로 그려져 있을 때)
+  if (!key || !BGFALL_CORR[key]) return;
+  const a = BGFALL_CORR[key], want = a.lava ? 'lava' : 'wet';
+  for (const u of S.units) {
+    if (!u.catapult || u.stone === 'lava' || u.stone === want) continue;
+    if (Math.hypot(u.x - a.botX, u.y - a.yBot) > 64) continue;
+    if (!u.stone) { u.dmg *= 1.5; if (want === 'wet') u.splash += 25; } // 첫 담금만 위력 강화 (물은 물튀김 반경도 +25)
+    u.stone = want;
+    if (want === 'lava') {
+      rewardToast('🌋', '용암 묻은 돌', '#ff6d1f', '🥚 이스터 에그 발견!');
+      logMsg('🥚🌋 투석기가 용암 폭포에 돌을 담갔다... <b>용암 묻은 돌</b>! 착탄한 몹이 불탄다!');
+      mutter = { u, txt: '…뜨겁다. 좋다.', t: 4 };
+    } else {
+      rewardToast('💧', '물먹은 돌', '#42a5f5', '🥚 이스터 에그 발견!');
+      logMsg('🥚💧 투석기가 폭포에 돌을 적셨다... <b>물먹은 돌</b>! 묵직해지고 물이 넓게 튄다!');
+      mutter = { u, txt: '…돌이 차다.', t: 4 };
+    }
+    sfx('jackpot'); sfx('hero');
+    S.goldFlash = 0.55;
+    for (let i = 0; i < 18; i++) { const ang = Math.random() * 6.28, v = 60 + Math.random() * 120; S.parts.push({ x: u.x, y: u.y - 8, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 40, g: true, t: 0.5, r: 1.5 + Math.random() * 2.5, c: want === 'lava' ? '#ff8a3d' : '#7ec8ff' }); }
+  }
+}
 // ==================== 게임 루프 ====================
 function update(dt) {
   S.time += dt;
@@ -2374,7 +2399,7 @@ function update(dt) {
   for (const q of U) {
     if (!q.quartet) continue;
     const qr = effRange(q), cap = (q.ascend || 0) >= 1 ? 7 : 5, f = (q.ascend || 0) >= 2 ? 0.769 : 0.833;
-    U.filter(v => v !== q && !v.miner && !v.item && !v.clone)
+    U.filter(v => v !== q && !v.miner && !v.item && !v.clone && !v.junk) // 고물상 제외 — 지원가끼리 서로 버프 금지 (08-15 유저)
       .map(v => [Math.hypot(v.x - q.x, v.y - q.y), v])
       .filter(([d]) => d <= qr)
       .sort((a, b) => a[0] - b[0])
@@ -2385,7 +2410,7 @@ function update(dt) {
   for (const j of U) {
     if (!j.junk) continue;
     const jr = effRange(j), cap = (j.ascend || 0) >= 1 ? 7 : 5, mul = (j.ascend || 0) >= 2 ? 1.35 : 1.2;
-    U.filter(v => v !== j && !v.miner && !v.item && !v.clone)
+    U.filter(v => v !== j && !v.miner && !v.item && !v.clone && !v.quartet) // 콰르텟 제외 — 지원가끼리 서로 버프 금지 (08-15 유저)
       .map(v => [Math.hypot(v.x - j.x, v.y - j.y), v])
       .filter(([d]) => d <= jr)
       .sort((a, b) => a[0] - b[0])
@@ -2395,6 +2420,7 @@ function update(dt) {
   updateMutter(dt); // 💬 히든 혼잣말
   updatePortal();
   updateAltar();
+  updateStoneDip(); // 🥚 투석기 폭포 이스터에그
   updateFusableHint();
   assignOreSlots();
   // 🥚 이스터에그: 이번 라운드 광석방 "첫 입장"이 하이카드 1기 단독이면 → 하이카드 에이스 강림 (게임당 1회)
@@ -2670,7 +2696,8 @@ function update(dt) {
             for (let i = 0; i < 6; i++) { const aa = Math.random() * 6.28, v = 130 + Math.random() * 190; S.parts.push({ x: p.ex, y: p.ey, vx: Math.cos(aa) * v, vy: Math.sin(aa) * v - 40, g: true, t: 0.5, r: 1.5 + Math.random() * 2, c: i % 2 ? '#ffd54f' : '#ff5722' }); } // 사방 불똥 (중력)
           }
           const r2 = p.splash * p.splash;
-          for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y - p.ey; if (ddx*ddx + ddy*ddy <= r2) dealDamage(m, p.dmg, p.owner); }
+          const lava = p.boulder && p.owner && p.owner.stone === 'lava'; // 🥚 용암 묻은 돌 — 착탄 화상 도트 (쇼군 화상 재사용)
+          for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y - p.ey; if (ddx*ddx + ddy*ddy <= r2) { dealDamage(m, p.dmg, p.owner); if (lava) { m.burnT = Math.max(m.burnT || 0, 2.5); m.burnDmg = Math.max(m.burnDmg || 0, p.dmg * 0.2); } } }
         }
         return false;
       }
@@ -5120,9 +5147,11 @@ function draw() {
       ctx.beginPath(); ctx.ellipse(p.x, p.ey + 2, 5, 2, 0, 0, Math.PI*2); ctx.fill();
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.spin || 0);
       if (p.boulder) {
-        ctx.fillStyle = '#6d7278';
+        const st = p.owner && p.owner.stone; // 🥚 물먹은/용암 돌 색
+        ctx.fillStyle = st === 'lava' ? '#a34a2e' : st === 'wet' ? '#56789c' : '#6d7278';
         ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#4d5155'; // 크레이터 3개
+        if (st === 'lava') { ctx.strokeStyle = 'rgba(255,138,61,0.85)'; ctx.lineWidth = 1.6; ctx.stroke(); ctx.lineWidth = 1; } // 용암 균열 글로우
+        ctx.fillStyle = st === 'lava' ? '#ff7043' : st === 'wet' ? '#3c576f' : '#4d5155'; // 크레이터 3개
         ctx.beginPath(); ctx.arc(-2, -1, 1.8, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.arc(2, 2, 1.3, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.arc(1, -2.5, 1, 0, Math.PI*2); ctx.fill();
@@ -7123,7 +7152,7 @@ function drawWeapon(u, x, y) {
     ctx.save(); ctx.translate(x + 1, y); ctx.rotate(ang);
     ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 2.5; // 팔
     ctx.beginPath(); ctx.moveTo(-4, 6); ctx.lineTo(6, -8); ctx.stroke();
-    if (!u.atkAnim) { ctx.fillStyle = '#78909c'; ctx.beginPath(); ctx.arc(6, -8, 3, 0, Math.PI*2); ctx.fill(); } // 돌 (발사 직후엔 비어 있다)
+    if (!u.atkAnim) { ctx.fillStyle = u.stone === 'lava' ? '#ff7043' : u.stone === 'wet' ? '#5b93c9' : '#78909c'; ctx.beginPath(); ctx.arc(6, -8, 3, 0, Math.PI*2); ctx.fill(); } // 돌 (발사 직후엔 비어 있다 · 🥚 물/용암 돌 색)
     ctx.restore(); ctx.lineWidth = 1;
     return;
   }
@@ -7736,6 +7765,8 @@ function updateInfoPanel() {
   if (u.catapult) traits.push('🪨 설치형 공성병기 (이동 불가)');
   if (u.ascend) traits.push(`<b style="color:#ff6b9d">🩸 승급 Lv.${u.ascend}</b>`);
   if (u.heroUpLv) traits.push(`<b style="color:#c9971a">⭐ 단련 Lv.${u.heroUpLv} (총 공격력 +${u.heroUpLv * 15}%)</b>`);
+  if (u.stone === 'lava') traits.push('<b style="color:#ff6d1f">🌋 용암 묻은 돌</b>'); // 🥚 획득 후에만 표시 (발견 전 힌트 없음)
+  else if (u.stone === 'wet') traits.push('<b style="color:#42a5f5">💧 물먹은 돌</b>');
   if (!traits.length) traits.push(u.miner ? '채굴 전용 (전투 불가)' : '단일 공격');
   if (u.forceTarget) traits.push('<b style="color:#e53935">🎯 집중 공격 중</b>');
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
