@@ -2232,16 +2232,16 @@ function updateStoneDip() {
   for (const u of S.units) {
     if (!u.catapult || u.stone === 'lava' || u.stone === want) continue;
     if (Math.hypot(u.x - a.botX, u.y - a.yBot) > 64) continue;
-    if (!u.stone) { u.dmg *= 1.5; if (want === 'wet') u.splash += 25; } // 첫 담금만 위력 강화 (물은 물튀김 반경도 +25)
+    if (!u.stone) { u.dmg *= 1.1; if (want === 'wet') u.splash += 25; } // 첫 담금만 위력 강화 ×1.1 (08-16 유저 하향. 물은 물튀김 반경도 +25)
     u.stone = want;
     if (want === 'lava') {
       rewardToast('🌋', '용암 묻은 돌', '#ff6d1f', '🥚 이스터 에그 발견!');
       logMsg('🥚🌋 투석기가 용암 폭포에 돌을 담갔다... <b>용암 묻은 돌</b>! 착탄한 몹이 불탄다!');
-      mutter = { u, txt: '…뜨겁다. 좋다.', t: 4 };
+      mutter = { u, txt: '불붙은 바위라니, 적들이 불쌍해지는군', t: 4 };
     } else {
       rewardToast('💧', '물먹은 돌', '#42a5f5', '🥚 이스터 에그 발견!');
       logMsg('🥚💧 투석기가 폭포에 돌을 적셨다... <b>물먹은 돌</b>! 묵직해지고 물이 넓게 튄다!');
-      mutter = { u, txt: '…돌이 차다.', t: 4 };
+      mutter = { u, txt: '물먹은 바위 맛좀 봐라', t: 4 };
     }
     sfx('jackpot'); sfx('hero');
     S.goldFlash = 0.55;
@@ -3542,8 +3542,9 @@ function ascendKey(u) { // 승급 가능한 히든 9종 전부
 }
 function onAltar(v) { return Math.abs(v.x - ALTAR.x) <= ALTAR.w / 2 + 10 && Math.abs(v.y - ALTAR.y) <= ALTAR.h / 2 + 10; }
 function ascendPool(nd) { // 제단 위에서 need 하나에 맞는 후보들
+  // ⚠️ !v.hidden: 에이스 유닛(더블 잭팟·뽑기권)은 제물 금지 — 영웅 쪽 !v.ace와 짝 (08-16 유저: 슬롯 승급이 에이스 트리플을 삼킨 버그)
   return S.units.filter(v => !v.miner && !v.item && !v.clone && !isHiddenCombo(v) && onAltar(v) &&
-    (nd.hero ? (v.hero && !v.super && !v.ace && (nd.tier == null || v.tier === nd.tier)) : (v.tier === nd.tier && !v.hero)));
+    (nd.hero ? (v.hero && !v.super && !v.ace && (nd.tier == null || v.tier === nd.tier)) : (v.tier === nd.tier && !v.hero && !v.hidden)));
 }
 function ascendStatus(def) { // 각 need별 보유 현황 — { ok, txt }
   const parts = def.needs.map(nd => `${ascendPool(nd).length}/${nd.n}`);
