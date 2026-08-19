@@ -3471,9 +3471,8 @@ function giveHuntReward(stage) {
     ['🏹', '원페어 영웅 유닛!', () => spawnHero(1, RACE_OF_RANK[1], CX-40, CY+155, 1), '#43a047'],
     ['⚔️', '전 종족 +3Lv', () => S.upg = S.upg.map(v => v + 3), '#43a047'],
     ['📑✨', '복사권×2 + 슈퍼광부', () => { S.items.copier += 2; spawnSuperMiner(); }, '#5b48d0'],
-    // 💎 다이아(9단계): 예전엔 족보를 0~9에서 굴려 원페어 에이스 같은 게 나왔다 — 8단계(복사권2+슈퍼광부)보다 초라해지는 사고.
-    //   이제 플러쉬 이상에서만 굴린다 (에이스 배수 5.5~12 구간) → 8단계보다 확실히 위, 10단계 슈퍼영웅보다는 아래.
-    ['♠', '상위 족보 에이스!', () => spawnUnit(5 + Math.floor(Math.random()*5), 0, true, 14), '#e91e8c'],
+    // 💎 다이아(9단계): 상위 족보 에이스 직접 지급 → 뽑기권 2장으로 교체 (08-16 유저 — 제물대 개봉 재미 + 뽑기권 시스템 일원화)
+    ['👑', '에이스 뽑기권 + 영웅 뽑기권!', () => { spawnItemUnit('gachaAce'); spawnItemUnit('gachaHero'); }, '#e91e8c'],
     ['🌟', '슈퍼영웅 강림!!', () => { const t = Math.floor(Math.random()*10); spawnHero(t, RACE_OF_RANK[t], CX-40, CY+155, 1.5, true); }, '#ff6b9d'],
   ][Math.min(10, stage)];
   R[2]();
