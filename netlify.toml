@@ -1,36 +1,17 @@
-# Netlify 배포 설정 — 비공개 GitHub 저장소에서 배포하기 위한 구성
-# (무료 플랜의 GitHub Pages는 비공개 저장소를 배포할 수 없어 Netlify로 이전)
-#
-# 빌드 단계 없음: index.html 단일 파일 게임이라 저장소 루트를 그대로 서빙한다.
-# 작업 방식은 이전과 동일 — git push 하면 Netlify가 자동 재배포.
-
-[build]
-  publish = "."
-  command = ""
-
-# DEV_NOTES 등 문서는 .gitignore로 저장소에 없지만, 혹시 올라가더라도 서빙하지 않는다
-[[redirects]]
-  from = "/*.md"
-  to = "/404.html"
-  status = 404
+# Netlify 설정 — 정적 사이트 (빌드 없음, 루트 그대로 서빙)
+# index.html은 항상 재검증(배포 즉시 반영), 에셋은 1일 캐시(?v= 버스터 병행)
 
 [[headers]]
-  for = "/*"
+  for = "/"
   [headers.values]
-    # 다른 사이트가 게임을 iframe으로 퍼가는 것 차단 (표절·무단 임베드 대비)
-    X-Frame-Options = "SAMEORIGIN"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
-# 게임 본체는 캐시하지 않는다 — 배포 직후 유저가 새로고침만 해도 최신판이 뜨게
-# (지금까지 캐시 때문에 옛 버전을 보는 문제가 반복됐다)
 [[headers]]
   for = "/index.html"
   [headers.values]
-    Cache-Control = "no-cache, must-revalidate"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
-# 아트 에셋은 파일명이 바뀔 때만 갱신되므로 길게 캐시 (1.7MB — 재방문 로딩 개선)
 [[headers]]
   for = "/assets/*"
   [headers.values]
-    Cache-Control = "public, max-age=604800"
+    Cache-Control = "public, max-age=86400"
