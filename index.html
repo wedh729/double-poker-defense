@@ -5067,14 +5067,21 @@ function draw() {
       const sway = Math.sin(S.time * 5 + e.x) * 2.6;
       const gx = e.x + sway * 0.4;
       const yb = gy + e.byB - 2;                                // 몸통 하단 (꼬리 시작 — 살짝 겹쳐 이음새 감춤)
-      const tw = Math.max(7, e.bw * 0.5), tl = 13 + e.bw * 0.12;
-      const tipX = gx + sway * 1.9, tipY = yb + tl + Math.sin(S.time * 7 + e.x) * 1.5;
-      ctx.globalAlpha = a * 0.8;                                // 꼬리: 몸 폭에서 한 점으로 좁아지는 물결 자락 (몸통보다 먼저 — 밑에서 나온 것처럼)
+      const tw = Math.max(7, e.bw * 0.5), tl = 18 + e.bw * 0.2; // 꼬리 길이 — 1.5웨이브가 보이려면 자락보다 길어야
+      const A = Math.max(3, e.bw * 0.16);                       // 꼬불 진폭 (몸 폭 비례)
+      ctx.globalAlpha = a * 0.8;                                // 🐍 꼬리: 뱀처럼 1.5웨이브 리본 (08-22 유저) — 위는 몸에 붙고(진폭×t) 아래로 갈수록 꼬불, 파동이 아래로 흘러 살랑임. 몸통보다 먼저 그려 밑에서 나온 것처럼
       ctx.fillStyle = '#cfd4dc';
       ctx.beginPath();
-      ctx.moveTo(gx - tw, yb);
-      ctx.quadraticCurveTo(gx - tw * 0.7 - sway, yb + tl * 0.55, tipX, tipY);
-      ctx.quadraticCurveTo(gx + tw * 0.7 - sway, yb + tl * 0.5, gx + tw, yb);
+      const N = 14, L = [], R = [];
+      for (let i = 0; i <= N; i++) {
+        const t = i / N;
+        const cxp = gx + Math.sin(t * Math.PI * 3 - S.time * 5 + e.x) * A * t; // 3π = 1.5웨이브
+        const cyp = yb + t * tl, hw = tw * (1 - t);
+        L.push([cxp - hw, cyp]); R.push([cxp + hw, cyp]);
+      }
+      ctx.moveTo(L[0][0], L[0][1]);
+      for (let i = 1; i <= N; i++) ctx.lineTo(L[i][0], L[i][1]);
+      for (let i = N; i >= 0; i--) ctx.lineTo(R[i][0], R[i][1]);
       ctx.closePath(); ctx.fill();
       ctx.globalAlpha = a * 0.92;
       ctx.drawImage(e.img, gx - GH_CX, gy - GH_CY, GH_W, GH_H);
