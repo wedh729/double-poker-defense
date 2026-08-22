@@ -920,8 +920,11 @@ function duelHP(n) {
   if (n > 28) hp *= Math.pow(1.0625, n - 28);               // R28+: 진짜 영웅 시대 — 여기부터 "확" 뛴다
   return Math.floor(hp);
 }
+// 🏛️ 결투 라운드 판정: 7의 배수·보스 주 휴장·태양 강림(R190+ 미클리어) 휴장 — startWave가 태양에서 조기 return해
+// 도전자를 안 만들므로, 예고(startPoker)·결투창(duelWindowActive)도 같은 조건을 공유해야 한다 (한 곳만 어긋나면 빈 링에 팝업·락인이 생긴다)
+function duelRound(r) { return r % DUEL_EVERY === 0 && r % 10 !== 0 && !(r >= SUN_ROUND && !S.hellCleared); }
 // 🏛️ 결투 창(window): 팝업·락인이 활성인 구간 — 도전자가 있거나, 결투 라운드 포커 중 아직 결판나지 않았을 때
-function duelWindowActive() { return !!S.duel || (S.phase === 'poker' && S.round % DUEL_EVERY === 0 && S.round % 10 !== 0 && !S.duelEnded); }
+function duelWindowActive() { return !!S.duel || (S.phase === 'poker' && duelRound(S.round) && !S.duelEnded); }
 
 const cv = document.getElementById('cv');
 let ctx = cv.getContext('2d'); // 스프라이트 캐시 빌드 시 임시 스왑 가능하도록 let
@@ -1287,7 +1290,8 @@ function startPoker() {
   S.phase = 'poker';
   // 라운드는 endWave에서 이미 올라갔으므로 S.round = 이번 포커가 준비하는 그 전투. 보스 주와 겹치면 휴장이라 제외.
   // 모바일은 포커 탭에서 캔버스가 통째로 숨겨지므로(#cv display:none) 여기서 띄우면 아무도 못 본다 → 전투 탭으로 넘어가는 startWave에서 띄운다.
-  if (S.round % DUEL_EVERY === 0 && S.round % 10 !== 0) { if (IS_MOBILE) S.duelCall = true; else showDuelToast(); evacuateArena(); }
+  // 태양 강림 라운드는 duelRound()가 휴장 처리 — startWave가 조기 return해 도전자를 안 만들기 때문 (가짜 예고 버그)
+  if (duelRound(S.round)) { if (IS_MOBILE) S.duelCall = true; else showDuelToast(); evacuateArena(); }
   pokerPeek = false; // 새 포커판은 항상 올라온 상태로 시작
   S.pokerTimer = POKER_TIME;
   S.roomVirgin = true; // 🥚 라운드마다 광석방 첫 입장 기록 리셋
@@ -1729,7 +1733,7 @@ function startWave() {
     else logMsg('🏛️ 도전자: "시간 다 됐다. 다음에 보자." (퇴장)');
     S.duel = null; S.champion = null; S.duelEnded = true;
   }
-  if (S.round % DUEL_EVERY === 0 && !boss) { // 🏛️ 결투장 도전자 (보스 라운드와 겹치면 휴장)
+  if (duelRound(S.round)) { // 🏛️ 결투장 도전자 (보스 주·태양 강림과 겹치면 휴장 — 예고·결투창과 같은 판정 공유)
     const dhp = duelHP(S.round);
     S.duel = { x: ARENA.x, y: ARENA.y - 2, hp: dhp, max: dhp, mat: matInfo(S.round).idx, phase: Math.random() * 6.28, hitT: 0, tauntT: 0, nextTaunt: 0, taunt: '', champ: null, fleeT: 0 };
     logMsg('🏛️ 결투장에 도전자가 나타났다! "한 놈만 와라."');
@@ -3378,24 +3382,42 @@ function duelWin(u) {
   S.duel = null; S.duelEnded = true; // 승리로 창이 닫힌다 → 승자 즉시 자유
 }
 // 🏛️ 결투 시간 초과 챔피언 사망 — 유닛 제거는 제물대(updateAltar) 패턴 재사용
-// 🪦 비석 초상화: 죽는 순간의 유닛 모습을 오프스크린에 1회 구워 비석에 새긴다 (ctx 임시 스왑 — 베이크 관례)
-function bakeGravePortrait(u) {
-  const c = document.createElement('canvas'); c.width = 40; c.height = 52;
+// 👻 유령 스프라이트: 죽는 순간의 유닛 모습(다리 제외)을 회백색으로 1회 구워 승천 이펙트가 쓴다 (ctx 임시 스왑 — 베이크 관례)
+let ghostBaking = false; // 베이크 중 drawUnitCore가 다리(궤도)를 생략한다 — 그 자리는 이펙트의 꼬리가 대신
+const GH_W = 120, GH_H = 136, GH_CX = 60, GH_CY = 68; // 논리 px (베이크는 2x — RS=2에서도 선명). 하단 여유 68: 아래 조준 영웅 무기가 최대 11px 뚫는다 (크로스체크 P2)
+function bakeGhostSprite(u) {
+  const c = document.createElement('canvas'); c.width = GH_W * 2; c.height = GH_H * 2;
   const old = ctx; ctx = c.getContext('2d');
   try {
-    ctx.translate(20 - u.x, 30 - u.y);
-    const sel = u.selected; u.selected = false;
-    drawUnit(u);
-    u.selected = sel;
+    ctx.save(); ctx.scale(2, 2);
+    ctx.translate(GH_CX - u.x, GH_CY - u.y);
+    ctx.translate(u.x, u.y); ctx.scale(1.5, 1.5); ctx.translate(-u.x, -u.y); // drawUnit과 동일한 1.5배 본체 확대
+    ghostBaking = true;
+    drawUnitCore(u, 0, (u.aimX != null && u.aimX < u.x) ? -1 : 1); // 망토·몸통·라벨 (다리는 플래그로 생략)
+    drawHeadgear(u, u.y - bodyShape(u).h / 2 - 1);
+    drawUnitArm(u);
+  } catch (e) {} finally { ghostBaking = false; }
+  // 회백색화는 try 밖 — 그리기가 도중에 던져도 부분 베이크가 회백색으로는 나간다 (크로스체크 P2)
+  // 명도 압축 + 밝은 바닥 + 한기 도는 푸른 기: 어떤 유닛이었는지는 명암·실루엣으로 남는다
+  try {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const id = ctx.getImageData(0, 0, c.width, c.height), d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (!d[i + 3]) continue;
+      const v = 112 + (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) * 0.55;
+      d[i] = Math.min(255, v - 6); d[i + 1] = Math.min(255, v - 2); d[i + 2] = Math.min(255, v + 6);
+    }
+    ctx.putImageData(id, 0, 0);
   } catch (e) {} finally { ctx = old; }
   return c;
 }
 function duelChampionDeath() {
   const u = S.champion;
   S.units = S.units.filter(v => v !== u);
-  // 👻 유령 승천 + 🪦 비석 (08-16 유저): 회색 올챙이 유령이 꼬리를 살랑이며 떠올라 사라지고, 그 자리에 초상화 비석이 쌓인다
-  S.effects.push({ type: 'ghost', x: u.x, y: u.y, t: 2.6, dur: 2.6, w: bodyShape(u).w });
-  S.graves.push({ x: u.x, y: u.y, img: bakeGravePortrait(u) });
+  // 👻 유령 승천 + 🪦 비석 (08-22 유저): 그 유닛 모습 그대로 회색이 되어 다리 대신 꼬리를 살랑이며 떠오르고, 그 자리에 R.I.P 비석이 쌓인다
+  const B = bodyShape(u);
+  S.effects.push({ type: 'ghost', x: u.x, y: u.y, t: 2.6, dur: 2.6, img: bakeGhostSprite(u), bw: B.w * 1.5, byB: B.h / 2 * 1.5 });
+  S.graves.push({ x: u.x, y: u.y });
   burstJuice({ x: u.x, y: u.y, r: 16, c: '#c0392b', dk: 'thud', boss: false, golden: false }); // 소형 사망 이펙트 (기존 몬스터 사망 헬퍼 재사용)
   addFloat(u.x, u.y - 26, '💀', '#e53935', 1.6);
   logMsg(`💀 ${u.weapon}, 결투장에서 전사… 도전자: "약했다." (퇴장)`);
@@ -3411,7 +3433,7 @@ function ripImg() {
   g2.strokeText('R.I.P', 30, 11); g2.fillText('R.I.P', 30, 11);
   ripBake = c; return c;
 }
-// 🪦 비석: 위가 둥근 몸돌 + 유닛 초상화 + R.I.P + 받침돌 (아주 작게 — 링 안에 계속 쌓여도 안 거슬리게)
+// 🪦 비석: 위가 둥근 몸돌 + R.I.P + 받침돌 (아주 작게 — 링 안에 계속 쌓여도 안 거슬리게. 초상화는 08-22 유저 지시로 제거 — 판독 불가였다)
 function drawGraves() {
   for (const g of S.graves) {
     const x = g.x, y = g.y;
@@ -3419,8 +3441,7 @@ function drawGraves() {
     ctx.beginPath(); ctx.moveTo(x - 5.5, y + 6); ctx.lineTo(x - 5.5, y - 4); ctx.arc(x, y - 4, 5.5, Math.PI, 0); ctx.lineTo(x + 5.5, y + 6); ctx.closePath();
     ctx.fillStyle = '#8f969f'; ctx.fill();
     ctx.strokeStyle = '#6b7178'; ctx.lineWidth = 1; ctx.stroke();
-    if (g.img) { ctx.globalAlpha = 0.85; ctx.drawImage(g.img, x - 3.2, y - 7.6, 6.4, 8.3); ctx.globalAlpha = 1; } // 유닛 그림 (음각)
-    ctx.drawImage(ripImg(), x - 4.5, y + 1.4, 9, 3.4); // R.I.P — 5px 직접 fillText는 안티앨리어스로 소실돼 큰 폰트 베이크를 축소
+    ctx.drawImage(ripImg(), x - 5, y - 3.7, 10, 3.9); // R.I.P 몸돌 중앙 — 5px 직접 fillText는 안티앨리어스로 소실돼 큰 폰트 베이크를 축소
     ctx.fillStyle = '#7a8089'; ctx.fillRect(x - 6.5, y + 6, 13, 2);
   }
 }
@@ -5039,22 +5060,24 @@ function draw() {
       ctx.lineTo(e.x2 + Math.cos(a + 2.6) * e.r, e.y2 + Math.sin(a + 2.6) * e.r);
       ctx.arc(e.x2, e.y2, e.r, a + 2.6, a - 2.6);
       ctx.closePath(); ctx.fill();
-    } else if (e.type === 'ghost') { // 👻 결투 전사 유령: 회색 올챙이 실루엣 — 꼬리를 살랑이며 떠올라 서서히 소멸
+    } else if (e.type === 'ghost') { // 👻 결투 전사 유령 (08-22 유저): 그 유닛 모습 그대로 회백색 — 다리 대신 꼬리를 살랑이며 떠올라 소멸
       const k = 1 - e.t / e.dur;
-      const gy = e.y - k * 46;                                  // 서서히 상승
-      const a = Math.min(1, e.t / (e.dur * 0.55));              // 서서히 사라짐
-      const w = Math.max(10, e.w * 0.7), sway = Math.sin(S.time * 6 + e.x) * 2.4;
-      const cx2 = e.x + sway * 0.4;
-      ctx.globalAlpha = a * 0.85;
+      const gy = e.y - k * 56;                                  // 서서히 상승
+      const a = Math.min(1, e.t / (e.dur * 0.55));              // 후반 55%에서 소멸
+      const sway = Math.sin(S.time * 5 + e.x) * 2.6;
+      const gx = e.x + sway * 0.4;
+      const yb = gy + e.byB - 2;                                // 몸통 하단 (꼬리 시작 — 살짝 겹쳐 이음새 감춤)
+      const tw = Math.max(7, e.bw * 0.5), tl = 13 + e.bw * 0.12;
+      const tipX = gx + sway * 1.9, tipY = yb + tl + Math.sin(S.time * 7 + e.x) * 1.5;
+      ctx.globalAlpha = a * 0.8;                                // 꼬리: 몸 폭에서 한 점으로 좁아지는 물결 자락 (몸통보다 먼저 — 밑에서 나온 것처럼)
       ctx.fillStyle = '#cfd4dc';
       ctx.beginPath();
-      ctx.arc(cx2, gy - w * 0.3, w * 0.52, Math.PI, 0);          // 둥근 머리 (다리 없음)
-      ctx.quadraticCurveTo(cx2 + w * 0.55, gy + w * 0.28, e.x + sway, gy + w * 0.78); // 오른 옆구리 → 꼬리 끝
-      ctx.quadraticCurveTo(cx2 - w * 0.1, gy + w * 0.42, cx2 - w * 0.52, gy - w * 0.3); // 꼬리 → 왼 옆구리
+      ctx.moveTo(gx - tw, yb);
+      ctx.quadraticCurveTo(gx - tw * 0.7 - sway, yb + tl * 0.55, tipX, tipY);
+      ctx.quadraticCurveTo(gx + tw * 0.7 - sway, yb + tl * 0.5, gx + tw, yb);
       ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#5f6672'; // 눈
-      ctx.beginPath(); ctx.arc(cx2 - w * 0.17, gy - w * 0.33, 1.3, 0, 6.28); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx2 + w * 0.17, gy - w * 0.33, 1.3, 0, 6.28); ctx.fill();
+      ctx.globalAlpha = a * 0.92;
+      ctx.drawImage(e.img, gx - GH_CX, gy - GH_CY, GH_W, GH_H);
       ctx.globalAlpha = 1;
     } else if (e.type === 'boom') {
       // 반지름은 t가 0.65를 넘으면 음수가 된다 → arc가 IndexSizeError를 던져 그 프레임의 draw가 통째로 중단됨.
@@ -6697,8 +6720,8 @@ function drawUnitCore(u, lw, faceX) {
       ctx.closePath(); ctx.fill();
     }
   }
-  // 다리 (짧고 단순) — 🛞 탱크(포카드 영웅)는 다리 대신 무한궤도
-  if (u.vis === 'tank') {
+  // 다리 (짧고 단순) — 🛞 탱크(포카드 영웅)는 다리 대신 무한궤도. 👻 유령 베이크 중엔 생략 (꼬리가 대신)
+  if (ghostBaking) {} else if (u.vis === 'tank') {
     const ty = u.y + B.h/2 + 1, tw = B.w/2 + 5;
     ctx.fillStyle = '#37474f'; roundRect(u.x - tw, ty - 3.5, tw * 2, 8, 3.5); ctx.fill(); // 궤도 벨트
     ctx.strokeStyle = '#20272c'; ctx.lineWidth = 1.2; roundRect(u.x - tw, ty - 3.5, tw * 2, 8, 3.5); ctx.stroke();
