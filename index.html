@@ -189,6 +189,23 @@
     background: rgba(120,44,32,0.9); color: #ffe6c2; cursor: pointer; }
   #duelConfirm button:hover { background: rgba(150,58,40,0.95); }
 
+  /* 👑 왕관 족보 선택 모달 — duelConfirm과 같은 관례(캔버스 중앙·S.paused), 금색 팔레트 */
+  #crownModal { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 420px; max-width: 88%;
+    background: linear-gradient(180deg, rgba(58,44,12,0.97), rgba(34,25,8,0.97));
+    border: 1px solid rgba(255,215,120,0.6); border-radius: 12px; padding: 16px 18px; text-align: center;
+    color: #ffedbf; z-index: 8; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+  #crownModal .dcTitle { font-size: 16px; font-weight: bold; margin-bottom: 8px; text-shadow: 0 2px 5px rgba(0,0,0,0.75); }
+  #crownModal .dcBody { font-size: 12px; line-height: 1.65; color: #e8d29a; margin-bottom: 12px; }
+  #crownModal .crGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 12px; }
+  #crownModal .crGrid button { padding: 8px 4px; font-size: 11.5px; line-height: 1.45; border: 1px solid rgba(255,215,120,0.45); border-radius: 8px;
+    background: rgba(96,72,22,0.9); color: #ffedbf; cursor: pointer; }
+  #crownModal .crGrid button b { font-size: 13px; color: #ffd166; }
+  #crownModal .crGrid button:hover { background: rgba(128,98,32,0.95); border-color: rgba(255,225,150,0.8); }
+  #crownModal .dcBtns { display: flex; justify-content: center; }
+  #crownModal .dcBtns button { padding: 8px 14px; font-size: 12px; border: 1px solid rgba(255,215,120,0.35); border-radius: 8px;
+    background: rgba(60,48,18,0.9); color: #d8c48e; cursor: pointer; }
+  #crownModal .dcBtns button:hover { background: rgba(84,66,24,0.95); }
+
   /* 📈 투자 전자시계 — 12시 원형 시계 우측에 상주 (데스크톱). 모바일은 부팅 시 JS가 상단바로 되돌린다.
      닫힘 = 빨간 LED 카운트다운 / 개장 = 밝은 금색 OPEN 펄스 ("지금 열렸다!" 구분). 클릭하면 투자 현황 */
   #tIntWrap { cursor: pointer; }
@@ -532,6 +549,8 @@
   .mobile #duelConfirm .dcTitle { font-size: 14px; }
   .mobile #duelConfirm .dcBody { font-size: 11px; }
   .mobile #duelConfirm button { font-size: 12px; padding: 8px 6px; }
+  .mobile #crownModal { width: 92%; padding: 12px 10px; }
+  .mobile #crownModal .crGrid button { font-size: 10.5px; padding: 7px 2px; }
 
   /* 📱 모바일 전투 탭 (가로): 비율 1.88 고정 uniform scale — 세로는 일반 흐름 레이아웃 (둘 다 플레이 가능)
      ⚠️ 예전 스트레치(width/height 100%)는 폰마다 13~27% 세로 눌림을 만들었다 (2026-08-10 유저 리포트로 폐지).
@@ -639,6 +658,12 @@
         <button onclick="duelEnter()">⚔️ 입장한다</button>
         <button onclick="duelDecline()">🏃 그만둔다</button>
       </div>
+    </div>
+    <div id="crownModal">
+      <div class="dcTitle">👑 대관식 — 왕관을 씌울 족보를 고르세요</div>
+      <div class="dcBody">선택한 족보 라인의 공격력이 게임 끝까지 배수만큼 강해집니다. (영웅·에이스 포함)<br><b>한 번 정하면 바꿀 수 없습니다.</b></div>
+      <div class="crGrid" id="crGrid"></div>
+      <div class="dcBtns"><button onclick="crownCancel()">🕰️ 아직 결심이 안 섰다 (왕관 회수)</button></div>
     </div>
     <!-- 좌측 카지노: 칩(보스·결투)으로 룰렛·슬롯·광부, 골드로 비상 물자 -->
     <div id="chipBar">
@@ -799,8 +824,11 @@ const WEAPONS = [
    hero:{name:'대형 화염방사기', splash:66, range:120, cd:0.125, dmgMul:2.5}}, // 공속 8/초 + 데미지 ×2.5 + 불길 폭 2배 (기본 dmg 인상분 반영해 3→2.5, 밀집 ~1.6k = 티어 5.5 자리)
   // 6 풀하우스 — 단검 (암살자: 사거리 짧게 + 초고속 난도질 + 암살 스킬)
   //   영웅(전기톱)은 사거리 1.7배 → 확실히 길어짐
-  {name:'단검', dmg:26, cd:0.3, range:72, splash:44, bounce:0, atk:'area', vis:'sword', bossCrack:true, // 💎 보석 브레이커 암살자: 단일 타겟·고속 난도질(공속 2/3: 0.2→0.3)·보스 대미지 2배
-   hero:{name:'쌍단검', atk:'area', vis:'twin', splash:0, cd:0.12, range:102}}, // 양손 단검: 초고속 연타 단일 브레이커 (스플래시 없음 — 풀하우스 라인 정체성)
+  // 08-22 유저: "무스킬(보스 브레이커 제외) DPS가 스트레이트보다 약하다" — 단일 계수 +2.5/발 규칙에서 업글 기울기 = 2.5/cd라
+  // cd 0.3은 기관총(0.18)에게 L8부터 구조적으로 역전당했다(L30 -33%). 해법 = cd를 기관총과 동일 0.18(기울기 동률)로 올리고 dmg 재조정(26→19).
+  // 실측(동일 업글·단일): L0 +98% / L12 +24% / L30 +6% — 전 레벨 우위, 마진은 자연 수렴. ⚠️ 쌍단검 영웅은 w.dmg 파생이라 dmgMul 1.37로 절대치 보존(결투 곡선 앵커).
+  {name:'단검', dmg:19, cd:0.18, range:72, splash:44, bounce:0, atk:'area', vis:'sword', bossCrack:true, // 💎 보석 브레이커 암살자: 단일 타겟·고속 난도질·보스 대미지 2배
+   hero:{name:'쌍단검', atk:'area', vis:'twin', splash:0, cd:0.12, range:102, dmgMul:1.37}}, // 양손 단검: 초고속 연타 단일 브레이커 (스플래시 없음 — 풀하우스 라인 정체성)
   // 7 포카드 — 바주카포 (5초, 스플래쉬)
   {name:'바주카포', dmg:38, cd:2.5, range:330, splash:78, bounce:0, atk:'area', vis:'rocket', // 공격력 1.5배(25→38)·폭발 반경 1.5배(52→78)
    hero:{name:'탱크', atk:'pen', vis:'tank', cd:2.0}}, // 소환장 전체 타격
@@ -1092,6 +1120,7 @@ function resetTransientUI() {
   clearTimeout(mktToastTimer);              // 📈 개장 예고도 동일
   const mt = document.getElementById('mktToast'); if (mt) mt.classList.remove('on');
   const dc = document.getElementById('duelConfirm'); if (dc) dc.style.display = 'none'; // 🏛️ 결투 입장 팝업이 새 판까지 남지 않게 (참조·pause 잔류 방지)
+  const cm = document.getElementById('crownModal'); if (cm) cm.style.display = 'none'; // 👑 왕관 모달도 동일 (새 S가 paused/crown 상태를 리셋)
   duelAskU = null; duelLockFloatT = -10;
 }
 function reset() {
@@ -1117,6 +1146,7 @@ function reset() {
     poker: null, portalA: 0,
     speed: 1, time: 0, paused: false,
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0, slowT: 0, graves: [], // 🪦 결투 전사자 비석 (판 내 영구 누적)
+    crownTier: -1, crownDropped: false, // 👑 왕관: 선택한 족보 tier (-1 = 미선택) / 석탄 보상 왕관 지급 여부 (잭팟 2배 중복 방지)
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
     stimT: 0, acidPools: [],  // 💉 스팀팩 남은시간 / 🧪 염산 장판
     reviveArmed: false, // 🔄 부활권 봉인 여부
@@ -1173,9 +1203,11 @@ function monsterHP(n) {
   // 풀 활용 기준 어려움 클리어율 40~70%→목표 5% 부근, 지옥 8~25%→목표 2% 부근. 쉬움·보통 무손상)
   const dm = DIFF_MUL > 1 ? DIFF_MUL * 0.8 * (1 + 0.008 * n) : DIFF_MUL;
   // ×1.2 = 🎟️ 재변경권 드립 도입 보정 (08-14 유저 지정 +20%, 전 라운드·보스·태양 공통 — 되돌리려면 TICKET_HP_COMP=1)
-  return Math.max(1, Math.floor(hp * dm * 0.7 * 1.6 * TICKET_HP_COMP));
+  // ×1.08 = 👑 왕관 도입 보정 (08-22 유저 "난이도 쉬워지지 않게" — 왕관 기대 화력 +5~8%의 상단. 되돌리려면 CROWN_HP_COMP=1)
+  return Math.max(1, Math.floor(hp * dm * 0.7 * 1.6 * TICKET_HP_COMP * CROWN_HP_COMP));
 }
 const TICKET_HP_COMP = 1.2;
+const CROWN_HP_COMP = 1.08;
 // 분열 제거 보정 계수: R39까지 1.0 → R55에서 1.45로 선형 증가 (보스는 분열과 무관하므로 이 값으로 나눠 상쇄한다)
 function splitComp(n) { return 1 + 0.45 * Math.max(0, Math.min(1, (n - 39) / 16)); }
 // 몬스터 수: 렉 저감을 위해 절반 (최대 200) — 대신 개체 HP ×1.6 + 킬 골드 ×2로 보정
@@ -1285,6 +1317,37 @@ function duelLockFloat(u) {
   if (S.time - duelLockFloatT < 0.8) return; // 도배 방지 스로틀
   duelLockFloatT = S.time;
   addFloat(u.x, u.y - 30, '🔒 결투 중!', '#ff6b6b', 0.9);
+}
+// 👑 왕관 족보 선택 (08-22 유저) — 카지노·결투 팝업 관례: 모달 중 S.paused (고민 시간 보장)
+function openCrownModal() {
+  if (S.phase === 'gameover') return; // 게임오버 오버레이(z10) 뒤에서 안 보이는 모달이 열려 배경만 멈추는 것 방지 (크로스체크 P2)
+  const g = document.getElementById('crGrid');
+  g.innerHTML = '';
+  for (let t = 1; t <= 9; t++) {
+    const b = document.createElement('button');
+    b.innerHTML = `${HAND_NAMES[t]}<br><b>×${CROWN_MUL[t].toFixed(2)}</b>`;
+    b.onclick = () => crownChoose(t);
+    g.appendChild(b);
+  }
+  document.getElementById('crownModal').style.display = 'block';
+  S.paused = true;
+}
+function closeCrownModal() {
+  document.getElementById('crownModal').style.display = 'none';
+  S.paused = false;
+}
+function crownChoose(t) {
+  closeCrownModal();
+  S.crownTier = t;
+  sfx('jackpot'); sfx('hero'); S.goldFlash = 0.7;
+  rewardToast('👑', `${HAND_NAMES[t]} ×${CROWN_MUL[t].toFixed(2)}`, '#e6a817', '👑 대 관 식');
+  logMsg(`👑 <b>${HAND_NAMES[t]}</b>에 왕관을 씌웠다 — 라인 공격력 <b>×${CROWN_MUL[t].toFixed(2)}</b> (영웅·에이스 포함, 히든 제외)`);
+  updateInfoPanel();
+}
+function crownCancel() { // 회수: 왕관을 다시 소환 — 선택 강요 방지 ("언제 확정하나"도 전략)
+  closeCrownModal();
+  spawnItemUnit('crown');
+  logMsg('👑 왕관을 회수했습니다 — 결심이 서면 다시 제물대로.');
 }
 function startPoker() {
   S.phase = 'poker';
@@ -1470,7 +1533,7 @@ function spawnHero(tier, race, x, y, keyBonus, sup) {
     atk: pick('atk', w.atk),
     proj: pick('proj', w.proj || null),
     vis: pick('vis', w.vis || null),
-    pierce: Math.round((h.pierce || 0) * (sup ? 2.5 : 1)), shards: Math.round((h.shards || 0) * (sup ? 2.5 : 1)), shardFrac: h.shardFrac || 0, // 관통 2→5, 파편 5→13
+    pierce: Math.round((h.pierce || 0) * (sup ? 1.5 : 1)), shards: Math.round((h.shards || 0) * (sup ? 2.5 : 1)), shardFrac: h.shardFrac || 0, // 관통 2→3 (08-22 유저: 5는 최저가 재료로 광역 최상위 — 밀집 실측 15.6k→9.3k, 슈퍼화염 동급이 적정), 파편 5→13
     weapon: (sup ? '슈퍼 ' : '') + '영웅 ' + (h.name || w.name),
     cool: 0, selected: true, walk: 0, speed: 85,
   });
@@ -1575,12 +1638,17 @@ function fuseCount(u) {
 // 가속 시작 20→15→12 (2026-08-03 시뮬 결과): L15로는 R30 도달선이 L14라 아무도 가속 구간을 못 탔다.
 // L12는 R25 도달선(L13) 바로 아래라 즉시 체감되고, 광산 복리를 굴린 쪽이 먼저 벽을 넘는다.
 function upgEff(lv) { return lv <= 12 ? lv : lv + (lv - 12) * (lv - 12) * 0.10; }
+// 👑 왕관 (08-22 유저): 석탄(1단계) 완채 보상 아이템 — 제물대에 바치면 족보 하나를 골라 그 라인(유닛·영웅·슈퍼·에이스, 히든 제외) 최종 공격력 ×배수, 게임당 1회
+// 배수 = 희귀도 사다리. 근거 = 실측 라인 화력 비중(족보 빈도 15만판 × L12 유닛 군집 DPS): 원50.5/투19.0/트20.3/스3.6/플1.5/풀4.1/포0.8%.
+// 원페어는 노력 없이 EV +5.1%, 희귀 족보는 빌드 집중(교환 추격·뽑기권·영웅 몰빵) 성공 시 그 이상 — "희귀 쪽이 살짝 더 달게" (유저 지정)
+const CROWN_MUL = [0, 1.10, 1.16, 1.18, 1.28, 1.34, 1.38, 1.44, 1.52, 1.60]; // 인덱스 = tier (원페어~로얄)
 function effDmg(u) {
   const heroUp = 1 + 0.15 * (u.heroUpLv || 0); // ⭐ 영웅 단련: 히든 영웅 전용 (레벨당 총 공격력 +15%)
-  if (isHiddenCombo(u)) return u.dmg * heroUp; // 히든 영웅은 종족이 없다 — 종족 업글 미적용, 단련(+제물 승급)으로만 성장 (08-13 유저: 투석기 ♦ 다이아 중복 특례 제거 — 단련으로 통일)
+  if (isHiddenCombo(u)) return u.dmg * heroUp; // 히든 영웅은 종족이 없다 — 종족 업글 미적용, 단련(+제물 승급)으로만 성장 (08-13 유저: 투석기 ♦ 다이아 중복 특례 제거 — 단련으로 통일. 👑 왕관도 미적용 — 조커 t1·투석기 t7 공유 함정)
+  const crown = (S.crownTier > 0 && u.tier === S.crownTier) ? CROWN_MUL[u.tier] : 1; // 👑 왕관 족보 라인 강화 (최종 배수). ⚠️ > 0 가드 필수: 광부 tier −1 = 미선택 센티널 −1과 충돌(NaN), CROWN_MUL[0] = 0 지뢰 (크로스체크 P1)
   const per = upgPer(u) * fuseCount(u);
-  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return u.dmg + per * (upgEff(s[0]) + upgEff(s[1])); } // 에이스: 상위 2종족 합산 (가속 반영)
-  return u.dmg + per * upgEff(S.upg[u.race]);
+  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return (u.dmg + per * (upgEff(s[0]) + upgEff(s[1]))) * crown; } // 에이스: 상위 2종족 합산 (가속 반영)
+  return (u.dmg + per * upgEff(S.upg[u.race])) * crown;
 }
 // 📯 콰르텟 공속 오라 적용된 실제 쿨다운 (spdBuff는 update()에서 매 프레임 갱신)
 function isHiddenCombo(u) { return !!(u.gamble || u.junk || u.quartet || u.execute || u.shogun || u.chrono || u.slot || u.joker || u.catapult); } // 히든 조합 유닛 판별
@@ -1607,6 +1675,7 @@ const ITEM_META = {
   gachaAceHero: { icon:'👑', name:'에이스 영웅 뽑기권', active:true },
   gachaSuper:   { icon:'👑', name:'슈퍼에이스 영웅 뽑기권', active:true },
   oreGift:      { icon:'💎', name:'보상 광석', active:true }, // 광석방 완채 보상 (08-16 — 제물대에서 깨서 개봉)
+  crown:        { icon:'👑', name:'왕관', active:true }, // 👑 석탄 완채 보상 (08-22 — 제물대에 바치면 족보 하나를 골라 라인 강화, 게임당 1회)
 };
 // 👑 뽑기권 링 색 (드로잉·구분용)
 const GACHA_COL = { gachaHero:'#c9a227', gachaAce:'#e91e8c', gachaAceHero:'#8c5bff', gachaSuper:'#ff2d95' };
@@ -2212,6 +2281,7 @@ function updateAltar() {
     if (it.item === 'revive') { S.reviveArmed = true; addFloat(ALTAR.x, ALTAR.y - 44, '🔄 부활 봉인!', '#43a047', 2); sfx('hero'); logMsg('🔄 부활권 봉인 — 이번 라운드 사망 시 부활! (무사 클리어 시 소멸)'); }
     else if (it.item === 'plank') { S.plank = true; addFloat(CX, CY + PEN.h/2 + 22, '🪵 나무판자 설치!', '#a1887f', 2); sfx('pick'); logMsg('🪵 나무판자 설치 — 소환장 중앙 하단에 발판! 단검(풀하우스)을 올려보세요.'); }
     else if (it.item === 'oreGift') { openOreGift(it.oreStage || 1); } // 💎 보상 광석 — 깨서 개봉
+    else if (it.item === 'crown') { openCrownModal(); } // 👑 왕관 — 족보 선택 모달 (취소 시 왕관 재소환)
     else { ({ timestop: useTimestop, stimpack: useStimpack, acid: useAcid, bombard: useBombard,
       sand: useSandItem, vbomb: useVBombItem, pray: usePrayItem,
       gachaHero: useGachaHero, gachaAce: useGachaAce, gachaAceHero: useGachaAceHero, gachaSuper: useGachaSuper })[it.item](); } // 🛒 비상 물자 3종 + 👑 뽑기권 4종도 제물대 발동
@@ -3530,7 +3600,8 @@ document.getElementById('rewardToast').addEventListener('pointerdown', () => {
 function huntRewardDef(stage) {
   return [
     null,
-    ['💰', '골드 +500', () => S.gold += 500, '#b8860b'],
+    // 👑 석탄(1단계) = 왕관 (08-22 유저 — 구 골드+500 대체. 잭팟 2배로 두 번 불려도 왕관은 1개 — 두 번째는 옛 보상 골드로)
+    ['👑', '왕관!', () => { if (S.crownDropped) S.gold += 500; else { S.crownDropped = true; spawnItemUnit('crown'); } }, '#e6a817'],
     ['⛏️', '광부 +1명', () => spawnMiner(), '#8a6d1f'],
     ['✨', '슈퍼 광부!', () => spawnSuperMiner(), '#ff9800'],
     ['📑', '복사권 +1', () => S.items.copier++, '#5b48d0'],
@@ -7922,7 +7993,7 @@ function updateInfoPanel() {
   el.innerHTML =
     `<b>${u.hidden ? '♠ ' + u.weapon : u.weapon}</b> (${sub})<br>` +
     raceLine + '<br>' +
-    `공격력: <b>${effDmg(u).toFixed(1)}</b>${isHiddenCombo(u) ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
+    `공격력: <b>${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownTier > 0 && u.tier === S.crownTier) ? ` 👑×${CROWN_MUL[u.tier].toFixed(2)}` : ''}${isHiddenCombo(u) ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
     `공속: ${(u.spdBuff || 1) < 1
       ? `<b style="color:#00a3ff">${(1/effCd(u)).toFixed(1)}회/초</b> <span style="color:#00a3ff;font-size:10px">📯 +20%</span>`
       : `${(1/effCd(u)).toFixed(1)}회/초`} · 사거리: ${Math.round(effRange(u))}<br>` + // 콰르텟 버프·히든 페널티 반영된 실제 값
@@ -8102,7 +8173,7 @@ function wirePriorityButtons(el) {
 // 슈퍼에이스가 일반 영웅보다 복사하기 쉬웠고, 슈퍼영웅도 영웅과 똑같이 50%였다).
 function copyRate(u) { return u.super ? 0.2 : u.hero ? 0.4 : 0.7; }
 function copyUnit(u) {
-  if (S.items.copier <= 0 || u.miner || u.clone) return; // 분신은 복사 불가 (곧 사라질 유닛을 영구화하는 익스플로잇 차단)
+  if (S.items.copier <= 0 || u.miner || u.clone || u.item) return; // 분신은 복사 불가 (곧 사라질 유닛을 영구화하는 익스플로잇 차단) · 아이템(왕관 등) 복제 방어 (크로스체크 P2)
   if (isHiddenCombo(u)) { addFloat(u.x, u.y - 26, '📑 히든 유닛은 복사 불가!', '#e57373', 1.6); logMsg('📑 히든 조합 유닛은 복사기로 복사할 수 없습니다.'); return; }
   S.items.copier--;
   const rate = copyRate(u);
