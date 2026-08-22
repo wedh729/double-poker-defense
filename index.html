@@ -306,6 +306,13 @@
   .gbxIco { font-size: 34px; filter: drop-shadow(0 0 10px rgba(255,214,102,0.8)); }
   .gbxTxt { font-size: 14px; font-weight: 900; margin-top: 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.7); }
   .gbxStage.failfx .gbx { transform: rotateX(6deg) rotateZ(3deg); }
+  /* 💎 광물 개봉 변형: 보석이 툭툭툭 균열 → 파열 (08-16 유저) */
+  .gbxOre { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px; transform: rotate(45deg); border-radius: 10px; border: 2px solid rgba(255,255,255,0.45); box-shadow: inset -7px -7px 14px rgba(0,0,0,0.5), inset 5px 5px 11px rgba(255,255,255,0.28), 0 0 14px rgba(255,255,255,0.12); }
+  .gbxCrk { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px; transform: rotate(45deg); opacity: 0; transition: opacity 0.14s;
+    background: linear-gradient(63deg, transparent 45%, rgba(255,255,255,0.95) 48%, transparent 51%), linear-gradient(-37deg, transparent 56%, rgba(255,255,255,0.8) 58%, transparent 61%), linear-gradient(102deg, transparent 30%, rgba(255,255,255,0.6) 32%, transparent 34%); }
+  .gbxStage.h1 .gbxCrk { opacity: 0.5; }
+  .gbxStage.h2 .gbxCrk { opacity: 1; }
+  .gbxStage.open .gbxOreWrap { transition: transform 0.28s ease-out, opacity 0.28s; transform: scale(1.4) rotate(10deg); opacity: 0; }
   .flipFace { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 46px;
     box-shadow: 0 6px 16px rgba(0,0,0,0.5); }
   .flipFront { background: linear-gradient(150deg, #5b48d0, #8c5bff); color: #fff; border: 2px solid #b39ddb; }
@@ -1595,6 +1602,7 @@ const ITEM_META = {
   gachaAce:     { icon:'👑', name:'에이스 뽑기권', active:true },
   gachaAceHero: { icon:'👑', name:'에이스 영웅 뽑기권', active:true },
   gachaSuper:   { icon:'👑', name:'슈퍼에이스 영웅 뽑기권', active:true },
+  oreGift:      { icon:'💎', name:'보상 광석', active:true }, // 광석방 완채 보상 (08-16 — 제물대에서 깨서 개봉)
 };
 // 👑 뽑기권 링 색 (드로잉·구분용)
 const GACHA_COL = { gachaHero:'#c9a227', gachaAce:'#e91e8c', gachaAceHero:'#8c5bff', gachaSuper:'#ff2d95' };
@@ -2199,6 +2207,7 @@ function updateAltar() {
     for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 50 + Math.random()*80; S.parts.push({ x: ALTAR.x, y: ALTAR.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 20, t: 0.4, r: 1.5 + Math.random()*2, c: '#ffd166' }); }
     if (it.item === 'revive') { S.reviveArmed = true; addFloat(ALTAR.x, ALTAR.y - 44, '🔄 부활 봉인!', '#43a047', 2); sfx('hero'); logMsg('🔄 부활권 봉인 — 이번 라운드 사망 시 부활! (무사 클리어 시 소멸)'); }
     else if (it.item === 'plank') { S.plank = true; addFloat(CX, CY + PEN.h/2 + 22, '🪵 나무판자 설치!', '#a1887f', 2); sfx('pick'); logMsg('🪵 나무판자 설치 — 소환장 중앙 하단에 발판! 단검(풀하우스)을 올려보세요.'); }
+    else if (it.item === 'oreGift') { openOreGift(it.oreStage || 1); } // 💎 보상 광석 — 깨서 개봉
     else { ({ timestop: useTimestop, stimpack: useStimpack, acid: useAcid, bombard: useBombard,
       sand: useSandItem, vbomb: useVBombItem, pray: usePrayItem,
       gachaHero: useGachaHero, gachaAce: useGachaAce, gachaAceHero: useGachaAceHero, gachaSuper: useGachaSuper })[it.item](); } // 🛒 비상 물자 3종 + 👑 뽑기권 4종도 제물대 발동
@@ -3304,7 +3313,7 @@ function assignOreSlots() {
 // 챔피언 결투 AI (웨이브·포커 페이즈 공용 — 조기 전멸 시 결투가 포커까지 이어지므로)
 function updateDuelFight(u) {
   if (!S.duel || u !== S.champion) return false;
-  if (S.duel.champ !== u) { S.duel.champ = u; S.duel.fleeT = S.time + 8; hideObjInfo(); } // 🏃 새 챔피언 입장 — 8초 도망 게이지 시작 (5→8, 2026-08-11 유저 지정. 버튼을 가리는 objInfo도 치운다)
+  if (S.duel.champ !== u) { S.duel.champ = u; S.duel.fleeT = S.time + 8; S.duel.fightStart = S.time; hideObjInfo(); } // 🏃 새 챔피언 입장 — 8초 도망 게이지 시작 + 교전 시계(도발 페이스 판정용) 리셋
   const ddx = S.duel.x - u.x, ddy = S.duel.y - u.y, dd = Math.hypot(ddx, ddy);
   if (dd > effRange(u)) { u.tx = S.duel.x - ddx / (dd || 1) * effRange(u) * 0.6; u.ty = S.duel.y - ddy / (dd || 1) * effRange(u) * 0.6; }
   else {
@@ -3391,7 +3400,7 @@ function duelFlee() {
   u.duelOk = false;
   u.x = ARENA.x; u.y = ARENA.y + ARENA.r + 18; u.tx = u.x; u.ty = u.y; u.moving = false;
   S.champion = null; d.champ = null;
-  d.taunt = '겁쟁이로군! 하하!'; d.tauntT = S.time + 2.6;
+  d.taunt = DUEL_T_FLEE[(Math.random() * DUEL_T_FLEE.length) | 0]; d.tauntT = S.time + 3.4; d.nextTaunt = S.time + 9; // 🏃 도망 조롱 (08-16 유저 문구)
   logMsg(`🏃 ${u.weapon}이(가) 결투장에서 도망쳤다!`);
 }
 function fireAtOre(u) {
@@ -3459,9 +3468,8 @@ document.getElementById('rewardToast').addEventListener('pointerdown', () => {
   clearTimeout(rtTimer);
   document.getElementById('rewardToast').style.display = 'none';
 });
-function giveHuntReward(stage) {
-  sfx('reward');
-  const R = [
+function huntRewardDef(stage) {
+  return [
     null,
     ['💰', '골드 +500', () => S.gold += 500, '#b8860b'],
     ['⛏️', '광부 +1명', () => spawnMiner(), '#8a6d1f'],
@@ -3475,12 +3483,32 @@ function giveHuntReward(stage) {
     ['👑', '에이스 뽑기권 + 영웅 뽑기권!', () => { spawnItemUnit('gachaAce'); spawnItemUnit('gachaHero'); }, '#e91e8c'],
     ['🌟', '슈퍼영웅 강림!!', () => { const t = Math.floor(Math.random()*10); spawnHero(t, RACE_OF_RANK[t], CX-40, CY+155, 1.5, true); }, '#ff6b9d'],
   ][Math.min(10, stage)];
-  R[2]();
-  const oreName = (ORES[Math.min(9, stage - 1)] || {}).name || '광석';
-  rewardToast(R[0], R[1], R[3], `⛏️ ${oreName} 채굴 보상`);
-  addFloat(ROOM.cx, ROOM.cy - 10, R[1], R[3], 2.4);
-  logMsg(`💎 ${oreName}(${stage}단계) 완채 보상: ${R[1]}`);
-  if (stage >= 9) { sfx('jackpot'); sfx('hero'); }
+}
+// 💎 완채 보상은 즉시 지급하지 않는다 — 해당 광물 모양 오브젝트가 나와서 제물대에 넣으면 툭툭툭 깨지며 개봉 (08-16 유저)
+function giveHuntReward(stage) {
+  sfx('reward');
+  const ore = ORES[Math.min(9, stage - 1)] || ORES[0];
+  spawnItemUnit('oreGift');
+  const it = S.units[S.units.length - 1];
+  it.oreStage = stage; it.weapon = ore.name + ' 보상 광석';
+  addFloat(ROOM.cx, ROOM.cy - 10, `💎 ${ore.name} 보상 광석!`, ore.col, 2.4);
+  logMsg(`💎 <b>${ore.name} 보상 광석</b>이 나왔습니다 — 제물대로 옮기면 개봉!`);
+}
+function openOreGift(stage) {
+  const R = huntRewardDef(stage);
+  const ore = ORES[Math.min(9, stage - 1)] || ORES[0];
+  const jackpot = Math.random() < 0.01; // 🎰 1%: 보상 2배 (유닛 보상이면 2기)
+  gachaBoxAnim(document.getElementById('cvWrap'), {
+    ovl: true, win: true, ore,
+    revealIcon: R[0], revealText: R[1] + (jackpot ? ' ×2!!' : ''), color: jackpot ? '#ffd166' : R[3],
+    onReveal: () => {
+      R[2]();
+      if (jackpot) { R[2](); showMktToast('🎰 잭팟!!', `${ore.name} 보상이 2배로 쏟아졌다!`); S.goldFlash = 0.7; sfx('jackpot'); }
+      rewardToast(R[0], R[1] + (jackpot ? ' ×2!!' : ''), R[3], `⛏️ ${ore.name} 채굴 보상${jackpot ? ' — 🎰 잭팟!' : ''}`);
+      logMsg(`💎 ${ore.name} 보상 개봉: ${R[1]}${jackpot ? ' — 🎰 잭팟 2배!!' : ''}`);
+      if (stage >= 9) { sfx('jackpot'); sfx('hero'); }
+    },
+  });
 }
 function spawnHiddenMiner() {
   spawnMiner();
@@ -4821,7 +4849,23 @@ function drawArena() {
     ctx.fillText('⚔️', x, y + 10); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
 }
-const DUEL_TAUNTS = ['한 놈만 와라. …올 수는 있고?', '그 실력으로 나를?', '하품 나오는군.', '아직도 고민 중이냐?', '가소롭구나.', '간지럽다. 더 세게.', '제법이군… 아니, 취소다.'];
+// 🗡️ 결투 도발 멘트 — 전황을 보고 골라 말한다 (08-16 유저 지정 문구 + 기존 멘트 성격별 편입)
+const DUEL_T_IDLE = ['하품이 나오는군 여긴 겁쟁이마을인가?', '한판 붙고싶은데 애송이들밖에 없나보군', '덤벼라 한수 가르쳐주지', '이정도 패기도 없어서야.. 글러먹었군', '한 놈만 와라. …올 수는 있고?', '아직도 고민 중이냐?'];
+const DUEL_T_FAST = ['잠깐만 좀 아픈데?', '우리 대화로 풀어볼까?', '나는 왜 도망을 못가는건데'];           // 압도적 페이스 (총 시간 절반 안쪽)
+const DUEL_T_FAST_LATE = ['이정도의 강자가 아직까지 있을줄이야', '과연 나설만 하군 인정하지'];              // R50+ 후반 전용 추가
+const DUEL_T_SLOW = ['간지럽군, 아니 간지럽지도 않아', '내 골드좀 줄까? 업글좀 해야겠다 너무약해', '결투가 시작된건가? 몰랐군', '그 실력으로 나를?', '가소롭구나.'];
+const DUEL_T_CLUTCH = ['잠깐, 사과할게', '이럴수가..내가 오만했군'];                                     // 아슬아슬하게 잡힐 듯
+const DUEL_T_FLEE = ['하하 도망가는모습이 아주 꼴사납군', '그래 목숨은 하나이니 소중하겠지', '전사가 뒷모습을 보이다니 실망스럽군'];
+function duelTauntPool(d) {
+  if (!S.champion) return DUEL_T_IDLE;
+  const ft = Math.max(1, S.time - (d.fightStart || S.time));      // 교전 경과
+  const dps = (d.max - d.hp) / ft;
+  if (dps <= 0.001) return DUEL_T_SLOW;                           // 아직 못 때리는 중
+  const tKill = d.hp / dps, remain = Math.max(1, S.timer);
+  if (ft + tKill <= (ft + remain) * 0.5) return S.round >= 50 ? DUEL_T_FAST.concat(DUEL_T_FAST_LATE) : DUEL_T_FAST;
+  if (tKill <= remain && d.hp / d.max < 0.25) return DUEL_T_CLUTCH;
+  return DUEL_T_SLOW;
+}
 function drawDuelist() {
   const d = S.duel, t = S.time, sz = 24;
   const y = d.y + Math.sin(t * 2.2 + d.phase) * 2; // 몸 풀기 바운스
@@ -4849,7 +4893,7 @@ function drawDuelist() {
   ctx.restore();
   drawBar(d.x - 30, y - sz - 30, 60, d.hp / d.max, '#e05a2b'); // 체력바
   // 도발 말풍선 (이따금)
-  if (t > d.nextTaunt) { d.taunt = DUEL_TAUNTS[(Math.random() * DUEL_TAUNTS.length) | 0]; d.tauntT = t + 2.6; d.nextTaunt = t + 12 + Math.random() * 10; }
+  if (t > d.nextTaunt) { const pool = duelTauntPool(d); d.taunt = pool[(Math.random() * pool.length) | 0]; d.tauntT = t + 2.6; d.nextTaunt = t + 12 + Math.random() * 10; }
   if (t < d.tauntT) {
     ctx.font = '10.5px sans-serif';
     const w = ctx.measureText(d.taunt).width + 14, h = 18;
@@ -6749,9 +6793,17 @@ function drawItemUnit(u) {
   ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 16, 11, 4, 0, 0, 6.28); ctx.fill();
   ctx.fillStyle = `rgba(255,214,102,${(0.15 + 0.1*Math.sin(S.time*5)).toFixed(2)})`; ctx.beginPath(); ctx.arc(u.x, y, 16, 0, 6.28); ctx.fill();
   const gc = GACHA_COL[u.item]; // 👑 뽑기권: 등급색 링 + '?' 위에 왕관
-  ctx.fillStyle = '#2a2340'; ctx.strokeStyle = gc || '#c9a227'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(u.x, y, 13, 0, 6.28); ctx.fill(); ctx.stroke(); ctx.lineWidth = 1;
+  const oreG = u.item === 'oreGift' ? (ORES[Math.min(9, (u.oreStage || 1) - 1)] || ORES[0]) : null; // 💎 보상 광석: 해당 광물 보석
+  ctx.fillStyle = '#2a2340'; ctx.strokeStyle = gc || (oreG && oreG.col) || '#c9a227'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(u.x, y, 13, 0, 6.28); ctx.fill(); ctx.stroke(); ctx.lineWidth = 1;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  if (gc) {
+  if (oreG) { // 마름모 보석 + 반짝임
+    ctx.save(); ctx.translate(u.x, y); ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = oreG.col; ctx.fillRect(-5.5, -5.5, 11, 11);
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.strokeRect(-5.5, -5.5, 11, 11);
+    ctx.restore();
+    ctx.fillStyle = `rgba(255,255,255,${(0.45 + 0.4 * Math.sin(S.time * 5 + u.jx)).toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(u.x - 3, y - 3.5, 1.3, 0, 6.28); ctx.fill();
+  } else if (gc) {
     ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = gc;
     ctx.fillText('?', u.x, y + 1);
     ctx.font = '11px sans-serif';
@@ -8659,12 +8711,16 @@ function doExchange() {
 function gachaBoxAnim(host, opts) {
   const st = document.createElement('div');
   st.className = 'gbxStage' + (opts.ovl ? ' ovl' : '');
-  st.innerHTML = `<div class="gbxRays"></div><div class="gbxGlow"></div><div class="gbxShadow"></div>
-    <div class="gbx"><div class="gbxLid">👑</div><div class="gbxBody">?</div></div><div class="gbxReveal"></div>`;
+  // 💎 opts.ore = 광물 개봉 변형: 상자 대신 보석이 툭·툭·툭 균열이 가다 파열
+  st.innerHTML = `<div class="gbxRays"></div><div class="gbxGlow"></div><div class="gbxShadow"></div>` + (opts.ore
+    ? `<div class="gbx gbxOreWrap"><div class="gbxOre" style="background:linear-gradient(135deg, ${opts.ore.col}, #171128)"></div><div class="gbxCrk"></div></div>`
+    : `<div class="gbx"><div class="gbxLid">👑</div><div class="gbxBody">?</div></div>`) + `<div class="gbxReveal"></div>`;
   host.appendChild(st);
-  sfx('thud'); casTimeout(() => sfx('thud'), 420); casTimeout(() => sfx('thud'), 840); // 펄떡펄떡
+  const hitSfx = opts.ore ? 'pick' : 'thud'; // 광석은 곡괭이 소리로 툭툭툭
+  sfx(hitSfx); casTimeout(() => sfx(hitSfx), 420); casTimeout(() => sfx(hitSfx), 840);
+  if (opts.ore) { setTimeout(() => st.classList.add('h1'), 430); setTimeout(() => st.classList.add('h2'), 850); } // 균열 진행
   setTimeout(() => st.classList.add('open'), 1300);
-  casTimeout(() => sfx('slash'), 1300); // 쩍
+  casTimeout(() => sfx(opts.ore ? 'thud' : 'slash'), 1300); // 쩍/파열
   setTimeout(() => {
     st.classList.add(opts.win ? 'winfx' : 'failfx');
     const rv = st.querySelector('.gbxReveal');
@@ -8711,17 +8767,45 @@ function updateDpsRank() {
   body.style.display = dpsMode === 2 ? 'none' : '';
   if (dpsMode === 2) return;
   const fmt = v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'k' : Math.round(v);
-  // 접두어 압축 (08-15 유저 표기 확정): 석궁 = 원페어 영웅 / S석궁 = 슈퍼영웅 / A석궁 = 에이스 영웅 / SA·AS = 슈퍼에이스 계열
-  const shortNm = nm => nm.replace('♠♠ 슈퍼에이스 ', 'SA').replace('에이스 슈퍼영웅 ', 'AS').replace('슈퍼 영웅 ', 'S').replace('에이스 영웅 ', 'A').replace('히든 영웅 ', '').replace('에이스 ', 'A').replace('영웅 ', '').replace(/^빽 /, 'B');
-  const all = Object.entries(S.stats).sort((a, b) => b[1].dmg - a[1].dmg);
+  // 족보로 묶어 집계 (08-16 유저): "원페어"·"원페어 영웅"·"투페어 슈퍼영웅"… — S.stats 키·결산 MVP는 무기명 유지, 위젯 표시만 묶는다
+  const agg = {};
+  for (const [nm, st] of Object.entries(S.stats)) {
+    const L = dpsGroupLabel(nm);
+    const a = agg[L] || (agg[L] = { dmg: 0, kills: 0 });
+    a.dmg += st.dmg; a.kills += st.kills;
+  }
+  const all = Object.entries(agg).sort((a, b) => b[1].dmg - a[1].dmg);
   const top = dpsMode === 1 ? all : all.slice(0, 5);
   const maxD = top.length ? top[0][1].dmg : 1;
   const html = top.length
     ? top.map(([nm, st], i) => dpsMode === 1
-      ? `<div class="dr">${i + 1}. ${shortNm(nm)} <b style="color:#ffd166">${fmt(st.dmg)}</b> · 킬 ${st.kills}<div class="db"><div style="width:${Math.max(3, 100 * st.dmg / maxD).toFixed(0)}%"></div></div></div>`
-      : `<div class="dr">${['①', '②', '③', '④', '⑤'][i]} ${shortNm(nm)} <b style="color:#ffd166">${fmt(st.dmg)}</b></div>`).join('')
+      ? `<div class="dr">${i + 1}. ${nm} <b style="color:#ffd166">${fmt(st.dmg)}</b> · 킬 ${st.kills}<div class="db"><div style="width:${Math.max(3, 100 * st.dmg / maxD).toFixed(0)}%"></div></div></div>`
+      : `<div class="dr">${['①', '②', '③', '④', '⑤'][i]} ${nm} <b style="color:#ffd166">${fmt(st.dmg)}</b></div>`).join('')
     : '<div class="dr" style="color:#8a8298">아직 없음</div>';
   if (html !== dpsLastHtml) { body.innerHTML = html; dpsLastHtml = html; } // DOM churn 방지 — 값이 변했을 때만
+}
+// 무기명 → 족보 그룹 라벨 (미분류는 원명 그대로 — 곡괭이 등)
+const HAND_SHORT = ['하이카드', '원페어', '투페어', '트리플', '스트레이트', '플러쉬', '풀하우스', '포카드', '스트플', '로얄'];
+let dpsNameMap = null;
+function dpsGroupLabel(nm) {
+  if (!dpsNameMap) {
+    dpsNameMap = { unit: {}, hero: {} };
+    WEAPONS.forEach((w, t) => { dpsNameMap.unit[w.name] = t; if (w.hero && w.hero.name) dpsNameMap.hero[w.hero.name] = t; });
+  }
+  const strip = p => nm.startsWith(p) ? nm.slice(p.length) : null;
+  let base, grade;
+  if ((base = strip('히든 영웅 '))) return base;                       // 조커·쇼군… 자기 이름 그대로
+  if ((base = strip('♠♠ 슈퍼에이스 '))) grade = '슈퍼에이스';
+  else if ((base = strip('에이스 슈퍼영웅 '))) grade = '에이스 슈퍼영웅';
+  else if ((base = strip('슈퍼 영웅 '))) grade = '슈퍼영웅';
+  else if ((base = strip('에이스 영웅 '))) grade = '에이스 영웅';
+  else if ((base = strip('에이스 '))) grade = '에이스';
+  else if ((base = strip('영웅 '))) grade = '영웅';
+  else if ((base = strip('빽 '))) grade = '';
+  else { base = nm; grade = ''; }
+  const t = /영웅/.test(grade) ? dpsNameMap.hero[base] : dpsNameMap.unit[base];
+  if (t === undefined) return nm;
+  return HAND_SHORT[t] + (grade ? ' ' + grade : '');
 }
 document.getElementById('dpsHead').onclick = () => { dpsMode = (dpsMode + 1) % 3; dpsLastHtml = ''; updateDpsRank(); };
 // 📈 투자 위젯 클릭 → 투자 현황 바로 열기 (2026-08-08 유저 지정)
