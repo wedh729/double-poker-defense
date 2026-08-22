@@ -1113,7 +1113,7 @@ function reset() {
     minerMoveLv: 0, minerMoveCost: 12000, minerMineLv: 0, minerMineCost: 12000, // 광부 업글은 비싸다 (×5·×5·×7·×8 — 12k·60k·300k·2.1M·16.8M. 08-15 유저: 광산 특별보상 도입 대응 밸런스)
     poker: null, portalA: 0,
     speed: 1, time: 0, paused: false,
-    combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0, slowT: 0,
+    combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0, slowT: 0, graves: [], // 🪦 결투 전사자 비석 (판 내 영구 누적)
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
     stimT: 0, acidPools: [],  // 💉 스팀팩 남은시간 / 🧪 염산 장판
     reviveArmed: false, // 🔄 부활권 봉인 여부
@@ -3378,13 +3378,51 @@ function duelWin(u) {
   S.duel = null; S.duelEnded = true; // 승리로 창이 닫힌다 → 승자 즉시 자유
 }
 // 🏛️ 결투 시간 초과 챔피언 사망 — 유닛 제거는 제물대(updateAltar) 패턴 재사용
+// 🪦 비석 초상화: 죽는 순간의 유닛 모습을 오프스크린에 1회 구워 비석에 새긴다 (ctx 임시 스왑 — 베이크 관례)
+function bakeGravePortrait(u) {
+  const c = document.createElement('canvas'); c.width = 40; c.height = 52;
+  const old = ctx; ctx = c.getContext('2d');
+  try {
+    ctx.translate(20 - u.x, 30 - u.y);
+    const sel = u.selected; u.selected = false;
+    drawUnit(u);
+    u.selected = sel;
+  } catch (e) {} finally { ctx = old; }
+  return c;
+}
 function duelChampionDeath() {
   const u = S.champion;
   S.units = S.units.filter(v => v !== u);
+  // 👻 유령 승천 + 🪦 비석 (08-16 유저): 회색 올챙이 유령이 꼬리를 살랑이며 떠올라 사라지고, 그 자리에 초상화 비석이 쌓인다
+  S.effects.push({ type: 'ghost', x: u.x, y: u.y, t: 2.6, dur: 2.6, w: bodyShape(u).w });
+  S.graves.push({ x: u.x, y: u.y, img: bakeGravePortrait(u) });
   burstJuice({ x: u.x, y: u.y, r: 16, c: '#c0392b', dk: 'thud', boss: false, golden: false }); // 소형 사망 이펙트 (기존 몬스터 사망 헬퍼 재사용)
   addFloat(u.x, u.y - 26, '💀', '#e53935', 1.6);
   logMsg(`💀 ${u.weapon}, 결투장에서 전사… 도전자: "약했다." (퇴장)`);
   updateInfoPanel(); // 선택 정보 패널이 사라진 유닛을 계속 가리키지 않게 (제물대 패턴과 동일)
+}
+let ripBake = null; // 'R.I.P' 1회 베이크 (16px로 굽고 9×3.4로 축소 — 소형 텍스트 가독 확보)
+function ripImg() {
+  if (ripBake) return ripBake;
+  const c = document.createElement('canvas'); c.width = 60; c.height = 22;
+  const g2 = c.getContext('2d');
+  g2.font = 'bold 16px sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
+  g2.fillStyle = '#262c33'; g2.strokeStyle = '#262c33'; g2.lineWidth = 3.5; // 굵은 스트로크 — 1/6.7 축소에서도 획이 살아남게
+  g2.strokeText('R.I.P', 30, 11); g2.fillText('R.I.P', 30, 11);
+  ripBake = c; return c;
+}
+// 🪦 비석: 위가 둥근 몸돌 + 유닛 초상화 + R.I.P + 받침돌 (아주 작게 — 링 안에 계속 쌓여도 안 거슬리게)
+function drawGraves() {
+  for (const g of S.graves) {
+    const x = g.x, y = g.y;
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(x, y + 7, 6.5, 2.2, 0, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x - 5.5, y + 6); ctx.lineTo(x - 5.5, y - 4); ctx.arc(x, y - 4, 5.5, Math.PI, 0); ctx.lineTo(x + 5.5, y + 6); ctx.closePath();
+    ctx.fillStyle = '#8f969f'; ctx.fill();
+    ctx.strokeStyle = '#6b7178'; ctx.lineWidth = 1; ctx.stroke();
+    if (g.img) { ctx.globalAlpha = 0.85; ctx.drawImage(g.img, x - 3.2, y - 7.6, 6.4, 8.3); ctx.globalAlpha = 1; } // 유닛 그림 (음각)
+    ctx.drawImage(ripImg(), x - 4.5, y + 1.4, 9, 3.4); // R.I.P — 5px 직접 fillText는 안티앨리어스로 소실돼 큰 폰트 베이크를 축소
+    ctx.fillStyle = '#7a8089'; ctx.fillRect(x - 6.5, y + 6, 13, 2);
+  }
 }
 // 🏃 5초 도망 게이지 버튼: ARENA 바로 아래, 캔버스(940×500) 안 (792~884, 373~399)
 function duelFleeBtnRect() { return { x: ARENA.x - 46, y: ARENA.y + ARENA.r + 10, w: 92, h: 26 }; }
@@ -4941,6 +4979,7 @@ function draw() {
   drawPortal();
   drawAltar();
   drawArena(); // 🏛️ 결투장
+  drawGraves(); // 🪦 결투 전사자 비석 (계속 쌓인다)
   if (S.plank) drawPlank();
   drawEnemyPortal(); // 소환장 안 적 포탈 (몹보다 뒤)
   for (const p of S.acidPools) {
@@ -5000,6 +5039,23 @@ function draw() {
       ctx.lineTo(e.x2 + Math.cos(a + 2.6) * e.r, e.y2 + Math.sin(a + 2.6) * e.r);
       ctx.arc(e.x2, e.y2, e.r, a + 2.6, a - 2.6);
       ctx.closePath(); ctx.fill();
+    } else if (e.type === 'ghost') { // 👻 결투 전사 유령: 회색 올챙이 실루엣 — 꼬리를 살랑이며 떠올라 서서히 소멸
+      const k = 1 - e.t / e.dur;
+      const gy = e.y - k * 46;                                  // 서서히 상승
+      const a = Math.min(1, e.t / (e.dur * 0.55));              // 서서히 사라짐
+      const w = Math.max(10, e.w * 0.7), sway = Math.sin(S.time * 6 + e.x) * 2.4;
+      const cx2 = e.x + sway * 0.4;
+      ctx.globalAlpha = a * 0.85;
+      ctx.fillStyle = '#cfd4dc';
+      ctx.beginPath();
+      ctx.arc(cx2, gy - w * 0.3, w * 0.52, Math.PI, 0);          // 둥근 머리 (다리 없음)
+      ctx.quadraticCurveTo(cx2 + w * 0.55, gy + w * 0.28, e.x + sway, gy + w * 0.78); // 오른 옆구리 → 꼬리 끝
+      ctx.quadraticCurveTo(cx2 - w * 0.1, gy + w * 0.42, cx2 - w * 0.52, gy - w * 0.3); // 꼬리 → 왼 옆구리
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#5f6672'; // 눈
+      ctx.beginPath(); ctx.arc(cx2 - w * 0.17, gy - w * 0.33, 1.3, 0, 6.28); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx2 + w * 0.17, gy - w * 0.33, 1.3, 0, 6.28); ctx.fill();
+      ctx.globalAlpha = 1;
     } else if (e.type === 'boom') {
       // 반지름은 t가 0.65를 넘으면 음수가 된다 → arc가 IndexSizeError를 던져 그 프레임의 draw가 통째로 중단됨.
       // (실제로 태양 보스 격파의 r230·t0.7이 -23으로 시작해 헬모드 클리어 연출 내내 화면이 안 그려졌다)
