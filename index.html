@@ -2363,16 +2363,21 @@ function update(dt) {
     return e.t > 0;
   });
   S.floats = S.floats.filter(f => { f.t -= dt; f.y -= 26 * dt; return f.t > 0; });
-  S.parts = S.parts.filter(p => {
-    p.t -= dt;
-    if (p.chipFx) { p.vy += 200 * dt; } // 칩 축포: 위로 튀었다 떨어짐 (킬 동전의 성 유도 물리는 연출 제거와 함께 삭제 — coin은 이제 chipFx로만 생성된다)
-    else if (p.g) p.vy += 320 * dt; // 즙/조각: 중력
-    p.x += p.vx * dt; p.y += p.vy * dt;
-    const drag = p.fire ? 0.975 : 0.94; // 화염 스트림은 감쇠를 약하게 — 사거리 끝까지 닿아야 판정과 그림이 일치
-    p.vx *= drag; p.vy *= drag;
-    if (p.frag) p.spin += dt * 12;
-    return p.t > 0;
-  });
+  { // 파티클: filter 대신 제자리 압축 — 수백 개×60fps에서 매 프레임 새 배열 할당이 GC를 긁는다 (⚡ 08-22 렉 최적화. 로직·순서는 filter와 동일)
+    const ps = S.parts; let w = 0;
+    for (let i = 0; i < ps.length; i++) {
+      const p = ps[i];
+      p.t -= dt;
+      if (p.chipFx) { p.vy += 200 * dt; } // 칩 축포: 위로 튀었다 떨어짐 (킬 동전의 성 유도 물리는 연출 제거와 함께 삭제 — coin은 이제 chipFx로만 생성된다)
+      else if (p.g) p.vy += 320 * dt; // 즙/조각: 중력
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      const drag = p.fire ? 0.975 : 0.94; // 화염 스트림은 감쇠를 약하게 — 사거리 끝까지 닿아야 판정과 그림이 일치
+      p.vx *= drag; p.vy *= drag;
+      if (p.frag) p.spin += dt * 12;
+      if (p.t > 0) ps[w++] = p;
+    }
+    ps.length = w;
+  }
   // 콤보/흔들림 타이머
   if (S.combo.t > 0) { S.combo.t -= dt; if (S.combo.t <= 0) S.combo.n = 0; }
   S.combo.pop = Math.max(0, S.combo.pop - dt);
@@ -5432,13 +5437,12 @@ function draw() {
   for (const p of S.parts) {
     if (p.fire) {
       // 진짜 불꽃: 진행 방향으로 뻗은 불꽃 방울 (흰-노랑 코어 → 주황 → 빨강 → 투명)
+      // ⚡ 08-22: 그라디언트만 캐시(fireGrad — s 0.25px 양자화), 패스는 벡터 그대로 = 모양 무손실 (파티클당 createRadialGradient 제거)
       const life = Math.min(1, p.t * 2.2);
       const s = p.r * (0.55 + p.t * 1.3);
       const ang = Math.atan2(p.vy, p.vx) + Math.PI/2 + Math.sin(S.time*20 + p.spin) * 0.15;
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(ang); ctx.globalAlpha = life;
-      const g = ctx.createRadialGradient(0, s*0.2, 0, 0, s*0.2, s*1.5);
-      g.addColorStop(0, '#fff6c8'); g.addColorStop(0.35, '#ffca28'); g.addColorStop(0.7, '#ff5722'); g.addColorStop(1, 'rgba(200,20,0,0)');
-      ctx.fillStyle = g;
+      ctx.fillStyle = fireGrad(s);
       ctx.beginPath(); ctx.moveTo(0, -s*1.7); ctx.quadraticCurveTo(s, s*0.1, 0, s); ctx.quadraticCurveTo(-s, s*0.1, 0, -s*1.7); ctx.fill();
       ctx.restore();
     } else if (p.coin) { // 골드 동전 (테두리 + 반짝)
@@ -6251,6 +6255,22 @@ function drawMatMob(m, sz, c) {
       ctx.beginPath(); ctx.moveTo(sx, sy-2.5); ctx.lineTo(sx+0.9, sy); ctx.lineTo(sx, sy+2.5); ctx.lineTo(sx-0.9, sy); ctx.closePath(); ctx.fill();
     }
   }
+}
+// 🔥 불꽃 파티클 그라디언트 캐시 (⚡ 08-22): 파티클마다 매 프레임 createRadialGradient가 draw의 ⅓이었다 (153회/frame 실측).
+// 그라디언트는 s를 0.25px로 양자화해 재사용(램프가 부드러워 육안 차이 없음), 패스는 벡터 그대로 = 모양 100% 보존.
+// ⚠️ 스프라이트 베이크안은 기각 — 뾰족한 꼬리 끝이 다운스케일에서 갉아먹혀 커버리지 -13% (퀄리티 저하)였고, 이 머신 실측 이득도 0.
+const fireGradCache = new Map();
+function fireGrad(s) {
+  const q = Math.round(s * 4);
+  let g = fireGradCache.get(q);
+  if (!g) {
+    const sq = q / 4;
+    g = ctx.createRadialGradient(0, sq * 0.2, 0, 0, sq * 0.2, sq * 1.5);
+    g.addColorStop(0, '#fff6c8'); g.addColorStop(0.35, '#ffca28'); g.addColorStop(0.7, '#ff5722'); g.addColorStop(1, 'rgba(200,20,0,0)');
+    if (fireGradCache.size > 200) fireGradCache.clear(); // 폭주 방어 (실사용 키는 ~40개)
+    fireGradCache.set(q, g);
+  }
+  return g;
 }
 function drawMonster(m) {
   if (m.pullT > 0) { // 🃏 조커 시그니처: 낫에 걸린 몹을 조커 쪽으로 잇는 보라 사슬 (지그재그, shadowBlur 대신 2겹 스트로크로 광 표현)
@@ -8919,7 +8939,8 @@ let dpsMode = 0, dpsLastHtml = ''; // 0 = 상위 5 / 1 = 전체 / 2 = 닫힘
 function updateDpsRank() {
   const head = document.getElementById('dpsHead'), body = document.getElementById('dpsBody'), box = document.getElementById('dpsRank');
   if (!head) return;
-  head.textContent = dpsMode === 1 ? '▼ 전체 딜량' : dpsMode === 2 ? '▼' : '▼ 딜 순위';
+  const ht = dpsMode === 1 ? '▼ 전체 딜량' : dpsMode === 2 ? '▼' : '▼ 딜 순위';
+  if (head.textContent !== ht) head.textContent = ht; // 20Hz 무조건 재기록 방지 (아래 body의 dpsLastHtml 가드와 같은 관용구)
   box.classList.toggle('full', dpsMode === 1);
   body.style.display = dpsMode === 2 ? 'none' : '';
   if (dpsMode === 2) return;
@@ -9113,6 +9134,9 @@ function refreshInfoOnBuffChange() { // 콰르텟/고물상 버프가 붙거나 
     `|${Math.ceil(u.skillCd || 0)},${Math.ceil(u.skillT || 0)},${Math.ceil(u.chronoCd || 0)},${Math.ceil(u.slotCd || 0)},${Math.ceil(u.jokerCd || 0)},${Math.ceil(u.jokerT || 0)},${Math.ceil(S.freezeT || 0)}`).join(',');
   if (sig !== __buffSig) { __buffSig = sig; updateInfoPanel(); }
 }
+// ⚡ 값이 바뀔 때만 쓰는 상단바 헬퍼 (마지막 값은 엘리먼트에 캐시 — 08-22 렉 최적화)
+function hudSet(id, txt) { const el = document.getElementById(id); if (el && el.__hud !== txt) { el.__hud = txt; el.textContent = txt; } }
+function hudSetHtml(id, html) { const el = document.getElementById(id); if (el && el.__hud !== html) { el.__hud = html; el.innerHTML = html; } }
 function updateHUD() {
   syncPokerPanel(); // 포커 페이즈에만 패널이 올라와 있게 (모든 전환 경로를 한 곳에서 보장)
   refreshInfoOnBuffChange();
@@ -9132,34 +9156,36 @@ function updateHUD() {
       }
     } else if (f && S.hunt.done) showObjInfo('room');
   }
-  document.getElementById('tLife').textContent = S.life + (S.reviveArmed ? ' 🔄' : '');
-  document.getElementById('tGold').textContent = Math.floor(S.gold).toLocaleString() + 'G';
+  // ⚡ 08-22: textContent는 같은 문자열이라도 텍스트 노드를 교체해 레이아웃을 더럽힌다. 값이 바뀔 때만 쓰는 더티 가드로
+  // 쓰기 횟수를 줄여 다음 틱 syncPokerPanel offsetHeight의 리플로우 비용을 낮춘다 (호출당 0.97→0.39ms 실측).
+  // ⚠️ 완전 제거는 불가: 포커 페이즈의 pokerTimerFill width·전투의 몹 수 카운트는 매 틱 실제로 변한다.
+  hudSet('tLife', S.life + (S.reviveArmed ? ' 🔄' : ''));
+  hudSet('tGold', Math.floor(S.gold).toLocaleString() + 'G');
   // 📈 예치 총액 + 가장 가까운 만기 — 묶어둔 돈이 얼마고 언제 풀리는지가 안 보이면 잠금이 그냥 손실로만 느껴진다
-  const iv = document.getElementById('tInterest');
   if (S.invests.length) {
     const near = Math.min(...S.invests.map(v => v.matureRound)) - S.round;
-    iv.textContent = `📈 ${investTotal().toLocaleString()}G (${Math.max(0, near)}R)`;
-  } else iv.textContent = '📈 0';
+    hudSet('tInterest', `📈 ${investTotal().toLocaleString()}G (${Math.max(0, near)}R)`);
+  } else hudSet('tInterest', '📈 0');
   // ⏱ 개장 전자시계: 닫힘 = 다음 개장까지 m:ss / 개장 중 = 남은 초 (금색 펄스)
   const mk = document.getElementById('tMkt');
   if (S.mktOpen) {
-    mk.textContent = 'OPEN ' + Math.max(0, Math.ceil(S.mktClose - S.time)) + 's';
+    hudSet('tMkt', 'OPEN ' + Math.max(0, Math.ceil(S.mktClose - S.time)) + 's');
     mk.classList.add('open');
   } else {
     const s = Math.max(0, Math.ceil(S.mktNext - S.time));
-    mk.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    hudSet('tMkt', `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
     mk.classList.remove('open');
   }
-  document.getElementById('tMiner').textContent = S.units.filter(u => u.miner).length + '명';
-  document.getElementById('tChips').textContent = chipTxt(S.chips); // 결투 반 개 칩 표기 (½·1½…)
-  document.getElementById('tTickets').textContent = S.items.reroll; // 🎟️ 재변경권 보유 수 (08-14 유저)
+  hudSet('tMiner', S.units.filter(u => u.miner).length + '명');
+  hudSet('tChips', chipTxt(S.chips)); // 결투 반 개 칩 표기 (½·1½…)
+  hudSet('tTickets', '' + S.items.reroll); // 🎟️ 재변경권 보유 수 (08-14 유저)
   updateDpsRank(); // 📊 딜 순위 1~3위 (08-14 유저)
   // 좌측 카지노 스테이션: 칩 있으면 활성 + 빛남
   // 칩이 없어도 비상 물자(골드)는 살 수 있으므로 카지노는 항상 열린다. 정수 칩이 있을 때만 발광
   document.querySelectorAll('.chipStation').forEach(b => { b.disabled = false; b.classList.toggle('ready', S.chips >= 1); });
-  document.getElementById('tRound').textContent = S.round;
+  hudSet('tRound', '' + S.round);
 
-  document.getElementById('tStage').textContent = stageInfo(S.round).name + (DIFF_NAME === '보통' ? '' : ` · ${DIFF_NAME === '지옥' ? '💀' : ''}${DIFF_NAME}`); // 재질명 옆에 난이도 상시 표시
+  hudSet('tStage', stageInfo(S.round).name + (DIFF_NAME === '보통' ? '' : ` · ${DIFF_NAME === '지옥' ? '💀' : ''}${DIFF_NAME}`)); // 재질명 옆에 난이도 상시 표시
   // 원형 시계: 시간이 흐를수록 빨강(전투)/보라(포커)가 시계방향으로 채워진다
   refreshInfoPanelLive(); // 킬 수·스킬 쿨 실시간
   const clock = document.getElementById('clock');
@@ -9167,11 +9193,11 @@ function updateHUD() {
   if (S.phase === 'wave') {
     frac = 1 - S.timer / WAVE_TIME; col = '#e53935';
     const tb = speedBonus(); // ⏱️ 실시간 예고: 눈앞에서 줄어드는 보상 — 빨리 잡을수록 이득임이 와닿게
-    document.getElementById('tPhase').innerHTML = '⚔️ 전투 (몹 ' + S.monsters.length + ')' +
-      (tb > 0 ? ' · <span style="color:#c9a227" title="지금 전멸시키면 받는 스피드 보너스">⏱️+' + tb + 'G</span>' : '');
+    hudSetHtml('tPhase', '⚔️ 전투 (몹 ' + S.monsters.length + ')' +
+      (tb > 0 ? ' · <span style="color:#c9a227" title="지금 전멸시키면 받는 스피드 보너스">⏱️+' + tb + 'G</span>' : ''));
   } else if (S.phase === 'poker') {
     frac = 1 - S.pokerTimer / POKER_TIME; col = '#8c5bff';
-    document.getElementById('tPhase').textContent = '🃏 포커 페이즈';
+    hudSetHtml('tPhase', '🃏 포커 페이즈'); // 두 분기가 __hud 키를 공유해도 문자열이 절대 안 겹쳐 안전
     document.getElementById('pokerTimerFill').style.width = (S.pokerTimer / POKER_TIME * 100) + '%';
   }
   const deg = Math.max(0, Math.min(1, frac)) * 360;
