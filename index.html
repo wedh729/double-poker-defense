@@ -697,6 +697,7 @@
       <button class="shopIcon" id="bMusic" title="배경음악 켜기/끄기">🎵</button>
       <button class="shopIcon" id="bSfx" title="타격음 켜기/끄기">🔊</button>
       <button class="shopIcon" id="bSpeed" title="배속">⏩</button>
+      <button class="shopIcon" id="bLowSpec" title="저사양 모드 — 렌더 해상도를 절반으로 (끊길 때)">🔋</button>
       <button class="shopIcon" id="btnFull" title="전체화면">⛶</button>
       <button class="shopIcon restartBtn" id="btnRestart" title="처음부터 다시">🔄<span class="rbTxt"> 다시하기</span></button>
     </div>
@@ -961,12 +962,14 @@ let ctx = cv.getContext('2d'); // 스프라이트 캐시 빌드 시 임시 스�
 //    베이크(배경·건물·몬스터)도 RS배로 구워 디바이스 픽셀 1:1 — 유닛 코어는 원래 2x 베이크라 RS=2에서 자동 1:1.
 //    상한 2 = 유닛 베이크(2x)·풀맵 원본(1880×1000)과 일치하는 스위트 스폿 (그 이상은 스프라이트가 도로 확대됨).
 const VW = 940, VH = 500;
-let RS = Math.round(Math.min(2, Math.max(1, window.devicePixelRatio || 1)) * 4) / 4; // 부팅: 레이아웃 전이라 CSS 확대율은 모름 → DPR만(¼ 양자화). 이후 rsMaybe가 보정
+// 🔋 저사양 모드 (08-22 유저): RS 상한 2→1 — 백킹스토어 픽셀 ¼(필레이트 4배 절감). 약한 GPU에서 가장 큰 레버. 툴바 🔋 토글, localStorage 영속
+let LOW_SPEC = false; try { LOW_SPEC = localStorage.getItem('dpd_lowspec') === '1'; } catch (e) {}
+let RS = Math.round(Math.min(LOW_SPEC ? 1 : 2, Math.max(1, window.devicePixelRatio || 1)) * 4) / 4; // 부팅: 레이아웃 전이라 CSS 확대율은 모름 → DPR만(¼ 양자화). 이후 rsMaybe가 보정
 function rsTarget() {
   const dpr = window.devicePixelRatio || 1;
   const r = cv.getBoundingClientRect();
   if (r.width < 50) return RS; // 캔버스 미표시(모바일 포커 탭 display:none 등) = 배율 미상 → 현행 유지 (탭 전환마다 RS가 널뛰며 캐시 스래시하는 것 방지)
-  return Math.round(Math.min(2, Math.max(1, dpr * (r.width / VW))) * 4) / 4; // ¼ 양자화 — 드래그 리사이즈마다 전체 리베이크 방지
+  return Math.round(Math.min(LOW_SPEC ? 1 : 2, Math.max(1, dpr * (r.width / VW))) * 4) / 4; // ¼ 양자화 — 드래그 리사이즈마다 전체 리베이크 방지
 }
 function rsSetCanvas() {
   cv.width = Math.round(VW * RS); cv.height = Math.round(VH * RS); // width 대입 = 컨텍스트 상태 리셋 → transform 재설정 필수
@@ -9383,6 +9386,15 @@ document.getElementById('bSfx').onclick = () => {
 };
 document.getElementById('bMusic').classList.toggle('off', !musicOn);
 document.getElementById('bSfx').textContent = sfxOn ? '🔊' : '🔇';
+// 🔋 저사양 모드 토글 — rsMaybe()가 즉시 리베이크 (게임 도중에도 안전, 다음 프레임부터 새 해상도)
+document.getElementById('bLowSpec').onclick = () => {
+  LOW_SPEC = !LOW_SPEC;
+  try { localStorage.setItem('dpd_lowspec', LOW_SPEC ? '1' : '0'); } catch (e) {}
+  document.getElementById('bLowSpec').textContent = LOW_SPEC ? '🪫' : '🔋';
+  rsMaybe();
+  logMsg(LOW_SPEC ? '🪫 저사양 모드 ON — 렌더 해상도 절반 (다시 누르면 복원)' : '🔋 저사양 모드 OFF — 고해상도 복원');
+};
+document.getElementById('bLowSpec').textContent = LOW_SPEC ? '🪫' : '🔋';
 ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, function once() { initAudio(); window.removeEventListener(ev, once); }));
 
 // ==================== 메인 루프 ====================
