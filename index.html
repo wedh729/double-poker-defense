@@ -731,6 +731,7 @@
       <button class="diffBtn" data-mul="2" style="background:#b71c1c">💀 지옥</button>
     </div>
     <div style="font-size:12px;color:#8f86b8">몬스터 체력 배수: 쉬움 ×0.7 · 보통 ×1.0 · 어려움 ×1.4 · 지옥 ×2.0</div>
+    <div id="diffBestRow" style="font-size:11.5px;color:#cfc6f5"></div>
     <button id="btnDaily" class="diffBtn" style="background:#4a3d8f;font-size:14px">📅 오늘의 시드 <span id="dailyBest" style="font-size:11px;color:#cfc6f5"></span></button>
     <div style="font-size:11px;color:#8f86b8">매일 모두에게 같은 카드가 옵니다 — 오늘의 덱으로 최고 기록에 도전! (보통 난이도)</div>
   </div>
@@ -762,7 +763,7 @@
 </div>
 <div id="winOverlay" style="position:fixed;inset:0;background:rgba(20,20,30,0.88);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:10;color:#fff">
   <h2 style="font-size:36px;color:#ffd166">🎉 80라운드 클리어! 🎉</h2>
-  <p style="font-size:17px">전설의 1%가 되신 것을 축하합니다.<br>하지만... 하늘의 태양이, 점점 다가오고 있습니다.</p>
+  <p style="font-size:17px"><span id="winMsg">80라운드 클리어를 축하합니다.</span><br>하지만... 하늘의 태양이, 점점 다가오고 있습니다.</p>
   <button style="font-size:17px;padding:12px 34px;border-radius:10px;border:none;background:#c0392b;color:#fff;cursor:pointer"
     onclick="S.paused=false;document.getElementById('winOverlay').style.display='none'">🔥 헬모드 진입</button>
 </div>
@@ -1149,6 +1150,7 @@ function reset() {
     poker: null, portalA: 0,
     speed: 1, time: 0, paused: false,
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0, slowT: 0, graves: [], // 🪦 결투 전사자 비석 (판 내 영구 누적)
+    lifeLog: [], maxCombo: 0, bestHand: 0, aceN: 0, superAceN: 0, castleOpened: castleSeen(), // 📋 09-08: 게임오버 정산용(목숨 타임라인·최고 콤보·최고 족보·에이스 수) / 🏰 성 강화창 안내 라벨 — 브라우저당 1회(dpd_castle_seen)
     crownTier: -1, crownDropped: false, // 👑 왕관: 선택한 족보 tier (-1 = 미선택) / 석탄 보상 왕관 지급 여부 (잭팟 2배 중복 방지)
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
     stimT: 0, acidPools: [],  // 💉 스팀팩 남은시간 / 🧪 염산 장판
@@ -1171,7 +1173,7 @@ function reset() {
   document.getElementById('winOverlay').style.display = 'none';
   document.getElementById('hellOverlay').style.display = 'none';
   document.getElementById('log').innerHTML = '';
-  logMsg('게임 시작! 드래그로 부대지정, 우클릭 이동, A키+클릭으로 공격 지정!');
+  logMsg(IS_MOBILE ? '게임 시작! 탭으로 선택·이동, 길게 누르면 공격 지정! 🏰 성을 눌러 강화하세요' : '게임 시작! 드래그로 부대지정, 우클릭 이동, A키+클릭 공격 지정! 🏰 성을 클릭해 강화하세요');
   startPoker();
 }
 function mineHP(layer) { return Math.floor(2500 * Math.pow(1.3, layer - 1)); } // 겹 성장 1.4→1.3: 광부가 귀해진 만큼 겹이 좀 더 빨리 깊어지게 (복리 체감)
@@ -1216,7 +1218,9 @@ function splitComp(n) { return 1 + 0.45 * Math.max(0, Math.min(1, (n - 39) / 16)
 // 몬스터 수: 렉 저감을 위해 절반 (최대 200) — 대신 개체 HP ×1.6 + 킬 골드 ×2로 보정
 function mobCount(n) {
   const base = Math.min(100, 22 + n * 3);
-  return n >= 10 ? base * 2 : base;
+  // R10 ×2를 3라운드 램프(×1.4/1.7/2.0)로 분산 — 09-08 디렉터 리뷰: R9→R10 웨이브HP ×2.43이 전 구간 최대 점프(첫 보스·즉사 룰과 겹쳐 신규 이탈점). R12 이후 동일 = R80 목표 무영향
+  const mul = n >= 12 ? 2 : n === 11 ? 1.7 : n === 10 ? 1.4 : 1;
+  return Math.floor(base * mul);
 }
 
 // ==================== 포커 ====================
@@ -1454,6 +1458,7 @@ function confirmHand() {
     const back = isBackStraight(hand.cards); // A-2-3-4-5 (같은 무늬면 rank 8) — bs는 전용 배수용(rank 4 한정), bsAny는 A보너스용
     return { rank, race: RACE_OF_RANK[rank], keyRank: handKeyRank(hand.cards, rank), bs: rank === 4 && back, bsAny: back, mtn: isMountain(hand.cards) };
   });
+  for (const r of res) if (r.rank > S.bestHand) S.bestHand = r.rank; // 📋 정산: 이번 판 최고 족보
   // 에이스 잭팟은 원페어부터 (페어 없는 하이카드 일치는 너무 쉬움)
   if (res.length === 2 && res[0].rank === res[1].rank && res[0].rank > 0) {
     // 두 족보 일치(하이카드 제외) → 에이스. 핵심 숫자까지 일치(5원페어+5원페어) → 슈퍼에이스(기본 2배)!
@@ -1463,10 +1468,14 @@ function confirmHand() {
       logMsg(`🌈💥 더블 잭팟!! ${rankLabel(res[0].keyRank)} ${HAND_NAMES[res[0].rank]} 완전 일치! ♠♠ 슈퍼에이스 강림!! 💥🌈`);
       addFloat(CX, CY - 120, '★★ ♠♠ 슈퍼에이스!! ★★', '#ff2d95', 3);
       sfx('jackpot'); sfx('hero');
+      S.superAceN++; S.slowT = 1.5; // 09-08: 게임의 1번 도파민인데 광산 발굴(슬로모 2초)보다 연출이 약했다 (골드 섬광은 🎰 배너 = 카지노 언어라 제외)
+      rewardToast('♠♠', `슈퍼에이스 ${HAND_NAMES[res[0].rank]}!!`, '#ff2d95', '더 블 잭 팟');
     } else {
       logMsg(`💥💥 잭팟! ${HAND_NAMES[res[0].rank]} 더블! ♠ 에이스 유닛 소환 (공격력 ×${ACE_MUL[res[0].rank] || 1.5})!! 💥💥`);
       addFloat(CX, CY - 120, '★ ♠ 에이스! ★', '#e91e8c', 2.5);
       sfx('jackpot');
+      S.aceN++; S.slowT = 0.8;
+      rewardToast('♠', `에이스 ${HAND_NAMES[res[0].rank]}!`, '#e91e8c', '잭 팟');
     }
   } else {
     res.forEach(r => {
@@ -1758,7 +1767,7 @@ function useVBombItem() {
   if (S.phase === 'wave' && S.monsters.some(m => !m.entering)) emergencyBomb();
   else { S.pendBomb++; logMsg('💣 긴급 폭격 — 몬스터가 나타나는 즉시 떨어집니다.'); }
 }
-function usePrayItem() { S.life += 3; addFloat(HOUSE.x, HOUSE.y - 40, '❤️ +3', '#e53935', 2); sfx('reward'); logMsg('❤️ 생명의 기도 — 목숨 +3!'); }
+function usePrayItem() { S.life += 3; S.lifeLog.push({ r: S.round, d: -3, why: '❤️ 기도' }); addFloat(HOUSE.x, HOUSE.y - 40, '❤️ +3', '#e53935', 2); sfx('reward'); logMsg('❤️ 생명의 기도 — 목숨 +3!'); }
 function useStimpack() { S.stimT = 20; addFloat(CX, CY, '💉 스팀팩! 전군 공속 2배 20초!', '#43a047', 2); sfx('hero'); logMsg('💉 스팀팩 — 20초간 전 아군 공속 2배!'); }
 function useBombard() { // 소환장 전체 즉발 광역
   S.effects.push({ type:'boom', x: PEN.x, y: PEN.y, r: 150, t: 0.6 });
@@ -1788,9 +1797,9 @@ function startWave() {
     sun.entering = true; sun.fallT = 0; sun.born = 1; sun.baseR = 6;
     sun.x = CX; sun.y = 82; // 하늘에 떠 있던 바로 그 자리에서 이어져 내려온다
     renderPoker();
-    logMsg('🌞🌞 하늘이 무너진다... 아포칼립스 태양 강림!! 🌞🌞');
+    if (IS_MOBILE) setMobTab('battle'); // 📱 티커(logMsg ticker)는 전투 탭일 때만 뜨므로 로그보다 먼저 전환 (크로스체크 P1)
+    logMsg('🌞🌞 하늘이 무너진다... 아포칼립스 태양 강림!! 🌞🌞', true);
     sfx('boss');
-    if (IS_MOBILE) setMobTab('battle');
     return;
   }
   const em = S.eventMods || {};
@@ -1805,16 +1814,16 @@ function startWave() {
     else logMsg('🏛️ 도전자: "시간 다 됐다. 다음에 보자." (퇴장)');
     S.duel = null; S.champion = null; S.duelEnded = true;
   }
+  if (IS_MOBILE) setMobTab('battle'); // 📱 티커(logMsg ticker)는 전투 탭일 때만 뜨므로 아래 결투·웨이브 로그보다 먼저 전환 (크로스체크 P1 — 끝에 두면 두 알림이 한 번도 안 떴다)
   if (duelRound(S.round)) { // 🏛️ 결투장 도전자 (보스 주·태양 강림과 겹치면 휴장 — 예고·결투창과 같은 판정 공유)
     const dhp = duelHP(S.round);
     S.duel = { x: ARENA.x, y: ARENA.y - 2, hp: dhp, max: dhp, mat: matInfo(S.round).idx, phase: Math.random() * 6.28, hitT: 0, tauntT: 0, nextTaunt: 0, taunt: '', champ: null, fleeT: 0 };
-    logMsg('🏛️ 결투장에 도전자가 나타났다! "한 놈만 와라."');
+    logMsg('🏛️ 결투장에 도전자가 나타났다! "한 놈만 와라."', true);
     if (S.duelCall) { S.duelCall = false; showDuelToast(); } // 모바일 이월분 (데스크톱은 포커 때 이미 봤다)
   }
   renderPoker();
   const info = stageInfo(S.round);
-  logMsg(`🌊 스테이지 ${S.round} [${info.name}] — ${count}마리 (HP ${hp})${boss ? ' + 👹 보스!' : ''}${S.event ? ' · ' + S.event.name : ''}`);
-  if (IS_MOBILE) setMobTab('battle');
+  logMsg(`🌊 스테이지 ${S.round} [${info.name}] — ${count}마리 (HP ${hp})${boss ? ' + 👹 보스!' : ''}${S.event ? ' · ' + S.event.name : ''}`, true);
 }
 function spawnMonster(hp, isBoss, opt) {
   opt = opt || {};
@@ -1870,12 +1879,14 @@ function endWave() {
   const leak = S.monsters.length;
   if (bossAlive) {
     // 보스를 시간 내에 못 잡으면 즉시 사망
+    S.lifeLog.push({ r: S.round, d: S.life, why: '👹 보스 실패' });
     S.life = 0;
     logMsg('👹 보스 처치 실패 — 즉시 사망!!');
     addFloat(CX, CY, '보스 실패! 즉시 사망', '#e53935', 2.5);
     sfx('leak');
   } else if (leak > 0) {
     S.life -= leak;
+    S.lifeLog.push({ r: S.round, d: leak, why: '⏰ 시간 초과' });
     logMsg(`⏰ 시간 초과! 남은 몬스터 ${leak} → 목숨 -${leak}`);
     addFloat(CX, CY, `목숨 -${leak}`, '#e53935', 2);
     sfx('leak');
@@ -1902,6 +1913,7 @@ function endWave() {
   S.projs = [];
   if (S.life <= 0) {
     if (S.reviveArmed) { // 🔄 부활권 봉인: 사망 대신 소모하고 부활
+      S.lifeLog.push({ r: S.round, d: -(10 - S.life), why: '🔄 부활' }); // 실제 증감 (누수로 음수까지 떨어졌다 10이 되면 +12 등)
       S.reviveArmed = false; S.life = 10;
       logMsg('🔄✨ 부활권 발동! 목숨 10으로 부활!'); addFloat(CX, CY, '🔄 부활!!', '#43a047', 2.5); sfx('hero');
       markAchv('revive');
@@ -1916,10 +1928,14 @@ function endWave() {
       const statsHTML = (top.length ? `<div style="margin-top:12px;text-align:left;font-size:12px"><b style="color:#ffd166">🏆 이번 판 MVP: ${top[0][0]}</b>` +
         top.map(([nm, st]) => `<div style="margin-top:5px">${nm} — 딜 ${fmt(st.dmg)} · 킬 ${st.kills}<div style="height:6px;background:#2a2340;border-radius:3px;margin-top:2px"><div style="height:100%;border-radius:3px;width:${Math.max(3, 100*st.dmg/maxD).toFixed(0)}%;background:linear-gradient(90deg,#8c5bff,#ff6b9d)"></div></div></div>`).join('') + '</div>' : '') +
         (S.minerGold ? `<div style="margin-top:8px;text-align:left;font-size:12px;color:#e6c36a">⛏️ 광부 총 수입: <b>${fmt(S.minerGold)}G</b> (${S.units.filter(u => u.miner).length}명 · 광산 ${S.mineLayer - 1}겹 파괴)</div>` : '');
+      // 📋 09-08 디렉터 리뷰: '왜 졌는지'가 없었다 — 목숨 타임라인(최근 6건) + 이번 판의 순간들(최고 콤보·족보·에이스·왕관)
+      const lifeHTML = S.lifeLog.length ? `<div style="margin-top:8px;text-align:left;font-size:12px;color:#ef9a9a">❤️ 목숨: ${S.lifeLog.slice(-6).map(e => `R${e.r} ${e.d > 0 ? '−' + e.d : '+' + (-e.d)} ${e.why}`).join(' · ')}</div>` : '';
+      const runHTML = `<div style="margin-top:6px;text-align:left;font-size:12px;color:#cfc6f5">🔥 최고 콤보 <b>${S.maxCombo}</b> · 🃏 최고 족보 <b>${HAND_NAMES[S.bestHand]}</b>${S.aceN ? ` · ♠ 에이스 ${S.aceN}` : ''}${S.superAceN ? ` · ♠♠ 슈퍼에이스 ${S.superAceN}` : ''}${S.crownTier > 0 ? ` · 👑 ${HAND_NAMES[S.crownTier]}` : ''}</div>`;
       document.getElementById('finalScore').innerHTML =
-        `도달 스테이지: <b>${S.round}</b> (${stageInfo(S.round).name})<br>` +
+        `도달 스테이지: <b>${S.round}</b> (${stageInfo(S.round).name}) · ${DIFF_NAME}<br>` +
         `🏆 최고 기록: <b>${best}</b> 스테이지` + (isNew ? ' <span style="color:#ffd166">★ 신기록! ★</span>' : '') +
-        statsHTML;
+        runHTML + lifeHTML + statsHTML;
+      diffBestLabel();
       document.getElementById('overlay').style.display = 'flex';
       return;
     }
@@ -1929,14 +1945,18 @@ function endWave() {
   }
   if (S.round === FINAL_ROUND) {
     S.paused = true;
+    document.getElementById('winMsg').textContent = DIFF_MUL >= 2 ? '💀 지옥에서 80라운드 — 2%의 문을 열었습니다.' : DIFF_MUL >= 1.4 ? '🔥 어려움 80라운드 — 5%의 문을 열었습니다.' : '80라운드 클리어를 축하합니다.'; // 난이도별 문구 (09-08)
     document.getElementById('winOverlay').style.display = 'flex';
     logMsg('🎉🎉 80라운드 클리어!! 이제부터는 헬모드... 🎉🎉');
+    if (DIFF_MUL >= 2) markAchv('hell80'); else if (DIFF_MUL >= 1.4) markAchv('hard80'); // 공식 목표 달성 = R80 '클리어' 시점 (r80 '도달'과 구분)
   }
   S.round++;
   S.duelEnded = false; // 🏛️ 새 라운드 — 다음 결투 창을 위해 리셋
   settleInvests(); // 📈 만기 도래한 예치금 지급 (라운드가 올라간 직후 = "N라운드 뒤")
   if (S.round >= 40) markAchv('r40');
   if (S.round >= 80) markAchv('r80');
+  if (S.round >= 120) markAchv('r120');
+  if (S.round >= 150) markAchv('r150');
   // 광석방 정원 증가 알림 (10라운드마다)
   if (S.round % 10 === 0) {
     logMsg(`💎⛏️ 광석방 채굴 정원이 늘었습니다! 이제 동시에 ${oreCap()}명까지 캘 수 있습니다.`);
@@ -2610,7 +2630,7 @@ function update(dt) {
       q.bossLeft = 0;
       // 보스 계수: 기본 9.4 / R40+는 mobHP ×1.45(분열 제거 보정)를 상쇄해 6.5 / R80+ 분열 보스는 본체 2.8 (조각 5×30% 포함 실효 ≈ 기존 수준)
       spawnMonster(q.hp * (S.round >= FINAL_ROUND ? 2.8 : 9.4 / splitComp(S.round)), true); // 보스는 분열 제거 보정 대상이 아니므로 splitComp를 나눠 상쇄
-      logMsg('👹 보스 등장!');
+      logMsg('👹 보스 등장!', true);
       sfx('boss');
     }
   }
@@ -2877,7 +2897,7 @@ function update(dt) {
       if (!m.boss && markMon(m.mat)) addFloat(m.x, m.y - 30, '📚 도감 등록!', '#7ec8ff', 1.5);
       deathPop(m);
       // 연쇄킬 콤보: 1.5초 내 연속 킬 → 카운트 + 사운드 피치 상승 + 소량 보너스 골드
-      S.combo.t = 1.5; S.combo.n++; S.combo.pop = 0.18;
+      S.combo.t = 1.5; S.combo.n++; S.combo.pop = 0.18; if (S.combo.n > S.maxCombo) S.maxCombo = S.combo.n;
       if (S.combo.n >= 30 && !S.feverUsed) {
         S.feverUsed = true; S.feverT = 10; sfx('jackpot');
         addFloat(CX, CY - 100, '🔥 FEVER TIME! 골드 2배! 🔥', '#ff6b9d', 2.5);
@@ -3259,7 +3279,7 @@ function mineReward() {
   const inc = Math.ceil(22 * Math.pow(1.4, S.mineLayer - 1)); // 14→22 상향: 단독 성장축이 된 만큼 겹 하나의 보상을 굵게
   S.mineBonus += inc;
   S.mineLayer++;
-  logMsg(`⛰️💥 광산 ${S.mineLayer - 1}겹 파괴! 채굴량 +${inc} — 이제 배달마다 골드 +${S.mineBonus}`);
+  logMsg(`⛰️💥 광산 ${S.mineLayer - 1}겹 파괴! 채굴량 +${inc} — 이제 배달마다 골드 +${S.mineBonus}`, true);
   addFloat(MINE_POS.x, MINE_POS.y - 34, `채굴량 +${inc}! (배달 ${MINER_LOAD + S.mineBonus}G)`, '#b8860b', 2.2);
   sfx('reward');
   S.mineMax = S.mineHp = mineHP(S.mineLayer);
@@ -3269,12 +3289,21 @@ function addFloat(x, y, text, color, dur) {
   S.floats.push({x, y, text, color, t: dur});
 }
 // 로컬 명예의 전당: 최고 도달 스테이지를 브라우저에 저장
+// 09-08: 난이도별 분리 (구 dpd_best는 쉬움 R60이 어려움 R45를 덮었고 오늘의 시드 판까지 섞였다). 구 키는 보통 기록으로 1회 이관
+function readBest(key) { try { return parseInt(localStorage.getItem(key) || '0') || 0; } catch (e) { return 0; } }
 function recordBest(stage) {
-  if (S && S.sandbox) { try { return parseInt(localStorage.getItem('dpd_best') || '0') || 0; } catch (e) { return 0; } }
-  let best = 0;
-  try { best = parseInt(localStorage.getItem('dpd_best') || '0') || 0; } catch (e) {}
-  if (stage > best) { best = stage; try { localStorage.setItem('dpd_best', String(best)); } catch (e) {} }
+  if (dailySeed != null) { try { const d = JSON.parse(localStorage.getItem('dpd_daily') || 'null'); return (d && d.seed === dailySeed) ? Math.max(d.best, stage) : stage; } catch (e) { return stage; } } // 📅 오늘의 시드 = dpd_daily가 기록 원천 (recordDaily 선행) — 별도 키 없음
+  const key = 'dpd_best_' + DIFF_MUL;
+  let best = readBest(key);
+  if (!best && key === 'dpd_best_1') best = readBest('dpd_best'); // 구 단일 키 → 보통
+  if (S && S.sandbox) return best; // 🧪 샌드박스는 표시만, 기록 안 함
+  if (stage > best) { best = stage; try { localStorage.setItem(key, String(best)); } catch (e) {} }
   return best;
+}
+function diffBestLabel() { // 시작 화면 난이도 버튼 아래 최고 기록 한 줄
+  const el = document.getElementById('diffBestRow'); if (!el) return;
+  const parts = [[0.7, '🌱'], [1, '⚔️'], [1.4, '🔥'], [2, '💀']].map(([m, ic]) => { const b = readBest('dpd_best_' + m) || (m === 1 ? readBest('dpd_best') : 0); return `${ic} ${b ? 'R' + b : '—'}`; });
+  el.textContent = '🏆 최고: ' + parts.join(' · ');
 }
 // 📖 히든 도감 발견 기록: 라운드 재시작해도 유지 (reset()이 건드리지 않음)
 function hintSeen(id) { // 🐦 새를 잡아 들은 소문만 도감에 남는다
@@ -3837,7 +3866,8 @@ function muzzle(u) {
   const n = (d.dx && d.dy) ? 0.7071 : 1; // 대각선은 거리 정규화
   return { x: u.x + d.dx * len * n, y: (u.y - 3) + d.dy * len * n };
 }
-function logMsg(msg) {
+function logMsg(msg, ticker) { // ticker = 📱 모바일 전투 탭에서 #log가 숨겨지므로(CSS) 중요 메시지만 상단 토스트로도 (09-08)
+  if (ticker && IS_MOBILE && document.body.dataset.tab === 'battle') showMktToast(msg, '');
   const el = document.getElementById('log');
   const wasFull = el.children.length >= 4; // 4줄 도달 후엔 높이 불변
   el.innerHTML = `<div>${msg}</div>` + el.innerHTML;
@@ -5073,6 +5103,7 @@ function draw() {
   });
   drawMinerRoad(); // 광부 갓길 (건물들보다 아래 레이어)
   drawCastle();
+  if (!S.castleOpened) { ctx.textAlign = 'center'; drawLabel('🏰 성 — 클릭해 강화', HOUSE.x, HOUSE.y - 96, 11); ctx.textAlign = 'left'; } // 09-08: 강화창 진입 경로가 어디에도 안내되지 않았다 (R1은 업글 1회로 갈리는 설계). 브라우저 1회 안내(dpd_castle_seen)
   drawMine();
   drawOreRoom();
   drawBarrack();
@@ -5470,7 +5501,7 @@ function draw() {
   ctx.textAlign = 'center';
   for (const f of S.floats) {
     ctx.fillStyle = f.color; ctx.globalAlpha = Math.min(1, f.t);
-    ctx.font = 'bold 13px sans-serif';
+    ctx.font = `bold ${IS_MOBILE ? 17 : 13}px sans-serif`; // 📱 모바일 가로 캔버스 배율 0.68~0.78 보정 (09-08)
     ctx.fillText(f.text, f.x, f.y);
   }
   ctx.globalAlpha = 1; ctx.textAlign = 'left';
@@ -5480,7 +5511,7 @@ function draw() {
     ctx.save();
     ctx.translate(CX, 88); ctx.scale(sc, sc);
     ctx.globalAlpha = Math.min(1, S.combo.t * 2.5);
-    ctx.font = 'bold 19px sans-serif'; ctx.textAlign = 'center';
+    ctx.font = `bold ${IS_MOBILE ? 25 : 19}px sans-serif`; ctx.textAlign = 'center';
     ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(70,40,0,0.6)';
     ctx.strokeText(`×${S.combo.n} COMBO!`, 0, 0);
     ctx.fillStyle = S.combo.n >= 20 ? '#ff2d95' : S.combo.n >= 10 ? '#ff9100' : '#ffd54f';
@@ -7666,7 +7697,7 @@ const OBJ_INFO = {
     tip: '💡 <b>새총(하이카드)</b>은 정원과 무관하게 들어가 캘 수 있는 프리패스. 잡패도 쓸모가 있는 법.' },
   mine: { t: '⛰️ 광산', d: '오늘도 곡괭이질, 한 겹만 더 파면 우리 집 마련!',
     tip: '⛏️ 사장님, 보너스는 언제 나옵니까?' },
-  pen: { t: '👹 소환장', d: '몬스터는 이 울타리 밖으로 나오지 못합니다.<br>시간 내에 못 잡으면 남은 수만큼 목숨이 깎여요.',
+  pen: { t: '👹 소환장', d: '몬스터는 이 울타리 밖으로 나오지 못합니다.<br>시간 내에 못 잡으면 남은 수만큼 목숨이 깎여요. 보스는 예외 — 못 잡으면 끝.',
     tip: '💡 풀하우스(단검)의 🗡️암살 스킬만이 유일하게 소환장 안으로 들어갈 수 있습니다.' },
   altar: { t: '🪨 제물대', d: '유닛을 이 위로 이동시키면 <b>제물</b>로 바쳐집니다.',
     tip: '🪨 오래된 돌 위에 무언가를 충분히 쌓으면… 깨어난다고들 한다.' },
@@ -7884,6 +7915,9 @@ cv.addEventListener('touchend', e => {
   const p = touchPos(e);
   if (hitDuelFleeBtn(p.x, p.y)) { duelFlee(); drag = null; return; } // 🏃 도망 버튼 — 유닛 선택보다 먼저
   if (tryCatchBird(p.x, p.y)) { drag = null; lastTapTime = 0; lastTapPos = null; return; } // 🐦 새 잡기 우선(유닛 이동보다 먼저)
+  // 📱 공격 지정 모드: 다음 탭 = 공격 (몹·광산·땅은 issueAttack이 분기, 선택이 없으면 issueAttack이 무시하고 모드만 해제 — 데스크톱 pressEnd와 같은 자가 해제).
+  //    더블탭 판정보다 앞: 모드 중 같은 자리 연속 탭이 selectSameType으로 새지 않게 (크로스체크 P1)
+  if (attackMode) { issueAttack(p.x, p.y); setAttackMode(false); drag = null; lastTapTime = 0; lastTapPos = null; updateInfoPanel(); return; }
   const now = performance.now();
   const isDouble = lastTapPos && (now - lastTapTime) < 350 && Math.hypot(p.x - lastTapPos.x, p.y - lastTapPos.y) < 40;
   if (isDouble) {
@@ -7945,13 +7979,13 @@ function updateInfoPanel() {
     const st6 = skillAllLabel(skUnits);
     const skHTML = skUnits.length === 0 ? '' :
       `<br><button id="skillAllBtn" class="shopBtn" ${st6.allReady ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:${st6.allReady ? '#c0392b' : '#999'};font-weight:bold">${st6.label}</button>`;
-    el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>우클릭 이동 · A키+클릭 공격 지정` +
-      (sel.some(u => !u.miner) ? priorityRow(commonPri) : '') +
+    el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>${IS_MOBILE ? '탭 이동 · 길게 누르면 공격 지정' : '우클릭 이동 · A키+클릭 공격 지정'}` +
+      (sel.some(u => !u.miner) ? priorityRow(commonPri) + mobileCmdHTML() : '') +
       skHTML +
       (canFuse ? `<br><span style="color:#8c5bff;font-weight:bold">🌀 같은 유닛 5기! 좌측 포털로 이동시키면 강화!</span>` : '') +
       deselBtnHTML();
     wirePriorityButtons(el);
-    wireDesel(el);
+    wireDesel(el); wireMobileCmd(el);
     const gb = el.querySelector('#skillAllBtn');
     if (gb) gb.onclick = () => { // 클릭 시점의 선택을 재계산 (렌더 시점 캡처가 낡는 것 방지 — Opus)
       S.units.filter(u => u.selected && u.tier === 6 && !u.clone && !u.miner).forEach(u => activateSkill(u));
@@ -8029,15 +8063,25 @@ function updateInfoPanel() {
     (u.slot ? slotRow(u) : '') +
     (isHiddenCombo(u) && !u.clone ? `<br><span style="font-size:10.5px;color:#9a8a60">⭐ 단련·🩸 승급은 🏰 성에서</span>` : '') +
     ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier}) <span style="color:${u.super?'#c62828':u.hero?'#e57373':'#66bb6a'};font-size:11px">성공률 ${Math.round(copyRate(u)*100)}%</span></button>` : '') +
-    deselBtnHTML();
+    (u.miner ? '' : mobileCmdHTML()) + deselBtnHTML();
   wirePriorityButtons(el);
-  wireDesel(el);
+  wireDesel(el); wireMobileCmd(el);
   placeInfoPanel();
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
   if (el.querySelector('#chronoBtn')) el.querySelector('#chronoBtn').onclick = () => { activateChrono(u); updateInfoPanel(); };
   if (el.querySelector('#slotBtn')) el.querySelector('#slotBtn').onclick = () => { activateSlot(u); updateInfoPanel(); };
   if (el.querySelector('#jokerBtn')) el.querySelector('#jokerBtn').onclick = () => { activateJoker(u); updateInfoPanel(); };
   if (el.querySelector('#copyBtn')) el.querySelector('#copyBtn').onclick = () => copyUnit(u);
+}
+// 📱 모바일 명령 버튼 (09-08): 공격 지정은 안내 없는 롱프레스뿐이었고 홀드는 터치로 불가능했다
+function mobileCmdHTML() { return IS_MOBILE ? `<br><button id="mAtkBtn" class="shopBtn" style="margin-top:6px">⚔️ 공격 지정</button> <button id="mHoldBtn" class="shopBtn" style="margin-top:6px">🛡️ 홀드</button>` : ''; }
+function wireMobileCmd(el) {
+  const a = el.querySelector('#mAtkBtn'), h = el.querySelector('#mHoldBtn');
+  if (a) { // 토글 + 상태 표시 (모드 중엔 버튼이 '취소'가 된다 — 터치엔 커서 변화가 없어 상시 표시가 필요, 크로스체크 P1)
+    if (attackMode) a.textContent = '⚔️ 탭할 곳을 고르세요 (취소)';
+    a.onclick = () => { setAttackMode(!attackMode); if (attackMode) addFloat(CX, 60, '⚔️ 공격할 곳을 탭!', '#ffb74d', 1.6); updateInfoPanel(); };
+  }
+  if (h) h.onclick = () => { holdSelected(); updateInfoPanel(); };
 }
 // 선택 해제 ✕ 버튼 (unitInfo 우상단, 데스크톱/모바일 공용)
 function deselBtnHTML() { return `<button id="deselBtn" title="선택 해제">✕</button>`; }
@@ -8213,8 +8257,10 @@ function copyUnit(u) {
 
 // ==================== 상점 ====================
 let openShop = null;
+function castleSeen() { try { return localStorage.getItem('dpd_castle_seen') === '1'; } catch (e) { return false; } }
 function toggleShop(id) {
   initAudio();
+  if (id === 'castle' && S && !S.castleOpened) { S.castleOpened = true; try { localStorage.setItem('dpd_castle_seen', '1'); } catch (e) {} } // 🏰 첫 오픈 뒤엔 캔버스 안내 라벨을 내린다 (브라우저 1회)
   openShop = (openShop === id) ? null : id;
   document.querySelectorAll('.shopIcon').forEach(b => b.classList.toggle('open', b.dataset.shop === openShop));
   // 상점/족보를 열면 모든 것이 멈춘다 (닫으면 재개). 게임오버/승리 화면 중엔 유지
@@ -8334,6 +8380,10 @@ const ACHV = [
   { id: 'lotto50', icon: '🎰', name: '대박', desc: '슬롯·룰렛 100만 골드 이상 잭팟' },
   { id: 'r40', icon: '🏳️', name: '40 라운드', desc: '' },
   { id: 'r80', icon: '👹', name: '헬 게이트', desc: '80 라운드 돌파' },
+  { id: 'hard80', icon: '🔥', name: '어려움 헬 게이트', desc: '어려움 난이도로 80 라운드 돌파' }, // 09-08: 공식 목표(어려움 5%·지옥 2%)를 게임이 기록·축하하지 않았다
+  { id: 'hell80', icon: '💀', name: '지옥 헬 게이트', desc: '지옥 난이도로 80 라운드 돌파' },
+  { id: 'r120', icon: '🕳️', name: '120 라운드', desc: '' },
+  { id: 'r150', icon: '☄️', name: '150 라운드', desc: '' },
   { id: 'hellclear', icon: '🌋', name: '태양 파괴자', desc: '아포칼립스 태양 격파 — 헬모드 클리어' },
   { id: 'mondex', icon: '📚', name: '몬스터 박사', desc: '몬스터 도감 14종 완성' },
   { id: 'hidden_all', icon: '🀄', name: '비밀의 끝', desc: '히든 조합 9종 모두 발견' },
@@ -9078,6 +9128,7 @@ function renderPoker(spin) {
   } else {
     banner.textContent = `스테이지 ${S.round} 준비 — 카드 클릭으로 교환 (각 1회)`;
   }
+  if (S.round % 10 === 0 || (S.round >= SUN_ROUND && !S.hellCleared)) banner.innerHTML += `<br><span style="color:#ff8a65;font-weight:bold">${S.round >= SUN_ROUND && !S.hellCleared ? '🌞 태양 강림' : '👹 보스 라운드'} — 시간 안에 못 잡으면 끝</span>`; // 09-08: 즉사 룰이 보스 클릭 팝업에만 있었다 (수치 없음, 미니멀 원칙 내)
   if (S.event) banner.innerHTML += `<br><span style="color:#ffd166;font-weight:bold">✨ 다음 전투 이벤트: ${S.event.name} — ${S.event.desc}</span>`;
   btn.textContent = double ? '유닛 2기 동시 소환!' : '유닛 소환!';
   cardsEl.innerHTML = '';
@@ -10637,7 +10688,7 @@ function dailyBestLabel() { // 시작 버튼에 오늘 최고 기록 표시
     if (el) el.textContent = (d && d.seed === todaySeedNum()) ? `· 오늘 최고 R${d.best}` : '';
   } catch (e) {}
 }
-dailyBestLabel();
+dailyBestLabel(); diffBestLabel();
 function recordDaily(round) { // 오늘의 시드 최고 기록 저장
   if (dailySeed == null) return;
   try { const d = JSON.parse(localStorage.getItem('dpd_daily') || 'null');
