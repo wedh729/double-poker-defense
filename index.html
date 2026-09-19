@@ -927,7 +927,8 @@ const MON_GROWTH = 0;
 function monProg(m) { return Math.min(1, ((m.mat || 0) + (m.esc || 0)) / (MATERIALS.length - 1)); }
 function monSize(m) { return (m.boss ? (m.sunBoss ? 104 : 52) : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + monProg(m) * MON_GROWTH); } // 🌞 태양 = 보스 2배
 // 🪖 몬스터 장비: esc 버킷(bucket/7)으로 장비 개수, HP 비율로 파괴 단계 — 드로우와 베이크가 같은 버킷 기준을 쓰게 공용화
-function monGearCount(bucket) { return Math.min(2, Math.floor((bucket / 7) * 3)); } // 0=맨몸 1=투구 2=투구+갑옷
+const MON_GEAR_ON = false; // 🪖 투구·어깨갑옷 (09-18 유저: 전부 삭제) — false면 gearCount 0 = 맨몸, 파괴 FX·베이크 키 변형도 자연 무동작. 되살리려면 true
+function monGearCount(bucket) { if (!MON_GEAR_ON) return 0; return Math.min(2, Math.floor((bucket / 7) * 3)); } // 0=맨몸 1=투구 2=투구+갑옷
 function monBroken(m) { // 갑옷이 먼저 부서지고(broken1) 투구가 나중에 부서진다(broken2)
   const gearCount = monGearCount(Math.min(7, Math.floor((m.esc || 0) * 8)));
   if (gearCount === 0) return 0;
@@ -1123,7 +1124,7 @@ function resetTransientUI() {
   if (typeof openShop !== 'undefined' && openShop && S) closeShop(); // 상점이 열린 채 재시작되면 토글 상태가 뒤집힌다
   setAttackMode(false);                     // 어택 모드 + 커서 원복
   drag = null;                              // 드래그 잔재 (다음 mouseup이 엉뚱한 부대지정을 하지 않게)
-  clearTimeout(longPressTimer); longPressFired = false; lastTapTime = 0; lastTapPos = null; joyDir = null; // 모바일 롱프레스/더블탭/조이스틱
+  clearTimeout(longPressTimer); longPressFired = false; lastTapTime = 0; lastTapPos = null; joyDir = null; grabPos = null; // 모바일 롱프레스/더블탭/조이스틱/집기
   mutter = null; mutterT = 22;              // 이전 판 유닛을 가리키던 말풍선 (유령 말풍선 방지)
   if (S) hideObjInfo();                     // 남아 있던 건물/몬스터 정보 팝업 (hideObjInfo가 S를 만지므로 부팅 시엔 건너뜀)
   gameGen++;                                // 이전 판의 카지노 지연 보상 무효화
@@ -1185,7 +1186,7 @@ function reset() {
   document.getElementById('winOverlay').style.display = 'none';
   document.getElementById('hellOverlay').style.display = 'none';
   document.getElementById('log').innerHTML = '';
-  logMsg(IS_MOBILE ? '게임 시작! 탭=선택·이동, 유닛 고른 뒤 화면을 끌면 그 방향으로 이동, 길게 누르면 공격! 🏰 성을 눌러 강화' : '게임 시작! 드래그로 부대지정, 우클릭 이동, A키+클릭 공격 지정! 🏰 성을 클릭해 강화하세요');
+  logMsg(IS_MOBILE ? '게임 시작! 유닛을 눌러 끌면 집어서 옮기고, 빈 땅을 끌면 그 방향으로 이동, 길게 누르면 공격! 🏰 성을 눌러 강화' : '게임 시작! 드래그로 부대지정, 우클릭 이동, A키+클릭 공격 지정! 🏰 성을 클릭해 강화하세요');
   startPoker();
 }
 function mineHP(layer) { return Math.floor(2500 * Math.pow(1.3, layer - 1)); } // 겹 성장 1.4→1.3: 광부가 귀해진 만큼 겹이 좀 더 빨리 깊어지게 (복리 체감)
@@ -1285,7 +1286,7 @@ function showDuelToast() {
 function evacuateArena() {
   let moved = 0;
   for (const u of S.units) {
-    if (u.miner || u.item) continue;
+    if (u.miner || u.item || u.grabbed) continue;
     const dx = u.x - ARENA.x, dy = u.y - ARENA.y, d = Math.hypot(dx, dy);
     if (d < ARENA.r + 12) {
       const k = (ARENA.r + 12) / (d || 1);
@@ -2178,7 +2179,7 @@ function spawnCatapult(x, y) {
 function updatePortal() {
   // 수집 반경은 시각 포털보다 넉넉하게 (길로틴 등 10기 레시피가 유닛 분리 때문에 안 들어가는 문제 방지)
   const GATHER = PORTAL.r + 30;
-  const inP = S.units.filter(u => fuseKey(u) && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) < GATHER);
+  const inP = S.units.filter(u => fuseKey(u) && !u.grabbed && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) < GATHER); // 집힌 채 지나가는 유닛은 재료가 아니다 (놓으면 다음 프레임 정상 합성)
   // 히든 조합 먼저 체크: 일반 원페어 ×1 + 투페어 ×2 + 트리플 ×3
   const normals = inP.filter(u => !u.hero && !u.hidden);
   const byT = {};
@@ -2309,7 +2310,7 @@ function updatePortal() {
 // 🪨 제물대: 위에 올라온 하이카드(tier0 일반)를 제물로 흡수 → 20장이면 투석기 완성
 function updateAltar() {
   // 🎁 아이템 유닛: 제물대에 멈추면 소모되고 발동 (하이카드/투석기 유무와 무관하게 처리)
-  const its = S.units.filter(u => u.item && u.altarIntent && !u.moving && Math.abs(u.x - ALTAR.x) <= ALTAR.w/2 && Math.abs(u.y - ALTAR.y) <= ALTAR.h/2); // altarIntent: 유저가 제물대를 직접 찍은 아이템만 (오발동 방지)
+  const its = S.units.filter(u => u.item && u.altarIntent && !u.moving && !u.grabbed && Math.abs(u.x - ALTAR.x) <= ALTAR.w/2 && Math.abs(u.y - ALTAR.y) <= ALTAR.h/2); // altarIntent: 유저가 제물대를 직접 찍은 아이템만 (오발동 방지)
   for (const it of its) {
     S.units = S.units.filter(u => u !== it);
     for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 50 + Math.random()*80; S.parts.push({ x: ALTAR.x, y: ALTAR.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 20, t: 0.4, r: 1.5 + Math.random()*2, c: '#ffd166' }); }
@@ -2323,7 +2324,7 @@ function updateAltar() {
     updateInfoPanel();
   }
   if (S.units.some(u => u.catapult)) return; // 이미 투석기 존재
-  const highs = S.units.filter(u => u.tier === 0 && !u.hero && !u.hidden && !u.miner && !u.moving && // 이동 중(통과)은 제외 — 제물대에 멈춘 하이카드만 소모
+  const highs = S.units.filter(u => u.tier === 0 && !u.hero && !u.hidden && !u.miner && !u.moving && !u.grabbed && // 이동 중(통과)·집힌 채 공중 통과는 제외 — 제물대에 멈춘 하이카드만 소모
     Math.abs(u.x - ALTAR.x) <= ALTAR.w/2 && Math.abs(u.y - ALTAR.y) <= ALTAR.h/2);
   if (!highs.length) return;
   S.units = S.units.filter(u => !highs.includes(u));
@@ -2443,6 +2444,12 @@ function update(dt) {
     u.swing = Math.max(0, (u.swing || 0) - dt);
     u.atkAnim = Math.max(0, (u.atkAnim || 0) - dt * 6);
     u.px = u.x; u.py = u.y; // 담장 통과 판정용 이동 전 위치
+    if (u.dropT > 0) u.dropT = Math.max(0, u.dropT - dt); // 🖐️ 착지 스쿼시 감쇠
+    if (u.grabbed && !(drag && drag.grab && drag.grab.includes(u))) { u.grabbed = false; u.tx = u.x; u.ty = u.y; } // 🖐️ 안전망: drag가 유실돼 놓아줄 손이 없는 유닛은 그 자리에 떨어진다 (영구 부양 방지)
+    if (u.grabbed) { // 🖐️ 집힌 유닛: 손가락을 따라 공중 이동 (걷기·밀어내기·벽 판정 제외)
+      if (grabPos) { const k = Math.min(1, dt * 14); u.x += (grabPos.x + u.grabOx - u.x) * k; u.y += (grabPos.y + u.grabOy - u.y) * k; }
+      u.tx = u.x; u.ty = u.y; continue;
+    }
     const dx = u.tx - u.x, dy = u.ty - u.y, d = Math.hypot(dx, dy);
     if (d > 3) {
       const spd = (u.skillT > 0 && !u.hero) ? u.speed * 2.4 : u.speed; // 🗡️ 암살 급습 대시
@@ -2473,6 +2480,7 @@ function update(dt) {
       const a = U[i];
       for (let j = i + 1; j < U.length; j++) {
         const b = U[j];
+        if (a.grabbed || b.grabbed) continue; // 🖐️ 공중의 유닛은 분리 대상 아님 (손가락에 모여야 한다)
         if (a.miner !== b.miner || !!a.item !== !!b.item) continue; // ⛏️ 광부·🎁 아이템 ↔ 전투유닛 유령 통과 (아이템이 병력에 밀려 제물대로 들어가 오발동하던 문제 — 크로스체크)
         let dx = b.x - a.x, dy = b.y - a.y;
         if (dx * dx + dy * dy < MINSEP * MINSEP) {
@@ -2484,14 +2492,14 @@ function update(dt) {
       }
     }
   }
-  for (const u of U) { pushOutOfPen(u); blockRoomWalls(u); blockSky(u); if (isInRoom(u) && u.x > ORE_LINE) u.x = ORE_LINE; }
+  for (const u of U) { if (u.grabbed) continue; pushOutOfPen(u); blockRoomWalls(u); blockSky(u); if (isInRoom(u) && u.x > ORE_LINE) u.x = ORE_LINE; }
   // 🏛️ 결투장: 전투 유닛 1기만 (챔피언). 락인 중엔 반경 이탈 판정 제외 — 밀림에 튕겨나가도 챔피언을 잃지 않게(아래서 클램프로 되돌린다)
   const duelLock = S.champion && S.champion.duelOk && duelWindowActive();
   if (S.champion && (S.champion.miner || S.champion.item || !U.includes(S.champion) || (!duelLock && Math.hypot(S.champion.x - ARENA.x, S.champion.y - ARENA.y) > ARENA.r + 12))) S.champion = null;
   // 🏛️ 결투 창이 열려 있을 때만 팝업·락인·챔피언 지정이 작동. 창 밖은 완전 자유 통행(벽·계단 없음 — 유저: 벽에 끼는 버그로 폐기)
   if (duelWindowActive()) {
     for (const u of U) {
-      if (u.miner || u.item || u === S.champion) continue;
+      if (u.miner || u.item || u.grabbed || u === S.champion) continue; // 집힌 유닛은 공중 — 놓은 뒤 판정
       const adx = u.x - ARENA.x, ady = u.y - ARENA.y, ad = Math.hypot(adx, ady);
       if (ad < ARENA.r && !u.duelOk) { // 동의 안 한 유닛은 가장자리에 세운다 (기존 둘째-유닛 방식)
         const k = (ARENA.r + 2) / (ad || 1); u.x = ARENA.x + adx * k; u.y = ARENA.y + ady * k;
@@ -2549,7 +2557,7 @@ function update(dt) {
   assignOreSlots();
   // 🥚 이스터에그: 이번 라운드 광석방 "첫 입장"이 하이카드 1기 단독이면 → 하이카드 에이스 강림 (게임당 1회)
   if (S.roomVirgin) {
-    const ins = S.units.filter(u => !u.miner && !u.item && isInRoom(u));
+    const ins = S.units.filter(u => !u.miner && !u.item && !u.grabbed && isInRoom(u)); // 집힌 채 지나가는 건 '입장'이 아니다 (이스터에그 기회 보존)
     if (ins.length) {
       S.roomVirgin = false;
       if (!S.hiAceGiven && ins.length === 1 && ins[0].tier === 0 && !ins[0].hero && !ins[0].hidden && !isHiddenCombo(ins[0])) {
@@ -2599,7 +2607,7 @@ function update(dt) {
   if (S.phase === 'poker') {
     // 포커 중에도 전투 유닛은 광산을 때려 레이어를 깎을 수 있다(골드는 광부 배달로만)
     for (const u of S.units) {
-      if (u.miner || u.item) continue;
+      if (u.miner || u.item || u.grabbed) continue; // 전투 루프와 같은 규칙 — 집힌 유닛은 공중에서 광석을 캐지 않는다
       u.cool -= dt;
       if (updateDuelFight(u)) continue; // 🏛️ 조기 전멸로 이어진 결투: 포커 페이즈에도 챔피언은 계속 싸운다
       // 광석 방 안이면 광석을 때린다 (정원 내 자격 유닛만). 광산 채굴은 광부 전담 — 전투 유닛은 안 캔다.
@@ -2703,7 +2711,7 @@ function update(dt) {
   }
   // 유닛 명령/공격 처리 (이동 중엔 발사 불가)
   for (const u of S.units) {
-    if (u.miner || u.item) continue; // 광부는 updateMiner에서, 아이템 유닛은 전투 안 함
+    if (u.miner || u.item || u.grabbed) continue; // 광부는 updateMiner에서, 아이템 유닛은 전투 안 함, 집힌 유닛은 공중
     u.cool -= dt;
     // 🗡️ 풀하우스 스킬 발동 중: 최강 몹에게만 달라붙어 때린다 (대상 고정이 스킬의 값어치 — 보스 ×2가 그대로 실린다).
     // 공속 2.5배 보너스는 2026-08-04 유저 지시로 삭제 (보스 데미지 2배만 남는다). 대상 선정은 위 1890행에서 갱신되므로 영웅·분신도 이 경로.
@@ -3422,7 +3430,7 @@ function assignOreSlots() {
   const inR = [];
   for (const u of S.units) {
     u.oreSlot = false;
-    if (u.miner || !isInRoom(u)) continue;
+    if (u.miner || u.grabbed || !isInRoom(u)) continue; // 공중 유닛은 정원을 차지하지 않는다
     if (u.tier === 0) { u.oreSlot = true; continue; } // 새총 특혜 (일반/에이스/영웅/슈퍼 전부)
     inR.push(u);
   }
@@ -3839,7 +3847,8 @@ function spawnClones(u, count) {
   for (let i = 0; i < count; i++) {
     const a = Math.PI * 2 * (i + 0.5) / count, c = Object.assign({}, u);
     c.clone = true; c.cloneLife = u.skillT; c.selected = false; c.skillT = 0; c.skillCd = 0; c.duelOk = false; // 결투 동의는 본체 전용 (복사되면 팝업을 영영 못 봄)
-    c.assassinTgt = null; c.homeX = null; c.homeY = null; c.forceTarget = null; c.hold = false; c.moving = false; c.cool = Math.random() * 0.2;
+    c.assassinTgt = null; c.homeX = null; c.homeY = null; c.forceTarget = null; c.moving = false; c.cool = Math.random() * 0.2;
+    c.grabbed = false; c.grabOx = c.grabOy = 0; c.dropT = 0; // 🖐️ 집힌 채 분신술을 써도 분신은 지상에
     c.x = u.x + Math.cos(a) * 28; c.y = u.y + Math.sin(a) * 28;
     c.inPen = true; // 분신도 울타리 안으로 들어가 난전
     c.amove = false; c.tx = CX + Math.cos(a) * (PEN.w / 4); c.ty = CY + Math.sin(a) * (PEN.h / 4);
@@ -5153,19 +5162,22 @@ function draw() {
   if (S.stimT > 0) { ctx.fillStyle = '#43a047'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign='center'; ctx.fillText(`💉 스팀팩 ${Math.ceil(S.stimT)}초`, CX, 20); ctx.textAlign='left'; }
   // 유닛
   for (const u of S.units) { // 🌀 분신은 반투명 + 보라 잔광으로 본체와 구분
+    if (u.grabbed) continue; // 🖐️ 집힌 유닛은 맨 위에 (루프 뒤에서)
     const rec = /바주카/.test(u.weapon || '') ? (u.atkAnim || 0) : 0; // 🚀 바주카 반동: 발사 순간 몸이 뒤로 뒤뚱
+    const sq = u.dropT > 0 ? Math.sin(u.dropT / 0.3 * Math.PI) * 0.22 : 0; // 🖐️ 툭 착지: 발을 기준으로 납작해졌다 튀어오르는 스쿼시 — drawUnit이 몸통에만 적용 (사거리·선택 링은 그대로)
     if (rec > 0.05) {
       const fd = faceDir(u);
       ctx.save(); ctx.translate(u.x, u.y); ctx.rotate(-fd.dx * rec * 0.1); ctx.translate(-u.x, -u.y); // 살짝 뒤로 기울고
       ctx.translate(-fd.dx * rec * 4, -fd.dy * rec * 4 + rec * 1.2);                                   // 반대 방향으로 밀림
-      drawUnit(u); ctx.restore();
-    } else if (u.clone) { // 분신: 반투명 + 발밑 보라 링으로 구분 (shadowBlur 없이 저렴하게)
+      drawUnit(u, sq); ctx.restore();
+    } else if (u.clone) { // 분신: 반투명 + 발밑 보라 링으로 구분 (shadowBlur 없이 저렴하게) — 착지 중에도 유지
       ctx.strokeStyle = 'rgba(126,87,194,0.6)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(u.x, u.y + 15, 12, 4.5, 0, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1;
-      ctx.save(); ctx.globalAlpha = 0.55; drawUnit(u); ctx.restore();
-    } else drawUnit(u);
+      ctx.save(); ctx.globalAlpha = 0.55; drawUnit(u, sq); ctx.restore();
+    } else drawUnit(u, sq);
   }
   drawBarrackCap(); // 🪵 울타리 윗변을 유닛 위에 재그림 — 뒤에 선 유닛 반쯤 가림 (오클루전)
+  for (const u of S.units) if (u.grabbed) drawGrabbedUnit(u); // 🖐️ 공중에 매달린 유닛 — 울타리보다도 위
   drawMutter(); // 💬 히든 혼잣말 말풍선
   if (S.bird) drawBird(S.bird); // 🐦 힌트 새 (유닛 위에 그려짐)
   // 이펙트
@@ -5532,7 +5544,7 @@ function draw() {
     ctx.restore(); ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.lineWidth = 1;
   }
   // 드래그 박스 (조이스틱 = 방향 이동 중엔 부대지정이 아니므로 안 그린다 — 크로스체크 P2)
-  if (drag && drag.moved && !drag.joyOn) {
+  if (drag && drag.moved && !drag.joyOn && !drag.grab) { // 집어 옮기는 중에도 부대지정이 아니다
     ctx.strokeStyle = '#5b48d0'; ctx.setLineDash([5,4]);
     ctx.strokeRect(Math.min(drag.x0,drag.x1), Math.min(drag.y0,drag.y1), Math.abs(drag.x1-drag.x0), Math.abs(drag.y1-drag.y0));
     ctx.setLineDash([]);
@@ -6143,7 +6155,7 @@ function drawMatStatic(x, y, sz, mat, esc, c, broken = 0) {
 const GEAR_ART_ON = true;
 const GEARART = { helms: null, shoulders: null, n: 0 };
 (function gearLoadArt() {
-  if (!GEAR_ART_ON) return;
+  if (!GEAR_ART_ON || !MON_GEAR_ON) return; // 장비 OFF면 시트(957KB)를 내려받지 않는다 — 스위치는 MON_GEAR_ON 하나로
   for (const k of ['helms', 'shoulders']) {
     const im = new Image();
     im.onload = () => { GEARART[k] = im; if (++GEARART.n === 2) Object.keys(matSprites).forEach(kk => delete matSprites[kk]); }; // 로드 완료 → 구운 스프라이트 무효화
@@ -6714,8 +6726,8 @@ function drawBossFace(m, sz) {
   }
   ctx.restore();
 }
-function drawUnit(u) {
-  if (u.item) { drawItemUnit(u); return; }
+function drawUnit(u, sq) { // sq: 🖐️ 착지 스쿼시(0~0.22) — 몸통 변환에만 건다 (사거리 링·선택 링·HP바는 안 찌그러지게)
+  if (u.item) { if (sq) { ctx.save(); ctx.translate(u.x, u.y + 16); ctx.scale(1 + sq, 1 - sq); ctx.translate(-u.x, -u.y - 16); } drawItemUnit(u); if (sq) ctx.restore(); return; }
   const hm = (!u.miner && !u.hidden) ? hiddenMeta(u) : null; // 히든 유닛 테마
   const raceC = (u.hidden || u.ace) ? '#e91e8c' : (u.miner ? (u.sminer ? '#e6a817' : u.hminer ? '#c9a227' : '#8d8d8d') : hm ? hm[2] : RACES[u.race].color); // 에이스=핑크, 히든=테마색
   // 선택 표시 + 사거리
@@ -6741,6 +6753,7 @@ function drawUnit(u) {
   }
   // 유닛 본체는 1.5배 확대 (사거리/선택 표시는 원본 크기 유지)
   ctx.save();
+  if (sq) { const fy = u.y + bodyShape(u).h / 2 * 1.5; ctx.translate(u.x, fy); ctx.scale(1 + sq, 1 - sq); ctx.translate(-u.x, -fy); } // 발을 기준으로 납작→튐
   ctx.translate(u.x, u.y); ctx.scale(1.5, 1.5); ctx.translate(-u.x, -u.y);
   const B = bodyShape(u);
   // 바라보는 방향 (이동 중엔 이동 방향, 아니면 마지막 공격 대상, 없으면 소환장)
@@ -6748,7 +6761,7 @@ function drawUnit(u) {
   const faceX = (aimX >= u.x) ? 1 : -1;
   // 그림자
   ctx.fillStyle = 'rgba(0,0,0,0.13)';
-  ctx.beginPath(); ctx.ellipse(u.x, u.y + B.h/2 + 6, B.w*0.55, 4, 0, 0, Math.PI*2); ctx.fill();
+  if (!u.grabbed) { ctx.beginPath(); ctx.ellipse(u.x, u.y + B.h/2 + 6, B.w*0.55, 4, 0, 0, Math.PI*2); ctx.fill(); } // 집힌 유닛은 draw 루프가 지면 그림자를 따로 그린다
   // 합성 가능(같은 유닛 5기+) 힌트: 주황 오라
   if (u.fusable) {
     ctx.strokeStyle = `rgba(255,145,0,${(0.5 + 0.4*Math.sin(S.time*6)).toFixed(2)})`;
@@ -6808,14 +6821,14 @@ function drawUnit(u) {
 function drawUnitBody(u, faceX) {
   const canBake = UNIT_BAKE && !u.superAce && u.vis !== 'tank';
   if (canBake) {
-    const lw = u.moving ? Math.round(Math.sin(u.walk)) * 3 : 0; // 다리 스윙 3포즈 양자화 (-3/0/3)
+    const lw = u.grabbed ? Math.round(Math.sin(S.time * 22)) * 3 : u.moving ? Math.round(Math.sin(u.walk)) * 3 : 0; // 다리 스윙 3포즈 양자화 (-3/0/3), 집히면 버둥버둥
     // 유닛별 참조 캐시: 키 문자열 조인(13필드 × 유닛 수 × 60fps)만으로 0.1ms/frame이 나갔다 — 포즈·방향이 같으면 재조회 생략
     let c = u._us;
     if (!c || c.lw !== lw || c.fx !== faceX) c = u._us = { lw, fx: faceX, sp: unitCoreSprite(u, lw, faceX) };
     ctx.drawImage(c.sp, u.x - USPR_CX / 2, u.y - USPR_CY / 2, USPR / 2, USPR / 2); // 2x 베이크 → ½로
     return;
   }
-  drawUnitCore(u, u.moving ? Math.sin(u.walk) * 3 : 0, faceX);
+  drawUnitCore(u, u.grabbed ? Math.sin(S.time * 22) * 3 : u.moving ? Math.sin(u.walk) * 3 : 0, faceX);
 }
 const UNIT_BAKE = true; // 문제 시 false로 — 원래 벡터 경로 복귀
 const unitSprites = new Map();
@@ -6837,6 +6850,32 @@ function unitCoreSprite(u, lw, faceX) {
     unitSprites.set(key, cnv);
   }
   return cnv;
+}
+// ♠♥♦♣ 벡터 문양 (09-18 유저: 모바일에서 문양이 우측으로 쏠림 — 폰트 글리프는 기기마다 사이드베어링·이모지 폴백이 달라 정중앙을 보장할 수 없다 → 패스로 직접 그린다. 중심 (x,y), 반높이 s)
+function drawSuit(suit, x, y, s, col) {
+  ctx.fillStyle = col; ctx.beginPath();
+  if (suit === '♦') {
+    ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.72, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * 0.72, y); ctx.closePath();
+  } else if (suit === '♥') {
+    ctx.moveTo(x, y + s);
+    ctx.bezierCurveTo(x - s * 1.55, y - s * 0.1, x - s * 0.95, y - s * 1.2, x, y - s * 0.4);
+    ctx.bezierCurveTo(x + s * 0.95, y - s * 1.2, x + s * 1.55, y - s * 0.1, x, y + s);
+    ctx.closePath();
+  } else if (suit === '♠') { // 하트를 뒤집은 잎 + 줄기
+    ctx.moveTo(x, y - s);
+    ctx.bezierCurveTo(x - s * 1.5, y + s * 0.1, x - s * 0.95, y + s * 1.05, x, y + s * 0.3);
+    ctx.bezierCurveTo(x + s * 0.95, y + s * 1.05, x + s * 1.5, y + s * 0.1, x, y - s);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x - s * 0.16, y + s * 0.25); ctx.lineTo(x + s * 0.16, y + s * 0.25); ctx.lineTo(x + s * 0.42, y + s); ctx.lineTo(x - s * 0.42, y + s); ctx.closePath();
+  } else { // ♣ 잎 3개 + 줄기
+    const r = s * 0.42;
+    ctx.arc(x, y - s * 0.5, r, 0, Math.PI * 2);
+    ctx.moveTo(x - s * 0.5 + r, y + s * 0.12); ctx.arc(x - s * 0.5, y + s * 0.12, r, 0, Math.PI * 2);
+    ctx.moveTo(x + s * 0.5 + r, y + s * 0.12); ctx.arc(x + s * 0.5, y + s * 0.12, r, 0, Math.PI * 2);
+    ctx.moveTo(x + s * 0.26, y); ctx.arc(x, y, s * 0.26, 0, Math.PI * 2); // 중심 원판 — 잎 사이 핀홀 메움 (크로스체크 P2)
+    ctx.moveTo(x - s * 0.16, y + s * 0.1); ctx.lineTo(x + s * 0.16, y + s * 0.1); ctx.lineTo(x + s * 0.4, y + s); ctx.lineTo(x - s * 0.4, y + s); ctx.closePath();
+  }
+  ctx.fill();
 }
 function drawUnitCore(u, lw, faceX) {
   const hm = (!u.miner && !u.hidden) ? hiddenMeta(u) : null;
@@ -6900,7 +6939,7 @@ function drawUnitCore(u, lw, faceX) {
   ctx.textAlign = 'center';
   if (u.hidden || u.ace) { // 에이스·에이스 영웅: ♠ 유지
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
-    ctx.fillText('♠\uFE0E', u.x, u.y + 4); // ♠도 ♦♥♣와 같은 이모지 승격 대상 (크로스체크 P2)
+    drawSuit('♠', u.x, u.y - 1, 5.6, '#fff'); // 벡터 ♠ (정중앙)
   } else if (u.joker) { // 🃏 조커: 카드 안에 레퍼런스 얼굴 전체 (모자+방울+마스크+미소) — 머리 위 장식 모자는 별도(drawHeadgear)
     const jx = u.x, jy = u.y + 1;
     ctx.fillStyle = '#d92b2b'; // 왼쪽 뿔 (빨강)
@@ -6922,12 +6961,21 @@ function drawUnitCore(u, lw, faceX) {
     ctx.font = '13px sans-serif'; ctx.fillText(hm[0], u.x, u.y + 4);
   } else if (!u.miner) {
     ctx.fillStyle = raceC; ctx.font = 'bold 10px sans-serif';
-    ctx.fillText(RACES[u.race].suit + '\uFE0E', u.x, u.y - 1); // \uFE0E = 텍스트 표현 강제 (안드로이드가 ♦♥♣를 컬러 이모지로 키워 그리던 문제 — 09-10 유저)
+    drawSuit(RACES[u.race].suit, u.x, u.y - 4.6, 4.4, raceC); // 벡터 문양 — 정중앙 보장 (구 fillText는 기기 폰트에 따라 쏠렸다)
     ctx.font = 'bold 8px sans-serif'; ctx.fillStyle = '#666';
     ctx.fillText(u.hero ? '★' : u.keyLabel, u.x, u.y + 8);
   }
   ctx.textAlign = 'left';
   // 모자는 여기 넣지 않는다 — 횃불 불꽃·왕관 반짝이 등 S.time 애니메이션이 많아 베이크하면 얼어붙는다 (drawUnit에서 라이브)
+}
+// 🖐️ 공중에 매달려 바둥바둥: 지면엔 작은 그림자, 몸은 위로 띄워 좌우로 흔들 (다리 버둥은 drawUnitBody의 lw)
+function drawGrabbedUnit(u) {
+  const B = bodyShape(u), t = S.time;
+  ctx.fillStyle = 'rgba(0,0,0,0.10)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + B.h / 2 + 6, B.w * 0.4, 3, 0, 0, Math.PI * 2); ctx.fill();
+  const lift = 18 + Math.sin(t * 9 + (u.jx || 0)) * 2, rot = Math.sin(t * 13 + (u.jy || 0)) * 0.08;
+  ctx.save(); ctx.translate(u.x, u.y - lift); ctx.rotate(rot); ctx.translate(-u.x, -u.y);
+  drawUnit(u);
+  ctx.restore();
 }
 // 🌈 영웅 홀로그램: 종족색 위에 흐르는 무지개 + 하이라이트 밴드 (슈퍼는 더 진하고 빠르게) — 시간 애니메이션이라 라이브
 function drawHeroHolo(u) {
@@ -7014,7 +7062,7 @@ function drawUnitArm(u) {
 function drawItemUnit(u) {
   const y = u.y + Math.sin(S.time * 3 + u.jx) * 2;
   if (u.selected) { ctx.strokeStyle = '#43a047'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(u.x, u.y + 14, 13, 5, 0, 0, 6.28); ctx.stroke(); ctx.lineWidth = 1; }
-  ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 16, 11, 4, 0, 0, 6.28); ctx.fill();
+  if (!u.grabbed) { ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 16, 11, 4, 0, 0, 6.28); ctx.fill(); } // 집힌 아이템은 drawGrabbedUnit의 지면 그림자만
   ctx.fillStyle = `rgba(255,214,102,${(0.15 + 0.1*Math.sin(S.time*5)).toFixed(2)})`; ctx.beginPath(); ctx.arc(u.x, y, 16, 0, 6.28); ctx.fill();
   const gc = GACHA_COL[u.item]; // 👑 뽑기권: 등급색 링 + '?' 위에 왕관
   const oreG = u.item === 'oreGift' ? (ORES[Math.min(9, (u.oreStage || 1) - 1)] || ORES[0]) : null; // 💎 보상 광석: 해당 광물 보석
@@ -7603,17 +7651,8 @@ function setAttackMode(on) {
   attackMode = on;
   cv.style.cursor = on ? ATTACK_CURSOR : ''; // '' = 인라인 해제 → CSS의 흰 십자 커서로 복귀 ('crosshair'로 쓰면 CSS를 덮어써 버린다)
 }
-function holdSelected() {
-  const sel = S.units.filter(u => u.selected && !u.miner);
-  sel.forEach(u => {
-    if (duelLocked(u)) { duelLockFloat(u); return; } // 🔒 결투 락인 중엔 명령 무시
-    u.tx = u.x; u.ty = u.y; u.forceTarget = null; u.attackMine = false; u.amove = false; u.hold = true;
-  });
-  if (sel.length) { S.effects.push({ type:'boom', x: sel[0].x, y: sel[0].y, r: 12, t: 0.2 }); logMsg('🛡️ 홀드! 제자리에서 근처 적을 공격합니다.'); }
-}
 window.addEventListener('keydown', e => {
   if (e.key === 'a' || e.key === 'A' || e.key === 'ㅁ') setAttackMode(true);
-  else if (e.key === 'h' || e.key === 'H' || e.key === 'ㅗ') holdSelected();
   else if (e.key === 'Escape') { if (openShop) closeShop(); else { setAttackMode(false); hideObjInfo(); } }
   else if (e.key >= '0' && e.key <= '9') {
     const n = e.key;
@@ -7639,7 +7678,7 @@ function issueAttack(px, py) {
     if (Math.hypot(m.x - px, m.y - py) < (m.sunBoss ? 95 : m.boss ? (IS_MOBILE ? 48 : 32) : (IS_MOBILE ? 30 : 15))) { hitM = m; break; }
   }
   if (hitM) {
-    sel.forEach(u => { if (u.miner) return; if (duelLocked(u)) { duelLockFloat(u); return; } u.forceTarget = hitM; u.attackMine = false; u.amove = false; u.hold = false; });
+    sel.forEach(u => { if (u.miner) return; if (duelLocked(u)) { duelLockFloat(u); return; } u.forceTarget = hitM; u.attackMine = false; u.amove = false; });
     S.effects.push({ type:'boom', x: hitM.x, y: hitM.y, r: 18, t: 0.25 });
     logMsg(`🎯 집중 공격 명령! (${sel.length}기)`);
     return;
@@ -7653,7 +7692,7 @@ function issueAttack(px, py) {
       py + (Math.floor(i / cols) - (Math.ceil(sel.length / cols) - 1) / 2) * 28);
     u.tx = t.x;
     u.ty = t.y;
-    u.amove = true; u.forceTarget = null; u.attackMine = false; u.hold = false;
+    u.amove = true; u.forceTarget = null; u.attackMine = false;
   });
   S.effects.push({ type:'boom', x: px, y: py, r: 14, t: 0.2 });
   logMsg('⚔️ 어택땅!');
@@ -7860,7 +7899,7 @@ function issueMoveDir(dx, dy) {
     // 맵 경계 클램프 필수: clampTargetPos는 울타리·하늘·광석방만 보정해서 이게 없으면 유닛이 화면 밖으로 걸어나갔다 (크로스체크 P1)
     const t = clampTargetPos(Math.max(12, Math.min(VW - 12, u.x + nx * 200)), Math.max(12, Math.min(VH - 12, u.y + ny * 200)));
     u.tx = t.x; u.ty = t.y;
-    u.forceTarget = null; u.attackMine = false; u.amove = false; u.hold = false;
+    u.forceTarget = null; u.attackMine = false; u.amove = false;
     n++;
   }
   return n;
@@ -7870,6 +7909,37 @@ function stopSelected() { // 손을 떼면 그 자리에 멈춘다 (issueMoveDir
   for (const u of S.units) if (u.selected && !u.miner && !u.catapult && !u.item && !duelLocked(u)) { u.tx = u.x; u.ty = u.y; u.moving = false; }
 }
 let joyDir = null; // 조이스틱 방향 {dx, dy} — touchmove가 세팅하고 update()가 매 프레임 소비 (손가락을 대고만 있어도 전진)
+// 🖐️ 집어 옮기기 (09-18 유저 지정): 유닛을 누른 채 끌면 공중에 매달려(바둥바둥) 손가락을 따라오고, 놓으면 그 자리에 툭 떨어진다.
+//    여러 기(선택 부대)면 손가락 주위로 모였다가 놓을 때 겹치지 않게 격자로 퍼진다. 아이템(왕관·뽑기권)도 집어 제물대에 놓을 수 있다.
+let grabPos = null; // 손가락 위치(캔버스 좌표) — update()가 매 프레임 집힌 유닛을 이쪽으로 끌어당긴다
+function grabbable(u) { return !u.miner && !u.catapult && !duelLocked(u); }
+function startGrab(hit) {
+  const group = hit.selected ? S.units.filter(u => u.selected && grabbable(u)) : [hit];
+  if (!hit.selected) { S.units.forEach(u => u.selected = false); hit.selected = true; }
+  group.forEach((u, i) => {
+    const a = i * 2.4, r = i ? 6 + Math.sqrt(i) * 5 : 0; // 손가락 주위로 살짝 흩어져 매달림 (완전 겹침 방지)
+    u.grabbed = true; u.grabOx = Math.cos(a) * r; u.grabOy = Math.sin(a) * r;
+    u.tx = u.x; u.ty = u.y; u.moving = false; u.forceTarget = null; u.attackMine = false; u.amove = false;
+  });
+  sfx('pick');
+  updateInfoPanel();
+  return group;
+}
+function dropGrab(group, px, py) {
+  group = group.filter(u => S.units.includes(u)); // 집힌 사이 사라진 유닛(제물·합성 등)의 유령 참조 제거
+  const n = group.length, cols = Math.ceil(Math.sqrt(n));
+  const c = clampTargetPos(Math.max(12, Math.min(VW - 12, px)), Math.max(12, Math.min(VH - 12, py))); // 격자 중심을 먼저 보정 — 소환장 안에 놓으면 전원이 같은 경계점으로 뭉치던 것 방지
+  group.forEach((u, i) => {
+    const gx = c.x + (i % cols - (cols - 1) / 2) * 28, gy = c.y + (Math.floor(i / cols) - (Math.ceil(n / cols) - 1) / 2) * 28; // issueMove와 같은 격자
+    const t = clampTargetPos(Math.max(12, Math.min(VW - 12, gx)), Math.max(12, Math.min(VH - 12, gy)));
+    u.x = t.x; u.y = t.y; u.tx = t.x; u.ty = t.y; u.moving = false; u.grabbed = false; u.dropT = 0.3;
+    if (u.item) u.altarIntent = Math.abs(t.x - ALTAR.x) <= ALTAR.w / 2 + 12 && Math.abs(t.y - ALTAR.y) <= ALTAR.h / 2 + 12; // 제물대에 놓으면 발동 자격 (issueMove와 동일 규칙)
+    for (let k = 0; k < 5; k++) { const a2 = Math.random() * 6.28, v = 30 + Math.random() * 50; S.parts.push({ x: t.x, y: t.y + 12, vx: Math.cos(a2) * v, vy: -Math.abs(Math.sin(a2)) * v * 0.5, t: 0.3, r: 1.5 + Math.random() * 1.5, c: '#c8b48a' }); } // 착지 흙먼지
+  });
+  sfx('thud');
+  grabPos = null;
+  updateInfoPanel();
+}
 function issueMove(px, py) {
   const p = clampTargetPos(px, py);
   const sel = S.units.filter(u => u.selected && !u.miner && !u.catapult); // 광부/투석기는 이동 명령 무시
@@ -7881,7 +7951,7 @@ function issueMove(px, py) {
       p.y + (Math.floor(i / cols) - (Math.ceil(sel.length / cols) - 1) / 2) * 28);
     u.tx = t.x;
     u.ty = t.y;
-    u.forceTarget = null; u.attackMine = false; u.amove = false; u.hold = false; // 이동 명령은 기존 명령 해제
+    u.forceTarget = null; u.attackMine = false; u.amove = false; // 이동 명령은 기존 명령 해제
     // 🎁 아이템 유닛: 유저가 제물대를 '직접 찍었을 때만' 발동 자격 (밀림·스턱으로 박스에 들어가도 오발동 금지 — 크로스체크)
     if (u.item) u.altarIntent = Math.abs(p.x - ALTAR.x) <= ALTAR.w / 2 + 12 && Math.abs(p.y - ALTAR.y) <= ALTAR.h / 2 + 12;
   });
@@ -7914,7 +7984,8 @@ cv.addEventListener('dblclick', e => {
 
 // ==================== 터치 컨트롤 (모바일) ====================
 function touchPos(e) {
-  const t = e.touches[0] || e.changedTouches[0];
+  let t = e.touches[0] || e.changedTouches[0];
+  if (drag && drag.tid != null) for (const q of [...e.touches, ...e.changedTouches]) if (q.identifier === drag.tid) { t = q; break; } // 드래그를 시작한 손가락만 본다 (둘째 손가락 좌표로 튀지 않게)
   const r = cv.getBoundingClientRect();
   return { x: (t.clientX - r.left) * VW / r.width, y: (t.clientY - r.top) * VH / r.height };
 }
@@ -7922,13 +7993,20 @@ let longPressTimer = null, longPressFired = false;
 let lastTapTime = 0, lastTapPos = null;
 cv.addEventListener('touchstart', e => {
   e.preventDefault();
+  if (e.touches.length > 1) return; // 📱 둘째 손가락(엄지·손바닥)은 무시 — pressStart가 drag를 새로 만들어 집기(drag.grab)가 유실되고 유닛이 영구 공중 부양하던 P1 (크로스체크)
   initAudio();
   const p = touchPos(e);
   pressStart(p.x, p.y);
-  if (drag) drag.joy = S.units.some(u => u.selected && !u.miner && !u.catapult && !u.item); // 📱 선택 유닛이 있으면 드래그 = 방향 이동(박스 선택 대신)
+  if (drag) {
+    drag.tid = e.changedTouches[0].identifier; // 이 드래그의 손가락 — touchend/cancel은 이 손가락이 떨어질 때만 처리
+    let hit = null; for (const u of S.units) if (grabbable(u) && Math.hypot(u.x - p.x, u.y - p.y) < HIT_R) { hit = u; break; }
+    drag.grabCand = hit; // 🖐️ 유닛 위에서 시작한 드래그 = 집어 옮기기 (짧은 탭이면 pressEnd의 선택 그대로)
+    drag.joy = !hit && S.units.some(u => u.selected && !u.miner && !u.catapult && !u.item); // 📱 빈 땅에서 시작 + 선택 유닛 = 방향 이동
+  }
   longPressFired = false;
   clearTimeout(longPressTimer);
   if (hitDuelFleeBtn(p.x, p.y)) return; // 🏃 도망 버튼 위 롱프레스가 어택땅으로 새지 않게 — touchend의 히트테스트가 처리 (크로스체크 P2)
+  if (drag.grabCand) return; // 🖐️ 유닛 위 = 집기 후보: 롱프레스(어택땅)를 걸지 않는다 — 400ms 머뭇거린 뒤 끌면 어택땅과 집기가 동시에 나갔다 (크로스체크 P2). 몹·빈 땅 롱프레스는 그대로
   longPressTimer = setTimeout(() => {
     longPressFired = true;
     issueAttack(p.x, p.y);
@@ -7942,6 +8020,8 @@ cv.addEventListener('touchmove', e => {
   pressMove(p.x, p.y);
   const dx = p.x - drag.x0, dy = p.y - drag.y0;
   if (Math.hypot(dx, dy) > 24) clearTimeout(longPressTimer); // 롱프레스 취소(움직임)
+  if (drag.grabCand && !drag.grab && !attackMode && Math.hypot(dx, dy) > 24) drag.grab = startGrab(drag.grabCand); // 🖐️ 24px 넘게 끌면 집기 시작
+  if (drag.grab) { grabPos = { x: p.x, y: p.y }; return; }
   // 방향 이동: 실시간 거리로 게이트 (drag.moved는 한 번 넘으면 고착이라, 손가락을 출발점으로 되돌리면 잔여 노이즈 방향으로 튀었다 — 크로스체크 P1)
   if (drag.joy && !attackMode) {
     if (Math.hypot(dx, dy) > 24) { drag.joyOn = true; joyDir = { dx, dy }; issueMoveDir(dx, dy); }
@@ -7950,10 +8030,13 @@ cv.addEventListener('touchmove', e => {
 }, { passive: false });
 cv.addEventListener('touchend', e => {
   e.preventDefault();
+  if (!drag) return; // 무시된 둘째 손가락·리셋 뒤의 잔여 touchend
+  if (drag.tid != null && ![...e.changedTouches].some(t => t.identifier === drag.tid)) return; // 📱 다른 손가락이 떨어진 것 — 우리 드래그(집기·조이스틱)는 계속
   clearTimeout(longPressTimer);
   // 방향 이동 종료 — 그 자리에 정지. ⚠️ 롱프레스 검사보다 먼저: 꾹 눌러 어택땅이 발동한 뒤 이어서 끌면
   //    아래 분기가 먼저 return해 정지가 누락됐다 (크로스체크 P1). longPressFired도 함께 리셋해야 다음 탭이 안 먹힌다
-  if (drag && drag.joyOn) { stopSelected(); drag = null; longPressFired = false; return; }
+  if (drag.grab) { const q = touchPos(e); dropGrab(drag.grab, q.x, q.y); drag = null; longPressFired = false; lastTapTime = 0; lastTapPos = null; return; } // 🖐️ 놓기 — 그 자리에 툭 (더블탭 기억도 지움)
+  if (drag.joyOn) { stopSelected(); drag = null; longPressFired = false; lastTapTime = 0; lastTapPos = null; return; }
   if (longPressFired) { longPressFired = false; drag = null; return; } // 롱프레스가 이미 처리함
   if (drag && drag.moved) { pressEnd(); return; } // 드래그 박스 선택
   const p = touchPos(e);
@@ -7986,9 +8069,11 @@ cv.addEventListener('touchend', e => {
   pressEnd();
 }, { passive: false });
 cv.addEventListener('touchcancel', e => {
+  if (drag && drag.tid != null && ![...e.changedTouches].some(t => t.identifier === drag.tid)) return; // 다른 손가락의 cancel
   clearTimeout(longPressTimer);
   longPressFired = false;
   if (drag && drag.joyOn) stopSelected(); // 전화·알림바로 터치가 끊겨도 유닛이 계속 걸어가지 않게 (크로스체크 P1)
+  if (drag && drag.grab) dropGrab(drag.grab, grabPos ? grabPos.x : drag.x1, grabPos ? grabPos.y : drag.y1); // 🖐️ 터치가 끊기면 그 자리에 내려놓는다
   drag = null;
 });
 function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 않게 좌/우로 자동 전환
@@ -8024,7 +8109,7 @@ function updateInfoPanel() {
     const st6 = skillAllLabel(skUnits);
     const skHTML = skUnits.length === 0 ? '' :
       `<br><button id="skillAllBtn" class="shopBtn" ${st6.allReady ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:${st6.allReady ? '#c0392b' : '#999'};font-weight:bold">${st6.label}</button>`;
-    el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>${IS_MOBILE ? '탭 이동 · 끌면 그 방향 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}` +
+    el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>${IS_MOBILE ? '유닛을 끌어 옮기기 · 빈 땅 끌면 그 방향 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}` +
       (sel.some(u => !u.miner) ? priorityRow(commonPri) + mobileCmdHTML() : '') +
       skHTML +
       (canFuse ? `<br><span style="color:#8c5bff;font-weight:bold">🌀 같은 유닛 5기! 좌측 포털로 이동시키면 강화!</span>` : '') +
@@ -8119,14 +8204,13 @@ function updateInfoPanel() {
   if (el.querySelector('#copyBtn')) el.querySelector('#copyBtn').onclick = () => copyUnit(u);
 }
 // 📱 모바일 명령 버튼 (09-08): 공격 지정은 안내 없는 롱프레스뿐이었고 홀드는 터치로 불가능했다
-function mobileCmdHTML() { return IS_MOBILE ? `<br><button id="mAtkBtn" class="shopBtn" style="margin-top:6px">⚔️ 공격 지정</button> <button id="mHoldBtn" class="shopBtn" style="margin-top:6px">🛡️ 홀드</button>` : ''; }
+function mobileCmdHTML() { return IS_MOBILE ? `<br><button id="mAtkBtn" class="shopBtn" style="margin-top:6px">⚔️ 공격 지정</button>` : ''; } // 홀드 버튼은 09-18 삭제(유저)
 function wireMobileCmd(el) {
-  const a = el.querySelector('#mAtkBtn'), h = el.querySelector('#mHoldBtn');
+  const a = el.querySelector('#mAtkBtn');
   if (a) { // 토글 + 상태 표시 (모드 중엔 버튼이 '취소'가 된다 — 터치엔 커서 변화가 없어 상시 표시가 필요, 크로스체크 P1)
     if (attackMode) a.textContent = '⚔️ 탭할 곳을 고르세요 (취소)';
     a.onclick = () => { setAttackMode(!attackMode); if (attackMode) addFloat(CX, 60, '⚔️ 공격할 곳을 탭!', '#ffb74d', 1.6); updateInfoPanel(); };
   }
-  if (h) h.onclick = () => { holdSelected(); updateInfoPanel(); };
 }
 // 선택 해제 ✕ 버튼 (unitInfo 우상단, 데스크톱/모바일 공용)
 function deselBtnHTML() { return `<button id="deselBtn" title="선택 해제">✕</button>`; }
@@ -8292,6 +8376,7 @@ function copyUnit(u) {
   if (Math.random() >= rate) { addFloat(u.x, u.y - 26, '📑 복사 실패…', '#8d8d8d', 1.4); sfx('leak'); logMsg(`📑 복사 실패! (${u.weapon} · 성공률 ${Math.round(rate*100)}%)`); updateInfoPanel(); return; }
   const c = Object.assign({}, u);
   c.x = c.tx = u.x + 26; c.y = c.ty = u.y; c.selected = false; c.kills = 0; c.duelOk = false; // 결투 동의는 본체 전용 (복사되면 팝업을 영영 못 봄)
+  c.grabbed = false; c.grabOx = c.grabOy = 0; c.dropT = 0; // 🖐️ 집힌 채 복사해도 사본은 지상에 (drag.grab에 없어 놓아줄 손이 없다)
   c.jx = (Math.random() - 0.5) * 48; c.jy = (Math.random() - 0.5) * 48;
   c.cool = 0; c.forceTarget = null; c.attackMine = false; c.amove = false; c.moving = false;
   S.units.push(c);
