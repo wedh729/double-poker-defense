@@ -15,7 +15,7 @@
   │  First published: 2026-07-13  ·  https://github.com/wedh729          │
   └──────────────────────────────────────────────────────────────────────┘
 -->
-<html lang="ko" translate="no">
+<html lang="ko" translate="no" data-theme="woodland">
 <head>
 <meta charset="utf-8">
 <meta name="author" content="wedh729">
@@ -639,13 +639,1224 @@
     }
   }
 </style>
+<style data-dpd-source="design-system.css">
+/* Double Poker Defense · design test
+   Presentation only. The original script owns visibility, panel motion, card
+   states, mobile tabs, map coordinates, timers, and game rules. */
+:root {
+  --dpd-ink: #183552;
+  --dpd-muted: #627b8d;
+  --dpd-blue: #168cde;
+  --dpd-blue-dark: #106eaf;
+  --dpd-coral: #f57562;
+  --dpd-yellow: #ffd45b;
+  --dpd-ivory: #fffdf5;
+  --dpd-line: #d5e4e8;
+  --dpd-shadow: 0 8px 24px rgba(29, 64, 85, .13);
+}
+
+body { background: #eff5f7; }
+#wrap > h1 { color: #236687; font-weight: 800; margin: 2px 2px 10px; }
+#wrap > h1 small { color: #708692; }
+
+/* The empty advertising placeholders disappear; the existing cooperative
+   minimap remains in its rail and keeps its original responsive behavior. */
+.adSlot { display: none; }
+#page { color: var(--dpd-ink); }
+#topbar {
+  gap: clamp(9px, 1.2vw, 18px);
+  padding: 10px 16px;
+  background: var(--dpd-ivory);
+  border: 1px solid var(--dpd-line);
+  border-radius: 17px;
+  box-shadow: 0 4px 0 rgba(183, 204, 211, .3);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+#topbar b { color: var(--dpd-ink); font-weight: 850; }
+#topbar > span { white-space: nowrap; }
+#bigTimer .p { color: var(--dpd-muted); font-weight: 700; }
+#bigTimer .t { color: var(--dpd-ink); }
+#bigTimer .t.urgent { color: #cc3f45; }
+#cvWrap { border-radius: 20px; box-shadow: var(--dpd-shadow); }
+#cv { border-radius: 20px; }
+#clock { border-color: #fffdf5; box-shadow: 0 0 0 2px #6d8a9d, 0 4px 10px #18355226; }
+#cvWrap #tIntWrap { background: #183552ed; border: 1px solid #ffffff4d; border-radius: 10px; }
+#toolbar { margin: 12px 0 10px; padding: 0 2px; }
+.tbGroup { gap: 8px; }
+.shopIcon {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #c9dde5;
+  border-radius: 14px;
+  background: var(--dpd-ivory);
+  color: var(--dpd-ink);
+  box-shadow: 0 3px 0 #c9dde5;
+  font-family: inherit;
+  transition: transform .14s, background-color .14s, box-shadow .14s;
+}
+.shopIcon::before, .shopIcon::after,
+.shopIcon.open::after, #shopWin::before, #shopWin::after,
+#pokerPanel::before { content: none; }
+.shopIcon:hover { border-color: #8ebbd1; background: #eaf7ff; transform: translateY(-2px); }
+.shopIcon:active { transform: translateY(2px); box-shadow: 0 1px 0 #b9d0dc; }
+.shopIcon.open { background: #dff3ff; border-color: #168cde; box-shadow: 0 3px 0 #168cde; }
+.shopIcon.off { opacity: .58; filter: grayscale(.85); }
+.shopIcon.restartBtn { padding: 0 14px; font-weight: 750; }
+.shopBtn {
+  min-height: 40px;
+  background: #eef7fb;
+  border: 1px solid #cddfe8;
+  border-radius: 11px;
+  color: var(--dpd-ink);
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.shopBtn:hover { background: #e1f2fd; border-color: #70b7e5; }
+.shopBtn:disabled { opacity: .45; }
+#page button:focus-visible, #shopOverlay button:focus-visible,
+#chipModal button:focus-visible, #mobTabs button:focus-visible {
+  outline: 3px solid #168cde;
+  outline-offset: 3px;
+}
+
+/* Soft ivory cards, one border, and a single clear primary action. */
+#shopOverlay, #chipModal { background: rgba(19, 44, 66, .64); }
+#shopWin {
+  background: var(--dpd-ivory);
+  border: 2px solid #fff;
+  border-radius: 24px;
+  color: var(--dpd-ink);
+  box-shadow: 0 12px 0 #18355220, 0 24px 70px #132c424d;
+  padding: 24px 24px 28px;
+  scrollbar-color: #a6c8d9 transparent;
+}
+#shopWin::-webkit-scrollbar-thumb { background-color: #a6c8d9; }
+#shopTitle {
+  color: var(--dpd-ink);
+  font-size: 22px;
+  letter-spacing: -.5px;
+  padding: 1px 42px 15px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--dpd-line);
+}
+#shopGoldRow { color: var(--dpd-muted); font-weight: 700; margin-bottom: 16px; }
+#shopClose, #chipClose {
+  top: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  border: 1px solid #d2e3eb;
+  background: #edf6fa;
+  color: var(--dpd-ink);
+  font-size: 15px;
+}
+#shopClose:hover { background: #dcedf5; color: var(--dpd-ink); }
+.castleColT { color: var(--dpd-ink); border-color: #d9e8ee; padding-bottom: 10px; }
+.rpgItem {
+  border: 1px solid var(--dpd-line);
+  background: #fff;
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 3px 0 #d5e4e826;
+}
+.rpgIcon { background: #eaf7fd; border: 0; border-radius: 13px; box-shadow: none; }
+.rpgInfo { color: var(--dpd-ink); }
+.rpgInfo .lv { color: var(--dpd-blue-dark); }
+.rpgInfo .desc { font-size: 12px; color: var(--dpd-muted); }
+.rpgBuy, .chipBtn {
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid #e5b938;
+  background: var(--dpd-yellow);
+  color: #573f10;
+  box-shadow: 0 3px 0 #d7ac31;
+  font-family: inherit;
+}
+.rpgBuy:active:not(:disabled), .chipBtn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #d7ac31; }
+.rpgGuide { background: #eef7fb; color: #587187; border: 0; border-radius: 12px; }
+.handRowG { background: #fff; border: 1px solid #dce8ee; border-radius: 12px; }
+.handRowG .hname { color: var(--dpd-ink); }
+.handRowG .hname .rank { background: #cceaf8; color: #17679a; }
+.handRowG .hdesc { color: var(--dpd-muted); }
+
+/* Unit/landmark panels keep JS's measured bottom clearance and visibility. */
+#unitInfo, #objInfo {
+  background: #fffdf5f7;
+  color: var(--dpd-ink);
+  border: 1px solid #cbdfe5;
+  border-radius: 16px;
+  box-shadow: 0 5px 0 #18355214, 0 8px 22px #18355222;
+  padding: 12px;
+  line-height: 1.55;
+}
+#unitInfo { font-size: 12px; max-width: 254px; max-height: 220px; }
+#unitInfo b, #objInfo b { color: #14699b; }
+#unitInfo button.shopBtn { min-height: 36px; font-size: 12px; padding: 7px 9px; border-radius: 10px; }
+#unitInfo .priBtn { min-height: 30px; }
+#deselBtn { width: 26px; height: 26px; border: 0; background: #e8f2f7; color: #35566c; }
+#objInfo { font-size: 12px; }
+#objInfo .tip { background: #fff2c8; border: 0; color: #755922; border-radius: 10px; }
+.chipStation { border: 1px solid #e0bb4b; background: #ffdf75; box-shadow: 0 3px 0 #d5ad39; border-radius: 16px; }
+.chipStation .cl { color: #614816; }
+.chipStation:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 0 #d5ad39; }
+#dpsRank { background: #183552ed; border-color: #ffffff40; border-radius: 12px; color: #e5f0f7; }
+#dpsRank #dpsHead { color: #ffdf75; }
+#dpsRank .db { background: #365571; }
+#dpsRank .db div { background: linear-gradient(90deg, #48b8f0, #ffce64); }
+
+/* Finance screens have intentionally navy interiors: their dynamic content
+   contains pale inline text colors which must remain readable. */
+#chipWin {
+  background: #183552;
+  border: 2px solid #d9eff9;
+  border-radius: 24px;
+  color: #f4f9fc;
+  box-shadow: 0 12px 0 #132c4226, 0 24px 65px #132c4259;
+  padding: 24px 22px;
+  scrollbar-width: thin;
+  scrollbar-color: #6390ac transparent;
+}
+#chipTitle { color: #ffdf75; letter-spacing: -.4px; padding: 0 38px; font-size: 22px; }
+#chipClose { background: #294d6b; border-color: #54768f; color: #fff; }
+#chipClose:hover { background: #365e7e; }
+.chipBtn.sub { background: #294d6b; color: #e6f4fc; border-color: #54768f; box-shadow: 0 3px 0 #102a43; }
+.chipBtn.casItem { background: #244763; color: #e8f3fc; border-color: #4d7692; box-shadow: 0 3px 0 #0f2b42; border-radius: 15px; }
+.chipBtn.casItem:hover:not(:disabled) { background: #2d5778; }
+#chipBody .back { color: #bcdfef; padding: 8px 0; }
+.slotBox { background: #295270; border: 2px solid #f4d372; box-shadow: none; border-radius: 17px; }
+.slotWin { border-color: #b5d4e1; background: #fffdf5; }
+.slotPay { color: #cae2ef; }
+.reelBox { background: #0f2c43; border-color: #507d9a; }
+.wheel { border-color: #ffdb73; box-shadow: 0 0 0 3px #406c89, inset 0 0 18px #18355259; }
+.wheelWrap { filter: drop-shadow(0 8px 10px #081b2c66); }
+.wheelHub { background: #ffdf75; border-color: #d5ad39; box-shadow: 0 3px 5px #18355255; }
+
+/* The poker tray retains its existing slide transform and both hand rows. */
+#pokerPanel {
+  background: #fffdf5;
+  border: 1px solid #d3e5ec;
+  border-top: 4px solid #98d9f4;
+  border-radius: 21px 21px 0 0;
+  box-shadow: 0 -8px 26px rgba(24, 53, 82, .17);
+  padding: 13px 16px 16px;
+  gap: 14px;
+  color: var(--dpd-ink);
+}
+#pokerMain::after { color: #baddebc9; }
+#pokerBanner { color: #547286; font-size: 13px; }
+#pokerGuide { background: #edf6fa; border: 1px solid #d9e9f0; border-radius: 15px; }
+.pgHead b { color: #35647f; }
+.pgHelp { width: 26px; height: 26px; color: #35647f; background: #fff; border-color: #b7d4e2; }
+.pgHelp:hover { background: #dceef8; }
+.pgRow .pgn { color: #5e7789; }
+.pgRow.on { background: #fff1b8; box-shadow: inset 0 0 0 1px #ebcb62; }
+.pgRow.on .pgn { color: #866213; }
+#pokerHandle { height: 36px; color: #fff; background: #168cde; border-color: #0d74bc; box-shadow: 0 -3px 12px #18355226; border-radius: 14px 14px 0 0; }
+#pokerTimerBar { background: #dcebf0; height: 6px; border-radius: 5px; }
+#pokerTimerBar > div { background: linear-gradient(90deg, #54bded, #168cde); }
+.handLabel { color: #647e90; font-weight: 650; }
+.handLabel b { color: #167cb6; }
+.handRow.match { border-color: #f57592; background: #fff0f4; }
+.card { background: #fff; box-shadow: 0 5px 0 #c2d5df, 0 8px 12px #18355226, inset 0 0 0 1px #dbe7ed; }
+.card.swapped { background: #e5edf2; }
+.card small { color: #738391; }
+.card.swapped small { color: #2c7949; }
+.card.made { box-shadow: 0 0 0 3px #f9c745, 0 7px 0 #c2d5df, 0 8px 15px #f9c74540; animation: none; }
+.card.made.spin { animation: whirl .5s cubic-bezier(.25, 1.5, .45, 1); }
+.reswap { background: #e96560; }
+#summonBtn { background: #168cde; min-height: 44px; padding: 11px 42px; border: 1px solid #117abf; border-radius: 14px; box-shadow: 0 4px 0 #106eaf; font-family: inherit; }
+#summonBtn:active { transform: translateY(2px); box-shadow: 0 2px 0 #106eaf; }
+#summonBtn:disabled { opacity: .5; cursor: default; }
+#handResult { color: #147dad; font-size: 13px; }
+#log { background: #edf5f8; box-shadow: none; border: 1px solid #d9e7ed; color: #6b808d; border-radius: 13px; }
+
+/* Informational rewards occupy a compact corner. Only the visible card takes
+   pointer input; its existing tap-to-dismiss and auto-dismiss logic stay intact. */
+#rewardToast { z-index: 70; top: max(16px, env(safe-area-inset-top, 0px)); right: 18px; left: auto; transform: none; width: min(340px, calc(100vw - 32px)); pointer-events: none; }
+#rtInner {
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  column-gap: 12px;
+  padding: 13px 16px;
+  border: 1px solid #e1c774;
+  border-left: 5px solid #f5c748;
+  border-radius: 16px;
+  background: #fffdf5;
+  box-shadow: 0 5px 0 #1835520d, 0 9px 24px #18355224;
+  text-align: left;
+  pointer-events: auto;
+  animation: dpdRewardEnter .24s ease-out;
+}
+#rtBurst { display: none; }
+#rtIcon { grid-row: 1 / 3; align-self: center; font-size: 31px; filter: none; }
+#rtTitle { margin: 0; font-size: 11px; line-height: 1.4; letter-spacing: .3px; color: #7f652c; }
+#rtDesc { margin: 2px 0 0; font-size: 15px; line-height: 1.4; color: var(--dpd-ink); overflow-wrap: anywhere; }
+@keyframes dpdRewardEnter { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+#duelToast, #mktToast { background: #fffdf5ed; border: 1px solid #e7c3a9; border-left: 5px solid #ed8766; border-radius: 13px; box-shadow: 0 4px 15px #18355224; color: #97543d; text-shadow: none; letter-spacing: 0; }
+#mktToast { background: #f0fff6ed; border-color: #b8dbc5; border-left-color: #5bbd86; color: #286f4a; }
+#duelToast .dtSub { color: #946d58; }
+#mktToast .dtSub { color: #557963; }
+
+/* Decisions remain explicit modals, with their existing pause behavior. */
+#duelConfirm, #crownModal {
+  background: #fffdf5;
+  border: 2px solid #fff;
+  border-radius: 22px;
+  color: var(--dpd-ink);
+  padding: 22px;
+  box-shadow: 0 9px 0 #18355224, 0 18px 55px #18355259;
+  max-height: 90%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#duelConfirm .dcTitle, #crownModal .dcTitle { text-shadow: none; font-size: 18px; letter-spacing: -.3px; }
+#duelConfirm .dcBody, #crownModal .dcBody { color: #60788a; font-size: 13px; line-height: 1.65; }
+#duelConfirm button { min-height: 44px; background: #f57562; border: 1px solid #d76756; border-radius: 12px; color: #fff; font-family: inherit; box-shadow: 0 3px 0 #cf6657; }
+#duelConfirm button:hover { background: #eb705e; }
+#duelConfirm button + button { background: #edf5f8; border-color: #c9dce6; color: #547185; box-shadow: 0 3px 0 #c9dce6; }
+#crownModal .crGrid { gap: 8px; }
+#crownModal .crGrid button { min-height: 48px; padding: 10px 5px; background: #fff4cd; border: 1px solid #e7ce80; border-radius: 12px; color: #83621f; font-family: inherit; }
+#crownModal .crGrid button b { color: #775114; }
+#crownModal .crGrid button:hover { background: #ffe592; border-color: #d6af44; }
+#crownModal .dcBtns button { min-height: 40px; color: #587486; background: #edf5f8; border-color: #c9dce6; border-radius: 11px; font-family: inherit; }
+#crownModal .dcBtns button:hover { background: #dcecf4; }
+
+/* Retain the existing mobile tab/rail model, with smaller rules only where
+   its fixed rail makes desktop-sized controls impossible. */
+.mobile #topbar { border-radius: 0 0 14px 14px; box-shadow: 0 3px 0 #b7ccd333; }
+.mobile #cvWrap, .mobile #cv { border-radius: 0; }
+.mobile .shopIcon, .mobile .shopIcon.restartBtn { width: 44px; height: 44px; }
+.mobile #toolbar { padding: 0 8px; }
+.mobile .tbGroup { gap: 5px; }
+.mobile #unitInfo { max-width: 44vw; min-width: 145px; font-size: 11px; max-height: 176px; padding: 10px; }
+.mobile #unitInfo button.shopBtn { min-height: 32px; font-size: 11px; padding: 6px; }
+.mobile #objInfo { font-size: 11px; padding: 10px; max-width: 46vw; }
+.mobile #pokerPanel { padding: 18px 10px 70px; border-radius: 0; }
+.mobile #cards { margin-bottom: 16px; }
+.mobile .handCards { gap: clamp(5px, 1.8vw, 12px); }
+.mobile .handRow { padding-left: 3px; padding-right: 3px; }
+.mobile #mobTabs { background: #fffdf5f2; border: 1px solid #d2e3eb; box-shadow: 0 4px 16px #18355229; }
+.mobile #mobTabs button { min-height: 40px; height: 40px; border-radius: 18px; color: #668092; }
+.mobile #mobTabs button.active { background: #168cde; color: #fff; }
+.mobile #rewardToast { top: 0; left: 0; right: 0; width: 100%; z-index: 70; } /* 상점(60)·칩모달(62) 위 — 카지노 안 잭팟·확정 구매 토스트 (크로스체크 P2) */
+.mobile #rtInner { display: flex; width: 100%; min-width: 0; gap: 7px; padding: calc(5px + env(safe-area-inset-top, 0px)) 12px 5px; border-width: 0 0 2px; border-radius: 0 0 12px 12px; animation: none; }
+.mobile #rtIcon { font-size: 20px; flex: 0 0 auto; }
+.mobile #rtTitle { font-size: 10px; flex: 0 0 auto; }
+.mobile #rtDesc { font-size: 12px; margin: 0; white-space: normal; overflow-wrap: anywhere; }
+.mobile #duelConfirm, .mobile #crownModal { padding: 14px; }
+.mobile #duelConfirm button { min-height: 40px; }
+.mobile #crownModal .crGrid button { min-height: 42px; }
+
+@media (max-width: 560px) {
+  #shopWin { padding: 20px 14px; border-radius: 20px; }
+  #shopTitle { font-size: 19px; padding-left: 32px; padding-right: 40px; }
+  .rpgItem { gap: 8px; padding: 10px; }
+  .rpgBuy { padding: 8px 10px; }
+  .handRowG { flex-wrap: wrap; gap: 5px; }
+  .handRowG .hname { flex-basis: 100%; }
+  .handRowG .hdesc { text-align: left; }
+}
+@media (orientation: landscape) {
+  .mobile[data-tab="battle"], .mobile[data-tab="battle"] #wrap { background: #183552; }
+  .mobile[data-tab="battle"] #topbar { background: #183552; border: 0; border-radius: 0; color: #eaf4fa; box-shadow: none; }
+  .mobile[data-tab="battle"] #topbar b { color: #fff; }
+  .mobile[data-tab="battle"] #bigTimer .p { color: #d9edf9; }
+  @supports (height: 100svh) and (aspect-ratio: 940 / 500) {
+    .mobile[data-tab="battle"] #toolbar { padding: 0; }
+    .mobile[data-tab="battle"] #toolbar .shopIcon { width: 27px; height: 27px; min-height: 0; border-radius: 8px; box-shadow: 0 2px 0 #54768f; font-size: 13px; } /* 크기는 09-10 유저 레이아웃(27px — 레일 46px에 7개) 유지, 색·그림자만 새 테마 */
+    .mobile[data-tab="battle"] #mobTabs { padding: 3px; border-radius: 14px; }
+    .mobile[data-tab="battle"] #mobTabs button { width: 32px; min-height: 31px; height: 31px; padding: 0; border-radius: 10px; }
+  }
+}
+@media (max-height: 480px) and (orientation: landscape) {
+  #shopWin, #chipWin { max-height: 94dvh; padding-top: 16px; padding-bottom: 16px; }
+  #shopTitle, #chipTitle { font-size: 18px; }
+  .mobile #duelConfirm .dcTitle, .mobile #crownModal .dcTitle { font-size: 14px; margin-bottom: 5px; }
+  .mobile #duelConfirm .dcBody, .mobile #crownModal .dcBody { font-size: 11px; margin-bottom: 7px; }
+  .mobile #crownModal .crGrid { gap: 4px; margin-bottom: 7px; }
+  .mobile #crownModal .crGrid button { min-height: 36px; padding: 5px 3px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #rtInner, .chipStation.ready { animation: none; }
+  .shopIcon, #summonBtn { transition: none; }
+}
+
+/* Banner warnings keep readable contrast on the new ivory tray. */
+#pokerBanner .poker-boss-warning { color: #b14b2c; font-weight: 800; }
+#pokerBanner .poker-event-notice { color: #8b6418; font-weight: 800; }
+
+/* Preserve the LED clock's contrast after it moves into the mobile HUD. */
+#topbar b#tMkt { color: #ff8888; }
+#topbar b#tMkt.open { color: #ffe97a; }
+
+/* A short landscape screen has space for both hands side by side. Keep the
+   summon action clear of the floating battle/poker tabs. Portrait is unchanged. */
+@media (orientation: landscape) and (min-width: 700px) and (max-height: 560px) {
+  .mobile[data-tab="poker"] #pokerPanel { padding-top: 12px; }
+  .mobile[data-tab="poker"] #cards { flex-direction: row; justify-content: center; align-items: flex-start; gap: 12px; }
+  .mobile[data-tab="poker"] .handRow { flex: 1 1 0; min-width: 0; max-width: 420px; }
+  .mobile[data-tab="poker"] .handLabel { font-size: 11px; min-height: 32px; }
+  .mobile[data-tab="poker"] .handCards { gap: 9px; }
+  .mobile[data-tab="poker"] #mobTabs { left: auto; right: max(10px, env(safe-area-inset-right)); transform: none; }
+}
+
+</style>
+<style data-dpd-source="title-screen.css">
+/* Design test 01 — title art and pre-game navigation. No game balance changes. */
+body.at-title { overflow: hidden; }
+body.at-title #mobTabs { visibility: hidden; }
+#startOverlay {
+  --title-ink: #203d53;
+  --title-muted: #617481;
+  --title-blue: #176ad9;
+  --title-line: #dce6e8;
+  background: #8acdf7;
+  color: var(--title-ink);
+  z-index: 40;
+  display: flex;
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  gap: 0;
+  isolation: isolate;
+  font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+}
+#startOverlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--dpd-file-art-0) center 57% / cover no-repeat;
+}
+#startOverlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(224,247,255,.2), transparent 35%, transparent 65%, rgba(255,248,219,.72));
+  pointer-events: none;
+}
+#startOverlay[data-screen="difficulty"]::after,
+#startOverlay[data-screen="coop"]::after {
+  background: rgba(216,239,247,.72);
+  backdrop-filter: blur(8px);
+}
+#startOverlay button, #titleHelp button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+#startOverlay button:focus-visible, #titleHelp button:focus-visible { outline: 3px solid #173c65; outline-offset: 4px; }
+#modeRow {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+  padding: clamp(10px, 3vh, 32px) 0 0;
+}
+.title-brand { position: relative; }
+.title-kicker { font-size: 12px; letter-spacing: 4px; font-weight: 800; color: #244966; margin-bottom: 10px; }
+#startOverlay h2.title-logo {
+  font-size: clamp(40px, 6vw, 78px);
+  line-height: 1.01;
+  font-weight: 1000;
+  letter-spacing: -4px;
+  text-shadow: 0 4px 0 #16477c, 0 7px 0 rgba(28,77,114,.24);
+  color: #fffdf1;
+  -webkit-text-stroke: 1px #2164a0;
+  paint-order: stroke fill;
+}
+.title-logo span { display: block; color: #ffda5b; font-size: .88em; margin-top: 8px; letter-spacing: 8px; padding-left: 8px; }
+.title-tagline { display: inline-block; margin-top: 16px; font-size: 13px; font-weight: 700; color: #194066; background: rgba(248,253,255,.82); padding: 7px 16px; border-radius: 30px; }
+.title-actions { display: flex; align-items: center; flex-direction: column; gap: 16px; width: min(100%, 520px); }
+.title-primary {
+  min-height: 58px;
+  min-width: 280px;
+  border-radius: 20px;
+  padding: 14px 30px;
+  border: 2px solid #fff;
+  background: var(--title-blue, #176ad9);
+  color: #fff;
+  box-shadow: 0 5px 0 #134894, 0 12px 28px rgba(21,77,113,.2);
+  font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 36px;
+  transition: transform .13s, box-shadow .13s, background .13s;
+}
+.title-primary:hover { background: #0f5ec8; transform: translateY(-2px); }
+.title-primary:active { transform: translateY(4px); box-shadow: 0 1px 0 #134894, 0 5px 12px rgba(21,77,113,.15); }
+.title-primary .title-arrow { font-size: 25px; line-height: 1; font-weight: 500; }
+.title-secondary { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; }
+.title-link { min-height: 44px; padding: 9px 16px; border: 1px solid rgba(255,255,255,.8); border-radius: 14px; background: rgba(255,253,242,.92); color: #294659; cursor: pointer; font-size: 13px; font-weight: 800; box-shadow: 0 2px 0 rgba(55,85,89,.14); }
+.title-link:hover { background: #fff; }
+.title-link small { font-size: 10px; margin-left: 4px; color: #576c77; font-weight: 600; }
+.title-footer { color: #3f5764; font-size: 11px; font-weight: 600; text-shadow: 0 1px 0 #fff; }
+#startOverlay .mobHint { color: #355369; margin: 0; font-size: 11px; }
+.adventure-panel {
+  flex: 0 0 auto;
+  flex-direction: column;
+  width: min(880px, 100%);
+  margin: auto;
+  padding: clamp(20px, 3vw, 36px);
+  background: #fffdf5;
+  border: 2px solid #fff;
+  border-radius: 30px;
+  box-shadow: 0 8px 0 rgba(90,143,160,.16), 0 28px 70px rgba(39,83,111,.22);
+  gap: 22px;
+}
+.adventure-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.adventure-label { color: #577182; font-size: 11px; letter-spacing: 2px; font-weight: 800; }
+.title-back { border: 1px solid var(--title-line); background: #fff; color: #3c566a; font-size: 13px; font-weight: 800; cursor: pointer; border-radius: 12px; min-height: 42px; padding: 9px 14px; }
+.title-back:hover { background: #eef5f9; }
+#startOverlay h2.adventure-heading { color: #203d53; text-shadow: none; font-size: clamp(26px, 3vw, 36px); letter-spacing: -1.5px; line-height: 1.25; }
+.adventure-intro p { margin-top: 8px; color: var(--title-muted); font-size: 14px; line-height: 1.6; }
+.adventure-solo { display: inline-block; font-size: 12px; color: #1762b8; background: #e6f2ff; padding: 6px 10px; border-radius: 8px; font-weight: 800; margin-bottom: 12px; }
+#diffBtnRow { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; width: 100%; }
+#startOverlay .diffBtn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 20px 16px 17px;
+  min-width: 0;
+  border: 2px solid #e0e7e8;
+  border-radius: 20px;
+  background: #fff;
+  color: #294459;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #e5ebea;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+#startOverlay .diffBtn:hover { border-color: #94bce8; transform: translateY(-2px); }
+#startOverlay .diffBtn[aria-pressed="true"] { border-color: #2478df; background: #edf6ff; box-shadow: 0 3px 0 #2478df; }
+.difficulty-symbol { width: 44px; height: 44px; display: grid; place-items: center; font-size: 29px; line-height: 1; border-radius: 14px; background: #e7f5e7; color: #278447; margin-bottom: 16px; }
+.diffBtn[data-mul="1"] .difficulty-symbol { background: #e1efff; color: #1766d4; }
+.diffBtn[data-mul="1.4"] .difficulty-symbol { background: #fff0d6; color: #b76817; }
+.diffBtn[data-mul="2"] .difficulty-symbol { background: #fde3e7; color: #cb3955; }
+.difficulty-name { font-size: 19px; font-weight: 900; }
+.difficulty-note { display: block; min-height: 38px; margin: 8px 0 14px; color: #596f7e; font-size: 12px; line-height: 1.6; font-weight: 500; }
+.difficulty-multiplier { font-size: 11px; color: #476679; background: #f0f5f6; padding: 5px 7px; border-radius: 7px; }
+.difficulty-check { position: absolute; top: 15px; right: 13px; display: none; width: 22px; height: 22px; line-height: 22px; border-radius: 50%; background: #176ad9; color: #fff; font-size: 13px; text-align: center; }
+[aria-pressed="true"] .difficulty-check { display: block; }
+.adventure-launch { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+#diffBestRow { color: #5e7484; font-size: 12px; line-height: 1.7; }
+#btnBeginAdventure { min-width: 245px; font-size: 17px; min-height: 54px; border-radius: 16px; gap: 18px; }
+.daily-challenge { border-top: 1px solid #e1e8e5; padding-top: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.daily-challenge p { color: #607584; font-size: 12px; line-height: 1.7; }
+.daily-challenge p b { display: block; color: #38556b; font-size: 13px; }
+#btnDaily { flex: 0 0 auto; background: #fff3cd; border: 1px solid #e8d08a; color: #755622; }
+#dailyBest { display: block; font-size: 11px; font-weight: 500; margin-top: 2px; }
+.coop-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.coop-card { text-align: left; border-radius: 20px; border: 2px solid #dce6e8; background: #fff; color: #294459; cursor: pointer; padding: 24px; min-height: 160px; }
+.coop-card:hover { border-color: #2478df; background: #edf6ff; }
+.coop-card b { display: block; font-size: 19px; margin: 10px 0; }
+.coop-card small { font-size: 13px; color: #607584; }
+.coop-symbol { display: block; font-size: 29px; color: #3288de; letter-spacing: 2px; }
+.coop-status { padding: 14px 16px; border-radius: 14px; background: #edf3f4; font-size: 13px; color: #536b7a; line-height: 1.7; }
+#titleHelp { margin: auto; width: min(500px, calc(100% - 32px)); border: 2px solid #fff; border-radius: 24px; background: #fffdf5; color: #294459; padding: 26px; box-shadow: 0 24px 70px #17365555; }
+#titleHelp::backdrop { background: #17365588; backdrop-filter: blur(6px); }
+#titleHelp h2 { color: #294459; font-size: 25px; margin-bottom: 20px; }
+#titleHelp ol { padding-left: 24px; font-size: 14px; line-height: 1.8; }
+#titleHelp li + li { margin-top: 12px; }
+#titleHelp p { font-size: 12px; color: #607584; line-height: 1.7; margin: 18px 0; }
+#titleHelp form { text-align: right; }
+@media (max-width: 650px) {
+  #startOverlay { padding: max(16px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom)); }
+  #startOverlay::before { background-position: 48% center; }
+  #modeRow { padding-top: 24px; }
+  #startOverlay h2.title-logo { font-size: 52px; letter-spacing: -3px; }
+  .title-tagline { font-size: 11px; margin-top: 14px; }
+  .title-secondary { gap: 5px; }
+  .title-link { padding: 9px 11px; font-size: 12px; }
+  .title-link small { display: block; margin: 0; font-size: 10px; }
+  .title-actions { gap: 12px; }
+  .adventure-panel { border-radius: 24px; padding: 20px 16px; gap: 17px; }
+  #startOverlay h2.adventure-heading { font-size: 27px; }
+  #diffBtnRow { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  #startOverlay .diffBtn { padding: 13px; border-radius: 15px; }
+  .difficulty-symbol { width: 34px; height: 34px; font-size: 23px; border-radius: 10px; margin-bottom: 8px; }
+  .difficulty-name { font-size: 17px; }
+  .difficulty-note { min-height: 0; margin: 6px 0 10px; font-size: 11px; }
+  .difficulty-multiplier { font-size: 10px; }
+  .adventure-launch { flex-direction: column-reverse; gap: 12px; }
+  #btnBeginAdventure { width: 100%; min-width: 0; }
+  .daily-challenge { align-items: flex-start; padding-top: 14px; }
+  .daily-challenge p { font-size: 11px; }
+  .coop-options { gap: 10px; }
+  .coop-card { padding: 18px 13px; min-height: 140px; }
+  .coop-card b { font-size: 16px; }
+  .coop-card small { font-size: 11px; }
+}
+@media (max-height: 560px) and (min-width: 651px) {
+  #startOverlay { padding: 12px 20px; }
+  #modeRow { padding: 0; }
+  .title-kicker { font-size: 10px; margin-bottom: 4px; }
+  #startOverlay h2.title-logo { font-size: 43px; }
+  .title-logo span { margin-top: 4px; }
+  .title-tagline { margin-top: 9px; padding: 4px 12px; font-size: 11px; }
+  .title-actions { gap: 8px; }
+  .title-primary { min-height: 46px; padding: 8px 28px; font-size: 17px; border-radius: 16px; }
+  .title-secondary { gap: 8px; }
+  .title-secondary .title-link { min-height: 36px; padding: 6px 13px; font-size: 11px; }
+  .title-footer, #startOverlay .mobHint { display: none; }
+  .adventure-panel { padding: 15px 20px; gap: 10px; border-radius: 22px; }
+  .adventure-top { height: 32px; }
+  .title-back { min-height: 32px; padding: 6px 12px; }
+  .adventure-intro { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .adventure-intro p { margin: 0; font-size: 12px; }
+  .adventure-solo { margin: 0; }
+  #startOverlay h2.adventure-heading { font-size: 24px; }
+  #startOverlay .diffBtn { padding: 11px 14px; border-radius: 14px; }
+  .difficulty-symbol { float: left; width: 28px; height: 28px; font-size: 22px; margin-bottom: 5px; }
+  .difficulty-name { font-size: 16px; }
+  .difficulty-note { min-height: 0; font-size: 11px; margin: 5px 0 7px; }
+  .difficulty-multiplier { font-size: 10px; padding: 3px 6px; }
+  .daily-challenge { padding-top: 8px; }
+  .daily-challenge p { font-size: 11px; }
+  #btnBeginAdventure { min-height: 44px; }
+  .coop-card { min-height: 120px; padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #startOverlay *, #titleHelp * { animation: none !important; transition: none !important; }
+}
+
+</style>
+<style data-dpd-source="upgrade-ui.css">
+/* Unified kingdom workshop and treasury. Game logic stays in index.html. */
+#shopOverlay,#chipModal{padding:18px;box-sizing:border-box;background:rgba(19,44,66,.64);backdrop-filter:blur(5px)}
+#shopOverlay{z-index:60}#chipModal{z-index:62}
+#shopWin,#shopWin.wide,#chipWin{width:min(760px,100%);max-height:calc(100dvh - 36px);box-sizing:border-box;border:2px solid #fff;border-radius:27px;background:#fffdf5;color:#183552;padding:0;box-shadow:0 8px 0 #1738552b,0 24px 80px #112a4259;overflow-x:hidden;overflow-y:auto;text-align:left;scrollbar-width:thin;scrollbar-color:#b8ced9 transparent;overscroll-behavior:contain}
+#shopWin::before,#shopWin::after{content:none}
+.v2-modal-head{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:13px;padding:20px 23px 17px;background:#fffdf5f5;border-bottom:1px solid #dce7eb;backdrop-filter:blur(14px)}
+#shopTitle,#chipTitle{flex:1;min-width:0;margin:0;padding:0;border:0;font-size:25px;font-weight:900;line-height:1.25;letter-spacing:-.8px;color:#183552;text-align:left}
+.v2-eyebrow{display:block;font-size:11px;letter-spacing:.5px;color:#667e90;font-weight:700;margin-bottom:4px}
+#shopClose,#chipClose{position:static;flex:0 0 42px;width:42px;height:42px;border-radius:14px;background:#eaf3f7;border:1px solid #d8e6ec;display:grid;place-items:center;color:#34566c;box-shadow:0 2px 0 #d0e0e8}
+#shopClose:hover,#chipClose:hover{background:#dfedf5;color:#183552}
+#shopBody,#chipBody{padding:0 23px 23px}
+#shopGoldRow{margin:0;padding:16px 23px 0}
+.v2-icon{width:24px;height:24px;flex-shrink:0;vertical-align:middle;display:inline-block}
+.v2-icon-tile{width:49px;height:49px;display:grid;place-items:center;border-radius:16px;flex-shrink:0;background:#def0ff;color:#1475b7}
+.v2-icon-tile .v2-icon{width:28px;height:28px}
+.v2-blue{--tone:#137bbd;--tint:#e5f3ff}.v2-gold{--tone:#856019;--tint:#fff1bb}.v2-coral{--tone:#b9544c;--tint:#ffebe3}.v2-mint{--tone:#23815d;--tint:#e2f6e8}.v2-violet{--tone:#8055ab;--tint:#f1e8ff}
+.v2-icon-tile.v2-gold,.v2-icon-tile.v2-coral,.v2-icon-tile.v2-mint,.v2-icon-tile.v2-violet{background:var(--tint);color:var(--tone)}
+.v2-wallet{display:flex;gap:12px;margin:17px 0;color:#183552;font-variant-numeric:tabular-nums}
+.v2-wallet>span{display:flex;align-items:center;gap:9px;flex:1;padding:12px 16px;border-radius:15px;background:#f1f6f6;border:1px solid #e2ebeb;text-align:left}
+.v2-wallet>span:first-child{background:#fff3ca;border-color:#f2e3ad}
+.v2-wallet>span>.v2-icon{color:#9b771f}.v2-wallet>span:nth-child(2)>.v2-icon{color:#b96350}
+.v2-wallet small{display:block;color:#6d7d83;font-size:11px;font-weight:700}.v2-wallet b{font-size:21px;font-weight:900;line-height:1.2;white-space:nowrap}.v2-wallet em{font-style:normal;font-size:11px;font-weight:700;margin-left:5px;color:#6c7880}
+#shopGoldRow .v2-wallet{margin:0 0 14px}
+.v2-tabs{display:flex;gap:5px;margin:0 0 18px;padding:5px;border-radius:16px;background:#eaf1f3}
+.v2-tab{flex:1;display:flex;justify-content:center;align-items:center;gap:7px;min-height:44px;border:1px solid transparent;border-radius:12px;background:transparent;font-family:inherit;color:#687f8f;font-size:13px;font-weight:800;cursor:pointer}
+.v2-tab .v2-icon{width:19px;height:19px}.v2-tab[aria-pressed=true]{color:#1475b7;background:#fff;box-shadow:0 2px 5px #2d5b7221;border-color:#dae7ed}
+.v2-intro{font-size:12px;line-height:1.6;color:#6a8190;margin:0 0 13px}
+#shopWin .rpgItem{background:#fff;border:1px solid #d9e7eb;border-radius:19px;box-shadow:0 3px 0 #d5e4e840;padding:15px;margin-bottom:12px;gap:12px;flex-wrap:wrap}
+#shopWin .rpgInfo{flex:1;min-width:140px;color:#264860;font-size:13px}.rpgInfo h3{margin:0;font-size:15px}.rpgInfo p{font-size:12px;color:#687f8e;margin:6px 0}.rpgInfo .desc{color:#677e8e}
+#shopWin .rpgInfo [style*="color:#9a8a60"],#shopWin .rpgInfo [style*="color:#8a7f68"]{color:#677b86!important}
+#shopWin .rpgIcon{background:#edf6fa;border:none;box-shadow:none;border-radius:13px}
+#shopWin .rpgBuy,#chipWin .chipBtn{background:#ffd55a;border:1px solid #efc74d;border-radius:12px;box-shadow:0 3px 0 #dfb640;color:#5b4611;text-shadow:none;font-family:inherit;font-weight:850;line-height:1.25;min-height:44px;padding:10px 14px;margin:0;cursor:pointer;filter:none}
+#shopWin .rpgBuy:disabled,#chipWin .chipBtn:disabled{background:#eff2f2!important;border-color:#dce3e5!important;color:#71848f!important;box-shadow:none;opacity:1;cursor:not-allowed;filter:none}
+#shopWin .rpgBuy small{display:block;font-size:10px;font-weight:650;margin-top:4px}
+#shopWin .v2-gamble{background:#ffe5de!important;color:#a64f47!important;border-color:#f1c8bc!important;box-shadow:0 3px 0 #e7b7a9!important;text-shadow:none!important;font-size:13px!important}
+#shopWin .v2-gamble:disabled{box-shadow:none!important}
+#shopWin [data-asc]{background:#f3e9fb!important;color:#845aa2!important;border-color:#d8c0e9!important;box-shadow:0 3px 0 #cdb2df!important}
+.v2-hero-upgrade .rpgInfo{min-width:210px!important}.v2-hero-level{display:flex;align-items:center;gap:6px;font-size:11px;color:#80919b;margin-top:7px}.v2-hero-level>.v2-icon{width:14px;height:14px}.v2-hero-level b{color:#536d89;font-size:16px}.v2-hero-level small{font-size:10px}.v2-hero-price{font-size:12px;font-weight:850;color:#9a791f}.v2-hero-upgrade .rpgInfo p{margin:5px 0;font-size:11px}.v2-hero-upgrade>.rpgBuy{margin-left:0!important}
+.v2-gamble-stage{padding:14px;border-radius:17px;background:#edf6fc;border:1px solid #d5e8f3;margin:3px 0 16px}.v2-gamble-stage #gmgTrack{border-color:#d2e4ee!important;background:#dceaf2!important}.v2-gamble-stage #gmgStop{margin-top:12px!important}.v2-gamble-stage #gmgOk{min-width:110px}
+.v2-upgrade{display:block!important;position:relative;overflow:hidden;border-left:4px solid var(--race)!important}
+.v2-upgrade-top{display:flex;align-items:center;gap:11px}.v2-suit{display:grid;place-items:center;width:42px;height:44px;border-radius:11px;color:var(--race);background:#f1f7fa;font-size:31px;flex-shrink:0}
+.v2-upgrade-name{flex:1}.v2-upgrade-name h3{font-size:16px;margin:0;color:#203f58}.v2-upgrade-name>span{font-size:11px;color:#738691;display:block;margin-top:4px}
+.v2-level{display:flex;gap:7px;align-items:center;color:#768c9a;font-size:12px;white-space:nowrap}.v2-level>span{color:#a4b4bd}.v2-level b{font-size:18px;color:#244b63;background:#edf6fa;padding:5px 9px;border-radius:8px}
+.v2-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:15px 0;background:#f5f8f8;border-radius:12px;padding:11px 0}
+.v2-stat-grid>div{padding:0 12px;border-right:1px solid #e0e9ec}.v2-stat-grid>div:last-child{border:0}.v2-stat-grid span{font-size:10px;display:block;color:#6e8491;white-space:nowrap}.v2-stat-grid b{font-size:13px;display:block;margin-top:5px;color:#8a9aa4;white-space:nowrap}.v2-stat-grid i{font-style:normal;color:#adbcc4;margin:0 6px}.v2-stat-grid strong{font-size:14px;color:#1d5275}
+.v2-upgrade-actions{display:flex;gap:8px;align-items:center}.v2-upgrade-actions .rpgBuy{margin-left:0!important;min-width:115px}.v2-cost-label{font-size:10px;color:#78909e;flex:1}.v2-cost-label b{font-size:18px;display:block;margin-top:2px;color:#35536a;font-variant-numeric:tabular-nums}.v2-cost-label small{font-size:11px}
+.v2-note{display:flex;align-items:flex-start;gap:10px;padding:13px 14px;border-radius:14px;background:#eaf4f9;font-size:11px;line-height:1.7;color:#617d90;margin:15px 0 0}.v2-note>.v2-icon{width:21px;color:#327da3}.v2-note b{display:block;color:#315c77;margin-bottom:3px;font-size:12px}
+.v2-miner-summary{display:flex;align-items:center;gap:12px;background:#eaf7ec;padding:15px;border-radius:16px;margin:2px 0 12px}.v2-miner-summary h3{font-size:15px;margin:0;color:#275846}.v2-miner-summary h3 b{font-size:20px;margin-left:8px}.v2-miner-summary p{font-size:11px;color:#628174;margin:6px 0 0}
+.v2-mini-level{font-size:11px;color:#67838a;margin-left:8px;white-space:nowrap}.v2-stat-line{display:flex;align-items:center;gap:11px;color:#85979d;font-size:16px}.v2-stat-line b{color:#2c886b}.v2-stat-line>.v2-icon{width:17px}
+.v2-level-dots{display:flex;gap:5px;margin-top:10px}.v2-level-dots i{display:block;width:23px;height:5px;background:#e8efef;border-radius:4px}.v2-level-dots i.filled{background:#69b796}.v2-max{font-size:12px;font-weight:800;color:#2c886b;background:#edf8f0;border-radius:10px;padding:9px}
+#shopWin .castleColT{font-size:14px;letter-spacing:0;text-align:left;border-bottom:1px solid #dce8ed;padding:10px 0;color:#35576d}
+.v2-hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.v2-hub-card{display:flex;flex-wrap:wrap;align-items:center;gap:12px;text-align:left;padding:17px 17px 0;border-radius:20px;border:1px solid #dbe7eb;background:#fff;box-shadow:0 3px 0 #d4e1e640;color:#294c63;cursor:pointer;font-family:inherit;transition:transform .16s,box-shadow .16s,border-color .16s;min-width:0}.v2-hub-card:hover:not(:disabled){transform:translateY(-2px);border-color:#80bddb;box-shadow:0 5px 0 #d4e1e670}
+.v2-hub-invest{grid-column:1/-1;background:#edf8ff;border-color:#c9e5f6}.v2-hub-invest>.v2-icon{margin-left:auto;color:#1681be}.v2-hub-main{flex:1;min-width:120px}.v2-hub-main small{display:block;font-size:10px;color:#7e93a0;margin-bottom:4px}.v2-hub-main>b{display:block;font-size:18px;font-weight:900;letter-spacing:-.4px}.v2-hub-main>span{display:block;color:#6c8494;font-size:11px;margin-top:5px}
+.v2-hub-foot{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px;border-top:1px solid #dbe8ee;padding:11px 0;font-size:11px;color:#7a909b}.v2-hub-foot b{color:#267ba4;font-size:11px}.v2-hub-foot .v2-icon{width:15px;height:15px}
+.v2-section-heading{margin:25px 0 11px}.v2-section-heading h3{font-size:16px;letter-spacing:-.3px;margin:0;color:#274961}.v2-section-heading p{font-size:11px;color:#7a8e9b;margin:5px 0 0;line-height:1.5}
+.v2-ticket-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.v2-ticket{background:var(--tint);color:var(--tone);border:1px solid color-mix(in srgb,var(--tone) 20%,white);border-radius:15px;min-width:0;text-align:left;padding:13px 11px;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;position:relative}.v2-ticket-top{width:100%;display:flex;align-items:center;justify-content:space-between;gap:3px;margin-bottom:14px}.v2-ticket-top>.v2-icon{width:22px;height:22px}.v2-probability{font-size:9px;font-weight:800;padding:4px 5px;border-radius:6px;background:#ffffffac;white-space:nowrap}.v2-ticket>b{font-size:13px;line-height:1.4;font-weight:900;word-break:keep-all}.v2-ticket-caption{font-size:10px;margin-top:2px;opacity:.75}.v2-ticket-cost{border-top:1px dashed #314a6336;width:100%;padding-top:11px;margin-top:12px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:850}.v2-ticket-cost .v2-icon{width:17px;height:17px}.v2-shortage{display:block;font-size:10px!important;font-weight:600;color:#7a8991;margin-top:5px;line-height:1.4}
+.v2-fineprint{color:#7b8e9a;font-size:10px;line-height:1.6;margin:9px 0 0}
+.v2-supply-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.v2-supply{background:#fff;border:1px solid #dbe6eb;border-radius:17px;padding:15px 12px;text-align:left;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;font-family:inherit;color:#36586c}.v2-supply .v2-icon-tile{width:36px;height:36px;border-radius:11px;margin-bottom:10px}.v2-supply .v2-icon-tile .v2-icon{width:22px;height:22px}.v2-supply>b{font-size:12px;font-weight:850}.v2-supply>span:not(.v2-icon-tile):not(.v2-supply-bottom){font-size:10px;color:#78909e;line-height:1.6;margin-top:5px;min-height:32px}.v2-supply-bottom{display:flex;flex-wrap:wrap;gap:4px;align-items:center;justify-content:space-between;width:100%;padding-top:11px;margin-top:9px;border-top:1px solid #e4ecef}.v2-supply-bottom strong{font-size:12px}.v2-supply-bottom small{font-size:9px;color:#7e929b}
+.v2-ticket:hover:not(:disabled),.v2-supply:hover:not(:disabled){filter:brightness(.985);box-shadow:0 4px 0 #dbe6eb;transform:translateY(-1px)}
+.v2-hub-card:disabled,.v2-ticket:disabled,.v2-supply:disabled,.v2-term:disabled{cursor:not-allowed;filter:saturate(.45);box-shadow:none}.v2-ticket:disabled{background:#f1f4f5;border-color:#e0e6e8;color:#7a8a97}.v2-supply:disabled{background:#f7f9f8}.v2-hub-card:disabled .v2-hub-main>b{color:#7b8e98}.v2-hub-card:disabled .v2-hub-foot b{color:#8597a2}
+.v2-back{display:flex;align-items:center;gap:4px;border:0;border-radius:9px;background:transparent;color:#537b93;font-family:inherit;font-size:11px;font-weight:750;min-height:34px;padding:4px 6px;margin:11px 0 -6px;cursor:pointer}.v2-back>.v2-icon{width:16px;height:16px}.v2-back:hover{background:#e9f2f7}
+.v2-market-status{display:flex;align-items:center;gap:7px;padding:11px 12px;border-radius:12px;background:#edf2f4;color:#68818f;font-size:12px;font-weight:750}.v2-market-status i{width:7px;height:7px;border-radius:50%;background:#a3b2b8}.v2-market-status.is-open{background:#e7f6eb;color:#277d57}.v2-market-status.is-open i{background:#53ae7b}
+.v2-invest-form{margin:21px 0 16px}.v2-invest-form label{font-size:14px;color:#305368;font-weight:850;display:block;margin-bottom:9px}.v2-amount-row{display:flex;gap:7px;align-items:stretch}#v2AmountHost{flex:1;min-width:0}#invAmt{box-sizing:border-box;width:100%;min-height:47px;border:1px solid #bccfdb;background:#fff;border-radius:12px;padding:10px 13px;color:#265575;font-family:inherit;font-size:18px;font-weight:800;text-align:right}#invAmt[aria-invalid=true]{border-color:#d98f7e}.v2-small-button{background:#edf4f7;color:#406a82;border:1px solid #d6e4eb;border-radius:11px;font-family:inherit;font-size:12px;font-weight:800;padding:8px 13px;cursor:pointer}
+.v2-term-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.v2-term{padding:15px 10px 0;display:flex;align-items:center;flex-direction:column;border:1px solid #cce3ef;border-radius:17px;background:#f0f9ff;color:#3c718e;font-family:inherit;cursor:pointer;overflow:hidden}.v2-term>span{font-size:12px;font-weight:750}.v2-term>b{font-size:28px;font-weight:900;color:#1e80b6;margin:7px 0 12px;letter-spacing:-1px}.v2-term>small{font-size:10px;color:#7693a3}.v2-term>strong{font-size:16px;color:#285b79;margin:4px 0 14px;word-break:break-all}.v2-term>em{font-style:normal;font-size:11px;background:#daeffc;padding:10px 2px;width:calc(100% + 20px);color:#2a779f;font-weight:800}.v2-term:disabled{background:#f3f6f6;border-color:#e0e8ea;color:#7e949f}.v2-term:disabled>b{color:#88a3b3}.v2-term:disabled>em{background:#e8eff2;color:#7c939f}
+.v2-deposits article{padding:13px 0;border-bottom:1px solid #e5ecef}.v2-deposits article>div:first-child{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#536f82}.v2-deposits small{font-size:10px;color:#8b9ca8}.v2-deposits b{color:#238165}.v2-progress{height:5px;margin:11px 0 7px;background:#e7eeee;border-radius:5px;overflow:hidden}.v2-progress i{display:block;height:100%;background:#80c3a8;border-radius:5px}.v2-deposits p{display:flex;justify-content:space-between;font-size:10px;color:#8a9eaa;margin:0}.v2-deposits p span{color:#74a48c}.v2-empty{background:#f1f5f5;border-radius:13px;padding:20px;text-align:center;color:#8197a3;font-size:12px}
+.v2-slot-machine{border-radius:23px;background:#eaf4fb;border:1px solid #cbdfea;padding:20px 15px;text-align:center}.v2-slot-mast>span{display:block;font-size:9px;letter-spacing:3px;color:#6a91a7;font-weight:900}.v2-slot-mast>b{display:block;font-size:43px;font-weight:950;line-height:1.15;letter-spacing:7px;color:#ed7965;text-shadow:0 3px 0 #ce605326}.v2-slot-mast>small{display:block;font-size:12px;font-weight:850;color:#52819c;margin-top:4px}
+#chipWin .slotBox{background:#ffd564;border:2px solid #f4c149;border-radius:17px;box-shadow:0 5px 0 #dba948;padding:11px;gap:7px;margin:17px auto}.slotWin{border-color:#d5b34f;border-radius:9px;background:linear-gradient(#e8ede9,#fff 27%,#fff 74%,#e8ede9)}
+.v2-slot-symbol{display:block;flex:0 0 auto;width:46px;height:48px;overflow:visible}
+#chipWin .v2-lever{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#ef806c;color:#fff;border:1px solid #e76d58;box-shadow:0 3px 0 #c86050;min-width:225px;padding:12px 20px;margin:0 auto}.v2-lever small{font-size:10px;font-weight:700;margin-left:7px}.v2-slot-machine .chipResult{font-size:13px;line-height:1.6;margin:13px 0 0;color:#65859a;min-height:23px}.v2-luck{font-size:11px;color:#8c679d;text-align:center;line-height:1.6}
+.v2-payout{margin-top:19px}.v2-payout summary{font-size:12px;color:#486b81;font-weight:800;cursor:pointer;padding:4px 0}.v2-payout>div{display:grid;grid-template-columns:1fr 1fr;gap:0 22px;margin-top:6px}.v2-payout>div>span{display:flex;justify-content:space-between;gap:7px;padding:8px 0;border-bottom:1px solid #e4ecef;font-size:10px;color:#7e909b}.v2-payout b{font-weight:650}.v2-payout strong{font-weight:850;color:#587387;white-space:nowrap}.v2-payout .v2-jackpot b,.v2-payout .v2-jackpot strong{color:#cb7263}
+/* Older result/hero dialogs use inline pale text from their original dark skin. */
+#chipWin [style*="color:#ffd166"],#chipWin [style*="color: #ffd166"]{color:#947012!important}
+#chipWin [style*="color:#c9b8f0"],#chipWin [style*="color:#9a8a60"],#chipWin [style*="color:#c9a75a"]{color:#647e90!important}
+#chipWin [style*="color:#7ec8ff"]{color:#247fae!important}
+#chipWin [style*="color:#4ade80"]{color:#2e8b64!important}
+#chipWin .chipBtn.sub{background:#eaf2f6;color:#517286;border-color:#d0e0e8;box-shadow:0 2px 0 #cbdce5}
+#chipWin .gbxTxt{line-height:1.45}.gbxStage{border-radius:18px}.v2-modal-head~#chipBody>.chipResult{margin:16px 0}
+#shopWin button:focus-visible,#chipWin button:focus-visible,#chipWin input:focus-visible,#chipWin summary:focus-visible{outline:3px solid #168cde;outline-offset:3px}
+@media(max-width:600px){#shopOverlay,#chipModal{padding:9px}#shopWin,#shopWin.wide,#chipWin{max-height:calc(100dvh - 18px);border-radius:21px}.v2-modal-head{padding:15px 15px 13px;gap:10px}#shopTitle,#chipTitle{font-size:21px}.v2-eyebrow{font-size:9px}.v2-modal-head>.v2-icon-tile{width:42px;height:42px;border-radius:13px}#shopBody,#chipBody{padding:0 14px 18px}#shopGoldRow{padding:13px 14px 0}.v2-wallet{gap:8px;margin:13px 0}.v2-wallet>span{padding:10px 11px;gap:7px}.v2-wallet b{font-size:18px}.v2-wallet>span>.v2-icon{width:20px;height:20px}.v2-wallet small{font-size:10px}.v2-ticket-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.v2-ticket-top{margin-bottom:8px}.v2-ticket{padding:12px 13px}.v2-ticket>b{font-size:14px}.v2-probability{font-size:10px}.v2-hub-card{padding:13px 12px 0;gap:8px;border-radius:17px}.v2-hub-main{min-width:90px}.v2-hub-main>b{font-size:16px}.v2-hub-main>span{font-size:10px}.v2-hub-card>.v2-icon-tile{width:37px;height:37px;border-radius:12px}.v2-hub-card>.v2-icon-tile>.v2-icon{width:24px;height:24px}.v2-hub-invest{gap:11px}.v2-supply-grid{gap:7px}.v2-supply{padding:12px 9px}.v2-supply>b{font-size:11px}.v2-supply-bottom{align-items:flex-start;flex-direction:column}.v2-upgrade-actions .rpgBuy{min-width:91px!important;padding:9px 10px!important;font-size:12px}.v2-cost-label b{font-size:16px}.v2-stat-grid>div{padding:0 7px}.v2-stat-grid span{font-size:9px}.v2-stat-grid b,.v2-stat-grid strong{font-size:12px}.v2-stat-grid i{margin:0 3px}.v2-upgrade-name h3{font-size:14px}.v2-level{font-size:11px;gap:5px}.v2-level b{font-size:16px;padding:5px 7px}.v2-upgrade-top{gap:8px}.v2-suit{width:34px;height:38px;font-size:27px}#shopWin .rpgItem{padding:12px}.v2-miner-upgrade>.v2-icon-tile{width:38px;height:38px}.v2-miner-buy{margin-left:auto!important}.v2-term-grid{gap:7px}.v2-term>strong{font-size:13px}.v2-term>em{font-size:10px}.v2-tab{font-size:11px;gap:4px;min-height:42px}.v2-tab>.v2-icon{width:17px;height:17px}}
+@media(max-width:360px){.v2-stat-grid{grid-template-columns:1fr}.v2-stat-grid>div{display:flex;justify-content:space-between;align-items:center;padding:5px 10px;border:0}.v2-stat-grid span{font-size:10px}.v2-stat-grid b{margin:0}.v2-upgrade-actions{flex-wrap:wrap}.v2-cost-label{flex:1 0 100%;display:flex;align-items:center;justify-content:space-between}.v2-cost-label b{margin:0}.v2-upgrade-actions .rpgBuy{flex:1}.v2-hub-grid{gap:8px}.v2-hub-card:not(.v2-hub-invest){flex-direction:column;align-items:flex-start}.v2-hub-card:not(.v2-hub-invest) .v2-hub-main{width:100%}.v2-supply-grid{grid-template-columns:1fr}.v2-supply{display:grid;grid-template-columns:35px 1fr;gap:3px 10px;align-items:center}.v2-supply .v2-icon-tile{grid-row:1/4;margin:0}.v2-supply>span:not(.v2-icon-tile):not(.v2-supply-bottom){min-height:0;margin:0}.v2-supply-bottom{grid-column:2;display:flex;flex-direction:row;padding:5px 0 0;margin:0;border:0}.v2-supply .v2-shortage{grid-column:2}.v2-amount-row{gap:5px}.v2-small-button{padding:8px}.v2-term{padding:12px 7px 0}.v2-term>strong{font-size:12px}.v2-term>em{width:calc(100% + 14px);font-size:9px}.v2-term>span{font-size:10px}.v2-payout>div{grid-template-columns:1fr}.v2-slot-machine{padding:17px 7px}.v2-wallet>span{padding:10px 8px}.v2-wallet b{font-size:15px}}
+@media(max-height:500px) and (min-width:600px){#shopOverlay,#chipModal{padding:8px}#shopWin,#shopWin.wide,#chipWin{max-height:calc(100dvh - 16px);width:min(750px,100%)}.v2-modal-head{padding:8px 18px;gap:10px}.v2-modal-head>.v2-icon-tile{width:34px;height:34px;border-radius:10px}.v2-modal-head>.v2-icon-tile>.v2-icon{width:22px;height:22px}#shopTitle,#chipTitle{font-size:19px}.v2-eyebrow{font-size:8px;margin-bottom:2px}#shopClose,#chipClose{width:36px;height:36px;flex-basis:36px;border-radius:11px}#shopGoldRow{padding-top:9px}.v2-wallet,#shopGoldRow .v2-wallet{margin:8px 0 10px}.v2-wallet>span{padding:6px 12px}.v2-wallet>span>span{display:flex;gap:9px;align-items:center}.v2-wallet small{font-size:10px}.v2-wallet b{font-size:16px}.v2-wallet>span>.v2-icon{width:18px;height:18px}.v2-tabs{padding:3px;margin-bottom:9px}.v2-tab{min-height:33px;font-size:12px}.v2-intro{font-size:11px;margin-bottom:8px}#shopWin .v2-upgrade{padding:10px 13px}.v2-suit{width:33px;height:33px;font-size:26px}.v2-upgrade-name h3{font-size:14px}.v2-upgrade-name>span{font-size:10px;margin-top:2px}.v2-stat-grid{margin:9px 0;padding:7px 0}.v2-upgrade-actions .rpgBuy{min-height:40px;padding:7px 12px}.v2-cost-label b{font-size:16px}.v2-hub-grid{grid-template-columns:1.1fr 1fr 1fr;gap:9px}.v2-hub-invest{grid-column:auto}.v2-hub-card{padding:12px 12px 0;gap:9px}.v2-hub-card>.v2-icon-tile{width:35px;height:35px;border-radius:11px}.v2-hub-main{min-width:100px}.v2-hub-main>b{font-size:15px}.v2-hub-main>span{font-size:10px}.v2-hub-invest>.v2-icon{display:none}.v2-hub-foot{font-size:10px;min-height:14px}.v2-hub-foot b{font-size:9px}.v2-section-heading{margin-top:19px}}
+@media(prefers-reduced-motion:reduce){.v2-hub-card,.v2-ticket,.v2-supply{transition:none}}
+
+</style>
+<style data-dpd-source="roster-ui.css">
+/* Color roles are supplied by theme-palette.css. Local fallbacks retain v2. */
+.roster-miners,.roster-heroes{color:var(--theme-ink,#264860)}
+.roster-icon{width:24px;height:24px;flex:none;vertical-align:middle}
+.roster-emblem{display:grid;place-items:center;flex:none;width:46px;height:46px;border-radius:15px;background:var(--theme-inset,#eaf4f3);color:var(--theme-accent,#2b876c);border:1px solid var(--theme-line,#d5e4e5)}
+.roster-emblem .roster-icon{width:28px;height:28px}.roster-emblem.is-hero{color:var(--theme-gold,#a58029);background:var(--theme-raised,#fbf3db)}
+.roster-kicker{font-size:10px;font-weight:750;letter-spacing:.2px;color:var(--theme-muted,#6f8b92)}
+.roster-banner{display:flex;position:relative;align-items:center;justify-content:space-between;gap:8px;padding:22px 24px;border-radius:21px;background:var(--theme-inset,#eaf4ef);border:1px solid var(--theme-line,#d9e7df);overflow:hidden}
+.roster-banner h3{font-size:25px;letter-spacing:-.9px;margin:7px 0 9px;color:var(--theme-ink,#2b594f);font-weight:950}.roster-banner p{font-size:12px;line-height:1.65;color:var(--theme-muted,#6a8980);margin:0}.roster-mine-art{width:150px;height:118px;flex:none;color:var(--theme-accent,#3e8b70);margin:-8px 0 -10px}
+.roster-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:19px 0 16px;border-bottom:1px solid var(--theme-line,#d9e7df)}.roster-totals>div{padding:0 17px;border-right:1px solid var(--theme-line,#d9e7df)}.roster-totals>div:first-child{padding-left:5px}.roster-totals>div:last-child{border:0}.roster-totals span{display:block;font-size:11px;color:var(--theme-muted,#708980)}.roster-totals b{display:block;font-size:23px;font-weight:900;margin-top:7px;letter-spacing:-.5px;word-break:break-all;font-variant-numeric:tabular-nums}.roster-totals small{font-size:11px;font-weight:700;margin-left:4px;color:var(--theme-muted,#708980)}
+.roster-hire-note{display:flex;align-items:center;gap:10px;margin:14px 0 20px;font-size:11px;line-height:1.65;color:var(--theme-muted,#718887)}.roster-hire-note>.roster-icon{width:21px;height:21px;color:var(--theme-gold,#a38337)}.roster-hire-note b{color:var(--theme-ink,#41615b);font-weight:750}
+.roster-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:21px 0 12px}.roster-section-head h3{display:flex;align-items:center;gap:7px;margin:0;font-size:16px;font-weight:900;letter-spacing:-.35px}.roster-section-head>span{font-size:10px;color:var(--theme-muted,#76908b)}.roster-section-head .roster-icon{width:20px;height:20px;color:var(--theme-accent,#428a7b)}
+.roster-miner-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#shopWin .rpgItem.roster-upgrade,#shopWin .rpgItem.roster-train,#shopWin .rpgItem.roster-ascension{display:block;background:var(--theme-card,#fffdf7);border:1px solid var(--theme-line,#d6e4df);box-shadow:0 3px 0 var(--theme-shadow,#d5e4e840);color:var(--theme-ink,#264860);padding:17px;border-radius:19px;margin:0}
+.roster-upgrade-head,.roster-train-head{display:flex;align-items:center;gap:10px}#shopWin .roster-upgrade .rpgInfo,#shopWin .roster-train .rpgInfo{min-width:0;color:var(--theme-ink,#264860)}#shopWin .roster-upgrade .rpgInfo h3,#shopWin .roster-train .rpgInfo h3{font-size:16px;letter-spacing:-.4px;margin:4px 0 0;line-height:1.35;color:var(--theme-ink,#264860)}
+.roster-level{white-space:nowrap;font-size:10px;color:var(--theme-muted,#7a918b);font-weight:750;margin-left:auto}.roster-level b{color:var(--theme-ink,#264860);font-size:17px;margin-left:2px}.roster-level small{font-size:9px;margin-left:2px}.roster-description{font-size:11px;line-height:1.65;color:var(--theme-muted,#718887);margin:14px 0}
+.roster-stat{display:flex;align-items:center;gap:14px;padding:13px;border-radius:13px;background:var(--theme-inset,#edf4f0)}.roster-stat>div{flex:1}.roster-stat span{display:block;font-size:10px;color:var(--theme-muted,#79918b)}.roster-stat b{display:block;font-size:25px;font-weight:900;letter-spacing:-1px;margin-top:3px;color:var(--theme-muted,#718887);font-variant-numeric:tabular-nums}.roster-stat b small{font-size:11px;letter-spacing:0;margin-left:2px}.roster-stat>.roster-icon{width:20px;color:var(--theme-muted,#8caaa0)}.roster-stat .is-next b{color:var(--theme-accent,#2f856c)}
+.roster-dots{display:flex;gap:5px;margin:13px 0}.roster-dots i{height:5px;display:block;background:var(--theme-inset,#e7efeb);border-radius:4px;flex:1;border:1px solid var(--theme-line,#d9e4df)}.roster-dots i.is-filled{background:var(--theme-accent,#54a28a);border-color:var(--theme-accent,#54a28a)}
+.roster-upgrade-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px}.roster-price{display:block;font-size:10px;color:var(--theme-muted,#789087)}.roster-price b{display:block;font-size:17px;color:var(--theme-gold,#937328);margin-top:5px;white-space:nowrap;font-variant-numeric:tabular-nums}.roster-price small{font-size:10px;margin-left:4px}
+#shopWin .roster-buy{background:var(--theme-action,#ffd55a);color:var(--theme-action-ink,#5b4611);border-color:var(--theme-line,#dfbc4e);box-shadow:0 3px 0 var(--theme-shadow,#bb974b40);min-width:100px;font-size:12px;margin-left:0!important}#shopWin .roster-buy:disabled,#shopWin .roster-gamble:disabled,#shopWin .roster-ascend-buy:disabled{background:var(--theme-inset,#edf2ef)!important;color:var(--theme-muted,#738980)!important;border-color:var(--theme-line,#dce3df)!important;box-shadow:none!important}
+.roster-finished{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--theme-good,#3b8767);min-height:44px}.roster-finished>.roster-icon{width:20px}.roster-stat .roster-complete-label{display:flex;align-items:center;gap:3px;font-size:10px;font-weight:750;color:var(--theme-good,#3b8767)}.roster-complete-label .roster-icon{width:18px}
+.roster-hero-banner{display:flex;align-items:center;gap:14px;padding:19px 20px;border-radius:20px;background:var(--theme-inset,#f4eedc);border:1px solid var(--theme-line,#e8e0ca)}.roster-hero-banner .roster-emblem{width:57px;height:62px;border-radius:17px;transform:rotate(-5deg)}.roster-hero-banner .roster-emblem>.roster-icon{width:34px;height:34px}.roster-hero-banner h3{font-size:22px;letter-spacing:-.75px;margin:5px 0 7px;font-weight:950}.roster-hero-banner p{margin:0;font-size:11px;color:var(--theme-muted,#898270)}.roster-discovered{display:flex;flex-direction:column;align-items:center;gap:3px;white-space:nowrap;margin-left:auto;padding-left:10px;color:var(--theme-muted,#8a826a);font-size:10px}.roster-discovered b{font-size:27px;color:var(--theme-gold,#9e7c2b);font-weight:950}.roster-discovered small{font-size:12px;font-weight:650;margin-left:4px;color:var(--theme-muted,#8a826a)}
+.roster-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:27px 16px;border-radius:20px;border:1px dashed var(--theme-line,#d9e3de);background:var(--theme-inset,#f2f4ed)}.roster-empty .roster-emblem{width:55px;height:55px;transform:rotate(-8deg)}.roster-empty h4{font-size:15px;margin:15px 0 8px;color:var(--theme-ink,#446158)}.roster-empty p{font-size:11px;line-height:1.8;color:var(--theme-muted,#7a8c7f);margin:0}
+.roster-hero-group{margin:0 0 17px}.roster-owned{margin-left:auto;white-space:nowrap;font-size:10px;font-weight:750;background:var(--theme-inset,#eaf4ee);color:var(--theme-good,#328461);padding:6px 8px;border-radius:7px}.roster-training-meter{display:flex;justify-content:space-between;flex-wrap:wrap;gap:9px;margin:18px 0 15px;font-size:10px;color:var(--theme-muted,#7e8a7c)}.roster-training-meter>span>b{color:var(--theme-ink,#425f55);margin-left:3px;font-size:13px}.roster-training-meter small{font-size:10px}.roster-training-meter>i{flex:1 0 100%;height:6px;border-radius:5px;background:var(--theme-inset,#e9eee6);overflow:hidden}.roster-training-meter>i>b{display:block;height:100%;background:var(--theme-gold,#c29c45);border-radius:5px}
+.roster-power{display:flex;align-items:center;gap:12px;background:var(--theme-inset,#f1f4ed);padding:13px 14px;border-radius:12px;flex-wrap:wrap}.roster-power>span:first-child{font-size:11px;color:var(--theme-muted,#7a897b);margin-right:auto}.roster-power>b{font-size:20px;color:var(--theme-muted,#859280)}.roster-power>strong{font-size:25px;color:var(--theme-accent,#3a865d);letter-spacing:-.7px}.roster-power>.roster-icon{width:19px;color:var(--theme-muted,#92a087)}.roster-power>small{font-size:9px;color:var(--theme-muted,#7a897b)}.roster-power>.roster-finished{min-height:0;font-size:10px}
+.roster-train-actions{display:flex;align-items:center;gap:8px;margin-top:16px}.roster-train-actions>.roster-price{margin-right:auto}.roster-train-actions>.rpgBuy{min-width:106px}#shopWin .roster-gamble{margin-left:0!important;font-size:12px;color:var(--theme-accent,#6c688d)!important;background:var(--theme-inset,#efedf6)!important;border-color:var(--theme-line,#dcd8e9)!important;box-shadow:0 3px 0 var(--theme-shadow,#dad7e240)!important}
+#shopWin .rpgItem.roster-ascension{margin:7px 0 0;padding:14px 17px;background:var(--theme-inset,#f1eef3);box-shadow:none;border-style:dashed}.roster-ascend-head{display:flex;gap:7px;align-items:center;color:var(--theme-accent,#8b6e96)}.roster-ascend-head>.roster-icon{width:20px;height:20px}.roster-ascend-head h4{font-size:12px;margin:0;font-weight:850;color:var(--theme-ink,#655b6d)}.roster-ascend-head>.roster-dots{width:44px;margin:0 0 0 auto;gap:4px}.roster-ascend-head>span:last-child{font-size:10px;color:var(--theme-muted,#8d8392);margin-left:2px}.roster-ascend-effect{margin:13px 0;padding-left:27px;font-size:11px;line-height:1.7}.roster-ascend-effect>span{display:block;color:var(--theme-muted,#8e8191);font-size:10px}.roster-ascend-effect>b{color:var(--theme-ink,#655d6e);font-weight:750}.roster-ascend-bottom{display:flex;gap:12px;align-items:center;border-top:1px solid var(--theme-line,#e0d8e4);padding-top:12px}.roster-ascend-bottom>div{flex:1;min-width:0}.roster-ascend-bottom b{display:block;font-size:12px;color:var(--theme-ink,#6c5a71);margin:3px 0 5px}.roster-ascend-bottom small{display:block;font-size:10px;line-height:1.6;color:var(--theme-muted,#8b8293)}.roster-ascend-bottom small.is-ready{color:var(--theme-good,#39866b)}#shopWin .roster-ascend-buy{display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;font-size:12px;background:var(--theme-accent,#9c82b0)!important;color:var(--theme-accent-ink,#fff)!important;border-color:var(--theme-line,#9176a4)!important;box-shadow:0 3px 0 var(--theme-shadow,#80639740)!important;margin:0!important}.roster-ascend-buy .roster-icon{width:15px;height:15px}.roster-ascend-done{display:flex;gap:7px;align-items:center;font-size:11px;line-height:1.6;color:var(--theme-good,#40856e);margin:13px 0 0}.roster-ascend-done>.roster-icon{width:18px}
+.roster-chance{display:flex;gap:9px;align-items:center;margin:15px 3px 20px;font-size:10px;line-height:1.75;color:var(--theme-muted,#7d8880)}.roster-chance>.roster-icon{width:21px;color:var(--theme-gold,#af903f)}.roster-chance b{color:var(--theme-ink,#506756)}
+.roster-dex-heading{margin-top:25px}.roster-dex-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.roster-dex-card{padding:14px;background:var(--theme-card,#fffdf7);border:1px solid var(--theme-line,#dedfce);border-radius:17px;min-width:0;position:relative}.roster-dex-card.is-owned{box-shadow:inset 0 3px 0 var(--theme-gold,#d0ad58)}.roster-dex-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:13px}.roster-dex-top>.roster-emblem{width:39px;height:43px;border-radius:12px}.roster-dex-top .roster-icon{width:25px;height:25px}.roster-dex-no{font-size:10px;font-weight:800;color:var(--theme-muted,#9d9a87);padding-top:3px}.roster-dex-card h4{font-size:14px;letter-spacing:-.25px;margin:0 0 5px;color:var(--theme-ink,#566451)}.roster-dex-state{display:block;font-size:9px;color:var(--theme-muted,#918d75);line-height:1.6}.roster-dex-card.is-owned .roster-dex-state{color:var(--theme-good,#438260)}.roster-riddle,.roster-ability{margin:13px 0 0;font-size:11px;line-height:1.85;color:var(--theme-muted,#8a8d7c);word-break:keep-all;overflow-wrap:anywhere}.roster-ability{color:var(--theme-ink,#63745e);min-height:60px}.roster-dex-card.is-locked{background:var(--theme-inset,#eef1e9);border-style:dashed}.roster-dex-card.is-locked .roster-emblem{color:var(--theme-muted,#8d9883);background:var(--theme-panel,#f9f7ed)}.roster-dex-card.is-locked h4{font-size:12px;color:var(--theme-muted,#7f8a75)}.roster-recipe{border-top:1px solid var(--theme-line,#e1e4d6);padding-top:10px;margin-top:12px}.roster-recipe>span{display:block;font-size:9px;color:var(--theme-muted,#96977c);margin-bottom:5px}.roster-recipe>b{font-size:10px;font-weight:750;line-height:1.65;color:var(--theme-ink,#677858);display:block;word-break:keep-all;overflow-wrap:anywhere}
+@media(max-width:600px){.roster-banner{padding:18px}.roster-banner h3{font-size:23px}.roster-mine-art{width:120px;height:105px;margin-right:-4px}.roster-miner-cards{grid-template-columns:1fr;gap:11px}#shopWin .rpgItem.roster-upgrade,#shopWin .rpgItem.roster-train{padding:15px}.roster-totals>div{padding:0 10px}.roster-totals b{font-size:19px}.roster-totals span{font-size:10px}.roster-totals small{font-size:10px}.roster-hire-note{font-size:10px}.roster-upgrade .roster-stat{margin-top:12px}.roster-upgrade-foot{padding-top:5px}.roster-upgrade .roster-description{margin-bottom:8px}.roster-hero-banner{padding:16px 14px;gap:10px}.roster-hero-banner h3{font-size:18px}.roster-hero-banner .roster-emblem{width:42px;height:49px;border-radius:13px}.roster-hero-banner .roster-emblem>.roster-icon{width:29px}.roster-hero-banner .roster-kicker{font-size:9px}.roster-hero-banner p{font-size:10px}.roster-discovered{padding-left:1px;font-size:9px}.roster-discovered b{font-size:24px}.roster-train-actions{flex-wrap:wrap;gap:8px}.roster-train-actions>.roster-price{display:flex;align-items:center;justify-content:space-between;flex:1 0 100%;margin:0 0 3px}.roster-train-actions>.roster-price b{margin:0}.roster-train-actions>.rpgBuy{flex:1;min-width:0}.roster-power{gap:8px;padding:12px}.roster-power>b{font-size:18px}.roster-power>strong{font-size:23px}.roster-power>small{display:none}.roster-ascend-bottom{align-items:flex-start}.roster-ascend-effect{padding-left:0}.roster-ascend-bottom>.rpgBuy{font-size:11px;padding:9px 10px!important;margin-top:5px!important;min-height:43px}.roster-dex-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.roster-dex-card{padding:13px}.roster-dex-card h4{font-size:13px}.roster-dex-card.is-locked h4{font-size:11px}.roster-riddle,.roster-ability{font-size:10px}.roster-ability{min-height:66px}.roster-owned{font-size:9px;padding:5px 7px}.roster-train-head{gap:9px}#shopWin .roster-train .rpgInfo h3{font-size:15px}.roster-train-head .roster-kicker{font-size:9px}}
+@media(max-width:360px){.roster-banner{padding:16px 14px}.roster-banner h3{font-size:21px}.roster-mine-art{width:92px;height:94px}.roster-totals b{font-size:16px}.roster-totals>div{padding:0 7px}.roster-totals span{font-size:9px}.roster-hero-banner{gap:8px;padding:14px 11px}.roster-hero-banner h3{font-size:16px}.roster-hero-banner .roster-emblem{width:33px;height:41px}.roster-hero-banner .roster-emblem>.roster-icon{width:24px}.roster-hero-banner .roster-kicker{font-size:8px}.roster-hero-banner p{font-size:9px}.roster-discovered b{font-size:21px}.roster-discovered small{font-size:10px}.roster-ascend-bottom{flex-wrap:wrap}.roster-ascend-bottom>div{flex-basis:100%}.roster-ascend-bottom>.rpgBuy{width:100%;margin-top:0!important}.roster-dex-card{padding:11px}.roster-riddle,.roster-ability{font-size:10px}.roster-power{gap:6px}.roster-power>b{font-size:16px}.roster-power>strong{font-size:21px}.roster-power>span:first-child{font-size:10px}}
+@media(max-height:500px) and (min-width:600px){.roster-banner{padding:15px 20px;min-height:95px}.roster-banner h3{font-size:23px;margin:5px 0}.roster-banner p{font-size:10px}.roster-mine-art{height:95px;width:120px}.roster-totals{padding:13px 0}.roster-totals b{font-size:20px}.roster-hire-note{margin:11px 0 15px}.roster-hero-banner{padding:13px 17px}.roster-hero-banner h3{font-size:20px}.roster-hero-banner .roster-emblem{width:45px;height:50px}.roster-section-head{margin-top:17px}}
+/* Keep both tools and their actions in the first desktop view. Compact space,
+   not type: portrait/mobile retains its original readable vertical cards. */
+@media(min-width:601px){
+  .roster-miners .roster-banner{box-sizing:border-box;min-height:0;height:110px;padding:12px 20px}
+  .roster-miners .roster-banner .roster-kicker{display:block;line-height:1.3}
+  .roster-miners .roster-banner h3{font-size:25px;line-height:1.1;margin:4px 0 5px}
+  .roster-miners .roster-banner p{font-size:12px;line-height:1.45}
+  .roster-miners .roster-banner p br{display:none}
+  .roster-miners .roster-mine-art{height:103px;width:132px;margin:-6px 0}
+  .roster-miners .roster-totals{padding:11px 0 10px}
+  .roster-miners .roster-totals span{line-height:1.4}
+  .roster-miners .roster-totals b{font-size:23px;line-height:1.1;margin-top:4px}
+  .roster-miners .roster-hire-note{margin:6px 0 7px;line-height:1.5}
+  .roster-miners .roster-section-head{margin:12px 0 9px}
+  #shopWin .roster-miners .rpgItem.roster-upgrade{padding:12px 15px}
+  .roster-miners .roster-upgrade-head .roster-emblem{width:42px;height:42px;border-radius:13px}
+  .roster-miners .roster-description{margin:7px 0;line-height:1.5}
+  .roster-miners .roster-stat{padding:8px 12px}
+  .roster-miners .roster-stat span{line-height:1.4}
+  .roster-miners .roster-stat b{line-height:1;margin-top:3px}
+  .roster-miners .roster-dots{margin:8px 0}
+  .roster-miners .roster-upgrade-foot{padding-top:2px}
+}
+
+</style>
+<style data-dpd-source="woodland-ui.css">
+/* Woodland workshop. Deliberately scoped to selection / upgrade windows.
+   The title poster, Canvas, battle HUD and poker tray keep their existing skin. */
+:is(#shopWin,#chipWin,#duelConfirm,#crownModal,#titleHelp,.adventure-panel) {
+  --theme-panel:#edcf94; --theme-card:#f6e0ad; --theme-raised:#fce8bc;
+  --theme-inset:#dfc18a; --theme-ink:#432a1c; --theme-muted:#745333;
+  --theme-line:#b88b4f; --theme-action:#4c793c; --theme-action-ink:#fff4d0;
+  --theme-accent:#a85b21; --theme-accent-ink:#fff1cc; --theme-gold:#79521a;
+  --theme-danger:#9f3e2c; --theme-good:#365b2b; --theme-shadow:#59391f;
+  --wood-ink:#fff0c1; --wood-border:#714322; --wood-face:#a86b31;
+  --wood-art:var(--dpd-file-art-1);
+  --paper:linear-gradient(125deg,#fff1c150,transparent 38%,#bf893212),linear-gradient(#f1d6a0,#e8c68b);
+  color-scheme:light;
+}
+#shopOverlay,#chipModal { background:#172b26ab; backdrop-filter:blur(5px); }
+html :is(#shopWin,#shopWin.wide,#chipWin) {
+  border:7px solid transparent; border-radius:22px;
+  background:linear-gradient(#eed19b,#e5c18a) padding-box,var(--wood-art) border-box;
+  color:var(--theme-ink);
+  box-shadow:0 0 0 2px #684123,0 3px 0 3px #c89951,0 9px 0 2px #57381e,0 24px 65px #0a170a70;
+  scrollbar-color:#9a6539 #dfbd82;
+}
+#shopWin::-webkit-scrollbar-thumb,#chipWin::-webkit-scrollbar-thumb { background:#9a6539; border-radius:9px; }
+:is(#shopWin,#chipWin) .v2-modal-head {
+  padding:18px 21px 16px; border-bottom:3px solid #714322;
+  background-image:linear-gradient(#84491c4d,#5a351a70),var(--wood-art);
+  background-size:cover,600px auto; background-position:center;
+  box-shadow:inset 0 2px 0 #ecc181b3,0 3px 0 #eac88c;
+  backdrop-filter:none;
+}
+:is(#shopWin,#chipWin) .v2-modal-head::before,
+:is(#shopWin,#chipWin) .v2-modal-head::after {
+  content:""; position:absolute; width:5px; height:5px; border-radius:50%;
+  top:8px; left:8px; background:#e8bd70; border:1px solid #6c4424;
+  box-shadow:inset 0 1px 0 #ffdf9e,0 1px 1px #3c241970; pointer-events:none;
+}
+:is(#shopWin,#chipWin) .v2-modal-head::after { left:auto; right:8px; }
+html :is(#shopTitle,#chipTitle) { color:var(--wood-ink); font-size:25px; text-shadow:0 2px 0 #52311c; letter-spacing:-.65px; }
+:is(#shopWin,#chipWin) .v2-eyebrow { color:#ffe3a9; font-size:10px; letter-spacing:1.3px; text-shadow:0 1px 0 #694421; }
+:is(#shopWin,#chipWin) .v2-modal-head>.v2-icon-tile {
+  color:#ffe8a5; background:#56331cd4; border:1px solid #c99551;
+  border-radius:14px; box-shadow:inset 0 2px 4px #341d164d,0 1px 0 #e3b568;
+}
+html :is(#shopClose,#chipClose) {
+  color:#fff0c2; background:linear-gradient(#a56a38,#814924);
+  border:1px solid #e2b16f; border-radius:11px;
+  box-shadow:inset 0 1px 0 #f0cb8680,0 3px 0 #58331e; text-shadow:0 1px 0 #52321b;
+}
+html :is(#shopClose,#chipClose):hover { color:#fff8d9; background:#b27a43; }
+:is(#shopWin,#chipWin) :is(#shopBody,#chipBody) { background:var(--paper); }
+#shopGoldRow { background:#eed19b; }
+:is(#shopWin,#chipWin) :is(.v2-intro,.v2-fineprint,.v2-shortage,.v2-cost-label,.v2-upgrade-name>span,.v2-level,.v2-level>span,.v2-mini-level,.v2-hero-level,.v2-hero-level small) { color:var(--theme-muted); }
+:is(#shopWin,#chipWin) .v2-wallet { color:var(--theme-ink); }
+:is(#shopWin,#chipWin) .v2-wallet>span {
+  background:linear-gradient(#e2bb7e,#edcc92); border:1px solid #bb8c4c; border-radius:12px;
+  box-shadow:inset 0 2px 4px #845c2530,0 1px 0 #fff0c5;
+}
+:is(#shopWin,#chipWin) .v2-wallet>span:first-child { background:linear-gradient(#e2bb7e,#edcc92); border-color:#bb8c4c; }
+:is(#shopWin,#chipWin) .v2-wallet>span>.v2-icon { color:#95621f; }
+:is(#shopWin,#chipWin) .v2-wallet>span:nth-child(2)>.v2-icon { color:#845239; }
+:is(#shopWin,#chipWin) .v2-wallet :is(small,em) { color:#745333; }
+#shopWin .v2-tabs { padding:5px; border:1px solid #997045; border-radius:13px; background:#b78950; box-shadow:inset 0 2px 3px #61401b40,0 1px 0 #fff0bf; }
+#shopWin .v2-tab { color:#553820; border-radius:9px; background:linear-gradient(#e1bc7e,#c99b60); border:1px solid #a37440; box-shadow:inset 0 1px 0 #f9dba3; text-shadow:0 1px 0 #ffedbf55; }
+#shopWin .v2-tab[aria-pressed=true] { color:#fff1c1; background:linear-gradient(#65894a,#456839); border-color:#38532b; box-shadow:inset 0 1px 0 #9caf67,0 2px 0 #344f2b; text-shadow:0 1px 0 #2d4929; }
+#shopWin .v2-tab:hover { filter:brightness(1.05); }
+#shopWin .rpgItem {
+  color:var(--theme-ink); border:1px solid #b98c50; border-radius:15px;
+  background:linear-gradient(120deg,#fff1c250,transparent 55%),#f3dba6;
+  box-shadow:inset 0 1px 0 #fff0c8,0 3px 0 #ae7d403d;
+}
+#shopWin :is(.rpgInfo,.rpgInfo h3,.v2-upgrade-name h3,.v2-cost-label b,.castleColT) { color:var(--theme-ink); }
+#shopWin :is(.rpgInfo p,.rpgInfo .desc) { color:var(--theme-muted); }
+#shopWin .rpgIcon,#shopWin .v2-suit { background:#e2bd80; border:1px solid #bc8c49; border-radius:11px; box-shadow:inset 0 1px 3px #8056272b,0 1px 0 #fff0be; }
+#shopWin .v2-level b { background:#e0bd82; color:#754820; box-shadow:inset 0 1px 2px #9a6c3533; }
+:is(#shopWin,#chipWin) :is(.v2-stat-grid,.v2-stat-line,.v2-note,.rpgGuide,.handRowG,.v2-gamble-stage) { background:#dfbf88; color:var(--theme-muted); border-color:#b88b4f; }
+#shopWin .v2-stat-grid { box-shadow:inset 0 1px 3px #95653326,0 1px 0 #fff0c6; }
+#shopWin .v2-stat-grid>div { border-color:#bd955f; }
+#shopWin .v2-stat-grid :is(span,b,i) { color:#745333; }
+#shopWin .v2-stat-grid strong { color:#365b2b; }
+:is(#shopWin,#chipWin) .v2-note :is(b,.v2-icon),#shopWin .handRowG .hname { color:#5c4827; }
+#shopWin .handRowG .hdesc { color:#745333; }
+#shopWin .handRowG .hname .rank { color:#4a6130; background:#eaf0b4; }
+:is(#shopWin,#chipWin) :is(.v2-blue,.v2-gold,.v2-coral,.v2-mint,.v2-violet) { --tint:#e5c38a; --tone:#845722; }
+:is(#shopWin,#chipWin) .v2-blue { --tone:#376c6c; }
+:is(#shopWin,#chipWin) .v2-mint { --tone:#44682e; }
+:is(#shopWin,#chipWin) .v2-coral { --tone:#9e472b; }
+:is(#shopWin,#chipWin) .v2-violet { --tone:#715068; }
+:is(#shopWin,#chipWin) .v2-icon-tile { color:var(--tone,#775021); background:var(--tint,#e4c289); border:1px solid #ba9059; box-shadow:inset 0 1px 0 #fae1ad; border-radius:12px; }
+html #shopWin .rpgBuy,html #chipWin .chipBtn {
+  color:#fff2c6; background:linear-gradient(#72934d,#507539 55%,#446930);
+  border:1px solid #355426; border-radius:10px;
+  box-shadow:inset 0 1px 0 #b8c77d,0 3px 0 #344e27; text-shadow:0 1px 0 #38502b;
+}
+html #shopWin .rpgBuy:hover:not(:disabled),html #chipWin .chipBtn:hover:not(:disabled) { filter:brightness(1.07); }
+html #shopWin :is(.v2-gamble,.roster-gamble,[data-asc]) {
+  color:#fff0c5!important; background:linear-gradient(#c68a44,#a4602d)!important;
+  border-color:#7f4f25!important; box-shadow:inset 0 1px 0 #efc383,0 3px 0 #784823!important; text-shadow:0 1px 0 #805124!important;
+}
+html #shopWin .rpgBuy:disabled,html #chipWin .chipBtn:disabled {
+  background:#d5b67e!important; color:#765734!important; border-color:#b49360!important;
+  box-shadow:inset 0 1px 0 #ebce99!important; text-shadow:none!important;
+}
+#shopWin .v2-hero-price { color:var(--theme-gold); }
+#shopWin .v2-hero-level b { color:#7a4d24; }
+#shopWin .v2-gamble-stage #gmgTrack { background:#d7b578!important; border-color:#aa7a40!important; }
+#shopWin .castleColT { border-color:#b88b4f; }
+/* The miners' timber sign and the heroes' illuminated journal share one shell. */
+#shopWin .roster-banner {
+  background:radial-gradient(ellipse at 80% 35%,#82935f55,transparent 65%),linear-gradient(120deg,#385936,#527247);
+  border:2px solid #b08345; border-radius:14px; box-shadow:inset 0 0 0 1px #91a36855,0 2px 0 #aa7b4433;
+}
+#shopWin .roster-banner h3 { color:#fff1bf; text-shadow:0 2px 0 #263d28; }
+#shopWin .roster-banner :is(p,.roster-kicker) { color:#f0dfb1; }
+#shopWin .roster-mine-art { color:#ead496; filter:drop-shadow(0 3px 1px #243f2738); }
+#shopWin .roster-emblem { background:linear-gradient(#e9c386,#d0a064); border:1px solid #ad7a3f; color:#6d4a24; border-radius:11px; box-shadow:inset 0 1px 0 #ffe2a5,0 2px 0 #a3713033; }
+#shopWin .roster-emblem.is-hero { color:#905d20; background:linear-gradient(#f5d99b,#dcba72); }
+#shopWin .roster-hero-banner { border:2px solid #ad7f43; border-radius:13px; background:radial-gradient(ellipse at 0 0,#ffe9b975,transparent 65%),linear-gradient(115deg,#dbb575,#edcd91); box-shadow:inset 4px 0 0 #895c3380,inset 6px 0 0 #f7d99c; }
+#shopWin .roster-hero-banner h3 { color:#6c431f; text-shadow:0 1px 0 #ffe9b9; }
+#shopWin .roster-hero-banner .roster-emblem { background:#765335; border:1px solid #d8af69; color:#f8d38c; box-shadow:inset 0 1px 0 #b68e59,0 3px 0 #5a3e26; }
+#shopWin :is(.roster-totals,.roster-totals>div,.roster-recipe,.roster-ascend-bottom) { border-color:#b58b52; }
+#shopWin .roster-totals b { color:#5c3b20; }
+#shopWin .roster-stat,#shopWin .roster-power { background:linear-gradient(#e2bf83,#e7c78e); box-shadow:inset 0 1px 3px #94632726,0 1px 0 #fff0c1; border-radius:10px; }
+#shopWin .roster-stat .is-next b,#shopWin .roster-power>strong { color:#3f682f; }
+#shopWin :is(.roster-dots i.is-filled,.roster-training-meter>i>b) { background:#658640; border-color:#507431; }
+#shopWin .roster-dots i { border-color:#ac864e; background:#d6b47b; }
+#shopWin .roster-section-head h3 { color:#654121; }
+#shopWin .rpgItem.roster-upgrade,#shopWin .rpgItem.roster-train { background:linear-gradient(115deg,#fff0bd60,transparent 70%),#f2d8a0; border-radius:14px; border-color:#b98b4e; box-shadow:inset 0 1px 0 #ffeabd,0 3px 0 #a2743b40; }
+#shopWin .rpgItem.roster-ascension { background:#e4c48c; border-radius:12px; border-color:#b78a50; }
+#shopWin .roster-dex-card { background:linear-gradient(#f4dcaa,#eccb91); border-color:#b98c50; border-radius:12px; box-shadow:inset 0 1px 0 #ffeab6,0 2px 0 #a2753940; }
+#shopWin .roster-dex-card.is-owned { box-shadow:inset 0 3px 0 #a98537,inset 0 4px 0 #fff0b4,0 2px 0 #a2753940; }
+#shopWin .roster-dex-card.is-locked { background:#dbbc88; border-color:#b08752; box-shadow:inset 0 1px 3px #9d70412b; }
+#shopWin .roster-dex-card.is-locked .roster-emblem { background:#ccab76; color:#775c37; }
+#shopWin .roster-empty { border-color:#b88b4f; background:#e3c590; border-radius:13px; }
+#shopWin .roster-owned { background:#d7d09b; color:#3c5e31; }
+/* Treasury: leather-inset resources, parchment tickets and a wood-cased slot. */
+#chipWin :is(.v2-hub-card,.v2-ticket,.v2-supply,.v2-term) { color:var(--theme-ink); background:linear-gradient(120deg,#fff0be66,transparent 65%),#f3dba5; border:1px solid #b78a4c; border-radius:14px; box-shadow:inset 0 1px 0 #fff0c2,0 3px 0 #a4723633; }
+#chipWin .v2-hub-invest { background:linear-gradient(115deg,#e9d8a3,#d4c58c); border-color:#9e8d51; }
+#chipWin :is(.v2-hub-main>b,.v2-section-heading h3,.v2-term>strong) { color:#54361e; }
+#chipWin :is(.v2-hub-main small,.v2-hub-main>span,.v2-hub-foot,.v2-section-heading p,.v2-supply>span:not(.v2-icon-tile):not(.v2-supply-bottom),.v2-supply-bottom small,.v2-ticket-caption) { color:#755634; opacity:1; }
+#chipWin :is(.v2-hub-invest>.v2-icon,.v2-hub-foot b,.v2-ticket-top>.v2-icon,.v2-ticket-cost) { color:#775122; }
+#chipWin :is(.v2-hub-foot,.v2-ticket-cost,.v2-supply-bottom) { border-color:#c59e61; }
+#chipWin :is(.v2-hub-card,.v2-ticket,.v2-supply):hover:not(:disabled) { border-color:#64803e; box-shadow:inset 0 1px 0 #fff0c2,0 5px 0 #8b693b55; }
+#chipWin .v2-probability { background:#e0bc7d; color:#624724; border:1px solid #c29b5c; }
+#chipWin :is(.v2-ticket:disabled,.v2-supply:disabled,.v2-hub-card:disabled,.v2-term:disabled) { background:#dec08a; border-color:#b79560; color:#785c37; filter:none; box-shadow:inset 0 1px 0 #ebd09f; }
+#chipWin .v2-hub-card:disabled :is(.v2-hub-main>b,.v2-hub-foot b) { color:#785c37; }
+#chipWin :is(.v2-back,.back) { color:#725335; }
+#chipWin .v2-back:hover { background:#e4c28c; }
+#chipWin .v2-market-status { background:#ddbf89; color:#735637; border:1px solid #b89864; border-radius:10px; }
+#chipWin .v2-market-status.is-open { background:#d6d299; color:#3f5a29; border-color:#a0a665; }
+#chipWin .v2-market-status.is-open i { background:#527239; }
+#chipWin .v2-invest-form label { color:#583b23; }
+#chipWin #invAmt { color:#55371d; background:#f9e5b4; border:1px solid #aa7c40; border-radius:10px; box-shadow:inset 0 2px 4px #9e713930,0 1px 0 #ffe6b4; }
+#chipWin #invAmt[aria-invalid=true] { border-color:#ad4b31; }
+#chipWin .v2-small-button { color:#664323; background:linear-gradient(#eacd98,#d6ae72); border-color:#b48a50; border-radius:9px; box-shadow:inset 0 1px 0 #fff0be,0 2px 0 #a27c42; }
+#chipWin .v2-term>b { color:#4c7134; }
+#chipWin .v2-term>small { color:#765734; }
+#chipWin .v2-term>em { background:linear-gradient(#6c8b48,#4c7236); color:#fff1c5; text-shadow:0 1px 0 #3b512b; border-top:1px solid #45632f; }
+#chipWin .v2-term:disabled>b { color:#79613d; }
+#chipWin .v2-term:disabled>em { color:#765c37; background:#ccad74; text-shadow:none; border-color:#b58e53; }
+#chipWin .v2-deposits article { border-color:#b99760; }
+#chipWin .v2-deposits article>div:first-child { color:#583b23; }
+#chipWin .v2-deposits :is(small,p) { color:#785b37; }
+#chipWin .v2-deposits :is(b,p span) { color:#446431; }
+#chipWin .v2-progress { background:#cfaf75; box-shadow:inset 0 1px 2px #86592338; }
+#chipWin .v2-progress i { background:#658b47; }
+#chipWin .v2-empty { background:#dfc28d; color:#745635; border:1px dashed #b99561; }
+#chipWin .v2-slot-machine {
+  background-image:linear-gradient(#89552455,#60371b7a),var(--wood-art); background-size:cover,600px auto;
+  border:3px solid #855226; border-radius:17px; box-shadow:inset 0 2px 0 #e9b869,0 4px 0 #613e24;
+}
+#chipWin .v2-slot-mast :is(span,small) { color:#f8e1ac; text-shadow:0 1px 0 #593923; }
+#chipWin .v2-slot-mast>b { color:#ffe19d; text-shadow:0 3px 0 #603c22,0 0 12px #f4ca6c44; }
+html #chipWin .slotBox { background:linear-gradient(#bb8a4e,#ddb372); border:2px solid #edca85; border-radius:12px; box-shadow:0 4px 0 #55371f,inset 0 1px 0 #fff0bf; }
+#chipWin .slotWin { border:1px solid #916133; border-radius:7px; background:linear-gradient(#d8bb84,#fbe8ba 27%,#fbe8ba 74%,#d8bb84); }
+#chipWin .v2-slot-machine .chipResult { color:#ffedc4; }
+#chipWin .v2-luck { color:#73543a; }
+#chipWin .v2-payout :is(summary,b,strong),#chipWin .slotPay { color:#614425; }
+#chipWin .v2-payout>div>span { color:#71532f; border-color:#bf9d63; }
+#chipWin .v2-payout .v2-jackpot :is(b,strong) { color:#964d27; }
+html #chipWin .chipBtn.sub { color:#674423; background:linear-gradient(#efd29a,#dbb478); border-color:#b08349; box-shadow:inset 0 1px 0 #ffedb6,0 3px 0 #a1763f; text-shadow:none; }
+:is(#shopWin,#chipWin) :is([style*="color:#9a8a60"],[style*="color:#8a7f68"],[style*="color:#c9b8f0"],[style*="color:#c9a75a"]) { color:#745333!important; }
+#chipWin :is([style*="color:#ffd166"],[style*="color: #ffd166"]) { color:#79521a!important; }
+#chipWin [style*="color:#7ec8ff"] { color:#426331!important; }
+#chipWin [style*="color:#4ade80"] { color:#365b2b!important; }
+#chipWin [style*="color:#ff6b6b"] { color:#9f3e2c!important; }
+#chipWin .v2-slot-machine [style*="color:#4ade80"] { color:#e1efb0!important; }
+#chipWin .v2-slot-machine :is([style*="color:#ffd166"],[style*="color: #ffd166"]) { color:#ffe5a4!important; }
+#chipWin .v2-slot-machine [style*="color:#ff6b6b"] { color:#ffceb0!important; }
+/* Confirmation windows use the same timber rim. Their positions and pause
+   behavior remain owned by the game and modal-flow.js. */
+html :is(#duelConfirm,#crownModal) {
+  color:var(--theme-ink); border:5px solid #a27039; border-radius:17px;
+  background:var(--paper); box-shadow:inset 0 0 0 1px #fff0c2,0 0 0 2px #674023,0 7px 0 #57371f88,0 18px 50px #17251666;
+}
+:is(#duelConfirm,#crownModal) .dcTitle { color:#614021; text-shadow:0 1px 0 #fff0c2; }
+:is(#duelConfirm,#crownModal) .dcBody { color:#715333; }
+#duelConfirm button,#crownModal .crGrid button { color:#fff0c5; background:linear-gradient(#71904d,#4c7139); border:1px solid #3d5c2d; border-radius:10px; box-shadow:inset 0 1px 0 #a7bc73,0 3px 0 #34532b; }
+#crownModal .crGrid button b { color:#fff0c5; }
+#duelConfirm button+button,#crownModal .dcBtns button { color:#654625; background:linear-gradient(#efd29e,#dbb67b); border:1px solid #b18951; border-radius:10px; box-shadow:inset 0 1px 0 #fff0c5,0 3px 0 #a27b44; }
+#crownModal .crGrid button:hover,#duelConfirm button:hover { background:#71944d; }
+#crownModal .dcBtns button:hover,#duelConfirm button+button:hover { background:#f0d3a1; }
+:is(#shopWin,#chipWin,#duelConfirm,#crownModal) :is(button,input,summary):focus-visible { outline:3px solid #315d39; outline-offset:3px; }
+@media(max-width:600px) {
+  html :is(#shopWin,#shopWin.wide,#chipWin) { border-width:5px; border-radius:17px; }
+  :is(#shopWin,#chipWin) .v2-modal-head { padding:14px 13px 12px; }
+  html :is(#shopTitle,#chipTitle) { font-size:21px; }
+  :is(#shopWin,#chipWin) .v2-eyebrow { font-size:9px; letter-spacing:.6px; }
+  #shopWin .v2-tab { font-size:11px; }
+  #shopWin .roster-banner { border-radius:12px; }
+  html :is(#duelConfirm,#crownModal) { border-width:4px; }
+}
+@media(max-height:500px) and (min-width:600px) {
+  html :is(#shopWin,#shopWin.wide,#chipWin) { border-width:5px; }
+  :is(#shopWin,#chipWin) .v2-modal-head { padding:8px 16px; }
+  html :is(#shopTitle,#chipTitle) { font-size:19px; }
+  :is(#shopWin,#chipWin) .v2-eyebrow { font-size:8px; }
+}
+
+</style>
+<style data-dpd-source="woodland-title.css">
+/* Woodland selection windows. The title poster, main menu and game world stay intact. */
+html[data-theme="woodland"] :is(#diffRow,#coopRow,#titleHelp) {
+  --title-ink:#432a1c;
+  --title-muted:#745333;
+  --title-line:#bd9357;
+  color:#432a1c;
+  border:10px solid #88522b;
+  border-radius:25px;
+  background:linear-gradient(115deg,#f5e2b4 0%,#efd59e 60%,#e8c78c 100%);
+  box-shadow:inset 0 0 0 2px #ffe9b4,inset 0 0 18px #b07a3730,0 0 0 2px #60371d,0 5px 0 2px #573b24,0 23px 65px #24312766;
+  isolation:isolate;
+}
+html[data-theme="woodland"] :is(#diffRow,#coopRow) {
+  position:relative;
+  width:min(900px,100%);
+  padding:0 26px 24px;
+  gap:20px;
+}
+html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-top {
+  margin:0 -26px;
+  padding:13px 20px 14px;
+  min-height:64px;
+  border-radius:14px 14px 0 0;
+  border-bottom:3px solid #7f4c27;
+  color:#ffedc0;
+  background:linear-gradient(#9d673ab8,#714b2be6),var(--dpd-file-art-1) center 40%/400px;
+  box-shadow:inset 0 2px #dfb86c,inset 0 -1px #c39052;
+}
+html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-label {
+  color:#ffedc0;
+  font-size:12px;
+  letter-spacing:1.2px;
+  text-shadow:0 2px #5c371e;
+  padding-left:5px;
+}
+html[data-theme="woodland"] :is(#diffRow,#coopRow) .title-back {
+  min-height:37px;
+  border:1px solid #e1b976;
+  border-radius:10px;
+  color:#fff1c9;
+  background:#4d3925a6;
+  box-shadow:inset 0 1px #f6d09b24,0 2px #54331f;
+  font-size:12px;
+}
+html[data-theme="woodland"] :is(#diffRow,#coopRow) .title-back:hover { background:#45301de8; }
+html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-intro { padding-top:2px; }
+html[data-theme="woodland"] #startOverlay :is(#diffRow,#coopRow) h2.adventure-heading {
+  color:#482e1c;
+  font-size:clamp(25px,3vw,32px);
+  font-weight:900;
+  letter-spacing:-1.2px;
+  text-shadow:0 1px #fff2d2;
+}
+html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-intro p {
+  color:#705333;
+  font-size:13px;
+  margin-top:7px;
+}
+html[data-theme="woodland"] #diffRow .adventure-solo {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  background:#567141;
+  color:#fff1c6;
+  border:1px solid #3c592f;
+  border-radius:6px 11px 11px 6px;
+  font-size:11px;
+  padding:5px 10px;
+  margin-bottom:11px;
+  box-shadow:inset 0 1px #9ba66b;
+}
+html[data-theme="woodland"] #diffRow .adventure-solo::before { content:'◆'; font-size:8px; color:#e9c06f; }
+html[data-theme="woodland"] #diffBtnRow { gap:12px; }
+html[data-theme="woodland"] #startOverlay #diffRow .diffBtn {
+  border:2px solid #bd955e;
+  border-radius:15px;
+  color:#482e1c;
+  background:linear-gradient(155deg,#fff0c9,#f1d59e);
+  box-shadow:inset 0 0 0 2px #fff3cf,0 4px 0 #b78b4e,0 7px 10px #80562d18;
+  padding:18px 15px 16px;
+  transition:transform .15s,border-color .15s,box-shadow .15s;
+}
+html[data-theme="woodland"] #startOverlay #diffRow .diffBtn:hover {
+  border-color:#8a672e;
+  transform:translateY(-3px);
+  box-shadow:inset 0 0 0 2px #fff3cf,0 6px 0 #b78b4e,0 10px 15px #80562d24;
+}
+html[data-theme="woodland"] #startOverlay #diffRow .diffBtn[aria-pressed="true"] {
+  border-color:#607340;
+  background:linear-gradient(150deg,#fff2cb,#ead495);
+  box-shadow:inset 0 0 0 2px #fbd679,0 4px 0 #4d6135,0 0 0 2px #9d995b55;
+}
+html[data-theme="woodland"] #diffRow .difficulty-symbol {
+  width:53px;
+  height:58px;
+  margin:0 0 13px;
+  padding:0;
+  border-radius:0;
+  background:transparent;
+  filter:drop-shadow(0 3px 0 #8f642d33);
+}
+html[data-theme="woodland"] .woodland-shield { display:block; width:100%; height:100%; overflow:visible; }
+html[data-theme="woodland"] #diffRow .difficulty-name { font-size:19px; letter-spacing:-.5px; }
+html[data-theme="woodland"] #diffRow .difficulty-note { color:#725333; font-size:12px; line-height:1.6; margin:8px 0 15px; }
+html[data-theme="woodland"] #diffRow .difficulty-multiplier {
+  color:#71502b;
+  background:#d7b97d40;
+  border:1px solid #c0a06766;
+  border-radius:6px;
+  font-size:10px;
+  padding:5px 6px;
+  white-space:nowrap;
+}
+html[data-theme="woodland"] #diffRow .difficulty-check {
+  width:23px;
+  height:23px;
+  line-height:21px;
+  top:13px;
+  right:12px;
+  border:1px solid #3c5427;
+  color:#fff2c0;
+  background:#607d42;
+  box-shadow:inset 0 1px #a6bd76,0 2px #4d613526;
+}
+html[data-theme="woodland"] #diffRow .adventure-launch { padding-top:2px; }
+html[data-theme="woodland"] #diffBestRow { color:#73522e; font-size:11px; }
+html[data-theme="woodland"] #btnBeginAdventure {
+  min-width:243px;
+  min-height:53px;
+  border:2px solid #405b2f;
+  border-radius:13px;
+  color:#fff5d3;
+  background:linear-gradient(#7c9550,#567b3d 55%,#466637);
+  box-shadow:inset 0 0 0 1px #bcc484,inset 0 2px #e5e2aa80,0 4px 0 #33472a,0 7px 15px #61513133;
+  text-shadow:0 2px #2f4e2d;
+  font-size:16px;
+  gap:23px;
+}
+html[data-theme="woodland"] #btnBeginAdventure:hover { background:linear-gradient(#8ea95f,#658d49 55%,#52773e); }
+html[data-theme="woodland"] #btnBeginAdventure:active { transform:translateY(3px); box-shadow:inset 0 0 0 1px #bcc484,0 1px 0 #33472a; }
+html[data-theme="woodland"] #diffRow .daily-challenge { border-top:1px dashed #b08a4f; padding-top:16px; }
+html[data-theme="woodland"] #diffRow .daily-challenge p { color:#7c5e37; font-size:11px; }
+html[data-theme="woodland"] #diffRow .daily-challenge p b { color:#593b23; font-size:12px; }
+html[data-theme="woodland"] #btnDaily {
+  color:#674526;
+  background:linear-gradient(#fce7b5,#e7c37c);
+  border:1px solid #a6793c;
+  border-radius:10px;
+  font-size:12px;
+  box-shadow:inset 0 1px #fff5d2,0 2px #a5793f;
+}
+html[data-theme="woodland"] #btnDaily:hover { background:#ffebbd; }
+html[data-theme="woodland"] #coopRow .coop-card {
+  border:2px solid #b89158;
+  border-radius:16px;
+  background:linear-gradient(130deg,#fff0c7,#eccc96);
+  color:#4b301c;
+  box-shadow:inset 0 0 0 2px #fff0c0,0 4px #b58a4d;
+}
+html[data-theme="woodland"] #coopRow .coop-card:hover { background:#fce7b6; border-color:#547441; }
+html[data-theme="woodland"] #coopRow .coop-card small { color:#755633; }
+html[data-theme="woodland"] #coopRow .coop-symbol { color:#3e6945; text-shadow:0 1px #fff9d9; }
+html[data-theme="woodland"] #coopRow .coop-status { border:1px solid #bea06a; background:#dabc8355; color:#725633; }
+html[data-theme="woodland"] #titleHelp { position:fixed; inset:0; margin:auto; height:fit-content; max-height:calc(100dvh - 32px); overflow:auto; padding:26px; }
+html[data-theme="woodland"] #titleHelp h2 { color:#4b301c; font-size:24px; text-shadow:0 1px #fff2d0; }
+html[data-theme="woodland"] #titleHelp ol { color:#583d26; }
+html[data-theme="woodland"] #titleHelp li::marker { color:#4d713d; font-weight:900; }
+html[data-theme="woodland"] #titleHelp p { color:#785934; }
+html[data-theme="woodland"] #titleHelp .title-link { color:#fff0c5; background:#557540; border:2px solid #3d5b2f; box-shadow:inset 0 1px #97ad6f,0 3px #3b502c; }
+html[data-theme="woodland"] :is(#diffRow,#coopRow,#titleHelp) button:focus-visible { outline:3px solid #315b48; outline-offset:4px; }
+html[data-theme="woodland"] .woodland-leaves { position:absolute; top:-18px; left:-26px; width:71px; height:52px; z-index:2; pointer-events:none; filter:drop-shadow(0 2px 0 #42362442); }
+html[data-theme="woodland"] .woodland-leaves svg { display:block; width:100%; height:100%; }
+html[data-theme="woodland"] #titleHelp .woodland-leaves { top:-18px; left:-20px; width:60px; }
+@media (max-width:650px) {
+  html[data-theme="woodland"] :is(#diffRow,#coopRow) { border-width:8px; border-radius:21px; padding:0 14px 18px; gap:17px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-top { margin:0 -14px; padding:10px 10px 12px; min-height:56px; border-radius:11px 11px 0 0; gap:6px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-label { font-size:10px; letter-spacing:.4px; padding-left:4px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow) .title-back { padding:7px 9px; font-size:11px; min-height:35px; white-space:nowrap; }
+  html[data-theme="woodland"] #startOverlay :is(#diffRow,#coopRow) h2.adventure-heading { font-size:24px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-intro p { font-size:11px; }
+  html[data-theme="woodland"] #diffBtnRow { gap:10px; }
+  html[data-theme="woodland"] #startOverlay #diffRow .diffBtn { padding:12px 11px 11px; border-radius:12px; }
+  html[data-theme="woodland"] #diffRow .difficulty-symbol { width:37px; height:41px; margin-bottom:8px; }
+  html[data-theme="woodland"] #diffRow .difficulty-name { font-size:17px; }
+  html[data-theme="woodland"] #diffRow .difficulty-note { font-size:10px; margin:6px 0 10px; min-height:32px; }
+  html[data-theme="woodland"] #diffRow .difficulty-multiplier { font-size:9px; padding:4px 5px; }
+  html[data-theme="woodland"] #diffRow .difficulty-check { top:11px; right:10px; width:21px; height:21px; line-height:19px; }
+  html[data-theme="woodland"] #diffRow .adventure-launch { gap:10px; }
+  html[data-theme="woodland"] #btnBeginAdventure { min-width:0; min-height:51px; }
+  html[data-theme="woodland"] #diffRow .daily-challenge { padding-top:13px; gap:8px; }
+  html[data-theme="woodland"] #diffRow .daily-challenge p { font-size:10px; }
+  html[data-theme="woodland"] #diffRow .daily-challenge p b { font-size:11px; }
+  html[data-theme="woodland"] #btnDaily { padding:9px; font-size:10px; }
+  html[data-theme="woodland"] .woodland-leaves { width:50px; height:40px; top:-16px; left:-17px; }
+  html[data-theme="woodland"] #titleHelp { padding:22px 19px; border-width:8px; }
+  html[data-theme="woodland"] #titleHelp h2 { font-size:22px; }
+}
+@media (max-height:560px) and (min-width:651px) {
+  html[data-theme="woodland"] :is(#diffRow,#coopRow) { border-width:7px; padding:0 20px 13px; gap:10px; border-radius:20px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-top { margin:0 -20px; min-height:42px; height:auto; padding:6px 14px 7px; border-radius:11px 11px 0 0; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow) .title-back { min-height:29px; padding:5px 10px; }
+  html[data-theme="woodland"] #startOverlay :is(#diffRow,#coopRow) h2.adventure-heading { font-size:23px; }
+  html[data-theme="woodland"] #diffRow .adventure-solo { margin:0; }
+  html[data-theme="woodland"] #startOverlay #diffRow .diffBtn { padding:10px 12px; }
+  html[data-theme="woodland"] #diffRow .difficulty-symbol { width:29px; height:32px; margin-bottom:5px; }
+  html[data-theme="woodland"] #diffRow .difficulty-name { font-size:16px; }
+  html[data-theme="woodland"] #diffRow .difficulty-note { min-height:0; margin:5px 0 7px; font-size:10px; }
+  html[data-theme="woodland"] #diffRow .difficulty-multiplier { font-size:9px; padding:3px 5px; }
+  html[data-theme="woodland"] #diffRow .difficulty-check { top:10px; right:10px; }
+  html[data-theme="woodland"] #btnBeginAdventure { min-height:43px; padding:8px 24px; }
+  html[data-theme="woodland"] #diffRow .daily-challenge { padding-top:8px; }
+  html[data-theme="woodland"] .woodland-leaves { width:50px; height:38px; top:-16px; left:-18px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  html[data-theme="woodland"] :is(#diffRow,#coopRow,#titleHelp) * { transition:none !important; }
+}
+
+</style>
+<style id="dpd-art">:root { --dpd-file-art-0: url("assets/title_poster.webp"); --dpd-file-art-1: url("assets/ui_wood.webp"); } /* 포스터(유저 확정 title-poster-approved.png)·나뭇결 — 인라인 base64 대신 파일 (index.html 12MB→0.8MB) */</style>
+<style id="wd-completion">
+/* Locked woodland design: extend to all selection/result/notification windows.
+   Applies only to dialogs. No game selectors, handlers, text or scripts changed. */
+:where(#shopOverlay,#chipModal,#startOverlay,#titleHelp,#duelConfirm,#crownModal,#overlay,#winOverlay,#hellOverlay,#rewardToast,#duelToast,#mktToast) :where(button,a,input,summary){transition-duration:.16s!important;}
+:where(#shopOverlay,#chipModal,#titleHelp,#duelConfirm,#crownModal,#overlay,#winOverlay,#hellOverlay,#rewardToast,#duelToast,#mktToast),
+:where(#shopOverlay,#chipModal,#titleHelp,#duelConfirm,#crownModal,#overlay,#winOverlay,#hellOverlay,#rewardToast,#duelToast,#mktToast) *{animation:none!important;}
+#shopWin :is(.handRow,.handRowG,.rpgGuide){background:#ead099;color:#604021;border-color:#bd9456;}
+#shopWin :is(.handRow b,.handRowG b,.rpgGuide b){color:#59391d;}
+#shopWin :is(.handRow small,.handRowG small){color:#745333;}
+#shopWin :is(.castleColT,.handRowG .hdesc){color:#674927;}
+#shopWin button:not(.rpgBuy):not(.v2-tab):not(#shopClose){border-color:#b68b4c;}
+:is(#overlay,#winOverlay,#hellOverlay){position:fixed!important;inset:0!important;background:#172b26b8!important;backdrop-filter:blur(5px);padding:18px;overflow:auto;}
+.wd-result{--wood-art:var(--dpd-file-art-1);box-sizing:border-box;position:relative;width:min(600px,100%);max-height:calc(100dvh - 36px);overflow:auto;display:flex;flex-direction:column;align-items:center;gap:18px;padding:0 27px 27px;border:8px solid #925b2e;border-radius:23px;background:linear-gradient(125deg,#f7e2b0,#eac88d);color:#432a1c;box-shadow:inset 0 0 0 2px #ffe9b4,0 0 0 2px #60371d,0 6px 0 #573b24,0 22px 65px #18291b60;text-align:center;}
+.wd-result>h2{align-self:stretch;margin:0 -27px!important;padding:23px 22px!important;background:linear-gradient(#84491c55,#5a351a70),var(--wood-art);background-size:cover,600px auto;border-bottom:3px solid #714322;color:#fff0c1!important;font-size:clamp(22px,3vw,30px)!important;line-height:1.4;text-shadow:0 2px #52311c;}
+.wd-result>p{color:#654625!important;font-size:15px!important;line-height:1.8!important;overflow-wrap:anywhere;}
+.wd-result>p span,.wd-result>p div{color:inherit!important;}.wd-result>p b{color:#7a4a10!important;} /* 결산(콤보·목숨·MVP·광부)은 어두운 배경용 인라인 밝은색 — 양피지에선 상속색으로 (크로스체크 P2) */
+.wd-result>button{max-width:100%;white-space:normal!important;min-height:46px;padding:12px 23px!important;border:1px solid #355426!important;border-radius:12px!important;background:linear-gradient(#72934d,#446930)!important;color:#fff2c6!important;font-family:inherit;font-weight:800;font-size:14px!important;box-shadow:inset 0 1px #b8c77d,0 3px #344e27;cursor:pointer;}
+#rtInner{background:linear-gradient(125deg,#f7e2b0,#eac88d);border-color:#9a6634;color:#432a1c;box-shadow:inset 0 0 0 1px #ffedbc,0 4px #684323,0 12px 30px #18291944;}
+#rtTitle{color:#624021;}#rtDesc{color:#735333;}
+#duelToast,#mktToast{background:#f2d9a4f5;border:1px solid #ad8144;border-left:5px solid #6b823f;color:#624021;box-shadow:0 4px 15px #49351533;}
+.mobile #duelToast,.mobile #mktToast{max-width:76%;} /* 불투명 판이 좌측 자금운영 스테이션을 덮지 않게 (크로스체크 P3) */
+#duelToast .dtSub,#mktToast .dtSub{color:#745333;}
+body.mobile :is(#shopOverlay,#chipModal){padding:calc(5px + env(safe-area-inset-top,0px)) calc(7px + env(safe-area-inset-right,0px)) calc(5px + env(safe-area-inset-bottom,0px)) calc(7px + env(safe-area-inset-left,0px));}
+body.mobile :is(#shopWin,#shopWin.wide,#chipWin){max-height:calc(100dvh - 10px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));width:min(760px,100%);max-width:100%;overflow:auto;overscroll-behavior:contain;}
+body.mobile #startOverlay:not([data-screen="title"]){padding:calc(5px + env(safe-area-inset-top,0px)) calc(9px + env(safe-area-inset-right,0px)) calc(5px + env(safe-area-inset-bottom,0px)) calc(9px + env(safe-area-inset-left,0px));}
+body.mobile :is(#diffRow,#coopRow){max-height:calc(100dvh - 12px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto;flex-shrink:0;overscroll-behavior:contain;}
+body.mobile :is(#duelConfirm,#crownModal){position:fixed;left:50%;top:50%;z-index:40;width:min(600px,calc(100vw - 24px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)));max-width:none;max-height:calc(100dvh - 20px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto;}
+body.mobile :is(#overlay,#winOverlay,#hellOverlay){padding:calc(6px + env(safe-area-inset-top,0px)) calc(12px + env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) calc(12px + env(safe-area-inset-left,0px));}
+body.mobile .wd-result{max-height:calc(100dvh - 14px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));gap:12px;padding:0 18px 17px;border-width:6px;}
+body.mobile .wd-result>h2{margin:0 -18px!important;padding:12px 17px!important;font-size:22px!important;}
+body.mobile .wd-result>p{font-size:12px!important;line-height:1.65!important;}
+@media(prefers-reduced-motion:reduce){:is(#shopOverlay,#chipModal,#startOverlay,#titleHelp,#overlay,#winOverlay,#hellOverlay) *{transition:none!important;}}
+/* Sandbox choices use the same parchment button material. */
+#shopWin .shopBtn{background:linear-gradient(#f8e4b6,#e4c185);color:#624321;border:1px solid #b78b4e;box-shadow:inset 0 1px #fff1c7,0 2px #a87a4140;}
+#shopWin .shopBtn:hover{background:#e3d49c;color:#3e5d2c;border-color:#718747;}
+
+</style>
 </head>
-<body>
+<body class="at-title">
 <div id="page">
 <!-- 광고 슬롯: 애드센스 승인 후 .adSlot 내부를 광고 코드로 교체 (300×600 기본, 좁으면 160×600) -->
 <aside class="adRail"><div class="adSlot" id="adSlotLeft">AD<br>300×600</div></aside>
 <div id="wrap">
-  <h1>DPD <small>프로토타입 v0.3 — 드래그: 부대지정 / 우클릭: 이동 / <b>A키+클릭: 공격 지정</b> (몬스터·광산·어택땅)</small></h1>
+  <h1>♦ 더블 포커 디펜스 <small>드래그: 부대 지정 · 우클릭: 이동 · <b>A + 클릭: 공격 지정</b></small></h1>
   <div id="topbar">
     <span>❤️ <b id="tLife"></b></span>
     <span>💰 <b id="tGold"></b></span>
@@ -719,35 +1930,52 @@
 <aside class="adRail"><div class="adSlot" id="adSlotRight">AD<br>300×600</div><canvas id="mmCv" width="220" height="140"></canvas></aside>
 </div>
 <div id="mobTabs"><button id="mtBattle" class="mobTabBtn">⚔️<span class="mtTxt"> 전투</span></button><button id="mtPoker" class="mobTabBtn">🃏<span class="mtTxt"> 포커</span></button></div>
-<div id="startOverlay">
-  <h2>♠♥ 더블 포커 디펜스 ♦♣</h2>
-  <div class="sub">포커로 유닛을 뽑아 몰려오는 몬스터를 막아라!</div>
-  <div class="mobHint">📱 가로 모드가 더 쾌적해요!</div>
-  <div id="modeRow" style="display:flex;gap:16px">
-    <button class="modeBtn" id="btnSolo">🎮 혼자하기</button>
-    <button class="modeBtn" id="btnCoop">👥 같이하기</button>
-    <button class="modeBtn" id="btnSandbox" style="background:#4a3d70">🧪 샌드박스<br><small style="font-size:11px">모든 유닛 실험</small></button>
-  </div>
-  <div id="coopRow" style="display:none;gap:12px">
-    <button class="modeBtn" id="btnMapTest">🏗️ 4인 맵 미리보기<br><small style="font-size:11px">혼자 둘러보기</small></button>
-    <button class="modeBtn" id="btnMapTest2">👥 2인 맵 미리보기<br><small style="font-size:11px">위·아래 진영</small></button>
-    <button class="modeBtn" disabled title="온라인 멀티는 준비 중입니다!">🌐 온라인 (준비 중)</button>
-    <button class="modeBtn" id="btnCoopBack" style="background:#3a3350">‹ 뒤로</button>
-  </div>
-  <div id="diffRow" style="display:none;flex-direction:column;align-items:center;gap:12px">
-    <div style="font-size:15px;color:#d9d2f5">난이도를 선택하세요</div>
-    <div id="diffBtnRow" style="display:flex;gap:12px">
-      <button class="diffBtn" data-mul="0.7" style="background:#2e7d32">🌱 쉬움</button>
-      <button class="diffBtn" data-mul="1" style="background:#1565c0">⚔️ 보통</button>
-      <button class="diffBtn" data-mul="1.4" style="background:#e65100">🔥 어려움</button>
-      <button class="diffBtn" data-mul="2" style="background:#b71c1c">💀 지옥</button>
+<div id="startOverlay" data-screen="title" role="region" aria-label="더블 포커 디펜스 시작 화면">
+  <div id="modeRow" style="display:flex">
+    <header class="title-brand">
+      <div class="title-kicker">DOUBLE POKER DEFENSE</div>
+      <h2 class="title-logo">더블 포커<span>디펜스</span></h2>
+      <p class="title-tagline">한 장의 행운, 나만의 작은 군단.</p>
+    </header>
+    <div class="title-actions">
+      <button class="title-primary" id="btnSolo">시작하기 <span class="title-arrow" aria-hidden="true">→</span></button>
+      <div class="title-secondary">
+        <button class="title-link" id="btnCoop">같이하기 <small>준비 중</small></button>
+        <button class="title-link" id="btnSandbox">샌드박스</button>
+        <button class="title-link" id="btnTitleHelp">게임 안내</button>
+      </div>
+      <div class="mobHint">가로로 돌리면 더 넓게 즐길 수 있어요.</div>
+      <div class="title-footer">© 2026 wedh729 · DOUBLE POKER DEFENSE</div>
     </div>
-    <div style="font-size:12px;color:#8f86b8">몬스터 체력 배수: 쉬움 ×0.7 · 보통 ×1.0 · 어려움 ×1.4 · 지옥 ×2.0</div>
-    <div id="diffBestRow" style="font-size:11.5px;color:#cfc6f5"></div>
-    <button id="btnDaily" class="diffBtn" style="background:#4a3d8f;font-size:14px">📅 오늘의 시드 <span id="dailyBest" style="font-size:11px;color:#cfc6f5"></span></button>
-    <div style="font-size:11px;color:#8f86b8">매일 모두에게 같은 카드가 옵니다 — 오늘의 덱으로 최고 기록에 도전! (보통 난이도)</div>
   </div>
+  <section id="coopRow" class="adventure-panel" style="display:none" aria-labelledby="coopHeading">
+    <div class="adventure-top"><span class="adventure-label">PLAY TOGETHER</span><button class="title-back" id="btnCoopBack">← 돌아가기</button></div>
+    <div class="adventure-intro"><h2 id="coopHeading" class="adventure-heading">함께할 세상을 미리 만나봐요</h2><p>지금은 혼자 지도를 둘러볼 수 있어요.</p></div>
+    <div class="coop-options">
+      <button class="coop-card" id="btnMapTest2"><span class="coop-symbol" aria-hidden="true">♦ ♥</span><b>2인 맵 미리보기</b><small>위·아래 두 진영 둘러보기 →</small></button>
+      <button class="coop-card" id="btnMapTest"><span class="coop-symbol" aria-hidden="true">♦ ♥ ♣ ♠</span><b>4인 맵 미리보기</b><small>넓은 네 진영 둘러보기 →</small></button>
+    </div>
+    <p class="coop-status">온라인 같이하기는 준비 중이에요. 맵 미리보기에서는 다른 플레이어와 연결되지 않아요.</p>
+  </section>
+  <section id="diffRow" class="adventure-panel" style="display:none" aria-labelledby="difficultyHeading">
+    <div class="adventure-top"><span class="adventure-label">READY FOR ADVENTURE</span><button class="title-back" id="btnDiffBack">← 돌아가기</button></div>
+    <div class="adventure-intro"><span class="adventure-solo">혼자하기</span><h2 id="difficultyHeading" class="adventure-heading">어떤 모험을 떠날까요?</h2><p>난이도를 고르고, 나만의 카드 군단을 만들어보세요.</p></div>
+    <div id="diffBtnRow" role="group" aria-label="난이도 선택">
+      <button class="diffBtn" data-mul="0.7" data-name="쉬움" aria-pressed="false"><span class="difficulty-check" aria-hidden="true">✓</span><span class="difficulty-symbol" aria-hidden="true">♧</span><b class="difficulty-name">쉬움</b><span class="difficulty-note">첫 모험에 추천해요</span><span class="difficulty-multiplier">몬스터 체력 ×0.7</span></button>
+      <button class="diffBtn" data-mul="1" data-name="보통" aria-pressed="true"><span class="difficulty-check" aria-hidden="true">✓</span><span class="difficulty-symbol" aria-hidden="true">♦</span><b class="difficulty-name">보통</b><span class="difficulty-note">전략을 하나씩 익혀요</span><span class="difficulty-multiplier">몬스터 체력 ×1.0</span></button>
+      <button class="diffBtn" data-mul="1.4" data-name="어려움" aria-pressed="false"><span class="difficulty-check" aria-hidden="true">✓</span><span class="difficulty-symbol" aria-hidden="true">✦</span><b class="difficulty-name">어려움</b><span class="difficulty-note">숙련된 지휘관의 도전</span><span class="difficulty-multiplier">몬스터 체력 ×1.4</span></button>
+      <button class="diffBtn" data-mul="2" data-name="지옥" aria-pressed="false"><span class="difficulty-check" aria-hidden="true">✓</span><span class="difficulty-symbol" aria-hidden="true">♠</span><b class="difficulty-name">지옥</b><span class="difficulty-note">한 수가 중요한 극한의 도전</span><span class="difficulty-multiplier">몬스터 체력 ×2.0</span></button>
+    </div>
+    <div class="adventure-launch"><div id="diffBestRow"></div><button id="btnBeginAdventure" class="title-primary"><span id="selectedDifficultyLabel" aria-live="polite">보통으로 출발</span><span class="title-arrow" aria-hidden="true">→</span></button></div>
+    <div class="daily-challenge"><p><b>오늘은 어떤 카드가 기다릴까요?</b>모두에게 같은 카드 · 보통 난이도</p><button id="btnDaily" class="title-link">오늘의 시드 도전 <span id="dailyBest"></span></button></div>
+  </section>
 </div>
+<dialog id="titleHelp" aria-labelledby="titleHelpHeading">
+  <h2 id="titleHelpHeading">작은 카드로, 커다란 모험</h2>
+  <ol><li><b>포커 족보를 만들어요.</b><br>준비 시간에 카드를 교환하고 유닛을 소환해요.</li><li><b>나만의 군단을 배치해요.</b><br>더 좋은 족보로 더 강한 무기를 얻어요.</li><li><b>몰려오는 몬스터를 막아요.</b><br>골드로 성장하며 80라운드 클리어에 도전해요.</li></ol>
+  <p>PC: 드래그로 선택 · 우클릭으로 이동 · A + 클릭으로 공격<br>모바일: 유닛을 집어 옮기기 · 두 번 탭해 같은 유닛 선택</p>
+  <form method="dialog"><button class="title-link">알겠어요</button></form>
+</dialog>
 <div id="shopOverlay"><div id="shopWin">
   <button id="shopClose" title="닫기 (ESC)">✕</button>
   <div id="shopTitle"></div>
@@ -756,7 +1984,7 @@
 </div></div>
 <button id="mtExit" style="display:none;position:fixed;top:8px;right:8px;z-index:30;padding:8px 14px;border-radius:8px;border:1px solid #5a5278;background:#2a2340;color:#e8def8;cursor:pointer;font-size:13px" onclick="location.reload()">← 미리보기 나가기</button>
 <!-- 광석 채굴 보상 팝업 (짜잔!) -->
-<div id="rewardToast"><div id="rtInner">
+<div id="rewardToast" role="status" aria-live="polite" aria-atomic="true"><div id="rtInner">
   <div id="rtBurst">🎉</div>
   <div id="rtIcon"></div>
   <div id="rtTitle"></div>
@@ -769,21 +1997,27 @@
   <div id="chipBody"></div>
 </div></div>
 <div id="overlay">
+  <div class="wd-result">
   <h2>게임 오버</h2>
   <p id="finalScore"></p>
   <button onclick="reset()">다시 시작</button>
+  </div>
 </div>
 <div id="winOverlay" style="position:fixed;inset:0;background:rgba(20,20,30,0.88);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:10;color:#fff">
+  <div class="wd-result">
   <h2 style="font-size:36px;color:#ffd166">🎉 80라운드 클리어! 🎉</h2>
   <p style="font-size:17px"><span id="winMsg">80라운드 클리어를 축하합니다.</span><br>하지만... 하늘의 태양이, 점점 다가오고 있습니다.</p>
   <button style="font-size:17px;padding:12px 34px;border-radius:10px;border:none;background:#c0392b;color:#fff;cursor:pointer"
-    onclick="S.paused=false;document.getElementById('winOverlay').style.display='none'">🔥 헬모드 진입</button>
+    onclick="document.getElementById('winOverlay').style.display='none';syncGamePause()">🔥 헬모드 진입</button>
+  </div>
 </div>
 <div id="hellOverlay" style="position:fixed;inset:0;background:rgba(12,6,10,0.93);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:10;color:#fff;text-align:center">
+  <div class="wd-result">
   <h2 style="font-size:38px;color:#ff8a3d">🌋 헬모드 클리어!!! 🌋</h2>
   <p style="font-size:17px;line-height:1.75">아포칼립스 태양이 무너졌습니다.<br>세계는 구원받았고, 당신의 이름은 전설이 되었습니다.<br><span style="color:#ffd166">이 순간을 본 사람은, 전 우주에 몇 없습니다.</span></p>
   <button style="font-size:17px;padding:12px 34px;border-radius:10px;border:none;background:#2e7d32;color:#fff;cursor:pointer"
-    onclick="S.paused=false;document.getElementById('hellOverlay').style.display='none'">🌅 구원된 세계에서 계속하기</button>
+    onclick="document.getElementById('hellOverlay').style.display='none';syncGamePause()">🌅 구원된 세계에서 계속하기</button>
+  </div>
 </div>
 
 <script>
@@ -1106,6 +2340,17 @@ function splat(x, y, c, big) {
 
 // ==================== 상태 ====================
 let S;
+// UI owns pause while any blocking window remains open (including stacked windows).
+function gameDialogVisible(id) {
+  const el = document.getElementById(id);
+  return !!el && !el.hidden && getComputedStyle(el).display !== 'none';
+}
+function syncGamePause() {
+  if (!S) return;
+  S.paused = !!(S.mapTest || // 게임오버는 일부러 제외: 사망 화면 뒤 배경은 계속 흐른다(기존 설계, update()의 gameover 가드가 부작용 차단). 오버레이가 툴바·캔버스를 inert로 막는다
+    ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal'].some(gameDialogVisible));
+  window.dispatchEvent(new Event('dpd:modalchange'));
+}
 // 🎰 카지노 지연 보상(룰렛 5.1s·슬롯 3s·교환 0.9s)은 창을 닫아도 계속 흘러 보상을 지급한다(의도).
 // 다만 그 사이 재시작하면 '다음 판'에 골드·영웅이 꽂히므로, 판마다 세대 번호를 올려 무효화한다.
 let gameGen = 0, casTimers = [];
@@ -1139,6 +2384,7 @@ function resetTransientUI() {
   const dc = document.getElementById('duelConfirm'); if (dc) dc.style.display = 'none'; // 🏛️ 결투 입장 팝업이 새 판까지 남지 않게 (참조·pause 잔류 방지)
   const cm = document.getElementById('crownModal'); if (cm) cm.style.display = 'none'; // 👑 왕관 모달도 동일 (새 S가 paused/crown 상태를 리셋)
   duelAskU = null; duelLockFloatT = -10;
+  window.dispatchEvent(new Event('dpd:resetui'));
 }
 function reset() {
   resetTransientUI();
@@ -1302,12 +2548,12 @@ function openDuelConfirm(u) {
   duelAskU = u;
   const el = document.getElementById('duelConfirm');
   if (el) el.style.display = 'block';
-  S.paused = true;
+  syncGamePause();
 }
 function closeDuelConfirm() {
   const el = document.getElementById('duelConfirm');
   if (el) el.style.display = 'none';
-  S.paused = false;
+  syncGamePause();
 }
 function duelEnter() { // ⚔️ 입장한다
   const u = duelAskU;
@@ -1350,11 +2596,11 @@ function openCrownModal() {
     g.appendChild(b);
   }
   document.getElementById('crownModal').style.display = 'block';
-  S.paused = true;
+  syncGamePause();
 }
 function closeCrownModal() {
   document.getElementById('crownModal').style.display = 'none';
-  S.paused = false;
+  syncGamePause();
 }
 function crownChoose(t) {
   closeCrownModal();
@@ -1949,7 +3195,7 @@ function endWave() {
         `🏆 최고 기록: <b>${best}</b> 스테이지` + (isNew ? ' <span style="color:#ffd166">★ 신기록! ★</span>' : '') +
         runHTML + lifeHTML + statsHTML;
       diffBestLabel();
-      document.getElementById('overlay').style.display = 'flex';
+      document.getElementById('overlay').style.display = 'flex'; syncGamePause();
       return;
     }
   } else if (S.reviveArmed) { // 🔄 봉인했는데 무사 클리어 → 소멸
@@ -1959,7 +3205,7 @@ function endWave() {
   if (S.round === FINAL_ROUND) {
     S.paused = true;
     document.getElementById('winMsg').textContent = DIFF_MUL >= 2 ? '💀 지옥에서 80라운드 — 2%의 문을 열었습니다.' : DIFF_MUL >= 1.4 ? '🔥 어려움 80라운드 — 5%의 문을 열었습니다.' : '80라운드 클리어를 축하합니다.'; // 난이도별 문구 (09-08)
-    document.getElementById('winOverlay').style.display = 'flex';
+    document.getElementById('winOverlay').style.display = 'flex'; syncGamePause();
     logMsg('🎉🎉 80라운드 클리어!! 이제부터는 헬모드... 🎉🎉');
     if (DIFF_MUL >= 2) markAchv('hell80'); else if (DIFF_MUL >= 1.4) markAchv('hard80'); // 공식 목표 달성 = R80 '클리어' 시점 (r80 '도달'과 구분)
   }
@@ -2391,7 +3637,7 @@ function update(dt) {
   }
   if (S.hellClearT > 0) { // 🌋 태양 격파 여운 → 클리어 화면 (포커 전환 후에도 이어서 카운트)
     S.hellClearT -= dt;
-    if (S.hellClearT <= 0) { S.hellClearT = 0; S.paused = true; document.getElementById('hellOverlay').style.display = 'flex'; }
+    if (S.hellClearT <= 0) { S.hellClearT = 0; S.paused = true; document.getElementById('hellOverlay').style.display = 'flex'; syncGamePause(); }
   }
   S.effects = S.effects.filter(e => {
     e.t -= dt;
@@ -3322,8 +4568,8 @@ function recordBest(stage) {
 }
 function diffBestLabel() { // 시작 화면 난이도 버튼 아래 최고 기록 한 줄
   const el = document.getElementById('diffBestRow'); if (!el) return;
-  const parts = [[0.7, '🌱'], [1, '⚔️'], [1.4, '🔥'], [2, '💀']].map(([m, ic]) => { const b = readBest('dpd_best_' + m) || (m === 1 ? readBest('dpd_best') : 0); return `${ic} ${b ? 'R' + b : '—'}`; });
-  el.textContent = '🏆 최고: ' + parts.join(' · ');
+  const parts = [[0.7, '쉬움'], [1, '보통'], [1.4, '어려움'], [2, '지옥']].map(([m, ic]) => { const b = readBest('dpd_best_' + m) || (m === 1 ? readBest('dpd_best') : 0); return `${ic} ${b ? 'R' + b : '—'}`; });
+  el.textContent = '최고 기록 · ' + parts.join(' · ');
 }
 // 📖 히든 도감 발견 기록: 라운드 재시작해도 유지 (reset()이 건드리지 않음)
 function hintSeen(id) { // 🐦 새를 잡아 들은 소문만 도감에 남는다
@@ -3641,7 +4887,8 @@ function rewardToast(icon, desc, color, title) {
   document.getElementById('rtTitle').textContent = title || '보 상 획 득';
   document.getElementById('rtIcon').textContent = icon;
   document.getElementById('rtDesc').textContent = desc;
-  document.getElementById('rtDesc').style.color = color || '#a06a00';
+  document.getElementById('rtDesc').style.color = '#183552';
+  document.getElementById('rtInner').style.borderLeftColor = color || '#f5c748';
   el.style.display = 'block';
   // 애니메이션 리트리거
   const inner = document.getElementById('rtInner');
@@ -8357,8 +9604,8 @@ function toggleShop(id) {
   openShop = (openShop === id) ? null : id;
   document.querySelectorAll('.shopIcon').forEach(b => b.classList.toggle('open', b.dataset.shop === openShop));
   // 상점/족보를 열면 모든 것이 멈춘다 (닫으면 재개). 게임오버/승리 화면 중엔 유지
-  if (S.phase !== 'gameover' && document.getElementById('winOverlay').style.display !== 'flex') S.paused = !!openShop;
   renderShop();
+  syncGamePause();
 }
 document.querySelectorAll('.shopIcon[data-shop]').forEach(btn => { btn.onclick = () => toggleShop(btn.dataset.shop); });
 // 족보 도감: 예시 카드 그림 (r, 무늬, 강조=족보 구성 카드)
@@ -8485,8 +9732,8 @@ const ACHV = [
 function closeShop() {
   openShop = null;
   document.querySelectorAll('.shopIcon').forEach(b => b.classList.remove('open'));
-  if (S.phase !== 'gameover' && document.getElementById('winOverlay').style.display !== 'flex') S.paused = false;
   renderShop();
+  syncGamePause();
 }
 // 공격력 업그레이드 항목 HTML + 배선
 function upgItemsHTML() {
@@ -8626,7 +9873,7 @@ function renderShop() {
     const tabBtn = (id, label) => `<button class="chipBtn${castleTab === id ? '' : ' sub'}" data-ctab="${id}" style="flex:1;padding:8px 4px;font-size:13px">${label}</button>`;
     el.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:10px">${tabBtn('upg', '⚔️ 강화')}${tabBtn('miner', '⛏️ 광부')}${tabBtn('hero', '⭐ 영웅')}</div>` +
       (castleTab === 'upg' ? upgItemsHTML() : castleTab === 'miner' ? minerItemsHTML() : heroSectionHTML());
-    el.querySelectorAll('[data-ctab]').forEach(b => b.onclick = () => { castleTab = b.dataset.ctab; renderShop(); });
+    el.querySelectorAll('[data-ctab]').forEach(b => b.onclick = () => { castleTab = b.dataset.ctab; renderShop(); win.scrollTop = 0; });
     if (castleTab === 'upg') wireUpg(el); else if (castleTab === 'miner') wireMiner(el); else wireHeroSection(el);
   } else if (openShop === 'upg') {
     title.textContent = '⚔️ 종족 업그레이드'; el.innerHTML = upgItemsHTML(); wireUpg(el);
@@ -8735,14 +9982,12 @@ document.getElementById('shopOverlay').onclick = e => { if (e.target.id === 'sho
 const CM = document.getElementById('chipModal'), CB = document.getElementById('chipBody'), CT = document.getElementById('chipTitle');
 // 반 개 칩 표기 통일: 0.5 → "½", 1.5 → "1½", 2 → "2" ("0½"처럼 0이 앞에 붙으면 0으로 오독된다)
 function chipTxt(c) { const w = Math.floor(c); return c === w ? String(w) : (w ? w + '½' : '½'); }
-let chipWasPaused = false;
 function openChip(title) {
   CT.textContent = title; CB.innerHTML = '';
-  if (CM.style.display !== 'flex') chipWasPaused = S.paused; // 이미 열려있으면(한 번 더) 원래 상태 보존 — 안 그러면 닫아도 멈춤 유지 버그
-  S.paused = true;
   CM.style.display = 'flex';
+  syncGamePause();
 }
-function closeChip() { CM.style.display = 'none'; if (!chipWasPaused && S.phase !== 'gameover' && !openShop) S.paused = false; }
+function closeChip() { CM.style.display = 'none'; syncGamePause(); }
 document.getElementById('chipClose').onclick = closeChip;
 CM.onclick = e => { if (e.target.id === 'chipModal') closeChip(); };
 
@@ -9005,7 +10250,7 @@ function slotPull() {
     else if (won >= 100000) { el.innerHTML = `<span style="color:#ff6b9d;font-size:16px">🎆 대박!! +${won.toLocaleString()}G 🎆</span>`; sfx('jackpot'); S.goldFlash = 0.55; }
     else { el.innerHTML = `<span style="color:#ffd166">🎉 +${won.toLocaleString()}G</span>`; sfx(won >= 20000 ? 'reward' : 'coin'); }
     const b = document.getElementById('slotBtn');
-    if (b) { b.disabled = S.chips < 1; b.textContent = `🎰 한 번 더 (🪙 보유 ${chipTxt(S.chips)})`; }
+    if (b) { b.disabled = S.chips < 1; b.textContent = `한 번 더 · 칩 ${chipTxt(S.chips)}개 보유`; }
   }, durs[2] * 1000 + 250);
 }
 
@@ -9221,8 +10466,8 @@ function renderPoker(spin) {
   } else {
     banner.textContent = `스테이지 ${S.round} 준비 — 카드 클릭으로 교환 (각 1회)`;
   }
-  if (S.round % 10 === 0 || (S.round >= SUN_ROUND && !S.hellCleared)) banner.innerHTML += `<br><span style="color:#ff8a65;font-weight:bold">${S.round >= SUN_ROUND && !S.hellCleared ? '🌞 태양 강림' : '👹 보스 라운드'} — 시간 안에 못 잡으면 끝</span>`; // 09-08: 즉사 룰이 보스 클릭 팝업에만 있었다 (수치 없음, 미니멀 원칙 내)
-  if (S.event) banner.innerHTML += `<br><span style="color:#ffd166;font-weight:bold">✨ 다음 전투 이벤트: ${S.event.name} — ${S.event.desc}</span>`;
+  if (S.round % 10 === 0 || (S.round >= SUN_ROUND && !S.hellCleared)) banner.innerHTML += `<br><span class="poker-boss-warning">${S.round >= SUN_ROUND && !S.hellCleared ? '🌞 태양 강림' : '👹 보스 라운드'} — 시간 안에 못 잡으면 끝</span>`; // 09-08: 즉사 룰이 보스 클릭 팝업에만 있었다 (수치 없음, 미니멀 원칙 내)
+  if (S.event) banner.innerHTML += `<br><span class="poker-event-notice">✨ 다음 전투 이벤트: ${S.event.name} — ${S.event.desc}</span>`;
   btn.textContent = double ? '유닛 2기 동시 소환!' : '유닛 소환!';
   cardsEl.innerHTML = '';
   S.poker.hands.forEach((hand, h) => {
@@ -10077,7 +11322,7 @@ function startMapTest(players) {
   mtSetup(players || 4);
   reset();
   S.mapTest = true; S.paused = true;
-  document.getElementById('startOverlay').style.display = 'none';
+  hideStartScreen();
   document.getElementById('mtExit').style.display = 'block';
   // 실게임 HUD 잔재 정리. 인라인 style 대신 body 클래스 — 인라인은 리로드 아닌 경로로 빠져나가면
   // 그대로 남아 카드·타이머 없는 좀비 상태가 된다 (툴바의 🔄 다시하기가 그 경로였다)
@@ -10611,6 +11856,7 @@ cv.addEventListener('contextmenu', e => {
 }, true);
 window.addEventListener('keydown', e => {
   if (!S || !S.mapTest) return;
+  if (['shopOverlay', 'chipModal', 'duelConfirm', 'crownModal'].some(gameDialogVisible)) return; // dialog owns keyboard while open
   if (document.getElementById('gmgStop')) return; // 강화 ×3 타이밍 미니게임이 열려 있으면 Space를 미니게임에 양보
   e.stopImmediatePropagation();
   const c = e.code; // e.key는 한글 IME에서 ㅈ/ㅁ/ㄴ/ㅇ이 되어 WASD가 죽는다 — 물리 키 기준
@@ -10680,14 +11926,37 @@ cv.addEventListener('touchmove', e => {
   mtMMJump(mtTouchPt(e.touches[0]));
 }, { capture: true, passive: false });
 cv.addEventListener('touchend', e => { if (S && S.mapTest) { e.stopImmediatePropagation(); MT.mmDrag = false; if (e.touches.length < 2) MT.pinch = null; } }, true);
-document.getElementById('btnCoop').onclick = () => {
-  document.getElementById('modeRow').style.display = 'none';
-  document.getElementById('coopRow').style.display = 'flex';
-};
-document.getElementById('btnCoopBack').onclick = () => {
-  document.getElementById('coopRow').style.display = 'none';
-  document.getElementById('modeRow').style.display = 'flex';
-};
+// Title navigation stays separate from game state: picking a card does not start a run.
+function showTitleScreen(screen, focusId) {
+  const overlay = document.getElementById('startOverlay');
+  overlay.dataset.screen = screen;
+  document.getElementById('modeRow').style.display = screen === 'title' ? 'flex' : 'none';
+  document.getElementById('diffRow').style.display = screen === 'difficulty' ? 'flex' : 'none';
+  document.getElementById('coopRow').style.display = screen === 'coop' ? 'flex' : 'none';
+  overlay.scrollTop = 0;
+  if (focusId) document.getElementById(focusId).focus({ preventScroll: true });
+}
+function hideStartScreen() {
+  document.getElementById('startOverlay').style.display = 'none';
+  document.body.classList.remove('at-title');
+  document.getElementById('page').inert = false;
+  document.getElementById('mobTabs').inert = false;
+}
+document.getElementById('page').inert = true;
+document.getElementById('mobTabs').inert = true;
+document.getElementById('btnCoop').onclick = () => showTitleScreen('coop', 'btnCoopBack');
+document.getElementById('btnCoopBack').onclick = () => showTitleScreen('title', 'btnCoop');
+document.getElementById('btnDiffBack').onclick = () => showTitleScreen('title', 'btnSolo');
+document.getElementById('btnTitleHelp').onclick = () => document.getElementById('titleHelp').showModal();
+window.addEventListener('keydown', e => {
+  if (!document.body.classList.contains('at-title')) return;
+  // Pre-game keys must not also trigger unit controls behind the title.
+  e.stopImmediatePropagation();
+  if (e.key === 'Escape' && !document.getElementById('titleHelp').open) {
+    const wasCoop = document.getElementById('startOverlay').dataset.screen === 'coop';
+    showTitleScreen('title', wasCoop ? 'btnCoop' : 'btnSolo');
+  }
+}, true);
 document.getElementById('btnMapTest').onclick = () => { initAudio(); startMapTest(4); };
 document.getElementById('btnMapTest2').onclick = () => { initAudio(); startMapTest(2); };
 
@@ -10748,28 +12017,32 @@ window.addEventListener('beforeunload', e => {
   if (S && S.round > 1 && S.phase !== 'gameover') { e.preventDefault(); e.returnValue = ''; }
 });
 try { localStorage.removeItem('dpd_save'); } catch (e) {} // 구버전 세이브 정리
-// 시작 화면: 모드 → 난이도 → 게임 시작
-document.getElementById('btnSolo').onclick = () => {
-  document.getElementById('modeRow').style.display = 'none';
-  document.getElementById('diffRow').style.display = 'flex';
-};
-document.querySelectorAll('.diffBtn').forEach(b => b.onclick = () => {
+// 시작 화면: 포스터 → 난이도 선택 → 출발. 명시적인 data-name으로 설명 문구와 이름을 분리.
+let selectedDifficulty = document.querySelector('.diffBtn[data-mul="1"]');
+document.getElementById('btnSolo').onclick = () => showTitleScreen('difficulty', 'btnDiffBack');
+document.querySelectorAll('.diffBtn[data-mul]').forEach(b => b.onclick = () => {
+  selectedDifficulty = b;
+  document.querySelectorAll('.diffBtn[data-mul]').forEach(card => card.setAttribute('aria-pressed', String(card === b)));
+  document.getElementById('selectedDifficultyLabel').textContent = b.dataset.name + '으로 출발';
+});
+document.getElementById('btnBeginAdventure').onclick = () => {
+  initAudio();
   if (IS_MOBILE) { lockLandscape(); iosPwaHint(); }
-  dailySeed = null; // 일반 난이도 = 시드 해제
-  DIFF_MUL = +b.dataset.mul;
-  DIFF_NAME = b.textContent.trim().replace(/^\S+\s/, '');
-  document.getElementById('startOverlay').style.display = 'none';
+  dailySeed = null;
+  DIFF_MUL = +selectedDifficulty.dataset.mul;
+  DIFF_NAME = selectedDifficulty.dataset.name;
+  hideStartScreen();
   reset();
   S.paused = false;
   document.getElementById('bSandbox').style.display = 'none';
-  logMsg(`🎮 난이도 [${b.textContent.trim()}] — 몬스터 체력 ×${DIFF_MUL}`);
-});
+  logMsg(`🎮 난이도 [${DIFF_NAME}] — 몬스터 체력 ×${DIFF_MUL}`);
+};
 document.getElementById('btnDaily').onclick = () => {
   initAudio();
   if (IS_MOBILE) { lockLandscape(); iosPwaHint(); } // 일반 난이도 시작과 동일 대우 (크로스체크 P2 — 이 경로만 빠져 있었다)
   dailySeed = todaySeedNum();
   DIFF_MUL = 1; DIFF_NAME = '오늘의 시드';
-  document.getElementById('startOverlay').style.display = 'none';
+  hideStartScreen();
   reset();
   S.paused = false;
   document.getElementById('bSandbox').style.display = 'none';
@@ -10790,9 +12063,11 @@ function recordDaily(round) { // 오늘의 시드 최고 기록 저장
   } catch (e) {}
 }
 document.getElementById('btnSandbox').onclick = () => {
+  initAudio();
+  if (IS_MOBILE) { lockLandscape(); iosPwaHint(); }
   dailySeed = null;
   DIFF_MUL = 1; DIFF_NAME = '샌드박스';
-  document.getElementById('startOverlay').style.display = 'none';
+  hideStartScreen();
   reset();
   S.sandbox = true; S.gold = 999999; S.chips = 99;
   S.items.reroll = 9; S.items.copier = 9;
@@ -10803,6 +12078,724 @@ document.getElementById('btnSandbox').onclick = () => {
 reset();
 S.paused = true; // 시작 화면 동안 정지 (배경은 계속 그려짐)
 requestAnimationFrame(frame);
+</script>
+<script>
+/* Double Poker Defense · world motion v2
+ * Loaded after the original classic script. All positions and water masks remain
+ * owned by the original game. This layer only paints; it never consumes game RNG.
+ */
+const WORLD_MOTION_V2 = true; // 🌊 GPT 재구현 폭포 물살·구름 (09-21 인수). false면 기존 drawFallFlow/drawSkyClouds 그대로
+if (WORLD_MOTION_V2) (() => {
+  'use strict';
+  const TAU = Math.PI * 2;
+  const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const stats = { version: 2, fallFrames: 0, cloudFrames: 0, lastFall: null, reducedMotion: motionQuery.matches };
+  const caches = new Map();
+  let cacheScale = 0;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const phase = (v, span) => ((v % span) + span) % span;
+  const ease = v => { const n = clamp(v, 0, 1); return n * n * (3 - 2 * n); };
+  const scale = () => LOW_SPEC ? 1 : Math.min(2, Math.max(1, RS));
+  const time = () => motionQuery.matches ? 8 : S.time;
+  const updateMotion = () => { stats.reducedMotion = motionQuery.matches; };
+  if (motionQuery.addEventListener) motionQuery.addEventListener('change', updateMotion);
+
+  function canvas(w, h) {
+    const s = scale();
+    if (cacheScale !== s) { caches.clear(); cacheScale = s; }
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(w * s); c.height = Math.ceil(h * s);
+    const g = c.getContext('2d');
+    g.setTransform(s, 0, 0, s, 0, 0);
+    return { c, g, w, h, s };
+  }
+
+  // Periodic, continuous ribbons rather than flashing horizontal scan lines.
+  // One bake per mood/resolution; the two sheets travel at different velocities.
+  function ribbonSheet(lava, layer) {
+    const key = `ribbons:${lava}:${layer}:${scale()}`;
+    if (caches.has(key)) return caches.get(key);
+    const a = canvas(320, 64), g = a.g;
+    const bright = lava ? '255,222,116' : '238,253,255';
+    const dark = lava ? '124,30,8' : '13,112,166';
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (let lane = 0; lane < 9; lane++) {
+      const cy = 3 + lane * 7.2;
+      const width = 1.2 + (lane % 3) * 0.75;
+      for (let shade = 0; shade < 2; shade++) {
+        g.strokeStyle = `rgba(${shade ? bright : dark},${shade ? (layer ? 0.20 : 0.30) : 0.14})`;
+        g.lineWidth = shade ? width : width * 2.8;
+        g.beginPath();
+        for (let x = -8; x <= 328; x += 4) {
+          const y = cy + Math.sin(x / 320 * TAU * (1 + lane % 2) + lane * 1.78 + layer) * (1.2 + lane % 3 * 0.7);
+          if (x === -8) g.moveTo(x, y); else g.lineTo(x, y);
+        }
+        g.stroke();
+      }
+      // Water folds are tapered, irregular lengths, and stay attached to streams.
+      const start = (lane * 73 + layer * 41) % 320;
+      const length = 37 + lane % 4 * 16;
+      for (const wrap of [-320, 0]) {
+        const x0 = start + wrap;
+        const fade = g.createLinearGradient(x0, 0, x0 + length, 0);
+        fade.addColorStop(0, `rgba(${bright},0)`);
+        fade.addColorStop(0.36, `rgba(${bright},${lava ? 0.64 : 0.74})`);
+        fade.addColorStop(0.78, `rgba(${bright},0.28)`);
+        fade.addColorStop(1, `rgba(${bright},0)`);
+        g.strokeStyle = fade; g.lineWidth = width * 1.55;
+        g.beginPath();
+        for (let x = x0; x <= x0 + length; x += 3) {
+          const y = cy + Math.sin(x / 320 * TAU * (1 + lane % 2) + lane * 1.78 + layer) * (1.2 + lane % 3 * 0.7);
+          if (x === x0) g.moveTo(x, y); else g.lineTo(x, y);
+        }
+        g.stroke();
+      }
+    }
+    caches.set(key, a); return a;
+  }
+
+  function mistSprite(lava) {
+    const key = `mist:${lava}:${scale()}`;
+    if (caches.has(key)) return caches.get(key);
+    const a = canvas(96, 64), g = a.g;
+    const rgb = lava ? '255,145,49' : '224,249,255';
+    const gr = g.createRadialGradient(48, 32, 2, 48, 32, 31);
+    gr.addColorStop(0, `rgba(${rgb},0.58)`);
+    gr.addColorStop(0.42, `rgba(${rgb},0.27)`);
+    gr.addColorStop(1, `rgba(${rgb},0)`);
+    g.translate(48, 32); g.scale(1.5, 1); g.translate(-48, -32);
+    g.fillStyle = gr; g.fillRect(12, 0, 72, 64);
+    caches.set(key, a); return a;
+  }
+
+  function waterSurface(F) {
+    const key = `surface:${F.x0}:${F.y0}:${F.lava}:${scale()}`;
+    let a = caches.get(key);
+    if (!a) { a = canvas(F.w, F.h); caches.set(key, a); }
+    return a;
+  }
+
+  function splash(F, t) {
+    const lava = F.lava, count = LOW_SPEC ? 5 : lava ? 6 : 11;
+    const rgb = lava ? '255,207,91' : '244,254,255';
+    const mist = mistSprite(lava);
+    ctx.save();
+    // Soft mist lifts away from the impact, then disperses instead of blinking.
+    if (!LOW_SPEC) for (let i = 0; i < 3; i++) {
+      const p = phase(t * (lava ? 0.23 : 0.37) + i / 3, 1);
+      const spread = 20 + p * 12;
+      ctx.globalAlpha = Math.sin(p * Math.PI) * (lava ? 0.20 : 0.40);
+      ctx.drawImage(mist.c, F.ex - spread + Math.sin(i * 2.4 + p * 2) * 6,
+        F.ey - 8 - p * 12, spread * 2, 17 + p * 8);
+    }
+    ctx.globalAlpha = 1;
+    // Elliptical ripples expand horizontally through the tiny plunge pool.
+    ctx.lineCap = 'round';
+    for (let i = 0; i < (LOW_SPEC ? 2 : 4); i++) {
+      const p = phase(t * (lava ? 0.34 : 0.82) + i / 4, 1);
+      ctx.strokeStyle = `rgba(${rgb},${(1 - p) * (lava ? 0.28 : 0.47)})`;
+      ctx.lineWidth = 1.5 - p * 0.7;
+      ctx.beginPath();
+      ctx.ellipse(F.ex + (i % 2 ? 2 : -2), F.ey + 1.3 + p * 2.4, 3 + p * 16, 1 + p * 3.3,
+        -0.08, 0.12 * Math.PI, 0.90 * Math.PI);
+      ctx.stroke();
+    }
+    // A continuous pressure of foam at the lip, with coherent lobes.
+    ctx.strokeStyle = `rgba(${rgb},${lava ? 0.39 : 0.64})`;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    for (let i = 0; i <= 12; i++) {
+      const x = F.ex - 11 + i * 22 / 12;
+      const y = F.ey - 1.4 + Math.sin(i * 1.3 - t * (lava ? 2 : 6)) * 0.8;
+      if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    // Repeating ballistic trajectories: upward launch → gravity → fade at pool.
+    for (let i = 0; i < count; i++) {
+      const life = lava ? 1.5 : 0.65 + (i % 3) * 0.13;
+      const p = phase(t / life + i * 0.618033989, 1), age = p * life;
+      const direction = i % 2 ? 1 : -1;
+      const vx = direction * (9 + i % 4 * 5);
+      const vy = lava ? -(7 + i % 3 * 2) : -(21 + i % 4 * 4);
+      const gravity = lava ? 17 : 70;
+      const dx = vx * age, dy = vy * age + gravity * age * age / 2;
+      const alpha = Math.sin(p * Math.PI) * (lava ? 0.65 : 0.80);
+      ctx.fillStyle = `rgba(${rgb},${alpha})`;
+      ctx.beginPath();
+      ctx.ellipse(F.ex + direction * (i % 3) + dx, F.ey - 1 + dy,
+        lava ? 0.8 : 0.72 + i % 3 * 0.16, lava ? 0.9 : 1.18,
+        direction * 0.24, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  drawFallFlow = function drawFallFlowV2(key) {
+    const F = bgFallPrep(key);
+    if (!F) return;
+    const t = time(), a = waterSurface(F), g = a.g;
+    const speed = F.lava ? 23 : 81;
+    g.clearRect(0, 0, F.w, F.h);
+    g.save();
+    g.translate(F.tx - F.x0, F.ty - F.y0);
+    g.rotate(Math.atan2(F.uy, F.ux));
+    const layers = LOW_SPEC ? 1 : 2;
+    for (let layer = 0; layer < layers; layer++) {
+      const sheet = ribbonSheet(F.lava, layer);
+      const off = phase(t * speed * (layer ? 1.47 : 1), sheet.w);
+      const lateral = Math.sin(t * (F.lava ? 0.5 : 1.7) + layer * 2) * (layer ? 1.4 : 0.7);
+      g.globalAlpha = layer ? 0.59 : 0.82;
+      for (let x = off - sheet.w; x < F.len + 45; x += sheet.w) {
+        g.drawImage(sheet.c, x, -32 + lateral, sheet.w, sheet.h);
+      }
+    }
+    // Small travelling folds lengthen as the water accelerates. Each fold stays
+    // in its stream, unlike horizontal highlight bars sweeping across the fall.
+    g.globalAlpha = 1;
+    g.lineCap = 'round';
+    const acceleration = F.lava ? 8 : 110;
+    const launch = F.lava ? 18 : 31;
+    const lifetime = (Math.sqrt(launch * launch + 2 * acceleration * (F.len + 64)) - launch) / acceleration;
+    for (let i = 0; i < (LOW_SPEC ? 3 : 7); i++) {
+      const age = phase(t + i * lifetime / 7, lifetime);
+      const head = launch * age + acceleration * age * age / 2 - 24;
+      const tail = head - (10 + age * (F.lava ? 5 : 15));
+      const cross = -17 + i * 5.6 + Math.sin(t * 0.7 + i) * 1.1;
+      const opacity = Math.sin(clamp(age / lifetime, 0, 1) * Math.PI) * (F.lava ? 0.42 : 0.50);
+      g.strokeStyle = `rgba(${F.lava ? '255,232,158' : '249,255,255'},${opacity})`;
+      g.lineWidth = 0.85 + age * 0.34;
+      g.beginPath(); g.moveTo(tail, cross);
+      g.bezierCurveTo(tail + (head - tail) * 0.35, cross - 0.9,
+        tail + (head - tail) * 0.70, cross + 0.7, head, cross + 0.4);
+      g.stroke();
+    }
+    g.restore();
+    // The original color-derived silhouette also preserves interrupted lava
+    // behind rocks. There is no overpaint on the cliff or change to the dip area.
+    g.globalCompositeOperation = 'destination-in';
+    g.drawImage(F.mask, 0, 0, F.w, F.h);
+    g.globalCompositeOperation = 'source-over';
+    ctx.drawImage(a.c, F.x0, F.y0, F.w, F.h);
+    splash(F, t);
+    stats.fallFrames++; stats.lastFall = key;
+  };
+
+  // A single asymmetrical silhouette with a soft shaded belly. No stacks of
+  // outlined circles, no per-frame blur/filter work, no foreground cloud stamps.
+  function cloudSprite(mood, variant) {
+    const key = `cloud:${mood}:${variant}:${scale()}`;
+    if (caches.has(key)) return caches.get(key);
+    const a = canvas(150, 64), g = a.g;
+    const bright = mood === 'lava' ? '#aa8072' : mood === 'storm' ? '#b7becf' : mood === 'night' ? '#d1daee' : '#ffffff';
+    const shade = mood === 'lava' ? '#694b4b' : mood === 'storm' ? '#747f98' : mood === 'night' ? '#929fbc' : '#bddfeb';
+    const gr = g.createLinearGradient(0, 9, 0, 60);
+    gr.addColorStop(0, bright); gr.addColorStop(0.50, bright); gr.addColorStop(1, shade);
+    g.fillStyle = gr;
+    g.translate(variant ? 150 : 0, 0); g.scale(variant ? -1 : 1, 1);
+    g.beginPath();
+    g.moveTo(10, 43);
+    g.bezierCurveTo(10, 35, 21, 29, 34, 30);
+    g.bezierCurveTo(36, 18, 48, 15, 58, 20);
+    g.bezierCurveTo(67, 5, 91, 7, 97, 23);
+    g.bezierCurveTo(109, 20, 120, 26, 121, 35);
+    g.bezierCurveTo(132, 34, 143, 40, 140, 46);
+    g.bezierCurveTo(135, 54, 102, 55, 74, 54);
+    g.bezierCurveTo(44, 54, 14, 53, 10, 43);
+    g.closePath(); g.fill();
+    // One painterly internal wisp gives volume without a hard outline.
+    g.globalAlpha = 0.21; g.fillStyle = shade;
+    g.beginPath(); g.moveTo(19, 43);
+    g.bezierCurveTo(35, 45, 49, 44, 62, 39);
+    g.bezierCurveTo(72, 43, 83, 46, 113, 42);
+    g.bezierCurveTo(94, 53, 38, 54, 19, 43); g.fill();
+    caches.set(key, a); return a;
+  }
+
+  drawSkyClouds = function drawSkyCloudsV2(ph, xLim) {
+    const t = time();
+    const mood = ph >= 4 ? 'lava' : DIFF_MUL === 1.4 ? 'storm' : ph >= 2 ? 'night' : 'day';
+    const count = LOW_SPEC ? 3 : 5;
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(0, 0, 296, 207, 0, 0, Math.PI / 2);
+    ctx.lineTo(0, 0); ctx.closePath(); ctx.clip();
+    for (let i = 0; i < count; i++) {
+      const far = i < 2;
+      const baseW = far ? 62 + i * 13 : 73 + i % 2 * 15;
+      const velocity = (far ? 3.6 + i * 1.6 : 8 + (i - 2) * 1.7) * (mood === 'storm' ? 1.25 : 1);
+      const x = phase(t * velocity + i * 67, xLim + baseW + 50) - baseW;
+      const fade = ease((xLim - (x + baseW * 0.95)) / 54); // 오른쪽 가장자리(채움 폭 ≈0.95w) 기준 — 왼쪽+0.26w 기준이라 하늘 폭 밖 절벽 위까지 43~61px 나갔다 (크로스체크 P2)
+      if (!fade) continue;
+      const breath = motionQuery.matches ? 1 : 1 + Math.sin(t * 0.34 + i * 2.17) * 0.025;
+      const w = baseW * breath, h = w * 64 / 150;
+      const y = (far ? 7 + i * 34 : 10 + (i * 31 % 50)) + Math.sin(t * 0.24 + i * 1.9) * 1.2; // 근거리 y 상한 72→53: 기존 구름(y≤80)처럼 절벽 상단 초원(y≥74) 위로 내려오지 않게
+      ctx.globalAlpha = fade * (far ? 0.33 : 0.55) * (mood === 'lava' ? 0.78 : 1);
+      const cloud = cloudSprite(mood, i % 2);
+      ctx.drawImage(cloud.c, x, y, w, h);
+    }
+    ctx.restore();
+    stats.cloudFrames++;
+  };
+
+  // Read-only, small diagnostic surface for smoke tests and performance sampling.
+  Object.defineProperty(window, 'DPD_WORLD_V2', { configurable: true, value: Object.freeze({
+    version: 2,
+    snapshot: () => ({ ...stats, cacheCount: caches.size, cacheScale, lowSpec: LOW_SPEC, time: S.time }),
+  }) });
+})();
+
+</script>
+<script>
+/* Double Poker Defense · world polish v2
+ * Presentation adapter. Original handlers own purchases, prices, rewards and odds.
+ * Classic script: load after the game's script, before modal-flow.js.
+ */
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const gold = n => Math.floor(n).toLocaleString();
+  const icons = {
+    castle:'<path d="M4 20V8h4V4h3v4h2V4h3v4h4v12H4Z"/><path d="M10 20v-6h4v6M6 11h1m10 0h1"/>',
+    coin:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 9v6"/>',
+    chip:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3m9 6h-3m-6 9v-3m-9-6h3M6 6l2 2m10-2-2 2m2 10-2-2M6 18l2-2"/>',
+    arrow:'<path d="M4 12h15m-6-6 6 6-6 6"/>',
+    back:'<path d="m14 5-7 7 7 7"/>',
+    pick:'<path d="m6 3 4 2 9 9 2 5-5-2-9-9-4-2 3-3Z"/><path d="m12 10-8 10"/>',
+    chart:'<path d="M4 4v16h16M7 14l4-4 4 2 5-7M16 5h4v4"/>',
+    slot:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M7 9h3l-2 6m6-6h3l-2 6"/>',
+    crown:'<path d="m3 7 5 4 4-7 4 7 5-4-2 12H5L3 7Z"/><path d="M6 16h12"/>',
+    sword:'<path d="m5 20 3-3m-3-3 5 5M8 16 19 5V3h-2L6 14"/>',
+    shield:'<path d="m12 3 8 3v6c0 5-8 9-8 9S4 17 4 12V6l8-3Z"/><path d="m8 12 3 3 5-6"/>',
+    time:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6m-3 0v3"/>',
+    heart:'<path d="M20 5c-3-3-7-1-8 2-1-3-5-5-8-2-5 5 8 15 8 15S25 10 20 5Z"/>',
+    star:'<path d="m12 3 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1 3-6Z"/>',
+    speed:'<path d="M4 18a9 9 0 1 1 16 0M12 13l5-5M4 18h16"/><circle cx="12" cy="13" r="1"/>',
+    box:'<path d="m3 7 9-4 9 4v11l-9 4-9-4V7Zm0 0 9 5 9-5M12 12v10M7 5l10 5"/>'
+  };
+  const icon = name => `<svg class="v2-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.star}</svg>`;
+  // Slot symbols are code-native vectors so every platform sees the same art.
+  // Cell height stays 72 px: slotPull's reel travel math relies on that height.
+  const slotArt = {
+    dia: '<path d="m12 10 24 0 8 12-20 24L4 22 12 10Z" fill="#5ac4f5" stroke="#228aba" stroke-width="2.2" stroke-linejoin="round"/><path d="m12 10 5 12 7-12 7 12 5-12M4 22h40M17 22l7 24 7-24" fill="none" stroke="#daf6ff" stroke-width="2" stroke-linejoin="round"/><path d="m9 18 4-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>',
+    bell: '<path d="M12 28v-8c0-7 5-12 12-12s12 5 12 12v8l5 7H7l5-7Z" fill="#ffd454" stroke="#c28f24" stroke-width="2.2" stroke-linejoin="round"/><path d="M18 39c1 6 11 6 12 0" fill="#efb33b" stroke="#c28f24" stroke-width="2.2" stroke-linecap="round"/><path d="M21 7V5h6v2" fill="#ffe8a2" stroke="#c28f24" stroke-width="2.2" stroke-linecap="round"/><path d="M17 23v-4c0-3 2-5 4-6" fill="none" stroke="#fff2b9" stroke-width="3" stroke-linecap="round"/><path d="M12 31h24" stroke="#e9af35" stroke-width="2"/>',
+    melon: '<path d="M5 17h38c0 18-10 28-19 28S5 35 5 17Z" fill="#68c78f" stroke="#2b9762" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 18h30c-1 14-8 22-15 22S10 32 9 18Z" fill="#f6edb5"/><path d="M12 18h24c-1 12-6 18-12 18S13 30 12 18Z" fill="#f4776d"/><path d="m18 23 1 3m10-3-1 3m-4 3v2" stroke="#6e4347" stroke-width="2.5" stroke-linecap="round"/><path d="M8 16h32" stroke="#2b9762" stroke-width="2.2" stroke-linecap="round"/>',
+    cherry: '<path d="M14 29c1-12 7-18 17-22-3 9-2 14 5 22" fill="none" stroke="#388b59" stroke-width="2.7" stroke-linecap="round"/><path d="M29 10c-8-9-14-5-15-2 4 5 9 6 15 2Z" fill="#82c56c" stroke="#388b59" stroke-width="1.8" stroke-linejoin="round"/><circle cx="14" cy="33" r="10" fill="#ef756b" stroke="#c85755" stroke-width="2.2"/><circle cx="34" cy="33" r="10" fill="#e96562" stroke="#bd5052" stroke-width="2.2"/><path d="M9 30c0-2 2-4 4-4m16 4c0-2 2-4 4-4" fill="none" stroke="#ffd5bf" stroke-width="3" stroke-linecap="round"/>'
+  };
+  slotCellHTML = function (s) {
+    if (s === 'sev') return '<div class="slotCell sev">7</div>';
+    if (s === 'bar') return '<div class="slotCell bar">BAR</div>';
+    const label = {dia:'다이아몬드',bell:'종',melon:'수박',cherry:'체리'}[s];
+    return `<div class="slotCell"><svg class="v2-slot-symbol" viewBox="0 0 48 48" role="img" aria-label="${label || ''}">${slotArt[s] || ''}</svg></div>`;
+  };
+  const badge = (name, tone='blue') => `<span class="v2-icon-tile v2-${tone}">${icon(name)}</span>`;
+  const wallet = () => `<div class="v2-wallet" aria-label="보유 자원"><span>${icon('coin')}<span><small>보유 골드</small><b data-v2-gold>${gold(S.gold)}<em>G</em></b></span></span><span>${icon('chip')}<span><small>보유 칩</small><b data-v2-chips>${chipTxt(S.chips)}<em>개</em></b></span></span></div>`;
+  const shortage = (cost, kind='gold') => kind === 'gold' ? `${gold(Math.max(0, cost - S.gold))}G 부족` : `칩 ${chipTxt(Math.max(0, cost - S.chips))}개 부족`;
+  const section = (title, note='') => `<div class="v2-section-heading"><h3>${title}</h3>${note ? `<p>${note}</p>` : ''}</div>`;
+  function capture(selector, attr) {
+    return new Map([...CB.querySelectorAll(selector)].map(b => [b.getAttribute(attr), b.onclick]));
+  }
+  function rewire(selector, attr, handlers) { CB.querySelectorAll(selector).forEach(b => { b.onclick = handlers.get(b.getAttribute(attr)); }); }
+  function financeView(name, title) {
+    $('chipWin').dataset.view = name;
+    CT.innerHTML = `<span class="v2-eyebrow">카드 왕국의 금고</span>${esc(title)}`;
+  }
+  function backButton() { return `<button class="v2-back" id="v2FinanceBack">${icon('back')}자금 운영</button>`; }
+  function wireBack() { const b = $('v2FinanceBack'); if (b) b.onclick = casMenu; }
+  function mountHeader(winId, titleId, closeId, kind) {
+    const win = $(winId), head = document.createElement('div');
+    head.className = 'v2-modal-head';
+    head.innerHTML = badge(kind, kind === 'castle' ? 'blue' : 'gold');
+    head.append($(titleId), $(closeId));
+    win.prepend(head);
+    $(closeId).setAttribute('aria-label', '닫기');
+    $(closeId).innerHTML = '<svg class="v2-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
+  }
+  mountHeader('shopWin', 'shopTitle', 'shopClose', 'castle');
+  mountHeader('chipWin', 'chipTitle', 'chipClose', 'coin');
+
+  // Keep wireUpg intact: its exact data attributes and .rpgItem anchor are retained.
+  upgItemsHTML = function () {
+    const boosted = S.units.some(u => u.gamble), basic = boosted ? 30 : 20, perfect = boosted ? 45 : 35;
+    return `<p class="v2-intro">같은 문양의 모든 유닛이 함께 강해져요.</p><div class="v2-upgrade-list">` + RACES.map((r, i) => {
+      const lv = S.upg[i], cost = S.upgCost[i], can = S.gold >= cost;
+      const current = upgEff(lv), next = upgEff(lv + 1);
+      return `<article class="rpgItem v2-upgrade" style="--race:${r.color}">
+        <div class="v2-upgrade-top"><span class="v2-suit" aria-hidden="true">${r.suit}</span><div class="v2-upgrade-name"><h3>${esc(r.name)} 공격력</h3><span>종족 전체 적용${lv > 12 ? ' · 가속 성장' : ''}</span></div><span class="v2-level">Lv.${lv}<span>→</span><b>${lv + 1}</b></span></div>
+        <div class="v2-stat-grid"><div><span>단일 공격</span><b>+${(current*2.5).toFixed(1)}<i>→</i><strong>+${(next*2.5).toFixed(1)}</strong></b></div><div><span>스플래시 / 초·마리</span><b>+${(current*.55).toFixed(1)}<i>→</i><strong>+${(next*.55).toFixed(1)}</strong></b></div><div><span>전체 공격 / 초·마리</span><b>+${(current*.15).toFixed(1)}<i>→</i><strong>+${(next*.15).toFixed(1)}</strong></b></div></div>
+        <div class="v2-upgrade-actions"><span class="v2-cost-label">강화 비용<b>${gold(cost)}<small> G</small></b></span><button class="rpgBuy v2-upgrade-buy" data-upg="${i}" ${can ? '' : 'disabled'}><span>+1 강화</span><small>${can ? '확정 성장' : shortage(cost)}</small></button><button class="rpgBuy v2-gamble" data-gupg="${i}" ${can ? '' : 'disabled'} title="같은 비용으로 +3레벨 도전. 기본 ${basic}%, 중앙 명중 ${perfect}%. 실패 시 골드 소모."><span>+3 도전</span><small>${can ? '타이밍 도박' : shortage(cost)}</small></button></div>
+      </article>`;
+    }).join('') + `</div><div class="v2-note">${icon('shield')}<span><b>확정 강화 또는 +3레벨 도전</b>도전 성공률 ${basic}% · 타이밍 중앙 명중 시 ${perfect}%${boosted ? ' (갬블러 가호 포함)' : ''}. 실패해도 골드는 소모돼요.</span></div>`;
+  };
+  minerItemsHTML = function () {
+    const n = S.units.filter(u => u.miner).length;
+    const rows = [
+      {name:'이동속도',desc:'광산과 성을 더 빠르게 오가요.',ico:'speed',lv:S.minerMoveLv,cost:S.minerMoveCost,id:'mvBtn',val:lv=>Math.round(MINER_SPEED*(1+.25*lv)),unit:''},
+      {name:'곡괭이 효율',desc:'초당 광산을 깎는 힘이 커져요.',ico:'pick',lv:S.minerMineLv,cost:S.minerMineCost,id:'mnBtn',val:lv=>Math.round(DIG_RATE*(1+.4*lv)),unit:'/초'}
+    ];
+    return `<div class="v2-miner-summary">${badge('pick','mint')}<div><h3>우리 왕국의 광부 <b>${n}명</b></h3><p>한 번 배달 ${gold(MINER_LOAD+S.mineBonus)}G · 누적 채굴 ${gold(S.minerGold||0)}G</p></div></div><p class="v2-intro">광부는 자금 운영에서 칩 1개로 고용해요. 광산 겹을 깰수록 배달액이 커져요.</p>` + rows.map(r => {
+      const maxed = r.lv >= MINER_MAX_LV, can = S.gold >= r.cost;
+      return `<article class="rpgItem v2-miner-upgrade">${badge(r.ico,'mint')}<div class="rpgInfo"><h3>${r.name}<span class="v2-mini-level">Lv.${r.lv}/${MINER_MAX_LV}</span></h3><p>${r.desc}</p><div class="v2-stat-line">${r.val(r.lv)}${r.unit}${maxed ? '<b>최대 단계</b>' : `${icon('arrow')}<b>${r.val(r.lv+1)}${r.unit}</b>`}</div><div class="v2-level-dots" aria-label="${MINER_MAX_LV}단계 중 ${r.lv}단계">${Array.from({length:MINER_MAX_LV},(_,i)=>`<i class="${i<r.lv?'filled':''}"></i>`).join('')}</div></div>${maxed ? '<span class="v2-max">강화 완료</span>' : `<button class="rpgBuy v2-miner-buy" id="${r.id}" ${can?'':'disabled'}><span>${gold(r.cost)} G</span><small>${can?'강화하기':shortage(r.cost)}</small></button>`}</article>`;
+    }).join('');
+  };
+  const baseRenderShop = renderShop;
+  renderShop = function () {
+    const active = document.activeElement;
+    const focusKey = active && $('shopBody').contains(active) ? ['data-upg','data-gupg','data-ctab','data-ht','data-htg','data-asc'].map(k=>active.hasAttribute(k)?[k,active.getAttribute(k)]:null).find(Boolean) : null;
+    baseRenderShop();
+    if (!openShop) return;
+    $('shopWin').dataset.view = openShop;
+    if (openShop === 'castle') {
+      $('shopTitle').innerHTML = '<span class="v2-eyebrow">작은 군단, 커다란 성장</span>성 강화';
+      const tabs = $('shopBody').querySelector('[data-ctab]')?.parentElement;
+      if (tabs) {
+        tabs.className = 'v2-tabs'; tabs.removeAttribute('style'); tabs.setAttribute('aria-label','강화 분류');
+        tabs.querySelectorAll('[data-ctab]').forEach(b => {
+          const key = b.dataset.ctab, titles = {upg:['sword','유닛 강화'],miner:['pick','광부'],hero:['crown','히든 영웅']};
+          b.removeAttribute('style'); b.className = 'v2-tab'; b.setAttribute('aria-pressed',String(key===castleTab));
+          b.innerHTML = icon(titles[key][0])+titles[key][1];
+        });
+      }
+    } else $('shopTitle').innerHTML = `<span class="v2-eyebrow">더블 포커 디펜스</span>${esc($('shopTitle').textContent)}`;
+    $('shopGoldRow').innerHTML = wallet();
+    $('shopBody').querySelectorAll('[data-htg]').forEach(b => { if (b.closest('.roster-train')) return; b.classList.add('v2-gamble'); b.textContent='+3 도전'; b.title='현재 단련 비용으로 최대 3레벨 도전 · 실패해도 골드 소모'; });
+    const heroes=shopHeroes();
+    $('shopBody').querySelectorAll('[data-ht]').forEach(b => {
+      if (b.closest('.roster-train')) return;
+      const h=heroes[+b.dataset.ht], lv=h.heroUpLv||0, cost=heroUpCost(h), row=b.closest('.rpgItem');
+      row.classList.add('v2-hero-upgrade');
+      row.querySelector('.rpgInfo').innerHTML=`<h3>${esc(h.weapon)}</h3><div class="v2-hero-level">단련 Lv.${lv} ${icon('arrow')} <b>${lv+1}</b><small>/ ${HERO_UP_MAX}</small></div><p>총 공격력 ×${(1+.15*lv).toFixed(2)} → <b>×${(1+.15*(lv+1)).toFixed(2)}</b></p><span class="v2-hero-price">${gold(cost)} G${S.gold<cost?` · ${shortage(cost)}`:''}</span>`;
+      b.textContent='+1 단련';
+    });
+    if (focusKey) { const target = $('shopBody').querySelector(`[${focusKey[0]}="${focusKey[1]}"]`); if (target && !target.disabled) target.focus({preventScroll:true}); }
+  };
+  // Preserve #shopGold: original renderShop writes to this ID before our wallet.
+  function keepShopGold() {
+    if (!$('shopGold')) { const ghost=document.createElement('span'); ghost.id='shopGold'; ghost.hidden=true; $('shopGoldRow').append(ghost); }
+  }
+  const decoratedRenderShop = renderShop;
+  renderShop = function () { keepShopGold(); const result=decoratedRenderShop(); keepShopGold(); return result; };
+
+  const baseGambleBar=runGambleBar;
+  runGambleBar=function(host,onStop){
+    baseGambleBar(host,onStop); host.classList.add('v2-gamble-stage');
+    const note=host.firstElementChild?.firstElementChild;
+    if(note)note.innerHTML=`가운데 노란 영역을 노려요 · 중앙 명중 시 <b>${S.units.some(u=>u.gamble)?45:35}%</b>`;
+  };
+  const baseGambleResult=showGambleResult;
+  showGambleResult=function(host,perfect,win,detail,refresh){
+    baseGambleResult(host,perfect,win,detail,refresh); host.classList.add('v2-gamble-stage');
+    const note=host.firstElementChild?.firstElementChild;
+    if(note){const chance=(perfect?35:20)+(S.units.some(u=>u.gamble)?10:0);note.textContent=`${perfect?'중앙 명중!':'타이밍 판정 완료'} · 성공률 ${chance}% 적용`;}
+  };
+
+  const baseCasMenu = casMenu;
+  casMenu = function () {
+    baseCasMenu();
+    const nav = capture('[data-go]','data-go'), bets = capture('[data-gacha]','data-gacha'), valves = capture('[data-valve]','data-valve');
+    const miners = S.units.filter(u=>u.miner).length;
+    const gacha = [
+      ['ace','에이스',1,.70,'blue'],['hero','영웅',4,.60,'gold'],['aceHero','에이스 영웅',7,.40,'coral'],['super','슈퍼에이스 영웅',20,1,'violet']
+    ];
+    const supplies = [ ['sand','time','시간의 모래','전투 시간 +15초'],['bomb','shield','긴급 폭격','모든 몬스터 최대체력 15% 타격'],['pray','heart','생명의 기도','목숨 +3'] ];
+    financeView('finance','자금 운영');
+    CB.innerHTML = wallet()+`<div class="v2-hub-grid">
+      <button class="v2-hub-card v2-hub-invest" data-go="invest">${badge('chart','blue')}<span class="v2-hub-main"><small>내일을 준비해요</small><b>골드 투자</b><span>${investTotal()?`예치 중 ${gold(investTotal())}G`:'기간을 정하고 골드를 불려요'}</span></span>${icon('arrow')}<span class="v2-hub-foot">${S.mktOpen?'지금 개장 중':'투자 현황 보기'}<b>만기 전 인출 불가</b></span></button>
+      <button class="v2-hub-card" data-go="miner" ${S.chips>=1?'':'disabled'}>${badge('pick','mint')}<span class="v2-hub-main"><small>꾸준한 골드 수입</small><b>광부 고용</b><span>현재 ${miners}명</span></span><span class="v2-hub-foot">칩 1개<b>${S.chips>=1?'고용하기':shortage(1,'chip')}</b></span></button>
+      <button class="v2-hub-card" data-go="slot">${badge('slot','coral')}<span class="v2-hub-main"><small>777의 행운</small><b>슬롯머신</b><span>잭팟 1,000만 G</span></span><span class="v2-hub-foot">칩 1개<b>입장하기 ${icon('arrow')}</b></span></button>
+    </div>`+section('뽑기권','획득한 뽑기권을 제물대로 옮기면 개봉해요.')+
+    `<div class="v2-ticket-grid">${gacha.map(([key,label,cost,p,tone])=>{const can=S.chips>=cost, rate=key==='super'?100:Math.round(p*gamblerLuck()*100);return `<button class="v2-ticket v2-${tone}" data-gacha="${key}" ${can?'':'disabled'}><span class="v2-ticket-top">${icon('crown')}<span class="v2-probability">${key==='super'?'확정 획득':`성공 ${rate}%`}</span></span><b>${label}</b><span class="v2-ticket-caption">뽑기권</span><span class="v2-ticket-cost">${icon('chip')} ${cost}개</span>${can?'':`<small class="v2-shortage">${shortage(cost,'chip')}</small>`}</button>`;}).join('')}</div><p class="v2-fineprint">${gamblerLuck()>1?'갬블러 가호가 성공률에 반영돼 있어요. ':''}확률 뽑기 실패 시 칩이 소모돼요.</p>`+
+    section('비상 물자','구매 후 맵에 배치돼요. 제물대로 옮겨 사용하세요.')+
+    `<div class="v2-supply-grid">${supplies.map(([key,ico,name,desc])=>{const left=3-S.valves[key],cost=valveCost(key),can=left>0&&S.gold>=cost;return `<button class="v2-supply" data-valve="${key}" ${can?'':'disabled'}>${badge(ico,key==='pray'?'coral':'gold')}<b>${name}</b><span>${desc}</span><span class="v2-supply-bottom"><strong>${left?gold(cost)+' G':'구매 완료'}</strong><small>${left?`남은 ${left}/3회`:'이번 판 한도'}</small></span>${left&&!can?`<small class="v2-shortage">${shortage(cost)}</small>`:''}</button>`;}).join('')}</div>`;
+    rewire('[data-go]','data-go',nav); rewire('[data-gacha]','data-gacha',bets); rewire('[data-valve]','data-valve',valves);
+  };
+
+  const baseCasInvest = casInvest;
+  casInvest = function () {
+    baseCasInvest();
+    const input=$('invAmt'), half=$('invHalf').onclick, all=$('invAll').onclick;
+    const terms=capture('[data-term]','data-term');
+    financeView('invest','골드 투자');
+    const deposits=S.invests.slice().sort((a,b)=>a.matureRound-b.matureRound);
+    CB.innerHTML=backButton()+wallet()+`<div class="v2-market-status ${S.mktOpen?'is-open':''}"><i></i>${mktClockTxt()}</div><div class="v2-invest-form"><label for="invAmt">얼마를 맡길까요?</label><div class="v2-amount-row"><div id="v2AmountHost"></div><button class="v2-small-button" id="invHalf">절반</button><button class="v2-small-button" id="invAll">전액</button></div><p id="v2AmountHint" class="v2-fineprint" aria-live="polite">최소 ${INVEST_MIN}G부터 예치할 수 있어요.</p></div><div class="v2-term-grid">`+
+      INVEST_TERMS.map(t=>`<button class="v2-term" data-term="${t.term}" ${S.mktOpen?'':'disabled'}><span>${t.term}라운드 뒤</span><b>×${t.mul}</b><small>만기 수령액</small><strong data-v2-return="${t.term}">—</strong><em>${S.mktOpen?'예치하기':'개장 후 예치 가능'}</em></button>`).join('')+`</div><div class="v2-note">${icon('time')}<span><b>만기까지 골드가 잠겨요.</b>중간에 인출할 수 없어요. 예치한 라운드 수만큼 클리어하면 자동으로 지급돼요.</span></div>`+
+      section('예치 현황',deposits.length?`${deposits.length}건 · 원금 ${gold(investTotal())}G`:'')+
+      (deposits.length?`<div class="v2-deposits">${deposits.map(v=>{const left=Math.max(0,v.matureRound-S.round),done=Math.max(0,Math.min(100,(v.term-left)/v.term*100));return `<article><div><span>${gold(v.amt)} G <small>· ${v.term}라운드</small></span><b>${gold(v.amt*v.mul)} G</b></div><div class="v2-progress" role="progressbar" aria-label="${v.term}라운드 투자 진행" aria-valuemin="0" aria-valuemax="${v.term}" aria-valuenow="${Math.max(0,v.term-left)}"><i style="width:${done}%"></i></div><p>${left}라운드 후 만기 <span>+${gold(Math.floor(v.amt*v.mul)-v.amt)} G 수익</span></p></article>`;}).join('')}</div>`:'<div class="v2-empty">아직 예치 중인 골드가 없어요.</div>');
+    input.removeAttribute('style'); input.setAttribute('aria-describedby','v2AmountHint'); input.setAttribute('inputmode','numeric');
+    $('v2AmountHost').append(input);
+    function preview() {
+      const amt=Math.floor(+input.value||0), valid=amt>=INVEST_MIN&&amt<=Math.floor(S.gold);
+      CB.querySelectorAll('[data-term]').forEach(b=>{b.disabled=!S.mktOpen||!valid; const t=INVEST_TERMS.find(x=>x.term===+b.dataset.term);b.querySelector('[data-v2-return]').textContent=valid?`${gold(amt*t.mul)} G`:'—';});
+      const hint=$('v2AmountHint'); hint.textContent=amt<INVEST_MIN?`최소 ${INVEST_MIN}G부터 예치할 수 있어요.`:amt>Math.floor(S.gold)?'보유 골드보다 많은 금액이에요.':`예치 후 사용 가능한 골드 ${gold(S.gold-amt)}G`;
+      input.setAttribute('aria-invalid',String(!valid));
+    }
+    input.addEventListener('input',preview);
+    $('invHalf').onclick=()=>{half();preview();}; $('invAll').onclick=()=>{all();preview();};
+    rewire('[data-term]','data-term',terms); wireBack(); preview();
+  };
+
+  const baseCasSlot=casSlot;
+  casSlot=function(){
+    baseCasSlot();
+    const box=CB.querySelector('.slotBox'), result=$('slRes'), button=$('slotBtn');
+    financeView('slot','777 슬롯머신');
+    const labels={777:'7 · 7 · 7',dia3:'다이아몬드 ×3',bell3:'종 ×3',melon3:'수박 ×3',cher3:'체리 ×3',bar3:'BAR ×3',sev2:'7 ×2',cher2:'체리 ×2'};
+    CB.innerHTML=backButton()+wallet()+`<div class="v2-slot-machine"><div class="v2-slot-mast"><span>LUCKY SEVEN</span><b>777</b><small>잭팟 10,000,000 G</small></div><div id="v2ReelHost"></div><div id="v2LeverHost"></div><div id="v2ResultHost"></div></div>`+
+      (gamblerLuck()>1||sevenLuck()>1?`<p class="v2-luck">${gamblerLuck()>1?'갬블러 가호 · 당첨 확률 ×1.1 ':''}${sevenLuck()>1?'슬롯머신 영웅 · 777 확률 ×2.5':''}</p>`:'')+
+      `<details class="v2-payout" open><summary>당첨 보상</summary><div>${SLOT_TABLE.map(([key,p,pay])=>`<span${key==='777'?' class="v2-jackpot"':''}><b>${labels[key]}</b><strong>${gold(pay)} G</strong></span>`).join('')}</div></details>`;
+    $('v2ReelHost').append(box); $('v2LeverHost').append(button); $('v2ResultHost').append(result);
+    button.classList.add('v2-lever'); button.innerHTML=`${icon('slot')}<span>레버 당기기 <small>칩 1개</small></span>`;
+    result.setAttribute('role','status'); result.setAttribute('aria-live','polite');
+    wireBack();
+  };
+  // Existing asynchronous payouts call updateInfoPanel; refresh only changed
+  // resource text in an open finance modal, without observing or rebuilding it.
+  const baseUpdateInfoPanel=updateInfoPanel;
+  updateInfoPanel=function(...args){
+    const result=baseUpdateInfoPanel.apply(this,args);
+    if (CM.style.display==='flex') {
+      CB.querySelectorAll('[data-v2-gold]').forEach(n=>{const s=`${gold(S.gold)}<em>G</em>`;if(n.innerHTML!==s)n.innerHTML=s;});
+      CB.querySelectorAll('[data-v2-chips]').forEach(n=>{const s=`${chipTxt(S.chips)}<em>개</em>`;if(n.innerHTML!==s)n.innerHTML=s;});
+    }
+    return result;
+  };
+  // 성 강화 창의 보이는 지갑은 renderShop 시점에만 그려지고, 원본 updateHUD(20Hz)는 숨은 ghost #shopGold에만 쓴다 —
+  // 도박 강화 결과 화면·카지노 지연 보상처럼 렌더 없이 골드가 바뀌면 지갑·버튼 소문구가 낡았다 (크로스체크 P2). 표현 계층만 갱신, 로직 무변경.
+  const baseUpdateHUD=updateHUD;
+  updateHUD=function(...args){
+    const result=baseUpdateHUD.apply(this,args);
+    if (CM.style.display==='flex') { const lever=$('slotBtn'); if(lever&&lever.classList.contains('v2-lever')&&!lever.querySelector('svg')) lever.innerHTML=`${icon('slot')}<span>${esc(lever.textContent)}</span>`; } // 원본 slotPull 지급 콜백이 updateInfoPanel 뒤에 textContent로 덮어 SVG가 사라짐 → 20Hz HUD에서 재장식 (크로스체크 P3)
+    if (openShop) {
+      const row=$('shopGoldRow');
+      if (row) {
+        row.querySelectorAll('[data-v2-gold]').forEach(n=>{const s=`${gold(S.gold)}<em>G</em>`;if(n.innerHTML!==s)n.innerHTML=s;});
+        row.querySelectorAll('[data-v2-chips]').forEach(n=>{const s=`${chipTxt(S.chips)}<em>개</em>`;if(n.innerHTML!==s)n.innerHTML=s;});
+      }
+      if (!$('gmgTrack')) $('shopBody').querySelectorAll('.v2-upgrade-buy[data-upg],.v2-gamble[data-gupg]').forEach(b=>{
+        const i=+(b.dataset.upg??b.dataset.gupg), cost=S.upgCost[i], can=S.gold>=cost, sm=b.querySelector('small');
+        const txt=can?(b.dataset.upg!=null?'확정 성장':'타이밍 도박'):shortage(cost); if(sm&&sm.textContent!==txt) sm.textContent=txt;
+      });
+    }
+    return result;
+  };
+})();
+
+</script>
+<script>
+/* Double Poker Defense · miner workshop / hidden hero hall.
+ * Presentation only. wireMiner, wireHeroSection, heroTrain and doAscend remain
+ * the authoritative handlers. Load after upgrade-ui.js, before modal-flow.js.
+ */
+(() => {
+  'use strict';
+  const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const num = value => Math.floor(value).toLocaleString();
+  const marks = {
+    pick:'<path d="m5 4 5 1 9 9 1 5-5-2-9-9-3-1 2-3Z"/><path d="m12 10-8 10"/>',
+    speed:'<path d="M3 16h7m-5-5h5m-2-5h5M12 9l3-4 6 5-5 6h-5m5-7-3 6 5 5"/>',
+    cart:'<path d="m3 7 3 10h13l2-10H3Zm4-3 4-2 4 2 3-1 2 4M8 7v10m5-10v10m5-10v10"/><circle cx="7" cy="20" r="1"/><circle cx="18" cy="20" r="1"/>',
+    coin:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 9v6"/>',
+    crown:'<path d="m3 7 5 4 4-7 4 7 5-4-2 12H5L3 7Z"/><path d="M6 16h12"/>',
+    star:'<path d="m12 3 3 6 6 1-4 5 1 6-6-3-6 3 1-6-4-5 6-1 3-6Z"/>',
+    arrow:'<path d="M4 12h15m-6-5 5 5-5 5"/>',
+    lock:'<rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/>',
+    book:'<path d="M12 6C8 3 5 3 2 4v15c4-1 7 0 10 2 3-2 6-3 10-2V4c-3-1-6-1-10 2Zm0 0v15"/>',
+    check:'<path d="m5 12 5 5L20 7"/>',
+    altar:'<path d="M4 18h16v3H4zM7 18v-5h10v5M6 10h12l-2 3H8l-2-3Z"/><path d="m12 2 3 4-3 3-3-3 3-4Z"/>',
+    gambler:'<rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="8" cy="8" r=".6"/><circle cx="16" cy="8" r=".6"/><circle cx="12" cy="12" r=".6"/><circle cx="8" cy="16" r=".6"/><circle cx="16" cy="16" r=".6"/>',
+    junk:'<path d="M6 8h12l3 9c1 6-19 6-18 0l3-9Zm3 0L6 3h12l-3 5M6 8h12m-6 5v5m-2-4h3l-2 3h3"/>',
+    quartet:'<path d="M9 16V5l11-3v12M9 9l11-3"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>',
+    guillotine:'<path d="M5 3v18m14-18v18M4 3h16M7 6h10v5l-10 4V6ZM3 21h18m-13-4h8"/>',
+    shogun:'<path d="m4 20 4-4m-4-3 7 7M8 15 19 4h2v2L10 17M4 3l4 3-3 3-2-4"/>',
+    chrono:'<path d="M6 3h12M6 21h12M7 3c0 6 5 6 5 9S7 15 7 21M17 3c0 6-5 6-5 9s5 3 5 9M8 18h8"/>',
+    slot:'<rect x="3" y="5" width="17" height="16" rx="3"/><path d="M6 9h3l-2 7m5-7h3l-2 7m8-4h2V6M8 3h7"/>',
+    joker:'<path d="m4 13-2-7 6 3 4-7 4 7 6-3-2 7M4 13h16l-3 8H7l-3-8ZM8 16h1m6 0h1m-6 2 2 1 2-1"/>',
+    catapult:'<path d="M4 18h17M8 18l6-9m-2-6 5 3-3 3-5-3 3-3ZM7 18V9m0 0 13 6"/><circle cx="6" cy="21" r="1"/><circle cx="18" cy="21" r="1"/>'
+  };
+  const icon = name => `<svg class="roster-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${marks[name] || marks.star}</svg>`;
+  const tile = (name, cls='') => `<span class="roster-emblem ${cls}">${icon(name)}</span>`;
+  const dots = (level, max) => `<span class="roster-dots" aria-label="${max}단계 중 ${level}단계">${Array.from({length:max}, (_,i)=>`<i${i<level?' class="is-filled"':''}></i>`).join('')}</span>`;
+  const short = cost => `${num(Math.max(0, cost-S.gold))}G 부족`;
+  const minerArt = `<svg class="roster-mine-art" viewBox="0 0 140 110" fill="none" aria-hidden="true"><path d="m11 96 20-57 33-17 45 21 21 53H11Z" fill="currentColor" opacity=".1"/><path d="M36 92V68c0-26 61-26 61 0v24" fill="currentColor" opacity=".15"/><path d="M39 92V68c0-23 55-23 55 0v24" stroke="currentColor" stroke-width="5"/><path d="M48 74h35l-5 16H54L48 74Z" fill="var(--theme-gold,#c39735)"/><path d="m53 73 8-12 9 3 7-4 6 14" fill="var(--theme-gold,#c39735)" opacity=".75"/><circle cx="57" cy="96" r="4" fill="currentColor"/><circle cx="76" cy="96" r="4" fill="currentColor"/><path d="M20 102h99M34 108l7-12m54 12-7-12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="m111 25 3-8 3 8 8 3-8 3-3 8-3-8-8-3 8-3Z" fill="var(--theme-gold,#c39735)"/><path d="m25 19 2-5 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="currentColor" opacity=".45"/></svg>`;
+
+  minerItemsHTML = function () {
+    const count = S.units.filter(u => u.miner).length;
+    const upgrades = [
+      {id:'mvBtn',icon:'speed',name:'가벼운 발걸음',type:'이동속도',desc:'광산과 성을 더 빠르게 오가요.',lv:S.minerMoveLv,cost:S.minerMoveCost,val:lv=>Math.round(MINER_SPEED*(1+.25*lv)),unit:''},
+      {id:'mnBtn',icon:'pick',name:'단단한 곡괭이',type:'곡괭이 효율',desc:'광산을 더 빠르게 깎아내요.',lv:S.minerMineLv,cost:S.minerMineCost,val:lv=>Math.round(DIG_RATE*(1+.4*lv)),unit:'/초'}
+    ];
+    return `<section class="roster-miners"><div class="roster-banner"><div><span class="roster-kicker">왕국의 작은 일꾼들</span><h3>반짝이는 광산</h3><p>작은 발걸음이 모여 <br>왕국의 금고를 채워요.</p></div>${minerArt}</div><div class="roster-totals" aria-label="광부 현황"><div><span>일하는 광부</span><b>${count}<small>명</small></b></div><div><span>한 번 배달</span><b>${num(MINER_LOAD+S.mineBonus)}<small>G</small></b></div><div><span>누적 수입</span><b>${num(S.minerGold||0)}<small>G</small></b></div></div><div class="roster-hire-note">${icon('coin')}<span>${count ? '광부를 더 고용하려면' : '첫 광부를 만나려면'} <b>자금 운영 → 광부 고용</b><br>칩 1개로 고용 · 광산 겹을 깰수록 배달액 증가</span></div><div class="roster-section-head"><h3>광부의 도구함</h3><span>모든 광부에게 적용</span></div><div class="roster-miner-cards">${upgrades.map(r=>{
+      const maxed=r.lv>=MINER_MAX_LV, can=S.gold>=r.cost;
+      return `<article class="rpgItem roster-upgrade ${maxed?'is-complete':''}"><div class="roster-upgrade-head">${tile(r.icon)}<div class="rpgInfo"><span class="roster-kicker">${r.type}</span><h3>${r.name}</h3></div><span class="roster-level">Lv.<b>${r.lv}</b><small>/${MINER_MAX_LV}</small></span></div><p class="roster-description">${r.desc}</p><div class="roster-stat"><div><span>현재</span><b>${r.val(r.lv)}<small>${r.unit}</small></b></div>${maxed?`<span class="roster-complete-label">${icon('check')}최대 단계</span>`:`${icon('arrow')}<div class="is-next"><span>다음 단계</span><b>${r.val(r.lv+1)}<small>${r.unit}</small></b></div>`}</div>${dots(r.lv,MINER_MAX_LV)}<div class="roster-upgrade-foot">${maxed?`<span class="roster-finished">${icon('check')}도구 강화 완료</span>`:`<span class="roster-price">강화 비용<b>${num(r.cost)}<small>G</small></b></span><button id="${r.id}" class="rpgBuy roster-buy" ${can?'':'disabled'} aria-label="${r.type} 강화, ${num(r.cost)} 골드${can?'':', 골드 부족'}"><span>강화하기</span><small>${can?'+1 단계':short(r.cost)}</small></button>`}</div></article>`;
+    }).join('')}</div></section>`;
+  };
+
+  function heroId(hero) { return HIDDEN_DEX.find(hd=>hero[HIDDEN_FLAG[hd.id]])?.id || 'star'; }
+  function ascension(hero,index) {
+    const key=ascendKey(hero); if (!key) return '';
+    const lv=hero.ascend||0, done=lv>=2;
+    const def=done?null:ASCEND_DEFS[key][lv], status=done?null:ascendStatus(def);
+    return `<article class="rpgItem roster-ascension ${done?'is-complete':''}"><div class="roster-ascend-head">${icon('altar')}<h4>제물 승급</h4>${dots(lv,2)}<span>Lv.${lv}/2</span></div>${done?`<p class="roster-ascend-done">${icon('check')}고유 능력의 힘을 모두 깨웠어요.</p>`:`<div class="roster-ascend-effect"><span>다음 능력</span><b>${esc(def.desc)}</b></div><div class="roster-ascend-bottom"><div><span class="roster-kicker">필요한 제물</span><b>${esc(def.mat)}</b><small class="${status.ok?'is-ready':''}">제단 위 ${esc(status.txt)} · ${status.ok?'승급 준비 완료':'제물을 제단으로 옮겨주세요'}</small></div><button class="rpgBuy roster-ascend-buy" data-asc="${index}" ${status.ok?'':'disabled'}>능력 승급${icon('arrow')}</button></div>`}</article>`;
+  }
+  function training(hero,index) {
+    const lv=hero.heroUpLv||0, done=lv>=HERO_UP_MAX, cost=heroUpCost(hero), can=S.gold>=cost;
+    return `<div class="roster-hero-group"><article class="rpgItem roster-train ${done?'is-complete':''}"><div class="roster-train-head">${tile(heroId(hero),'is-hero')}<div class="rpgInfo"><span class="roster-kicker">함께 싸우는 히든 영웅</span><h3>${esc(hero.weapon)}</h3></div><span class="roster-owned">출전 중</span></div><div class="roster-training-meter"><span>단련 <b>Lv.${lv}</b> <small>/ ${HERO_UP_MAX}</small></span><span>${done?'단련 완료':'공격력 성장'}</span><i><b style="width:${Math.min(100,lv/HERO_UP_MAX*100)}%"></b></i></div><div class="roster-power"><span>총 공격력</span><b>×${(1+.15*lv).toFixed(2)}</b>${done?`<span class="roster-finished">${icon('check')}최대 성장</span>`:`${icon('arrow')}<strong>×${(1+.15*(lv+1)).toFixed(2)}</strong><small>다음 단련</small>`}</div>${done?'':`<div class="roster-train-actions"><span class="roster-price">단련 비용<b>${num(cost)}<small>G</small></b></span><button class="rpgBuy roster-buy" data-ht="${index}" ${can?'':'disabled'}><span>+1 단련</span><small>${can?'확정 성장':short(cost)}</small></button><button class="rpgBuy roster-gamble" data-htg="${index}" ${can?'':'disabled'} title="같은 비용으로 최대 3레벨. 실패 시 골드 소모."><span>+3 도전</span><small>${can?'타이밍 도박':short(cost)}</small></button></div>`}</article>${ascension(hero,index)}</div>`;
+  }
+  heroSectionHTML = function () {
+    const heroes=shopHeroes(), seen=HIDDEN_DEX.filter(hd=>hiddenSeen(hd.id)).length;
+    const boosted=S.units.some(u=>u.gamble), basic=boosted?30:20, perfect=boosted?45:35;
+    return `<section class="roster-heroes"><div class="roster-hero-banner">${tile('crown','is-hero')}<div><span class="roster-kicker">조합으로 만나는 특별한 동료</span><h3>히든 영웅의 전당</h3><p>발견의 설렘, 함께하는 성장.</p></div><span class="roster-discovered"><b>${seen}<small>/${HIDDEN_DEX.length}</small></b>발견</span></div><div class="roster-section-head"><h3>우리 영웅 단련</h3><span>보유 ${heroes.length}기</span></div>${heroes.length?heroes.map(training).join(''):`<div class="roster-empty">${tile('star','is-empty')}<h4>아직 빈 영웅의 자리</h4><p>아래 도감의 이야기를 따라 조합을 발견해봐.<br>영웅을 만나면 이곳에서 단련할 수 있어.</p></div>`}${heroes.some(h=>(h.heroUpLv||0)<HERO_UP_MAX)?`<div class="roster-chance">${icon('star')}<span><b>+3 도전</b> 성공률 ${basic}% · 중앙 명중 ${perfect}%${boosted?' (갬블러 가호 포함)':''}<br>같은 단련 비용을 사용해요. 실패해도 골드는 소모돼요.</span></div>`:''}<div class="roster-section-head roster-dex-heading"><h3>${icon('book')}발견 도감</h3><span>아홉 영웅의 이야기</span></div><div class="roster-dex-grid">${HIDDEN_DEX.map((hd,index)=>{
+      if(!hiddenSeen(hd.id)) return `<article class="roster-dex-card is-locked"><div class="roster-dex-top">${tile('lock')}<span class="roster-dex-no">${String(index+1).padStart(2,'0')}</span></div><h4>아직 만나지 못한 영웅</h4><span class="roster-dex-state">미발견</span><p class="roster-riddle">“${esc(hd.voice)}”</p></article>`;
+      const owned=S.units.some(u=>u[HIDDEN_FLAG[hd.id]]);
+      return `<article class="roster-dex-card ${owned?'is-owned':'is-found'}"><div class="roster-dex-top">${tile(hd.id,'is-hero')}<span class="roster-dex-no">${String(index+1).padStart(2,'0')}</span></div><h4>${esc(hd.name)}</h4><span class="roster-dex-state">${owned?'함께하는 중':'발견 완료 · 현재 미보유'}</span><p class="roster-ability">${esc(hd.desc)}</p><div class="roster-recipe"><span>조합법</span><b>${esc(hd.recipe)}</b></div></article>`;
+    }).join('')}</div></section>`;
+  };
+  // Miner purchases recreate the body; retain keyboard focus when the same
+  // upgrade can still be purchased. All purchase listeners stay in wireMiner.
+  const previousRender=renderShop;
+  renderShop=function(){
+    const id=document.activeElement?.id;
+    const preserve=id==='mvBtn'||id==='mnBtn';
+    previousRender();
+    if(preserve){const next=document.getElementById(id);if(next&&!next.disabled)next.focus({preventScroll:true});}
+  };
+})();
+
+</script>
+<script>
+/* Shared focus and keyboard behavior for the existing game dialogs.
+   Pause ownership is resolved by syncGamePause() in the game script. */
+(() => {
+  const entries = [
+    ['duelConfirm', '.dcTitle', null],
+    ['crownModal', '.dcTitle', null],
+    ['shopOverlay', '#shopTitle', '#shopClose'],
+    ['overlay', 'h2', null],
+    ['winOverlay', 'h2', null],
+    ['hellOverlay', 'h2', null],
+    ['chipModal', '#chipTitle', '#chipClose'],
+  ].map(([id, heading, close]) => {
+    const el = document.getElementById(id);
+    const panel = el.querySelector('#shopWin, #chipWin') || el;
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    const label = el.querySelector(heading);
+    if (label) {
+      if (!label.id) label.id = id + 'Heading';
+      panel.setAttribute('aria-labelledby', label.id);
+    }
+    if (close) el.querySelector(close).setAttribute('aria-label', '닫기');
+    return { id, el, panel, close };
+  });
+  const returnFocus = new Map();
+  const gameRoots = ['topbar', 'toolbar', 'cv', 'chipBar', 'pokerPanel', 'mobTabs'];
+  let active = null;
+  const visible = el => !!el && el.isConnected && !el.disabled && el.getClientRects().length > 0 && !el.closest('[inert]');
+  const controls = dialog => [...dialog.panel.querySelectorAll('button, input, select, textarea, a[href], [tabindex="0"]')].filter(visible);
+  function topDialog() {
+    return entries.filter(x => gameDialogVisible(x.id))
+      .sort((a, b) => (parseInt(getComputedStyle(a.el).zIndex) || 0) - (parseInt(getComputedStyle(b.el).zIndex) || 0)).pop() || null;
+  }
+  function lockGameControls(on) {
+    for (const id of gameRoots) {
+      const el = document.getElementById(id);
+      if (el) el.inert = on || (id === 'mobTabs' && document.body.classList.contains('at-title'));
+    }
+  }
+  function focusFirst(dialog) {
+    const target = dialog.close ? dialog.el.querySelector(dialog.close) : controls(dialog)[0];
+    if (target && visible(target)) target.focus({ preventScroll: true });
+  }
+  function syncFocus() {
+    const next = topDialog();
+    const focusedBeforeLock = document.activeElement;
+    lockGameControls(!!next);
+    if (next && S && S.mapTest) {
+      MT.keys.l = MT.keys.r = MT.keys.u = MT.keys.d = false;
+    }
+    if (next === active) return;
+    const previous = active;
+    let restore = null;
+    if (previous && !gameDialogVisible(previous.id)) {
+      restore = returnFocus.get(previous.id);
+      returnFocus.delete(previous.id);
+    }
+    active = next;
+    if (next) {
+      if (!returnFocus.has(next.id)) returnFocus.set(next.id, focusedBeforeLock);
+      if (restore && next.panel.contains(restore) && visible(restore)) restore.focus({ preventScroll: true });
+      else focusFirst(next);
+    } else if (restore && visible(restore)) {
+      restore.focus({ preventScroll: true });
+    }
+  }
+  window.addEventListener('dpd:modalchange', syncFocus);
+  window.addEventListener('dpd:resetui', () => {
+    active = null;
+    returnFocus.clear();
+    lockGameControls(false);
+  });
+  window.addEventListener('keydown', e => {
+    if (document.body.classList.contains('at-title')) return;
+    const top = topDialog();
+    if (!top) return;
+    // Stop game shortcuts while typing in a dialog. Other capture listeners,
+    // including the existing space-bar timing game, remain available.
+    e.stopPropagation();
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (top.id === 'chipModal') closeChip();
+      else if (top.id === 'shopOverlay') closeShop();
+      else if (top.id === 'duelConfirm') duelDecline();
+      else if (top.id === 'crownModal') crownCancel();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const list = controls(top);
+    if (!list.length) { e.preventDefault(); return; }
+    const first = list[0], last = list[list.length - 1];
+    if (!top.panel.contains(document.activeElement)) {
+      e.preventDefault(); (e.shiftKey ? last : first).focus();
+    } else if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  }, true);
+  syncFocus();
+})();
+
+</script>
+<script>
+/* Decorative SVGs only. IDs, game events, selected difficulty and labels are preserved. */
+(() => {
+  'use strict';
+  const leafArt = '<svg viewBox="0 0 96 66" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 52C34 33 52 24 82 17" stroke="#6c4b27" stroke-width="5" stroke-linecap="round"/><path d="M30 41C14 37 11 23 15 13c17 0 25 10 24 20L30 41Z" fill="#5f8c40" stroke="#354f2d" stroke-width="2"/><path d="M49 29C36 20 40 7 50 3c12 8 13 19 6 25L49 29Z" fill="#83a74d" stroke="#456331" stroke-width="2"/><path d="M62 23C70 9 84 7 93 11c-5 13-15 20-29 18L62 23Z" fill="#5f8b42" stroke="#354f2d" stroke-width="2"/><path d="M26 45C34 60 50 63 61 53c-8-12-20-14-32-10L26 45Z" fill="#759949" stroke="#405d31" stroke-width="2"/><path d="m18 20 13 19m19-29 1 17m17-2 17-9M35 47l18 7" stroke="#c5d682" stroke-width="2" stroke-linecap="round"/><circle cx="57" cy="34" r="5" fill="#cb8743" stroke="#744d28" stroke-width="2"/><circle cx="65" cy="36" r="4" fill="#e4ad50" stroke="#744d28" stroke-width="2"/></svg>';
+  for (const id of ['diffRow','coopRow','titleHelp']) {
+    const panel = document.getElementById(id);
+    if (!panel || panel.querySelector('.woodland-leaves')) continue;
+    const leaves = document.createElement('span');
+    leaves.className = 'woodland-leaves';
+    leaves.setAttribute('aria-hidden','true');
+    leaves.innerHTML = leafArt;
+    panel.appendChild(leaves);
+  }
+  const suitPaths = [
+    '<path d="M26 19c-6-7-16-1-12 7-9-1-11 12-3 15 5 2 8-1 11-3l-3 8h14l-3-8c4 3 8 5 12 2 7-5 2-16-5-14 3-9-8-14-11-7Z"/>',
+    '<path d="m26 15 14 17-14 17L12 32l14-17Z"/>',
+    '<path d="m26 14 5 12 13 6-13 5-5 14-5-14-13-5 13-6 5-12Z"/>',
+    '<path d="M26 15C20 22 9 28 10 36c1 8 10 9 15 3l-5 9h12l-5-9c5 6 14 5 15-3 1-8-10-14-16-21Z"/>'
+  ];
+  const colors = ['#578c52','#467e99','#be8040','#9c4f55'];
+  document.querySelectorAll('#diffBtnRow .difficulty-symbol').forEach((node,i) => {
+    node.innerHTML = '<svg class="woodland-shield" viewBox="0 0 52 58" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 8 26 2l22 6v20c0 13-8 22-22 28C12 50 4 41 4 28V8Z" fill="#d5ac5d" stroke="#78552d" stroke-width="2"/><path d="M8 11 26 6l18 5v17c0 11-6 19-18 24C14 47 8 39 8 28V11Z" fill="'+colors[i]+'" stroke="#fae2a0" stroke-width="1.2"/><path d="M9 12 26 7l17 5v8C31 16 20 17 9 23V12Z" fill="#ffffff" opacity=".14"/><g fill="#fff1c7" transform="translate(4 5) scale(.85)">'+suitPaths[i]+'</g><circle cx="5" cy="10" r="1.5" fill="#ffe3a5"/><circle cx="47" cy="10" r="1.5" fill="#ffe3a5"/></svg>';
+  });
+  const difficultyLabel = document.querySelector('#diffRow .adventure-label');
+  const coopLabel = document.querySelector('#coopRow .adventure-label');
+  if (difficultyLabel) difficultyLabel.textContent = '카드 군단의 모험일지';
+  if (coopLabel) coopLabel.textContent = '함께 떠나는 모험';
+})();
+
 </script>
 </body>
 </html>
