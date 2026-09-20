@@ -1124,7 +1124,7 @@ function resetTransientUI() {
   if (typeof openShop !== 'undefined' && openShop && S) closeShop(); // 상점이 열린 채 재시작되면 토글 상태가 뒤집힌다
   setAttackMode(false);                     // 어택 모드 + 커서 원복
   drag = null;                              // 드래그 잔재 (다음 mouseup이 엉뚱한 부대지정을 하지 않게)
-  clearTimeout(longPressTimer); longPressFired = false; lastTapTime = 0; lastTapPos = null; joyDir = null; grabPos = null; // 모바일 롱프레스/더블탭/조이스틱/집기
+  clearTimeout(longPressTimer); longPressFired = false; lastTapTime = 0; lastTapPos = null; grabPos = null; // 모바일 롱프레스/더블탭/집기
   mutter = null; mutterT = 22;              // 이전 판 유닛을 가리키던 말풍선 (유령 말풍선 방지)
   if (S) hideObjInfo();                     // 남아 있던 건물/몬스터 정보 팝업 (hideObjInfo가 S를 만지므로 부팅 시엔 건너뜀)
   gameGen++;                                // 이전 판의 카지노 지연 보상 무효화
@@ -1186,7 +1186,7 @@ function reset() {
   document.getElementById('winOverlay').style.display = 'none';
   document.getElementById('hellOverlay').style.display = 'none';
   document.getElementById('log').innerHTML = '';
-  logMsg(IS_MOBILE ? '게임 시작! 유닛을 눌러 끌면 집어서 옮기고, 빈 땅을 끌면 그 방향으로 이동, 길게 누르면 공격! 🏰 성을 눌러 강화' : '게임 시작! 드래그로 부대지정, 우클릭 이동, A키+클릭 공격 지정! 🏰 성을 클릭해 강화하세요');
+  logMsg(IS_MOBILE ? '게임 시작! 유닛을 눌러 끌면 집어서 옮기고, 빈 땅을 탭하면 선택 해제, 길게 누르면 공격! 🏰 성을 눌러 강화' : '게임 시작! 드래그로 부대지정, 우클릭 이동, A키+클릭 공격 지정! 🏰 성을 클릭해 강화하세요');
   startPoker();
 }
 function mineHP(layer) { return Math.floor(2500 * Math.pow(1.3, layer - 1)); } // 겹 성장 1.4→1.3: 광부가 귀해진 만큼 겹이 좀 더 빨리 깊어지게 (복리 체감)
@@ -2553,7 +2553,6 @@ function update(dt) {
   updateAltar();
   updateStoneDip(); // 🥚 투석기 폭포 이스터에그
   updateFusableHint();
-  if (joyDir) issueMoveDir(joyDir.dx, joyDir.dy); // 조이스틱: 손가락을 대고 있는 동안 계속 그 방향으로 (touchmove가 멈춰도 전진)
   assignOreSlots();
   // 🥚 이스터에그: 이번 라운드 광석방 "첫 입장"이 하이카드 1기 단독이면 → 하이카드 에이스 강림 (게임당 1회)
   if (S.roomVirgin) {
@@ -5543,8 +5542,8 @@ function draw() {
     ctx.fillText(`×${S.combo.n} COMBO!`, 0, 0);
     ctx.restore(); ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.lineWidth = 1;
   }
-  // 드래그 박스 (조이스틱 = 방향 이동 중엔 부대지정이 아니므로 안 그린다 — 크로스체크 P2)
-  if (drag && drag.moved && !drag.joyOn && !drag.grab) { // 집어 옮기는 중에도 부대지정이 아니다
+  // 드래그 박스 (집어 옮기는 중엔 부대지정이 아니므로 안 그린다)
+  if (drag && drag.moved && !drag.grab) {
     ctx.strokeStyle = '#5b48d0'; ctx.setLineDash([5,4]);
     ctx.strokeRect(Math.min(drag.x0,drag.x1), Math.min(drag.y0,drag.y1), Math.abs(drag.x1-drag.x0), Math.abs(drag.y1-drag.y0));
     ctx.setLineDash([]);
@@ -7888,27 +7887,7 @@ window.addEventListener('mouseup', e => {
   pressEnd();
 });
 // 우클릭 이동 명령 (contextmenu·터치 롱프레스가 아닌 탭-이동에서 공용)
-// 📱 09-10 유저 지정: 유닛을 고르고 화면 아무 곳이나 눌러 끌면 그 방향으로 계속 이동 (탭 목표지정은 그대로)
-function issueMoveDir(dx, dy) {
-  const d = Math.hypot(dx, dy) || 1, nx = dx / d, ny = dy / d;
-  let n = 0;
-  for (const u of S.units) {
-    if (!u.selected || u.miner || u.catapult || u.item) continue; // 광부·투석기·아이템은 이동 명령 무시 (issueMove와 동일 규칙)
-    if (duelLocked(u)) { duelLockFloat(u); continue; }            // 🔒 결투 락인
-    // 손가락 방향 먼 곳 — update()가 매 프레임 재계산해 손가락을 대고만 있어도 계속 전진한다.
-    // 맵 경계 클램프 필수: clampTargetPos는 울타리·하늘·광석방만 보정해서 이게 없으면 유닛이 화면 밖으로 걸어나갔다 (크로스체크 P1)
-    const t = clampTargetPos(Math.max(12, Math.min(VW - 12, u.x + nx * 200)), Math.max(12, Math.min(VH - 12, u.y + ny * 200)));
-    u.tx = t.x; u.ty = t.y;
-    u.forceTarget = null; u.attackMine = false; u.amove = false;
-    n++;
-  }
-  return n;
-}
-function stopSelected() { // 손을 떼면 그 자리에 멈춘다 (issueMoveDir이 실제로 움직인 대상만 — 배달 중인 아이템 유닛 등을 얼리지 않게)
-  joyDir = null;
-  for (const u of S.units) if (u.selected && !u.miner && !u.catapult && !u.item && !duelLocked(u)) { u.tx = u.x; u.ty = u.y; u.moving = false; }
-}
-let joyDir = null; // 조이스틱 방향 {dx, dy} — touchmove가 세팅하고 update()가 매 프레임 소비 (손가락을 대고만 있어도 전진)
+// 📱 09-10의 조이스틱(빈 땅 끌기 = 방향 이동)과 탭 이동은 09-20 유저 지정으로 삭제 — 모바일 이동은 아래 집어 옮기기 하나. 되살리려면 7e2656e 참고
 // 🖐️ 집어 옮기기 (09-18 유저 지정): 유닛을 누른 채 끌면 공중에 매달려(바둥바둥) 손가락을 따라오고, 놓으면 그 자리에 툭 떨어진다.
 //    여러 기(선택 부대)면 손가락 주위로 모였다가 놓을 때 겹치지 않게 격자로 퍼진다. 아이템(왕관·뽑기권)도 집어 제물대에 놓을 수 있다.
 let grabPos = null; // 손가락 위치(캔버스 좌표) — update()가 매 프레임 집힌 유닛을 이쪽으로 끌어당긴다
@@ -8000,8 +7979,7 @@ cv.addEventListener('touchstart', e => {
   if (drag) {
     drag.tid = e.changedTouches[0].identifier; // 이 드래그의 손가락 — touchend/cancel은 이 손가락이 떨어질 때만 처리
     let hit = null; for (const u of S.units) if (grabbable(u) && Math.hypot(u.x - p.x, u.y - p.y) < HIT_R) { hit = u; break; }
-    drag.grabCand = hit; // 🖐️ 유닛 위에서 시작한 드래그 = 집어 옮기기 (짧은 탭이면 pressEnd의 선택 그대로)
-    drag.joy = !hit && S.units.some(u => u.selected && !u.miner && !u.catapult && !u.item); // 📱 빈 땅에서 시작 + 선택 유닛 = 방향 이동
+    drag.grabCand = hit; // 🖐️ 유닛 위에서 시작한 드래그 = 집어 옮기기 (짧은 탭이면 pressEnd의 선택 그대로). 빈 땅 드래그 = 부대지정 박스
   }
   longPressFired = false;
   clearTimeout(longPressTimer);
@@ -8021,22 +7999,15 @@ cv.addEventListener('touchmove', e => {
   const dx = p.x - drag.x0, dy = p.y - drag.y0;
   if (Math.hypot(dx, dy) > 24) clearTimeout(longPressTimer); // 롱프레스 취소(움직임)
   if (drag.grabCand && !drag.grab && !attackMode && Math.hypot(dx, dy) > 24) drag.grab = startGrab(drag.grabCand); // 🖐️ 24px 넘게 끌면 집기 시작
-  if (drag.grab) { grabPos = { x: p.x, y: p.y }; return; }
-  // 방향 이동: 실시간 거리로 게이트 (drag.moved는 한 번 넘으면 고착이라, 손가락을 출발점으로 되돌리면 잔여 노이즈 방향으로 튀었다 — 크로스체크 P1)
-  if (drag.joy && !attackMode) {
-    if (Math.hypot(dx, dy) > 24) { drag.joyOn = true; joyDir = { dx, dy }; issueMoveDir(dx, dy); }
-    else if (drag.joyOn) { stopSelected(); } // 중앙으로 되돌리면 정지 (조이스틱 직관)
-  }
+  if (drag.grab) grabPos = { x: p.x, y: p.y };
 }, { passive: false });
 cv.addEventListener('touchend', e => {
   e.preventDefault();
   if (!drag) return; // 무시된 둘째 손가락·리셋 뒤의 잔여 touchend
-  if (drag.tid != null && ![...e.changedTouches].some(t => t.identifier === drag.tid)) return; // 📱 다른 손가락이 떨어진 것 — 우리 드래그(집기·조이스틱)는 계속
+  if (drag.tid != null && ![...e.changedTouches].some(t => t.identifier === drag.tid)) return; // 📱 다른 손가락이 떨어진 것 — 우리 드래그(집기)는 계속
   clearTimeout(longPressTimer);
-  // 방향 이동 종료 — 그 자리에 정지. ⚠️ 롱프레스 검사보다 먼저: 꾹 눌러 어택땅이 발동한 뒤 이어서 끌면
-  //    아래 분기가 먼저 return해 정지가 누락됐다 (크로스체크 P1). longPressFired도 함께 리셋해야 다음 탭이 안 먹힌다
-  if (drag.grab) { const q = touchPos(e); dropGrab(drag.grab, q.x, q.y); drag = null; longPressFired = false; lastTapTime = 0; lastTapPos = null; return; } // 🖐️ 놓기 — 그 자리에 툭 (더블탭 기억도 지움)
-  if (drag.joyOn) { stopSelected(); drag = null; longPressFired = false; lastTapTime = 0; lastTapPos = null; return; }
+  // 🖐️ 놓기 — 그 자리에 툭 (더블탭 기억도 지움). ⚠️ 롱프레스 검사보다 먼저, longPressFired도 함께 리셋해야 다음 탭이 안 먹힌다 (크로스체크 P1)
+  if (drag.grab) { const q = touchPos(e); dropGrab(drag.grab, q.x, q.y); drag = null; longPressFired = false; lastTapTime = 0; lastTapPos = null; return; }
   if (longPressFired) { longPressFired = false; drag = null; return; } // 롱프레스가 이미 처리함
   if (drag && drag.moved) { pressEnd(); return; } // 드래그 박스 선택
   const p = touchPos(e);
@@ -8054,25 +8025,14 @@ cv.addEventListener('touchend', e => {
     return;
   }
   lastTapTime = now; lastTapPos = { x: p.x, y: p.y };
-  // 탭: ①유닛 명중 → 선택(pressEnd) ②선택유닛 있음 → 이동 ③건물 → 팝업 ④빈땅 → 선택해제
-  let hit = null;
-  for (const u of S.units) if (Math.hypot(u.x - p.x, u.y - p.y) < HIT_R) { hit = u; break; }
-  const hasSel = S.units.some(u => u.selected && !u.miner);
-  // 🎯 몬스터 탭 → 정보: 유닛 미선택일 때만 (선택 중엔 이동이 우선 — 몹 근처 나무판자 이동이 정보창에 먹히던 버그)
-  if (!hit && !hasSel) { const mon = monsterAt(p.x, p.y); if (mon) { S.selMon = mon; showMonsterInfo(mon); drag = null; return; } }
-  if (!hit && hasSel) {
-    issueMove(p.x, p.y);
-    drag = null;
-    updateInfoPanel();
-    return;
-  }
+  // 탭 = 데스크톱 좌클릭과 동일(pressEnd): ①유닛 → 선택 ②몬스터 → 정보 ③건물 → 팝업/강화 ④빈 땅 → 선택 해제.
+  //    📱 09-20 유저: 이동은 🖐️ 집어 옮기기 하나로 — 탭 이동·조이스틱 삭제, 맵 탭은 '선택 풀고 다른 행동' 용도
   pressEnd();
 }, { passive: false });
 cv.addEventListener('touchcancel', e => {
   if (drag && drag.tid != null && ![...e.changedTouches].some(t => t.identifier === drag.tid)) return; // 다른 손가락의 cancel
   clearTimeout(longPressTimer);
   longPressFired = false;
-  if (drag && drag.joyOn) stopSelected(); // 전화·알림바로 터치가 끊겨도 유닛이 계속 걸어가지 않게 (크로스체크 P1)
   if (drag && drag.grab) dropGrab(drag.grab, grabPos ? grabPos.x : drag.x1, grabPos ? grabPos.y : drag.y1); // 🖐️ 터치가 끊기면 그 자리에 내려놓는다
   drag = null;
 });
@@ -8109,7 +8069,7 @@ function updateInfoPanel() {
     const st6 = skillAllLabel(skUnits);
     const skHTML = skUnits.length === 0 ? '' :
       `<br><button id="skillAllBtn" class="shopBtn" ${st6.allReady ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:${st6.allReady ? '#c0392b' : '#999'};font-weight:bold">${st6.label}</button>`;
-    el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>${IS_MOBILE ? '유닛을 끌어 옮기기 · 빈 땅 끌면 그 방향 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}` +
+    el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>${IS_MOBILE ? '유닛을 끌어 옮기기 · 빈 땅 탭 = 선택 해제 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}` +
       (sel.some(u => !u.miner) ? priorityRow(commonPri) + mobileCmdHTML() : '') +
       skHTML +
       (canFuse ? `<br><span style="color:#8c5bff;font-weight:bold">🌀 같은 유닛 5기! 좌측 포털로 이동시키면 강화!</span>` : '') +
