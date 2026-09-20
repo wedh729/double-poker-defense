@@ -6162,6 +6162,7 @@ const GEARART = { helms: null, shoulders: null, n: 0 };
   }
 })();
 function drawMonGear(x, y, sz, gearCount, broken, mat) {
+  if (!MON_GEAR_ON) return; // 🪖 장비 OFF — 호출처(아트 경로 monGearCount / 프로시저럴 drawMatStatic의 esc 직접 계산) 어느 쪽이든 여기서 차단 (09-20 유저: 물풍선 안에 투구 문양 잔재)
   if (GEARART.n === 2) { // 시트 셀 공용 매핑: 반지름 120 → k = sz/120, 셀 내 공 중심 (192,230)
     const idx = Math.min(9, mat | 0), k = sz / 120, sx = (idx % 5) * 384, sy = (idx / 5 | 0) * 384;
     if (gearCount >= 2 && broken < 1) ctx.drawImage(GEARART.shoulders, sx, sy, 384, 384, x - 192 * k, y - 230 * k, 384 * k, 384 * k); // 어깨갑옷 (먼저 부서짐)
@@ -6855,10 +6856,12 @@ function drawSuit(suit, x, y, s, col) {
   ctx.fillStyle = col; ctx.beginPath();
   if (suit === '♦') {
     ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.72, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * 0.72, y); ctx.closePath();
-  } else if (suit === '♥') {
+  } else if (suit === '♥') { // 잎 2개 둥글게 + 깊은 홈 + 뾰족한 끝 (2-베지어 하트는 납작해 '찌그러져' 보였다 — 09-20 유저)
     ctx.moveTo(x, y + s);
-    ctx.bezierCurveTo(x - s * 1.55, y - s * 0.1, x - s * 0.95, y - s * 1.2, x, y - s * 0.4);
-    ctx.bezierCurveTo(x + s * 0.95, y - s * 1.2, x + s * 1.55, y - s * 0.1, x, y + s);
+    ctx.bezierCurveTo(x - s * 0.55, y + s * 0.42, x - s * 1.12, y - s * 0.02, x - s * 1.0, y - s * 0.5);
+    ctx.bezierCurveTo(x - s * 0.9, y - s * 1.12, x - s * 0.12, y - s * 1.1, x, y - s * 0.48);
+    ctx.bezierCurveTo(x + s * 0.12, y - s * 1.1, x + s * 0.9, y - s * 1.12, x + s * 1.0, y - s * 0.5);
+    ctx.bezierCurveTo(x + s * 1.12, y - s * 0.02, x + s * 0.55, y + s * 0.42, x, y + s);
     ctx.closePath();
   } else if (suit === '♠') { // 하트를 뒤집은 잎 + 줄기
     ctx.moveTo(x, y - s);
