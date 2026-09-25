@@ -390,6 +390,7 @@
   #pokerTimerBar { height: 5px; background: rgba(30,18,8,0.4); border-radius: 3px; margin: 6px auto 12px; width: 440px; max-width: 90%; overflow: hidden; position: relative; }
   #pokerTimerBar > div { height: 100%; background: linear-gradient(90deg, #ffd166, #ff9e40); border-radius: 3px; transition: width 0.2s linear; }
   #cards { display: flex; flex-direction: column; gap: 4px; align-items: center; margin-bottom: 14px; perspective: 900px; position: relative; }
+  .rerollInfo { max-width: 300px; margin: 6px auto 0; text-align: center; font-size: 12px; color: #c0392b; font-weight: bold; }
   .handRow { border-radius: 12px; padding: 4px 14px 8px; border: 2px dashed transparent; }
   .handRow.match { border-color: #ff6ab5; background: rgba(255,120,180,0.10); }
   .handLabel { font-size: 13px; color: #d9c8a6; margin-bottom: 6px; }
@@ -552,6 +553,7 @@
   /* ⚠️ !important 필수: updateInfoPanel/showObjInfo가 인라인 style.display='block'을 쓰므로 그게 아니면 포커 탭에서도 남는다 (09-10 유저 리포트) */
   .mobile[data-tab="poker"] #cv, .mobile[data-tab="poker"] #clock, .mobile[data-tab="poker"] #unitInfo,
   .mobile[data-tab="poker"] #objInfo, .mobile[data-tab="poker"] #chipBar { display: none !important; }
+  .mobile[data-tab="poker"] #duelToast { top: 2px; } /* 09-26: 카드 위(중앙)에 얹히던 것 → 패널 맨 위 배너 자리 */
   .mobile[data-tab="poker"] #mktToast { display: none; } /* 포커 탭에선 카드 위에 얹힌다 (크로스체크) — 시계가 상단에 있으니 토스트는 생략 */
   .mobile #mktToast, .mobile #duelToast { font-size: 12px; padding: 5px 10px; } /* 모바일 캔버스(~200px)에서 토스트가 하단을 넘지 않게 슬림 */
   .mobile #mktToast { top: 140px; } /* 모바일 결투 토스트(96+~40)와 안 겹치는 위치 */
@@ -613,19 +615,19 @@
       .mobile[data-tab="battle"] #bigTimer { margin-left: auto; padding-right: 2px; }
       .mobile[data-tab="battle"] #bigTimer .p { font-size: 10.5px; }
       .mobile[data-tab="battle"] #bigTimer .t { font-size: 13px; }
-      /* ⏱️🎛️ 우측 레일: 시계 → 툴바 버튼 → 탭 (전부 캔버스 밖) */
+      /* ⏱️ 시계 = 캔버스 상단 중앙 (09-26 유저: 우측 레일은 잘 안 보인다 — 데스크톱과 같은 자리). 크기는 09-10의 40px 유지 */
       .mobile[data-tab="battle"] #clock {
-        position: fixed; left: auto; transform: none;
-        right: calc(3px + env(safe-area-inset-right, 0px));
-        top: calc(var(--topH) + 4px);
-        width: 40px; height: 40px; border-width: 2px; /* 09-10 유저: 50px는 레일에서 잘렸다 */
+        top: 3px; left: 50%; transform: translateX(-50%);
+        width: 40px; height: 40px; border-width: 2px;
+        pointer-events: none; /* 캔버스 위에 떠 있으니 터치는 맵으로 통과 (집기·부대지정 사각지대 방지) */
       }
+      /* 🎛️ 우측 레일: 툴바 버튼 → 탭 (전부 캔버스 밖) */
       .mobile[data-tab="battle"] #toolbar {
         position: fixed; left: auto; right: env(safe-area-inset-right, 0px);
-        top: calc(var(--topH) + 48px); bottom: auto;
+        top: calc(var(--topH) + 4px); bottom: auto;
         width: 46px; margin: 0; padding: 0; z-index: 21;
         flex-direction: column; justify-content: flex-start; align-items: center; gap: 2px;
-        max-height: calc(100svh - var(--topH) - 140px); overflow-y: auto; /* 하단 탭(75+여백)과 안 겹치게 — 초저높이 기기에선 스크롤 */
+        max-height: calc(100svh - var(--topH) - 96px); overflow-y: auto; /* 하단 탭(75+여백)과 안 겹치게 — 초저높이 기기에선 스크롤 */
       }
       .mobile[data-tab="battle"] .tbGroup { flex-direction: column; gap: 2px; }
       .mobile[data-tab="battle"] #toolbar .shopIcon { width: 27px; height: 27px; font-size: 14px; border-radius: 8px; padding: 0; }
@@ -635,6 +637,9 @@
         flex-direction: column; border-radius: 16px; padding: 3px;
       }
       .mobile[data-tab="battle"] #mobTabs button { padding: 0 6px; font-size: 15px; }
+      /* 💬 결투·투자 토스트 = 시계(3+40) 바로 밑 (09-26 유저: 화면 중앙을 가렸다). 둘 다 뜨면 투자가 결투(두 줄 45px) 아래 */
+      .mobile[data-tab="battle"] #duelToast, .mobile[data-tab="battle"] #mktToast { top: 47px; }
+      .mobile[data-tab="battle"] #duelToast.on + #mktToast { top: 95px; }
       .mobile[data-tab="battle"] .mtTxt { display: none; } /* 레일은 아이콘 전용 */
     }
   }
@@ -963,6 +968,9 @@ body { background: #eff5f7; }
   .handRowG .hdesc { text-align: left; }
 }
 @media (orientation: landscape) {
+  /* 🎟️ 재변경권 안내: 가로 화면에선 패 옆 칸을 차지해 패를 왼쪽으로 밀거나(두 패 가로 배치) 소환 버튼을 밀어냈다 (09-26 유저)
+     → 흐름 밖으로 빼 카드 아래 여백(.mobile #cards 16px) 안에 한 줄. 세로 화면은 폭이 좁아 기존 흐름 그대로 */
+  .mobile[data-tab="poker"] #cards > .rerollInfo { position: absolute; left: 0; right: 0; top: 100%; max-width: none; margin: 1px 0 0; font-size: 11px; line-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mobile[data-tab="battle"], .mobile[data-tab="battle"] #wrap { background: #183552; }
   .mobile[data-tab="battle"] #topbar { background: #183552; border: 0; border-radius: 0; color: #eaf4fa; box-shadow: none; }
   .mobile[data-tab="battle"] #topbar b { color: #fff; }
@@ -10504,7 +10512,7 @@ function renderPoker(spin) {
   // 🎟️ 재변경권: 교환 완료된 카드의 🎟️로 그 카드만 재교환 (전체 재변경 아님)
   if (S.items.reroll > 0) {
     const info = document.createElement('div');
-    info.style.cssText = 'max-width:300px;margin:6px auto 0;text-align:center;font-size:12px;color:#c0392b;font-weight:bold';
+    info.className = 'rerollInfo';
     info.innerHTML = `🎟️ 재변경권 ${S.items.reroll}장 — 교환 완료된 카드의 🎟️를 누르면 그 카드만 다시 교환`;
     cardsEl.appendChild(info);
   }
