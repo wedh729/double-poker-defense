@@ -12452,6 +12452,7 @@ if (WORLD_MOTION_V2) (() => {
     baseRenderShop();
     if (!openShop) return;
     $('shopWin').dataset.view = openShop;
+    $('shopWin').dataset.ctab = openShop === 'castle' ? castleTab : ''; // 🎨 창 디자인 훅: 성 강화 탭별(upg/miner/hero) 테마용 (09-26)
     if (openShop === 'castle') {
       $('shopTitle').innerHTML = '<span class="v2-eyebrow">작은 군단, 커다란 성장</span>성 강화';
       const tabs = $('shopBody').querySelector('[data-ctab]')?.parentElement;
