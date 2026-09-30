@@ -189,7 +189,7 @@
     background: rgba(120,44,32,0.9); color: #ffe6c2; cursor: pointer; }
   #duelConfirm button:hover { background: rgba(150,58,40,0.95); }
 
-  /* 👑 왕관 족보 선택 모달 — duelConfirm과 같은 관례(캔버스 중앙·S.paused), 금색 팔레트 */
+  /* 👑 왕관 종족 선택 모달 — duelConfirm과 같은 관례(캔버스 중앙·S.paused), 금색 팔레트 */
   #crownModal { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 420px; max-width: 88%;
     background: linear-gradient(180deg, rgba(58,44,12,0.97), rgba(34,25,8,0.97));
     border: 1px solid rgba(255,215,120,0.6); border-radius: 12px; padding: 16px 18px; text-align: center;
@@ -264,14 +264,7 @@
   .casItem { background: linear-gradient(180deg, #2a2340, #17102b); color: #e8def8; border-color: #4a3d70; } /* 카지노 메뉴 카드: 어두운 배경(금색 제목·연보라 설명 가독) */
   .chipResult { font-size: 17px; font-weight: bold; margin-top: 14px; min-height: 24px; }
 
-  /* 🎰 777 슬롯머신 */
-  .slotBox { display: flex; gap: 8px; justify-content: center; margin: 12px auto 6px; padding: 14px 16px 12px; width: fit-content;
-    background: linear-gradient(180deg, #3a2a55, #1a1230); border: 3px solid #c9a227; border-radius: 14px; box-shadow: inset 0 2px 8px rgba(0,0,0,0.6), 0 6px 14px rgba(0,0,0,0.5); }
-  .slotWin { width: 66px; height: 72px; overflow: hidden; background: linear-gradient(180deg, #efe6cd, #fdf6e3 30%, #fdf6e3 70%, #d9cfb2); border-radius: 7px; border: 2px solid #8a6d3b; }
-  .slotStrip { will-change: transform; }
-  .slotCell { height: 72px; display: flex; align-items: center; justify-content: center; font-size: 36px; }
-  .slotCell.bar { font-size: 17px; font-weight: 900; color: #c0392b; letter-spacing: 1px; text-shadow: 0 1px 0 #fff; }
-  .slotCell.sev { font-size: 40px; font-weight: 900; color: #e02020; text-shadow: 0 2px 0 rgba(0,0,0,0.25); font-style: italic; }
+  /* 🎁 캡슐 뽑기 상품표 (구 777 슬롯 — 릴 CSS는 10-01 캡슐 전환으로 삭제) */
   .slotPay { width: 100%; font-size: 11px; color: #c9b8f0; border-collapse: collapse; margin: 8px 0 2px; }
   .slotPay td { padding: 1.5px 2px; }
 
@@ -649,8 +642,8 @@
       .mobile[data-tab="battle"] #chipBar > #stCasino { pointer-events: auto; } /* 딜 순위는 표시 전용(제목 줄만 auto) — #chipBar > * 로 두면 위젯 본문이 다시 터치를 막는다 */
       .mobile[data-tab="battle"] #stCasino { position: absolute; left: 4px; top: 50%; transform: translateY(-50%); }
       .mobile.stOut[data-tab="battle"] #stCasino { position: fixed; left: max(1px, calc((var(--gutL, 48px) - 46px) / 2)); top: calc(var(--topH) + 6px); transform: none; }
-      /* 📊 딜 순위 = 강화 포털(84,224 r34) 바로 밑 (09-30 유저: 성을 가렸다) — %는 캔버스 논리 좌표: (84-34)/940, (224+34+6)/500 */
-      .mobile[data-tab="battle"] #dpsRank { left: 5.3%; top: 52.8%; }
+      /* 📊 딜 순위 = 강화 포털(84,224 r34) 밑 높이, 게임 화면 왼쪽 끝 (09-30 유저: 성을 가렸다 → 10-01 유저: 왼쪽 끝으로 붙이자) — top %는 캔버스 논리 (224+34+6)/500 */
+      .mobile[data-tab="battle"] #dpsRank { left: 4px; top: 52.8%; }
       .mobile[data-tab="battle"]:not(.stOut) #dpsRank { left: 54px; } /* 자금운영이 캔버스 안에 남는 폰: 버튼(4+46) 오른쪽 */
       .mobile[data-tab="battle"] .mtTxt { display: none; } /* 레일은 아이콘 전용 */
     }
@@ -1870,6 +1863,543 @@ body.mobile .wd-result>p{font-size:12px!important;line-height:1.65!important;}
 #shopWin .shopBtn:hover{background:#e3d49c;color:#3e5d2c;border-color:#718747;}
 
 </style>
+<style data-dpd-source="honey-storybook.css">
+/* Honey Storybook 09. Source game 6734c39. Presentation only.
+   This block does not insert HTML, replace icons or change any game script.
+   The concept is scoped to the finance hub and castle unit-upgrade view. */
+
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) {font-size:14px;line-height:1.4;font-family:"Segoe UI","Malgun Gothic",sans-serif;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) :where(:not(svg):not(svg *)) {all:revert;box-sizing:border-box;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) *::before,:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) *::after {content:none;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) * {box-sizing:border-box}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) button {font:inherit;color:inherit;cursor:default}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) button:focus-visible {outline:3px solid var(--accent);outline-offset:3px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) h3,
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) p {margin:0}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) b,
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) strong {font-weight:800}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) svg {flex-shrink:0}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) [hidden] {display:none!important}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-icon {width:22px;height:22px;vertical-align:middle}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-modal-head {height:87px;padding:20px 26px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line);background:var(--head);color:var(--headink)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-modal-head>.v2-icon-tile {height:46px;width:46px;background:var(--headtile);color:inherit;border:1px solid var(--headline)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #shopTitle,
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #chipTitle {font-size:27px;font-weight:900;line-height:1.15;letter-spacing:-1px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-eyebrow {display:block;font-size:10px;font-weight:600;letter-spacing:.7px;line-height:1.7;margin-bottom:3px;opacity:.78}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #shopClose,
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #chipClose {margin-left:auto;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--headline);background:transparent;color:inherit;border-radius:10px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #shopClose svg,
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #chipClose svg {width:17px;height:17px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #shopGoldRow {padding:20px 26px 0}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #shopBody,
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #chipBody {padding:20px 26px 24px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet {display:grid;grid-template-columns:1.5fr 1fr;gap:12px;margin-bottom:20px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet>span {display:flex;align-items:center;gap:13px;background:var(--wallet);border:1px solid var(--line);border-radius:var(--cr);padding:12px 16px;min-height:62px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet>span>.v2-icon {color:var(--accent);width:27px;height:27px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet small {font-size:10px;display:block;color:var(--muted);font-weight:600;margin-bottom:1px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet b {display:flex;align-items:baseline;font-size:24px;line-height:1.1;letter-spacing:-.8px;font-variant-numeric:tabular-nums}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet em {font-size:10px;font-style:normal;letter-spacing:0;margin-left:6px;color:var(--muted);font-weight:600}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #shopGoldRow .v2-wallet {margin:0}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-icon-tile {display:inline-grid;place-items:center;width:44px;height:44px;border-radius:12px;color:var(--kind,var(--accent));background:color-mix(in srgb,var(--kind,var(--accent)) 11%,var(--card));flex-shrink:0}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-grid {display:grid;grid-template-columns:1.16fr 1fr 1fr;gap:12px;margin-bottom:20px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card {position:relative;display:grid;grid-template-columns:44px 1fr;align-items:center;gap:12px;text-align:left;min-height:145px;padding:17px 16px 13px;border:1px solid color-mix(in srgb,var(--kind) 24%,var(--line));border-radius:var(--cr);background:var(--card);box-shadow:var(--cardshadow);overflow:hidden}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card:before {content:'';position:absolute;top:0;bottom:0;left:0;width:3px;background:var(--kind)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card[data-go=invest] {--kind:var(--teal)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card[data-go=miner] {--kind:var(--ochre)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card[data-go=slot] {--kind:var(--plum)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main {display:flex;flex-direction:column;gap:3px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main small {font-size:10px;color:var(--muted)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main b {font-size:20px;letter-spacing:-.5px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main>span {font-size:11px;color:var(--muted)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card>svg {display:none}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-foot {grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;font-size:10px;border-top:1px solid var(--line);padding-top:11px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-foot b {background:var(--confirm);color:#fff7e8;padding:5px 8px;border-radius:6px;font-size:10px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-invest .v2-hub-foot b {background:transparent;color:var(--muted);padding-right:0;font-weight:500}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card[data-go=slot] .v2-hub-foot b {background:var(--gamble)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-foot b svg {width:12px;height:12px;margin-left:4px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-section-heading {display:flex;align-items:baseline;gap:10px;margin:0 0 10px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-section-heading h3 {font-size:16px;letter-spacing:-.3px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-section-heading p {font-size:10px;color:var(--muted)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket-grid {display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket {display:flex;flex-direction:column;text-align:left;position:relative;border-radius:var(--cr);border:1px solid color-mix(in srgb,var(--kind) 25%,var(--line));background:var(--card);padding:13px 14px 12px;min-height:138px;box-shadow:var(--cardshadow)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket[data-gacha=ace] {--kind:var(--blue)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket[data-gacha=hero] {--kind:var(--ochre)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket[data-gacha=aceHero] {--kind:var(--rose)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket[data-gacha=super] {--kind:var(--plum)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket-top {display:flex;justify-content:space-between;width:100%;align-items:center;margin-bottom:11px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket-top>svg {color:var(--kind);width:25px;height:25px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-probability {font-size:9px;color:var(--kind);background:color-mix(in srgb,var(--kind) 10%,var(--card));padding:4px 7px;border-radius:5px;font-weight:700}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket>b {font-size:14px;letter-spacing:-.3px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket-caption {font-size:10px;color:var(--muted);margin-top:2px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket-cost {display:flex;align-items:center;gap:5px;margin-top:10px;font-size:13px;font-weight:800;color:var(--gamble)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket-cost svg {width:16px;height:16px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-shortage {position:absolute;bottom:14px;right:12px;font-size:9px;color:var(--muted);font-weight:600}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket:disabled {background:var(--inset);box-shadow:none;border-style:dashed}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket:disabled .v2-ticket-cost {color:var(--muted)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-fineprint {font-size:9px;line-height:1.5;color:var(--muted);margin:9px 0 18px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply-grid {display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply {display:grid;grid-template-columns:32px 1fr;gap:4px 10px;text-align:left;border:1px solid var(--line);border-radius:var(--cr);background:var(--card);padding:12px;position:relative;align-content:start}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply[data-valve=sand] {--kind:var(--ochre)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply[data-valve=bomb] {--kind:var(--rose)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply[data-valve=pray] {--kind:var(--teal)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply .v2-icon-tile {grid-row:1/3;width:32px;height:32px;border-radius:9px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply .v2-icon-tile svg {width:18px;height:18px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply>b {font-size:12px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply>span:not(.v2-icon-tile):not(.v2-supply-bottom) {font-size:9px;color:var(--muted);white-space:nowrap}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply-bottom {grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding-top:9px;margin-top:4px;border-top:1px solid var(--line);font-size:11px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply-bottom strong {color:var(--confirm)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply-bottom small {font-size:9px;color:var(--muted)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-tabs {display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:var(--inset);border-radius:11px;border:1px solid var(--line)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-tab {display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;border:1px solid transparent;border-radius:8px;color:var(--muted);padding:10px 8px;font-size:12px;font-weight:700}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-tab svg {width:17px;height:17px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-tab[aria-pressed=true] {background:var(--accent);color:var(--onaccent);box-shadow:0 2px 4px #00000010}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-intro {font-size:11px;color:var(--muted);margin:17px 0}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-list {display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade {position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--cr);padding:20px 17px 15px;box-shadow:var(--cardshadow);overflow:hidden}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade:before {content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--race)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-top {display:grid;grid-template-columns:42px 1fr;gap:10px;align-items:center}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-suit {width:42px;height:50px;display:grid;place-items:center;font-size:38px;font-family:Arial,sans-serif;line-height:1;color:var(--race);background:color-mix(in srgb,var(--race) 9%,var(--card));border:1px solid color-mix(in srgb,var(--race) 25%,var(--line));border-radius:10px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-name h3 {font-size:16px;letter-spacing:-.6px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-name>span {font-size:9px;color:var(--muted);display:block;margin-top:5px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-level {grid-column:1/-1;display:flex;gap:9px;align-items:center;margin-top:7px;border-bottom:1px solid var(--line);padding-bottom:14px;color:var(--muted);font-size:11px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-level>b {font-size:18px;color:var(--ink)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-level>span {margin-left:auto}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-stat-grid {display:flex;flex-direction:column;gap:15px;margin:19px 0 20px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-stat-grid>div {display:flex;justify-content:space-between;align-items:center;gap:6px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-stat-grid>div>span {font-size:9px;color:var(--muted)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-stat-grid b {font-size:12px;white-space:nowrap;letter-spacing:-.1px;font-variant-numeric:tabular-nums}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-stat-grid i {font-style:normal;margin:0 7px;font-weight:400;color:var(--muted)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-stat-grid strong {color:var(--confirm)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-actions {display:grid;grid-template-columns:1fr 1fr;gap:8px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-cost-label {grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--muted);padding:11px 0 12px;border-top:1px solid var(--line)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-cost-label b {font-size:17px;color:var(--ink)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-cost-label small {font-size:10px;font-weight:500}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .rpgBuy {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;background:var(--confirm);color:#fff7e8;border:1px solid #00000010;border-radius:8px;font-size:13px;font-weight:800;box-shadow:0 2px 0 #00000010;padding:8px 5px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .rpgBuy small {font-size:9px;font-weight:500}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-gamble {background:var(--gamble)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-note {display:flex;gap:11px;align-items:center;margin-top:18px;padding:13px 16px;background:var(--inset);border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:10px;line-height:1.7}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-note>b {color:var(--ink)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-note span b {display:block;color:var(--ink);font-size:11px;margin-bottom:2px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-note svg {color:var(--accent);width:24px;height:24px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) {--stage:#e2e4dd;--glow:#faf4dc;--paper:#f6f1e6;--card:#fffaf1;--wallet:#ece8db;--inset:#ece6d9;--ink:#29352f;--muted:#6c7062;--line:#d8d5c5;--wood:#796047;--edge:#413629;--head:#f6f1e6;--headink:#29352f;--headtile:#e8e4d6;--headline:#d2cdbb;--accent:#315b55;--onaccent:#fff9e9;--confirm:#376849;--gamble:#9a532e;--teal:#2b6863;--ochre:#805d22;--plum:#79537d;--blue:#355e8f;--rose:#9a4a55;--radius:23px;--cr:13px;--cardshadow:0 3px 8px #3d372307}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) {--stage:#e7dbbe;--glow:#fff4d4;--paper:#faeecf;--card:#fff6df;--wallet:#f0dfb6;--inset:#efe0ba;--ink:#5c452c;--muted:#8a714c;--line:#dbc599;--wood:#96703e;--edge:#5e4b30;--head:#eee0b7;--headink:#5a482f;--headtile:#e3d09e;--headline:#cbb57f;--accent:#607447;--radius:31px;--cr:20px;--cardshadow:0 4px 0 #d4be8c52}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) {border-width:8px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-modal-head {border-radius:20px 20px 0 0;border-bottom:1px solid #d6bd85}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-modal-head>.v2-icon-tile {border-radius:16px;transform:rotate(-5deg)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-tabs {padding:5px;border:0;border-radius:22px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-tab {border-radius:17px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-suit {border:0;width:48px;height:54px;border-radius:15px;transform:rotate(-6deg);box-shadow:3px 3px 0 var(--inset)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-top {grid-template-columns:48px 1fr}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade {border-width:1px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade:before {height:0}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-level {border-bottom-style:dashed}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card {background:color-mix(in srgb,var(--kind) 4%,var(--card));padding-top:19px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card:before {display:none}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card .v2-icon-tile {border-radius:15px;box-shadow:0 3px 0 var(--line);transform:rotate(-4deg)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket {border-radius:18px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket-top>svg {width:30px;height:30px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-probability {border-radius:20px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .rpgBuy {border-radius:13px;box-shadow:0 3px 0 #0000001a}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-note {border:0;background:transparent;padding-left:4px}
+
+/* Integration: keep original modal ownership and visibility; scroll inside. */
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) {--muted:#705939;width:min(996px,calc(100vw - 40px));max-height:calc(100dvh - 38px);min-height:0;padding:0;border:7px solid #96703e;border-radius:28px;background:#faeecf;color:#5c452c;box-shadow:0 4px 0 #5e4b30,0 15px 35px #30241438;overflow-x:hidden;overflow-y:auto;scrollbar-color:#a0804e #f0dfb6;text-align:left;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-modal-head {position:sticky;top:0;z-index:5;box-shadow:0 2px 0 #dac399;background:#eee0b7;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) :is(#shopTitle,#chipTitle) {text-align:left;flex:1;margin:0;padding:0;color:#5a482f;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-eyebrow {color:#755e3f;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-modal-head>.v2-icon-tile {color:#665038;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) :is(#shopClose,#chipClose) {position:static;flex:0 0 34px;cursor:pointer;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) :is(#shopGoldRow,#shopBody,#chipBody) {background:transparent;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) button {cursor:pointer;transition:background-color .12s,box-shadow .12s,transform .12s;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) button:disabled {cursor:not-allowed;filter:none;opacity:1;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) button:hover:not(:disabled) {filter:none;box-shadow:0 3px 0 #c3a77570;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) button:active:not(:disabled) {transform:translateY(1px);box-shadow:none;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) button:focus-visible {outline:3px solid #795d2d;outline-offset:3px;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade {display:block!important;border-left:1px solid var(--line)!important;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-actions .rpgBuy {min-width:0!important;margin-left:0!important;padding:8px 5px!important;font-size:13px!important;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-gamble {background:#9a532e!important;color:#fff7e8!important;border-color:#7e4527!important;box-shadow:0 3px 0 #6e3e2728!important;text-shadow:none!important;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .rpgBuy:disabled {background:#e0d3b5!important;color:#5e4d36!important;border-color:#b9a47c!important;box-shadow:none!important;text-shadow:none!important;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-invest {grid-column:auto;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket[data-gacha="ace"] {--kind:#a02b66;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket[data-gacha="hero"] {--kind:#805d22;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket[data-gacha="aceHero"] {--kind:#694594;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket[data-gacha="super"] {--kind:#a12466;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply[data-valve="sand"] {--kind:#315e84;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply[data-valve="bomb"] {--kind:#9a4a38;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply[data-valve="pray"] {--kind:#99516b;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply>.v2-shortage {grid-column:1/-1;position:static;font-size:10px!important;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket:disabled {border-style:dashed;background:#eee1c1;color:#5e4d36;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket:disabled :is(.v2-probability,.v2-ticket-top>svg) {color:#5e4d36;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket:disabled .v2-probability {background:#e1d3b3;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply:disabled {background:#e8dcbd;border-style:dashed;color:#5e4d36;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply:disabled strong {color:#5e4d36;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card:disabled {background:#e8dcbd;border-style:dashed;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card:disabled .v2-hub-foot b {background:#d6c8a7;color:#5e4d36;}
+/* Timing mini-game is rendered dynamically ahead of the upgrade cards. */
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-gamble-stage {margin:0 0 14px;padding:14px;background:#f0dbb2;border:1px solid #c59764;border-radius:16px;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-gamble-stage #gmgTrack {position:relative!important;overflow:hidden;border:1px solid #b58957!important;background:#e2c393!important;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-gamble-stage :is(#gmgStop,#gmgOk) {min-height:40px;background:#9a532e!important;color:#fff7e8!important;border:1px solid #754429;border-radius:10px;padding:8px 14px;}
+
+
+@media(max-width:850px){
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) {width:calc(100vw - 24px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));max-height:calc(100dvh - 20px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));border-width:4px;border-radius:20px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-modal-head {height:60px;padding:10px 16px;gap:10px;border-radius:14px 14px 0 0;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) :is(#shopTitle,#chipTitle) {font-size:21px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-eyebrow {font-size:9px;letter-spacing:.2px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-modal-head>.v2-icon-tile {width:34px;height:34px;border-radius:11px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) :is(#shopBody,#chipBody) {padding:14px 14px 18px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #shopGoldRow {padding:14px 14px 0;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet {margin-bottom:14px;gap:9px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet>span {min-height:49px;padding:8px 11px;gap:10px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet>span>span {display:block;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet b {font-size:20px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet small {font-size:10px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-grid {gap:8px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card {padding:12px 10px;grid-template-columns:30px 1fr;gap:7px;min-height:131px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card .v2-icon-tile {width:30px;height:32px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main b {font-size:16px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main small {font-size:9px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main>span {font-size:10px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-foot {font-size:9px;gap:3px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-foot b {font-size:9px;padding:5px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket-grid {gap:7px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket {padding:11px 10px;min-height:139px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket>b {font-size:12px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-probability {font-size:9px;padding:3px 5px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-shortage {right:8px;bottom:8px;font-size:9px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket:disabled .v2-ticket-cost {margin-bottom:10px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-section-heading {gap:8px;flex-wrap:wrap;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-section-heading h3 {font-size:15px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply-grid {gap:7px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply {padding:10px;grid-template-columns:25px 1fr;gap:4px 7px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply .v2-icon-tile {width:25px;height:28px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply>b {font-size:11px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply>span:not(.v2-icon-tile):not(.v2-supply-bottom) {white-space:normal;font-size:9px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-list {gap:8px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade {padding:16px 11px 12px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-top {grid-template-columns:32px 1fr;gap:7px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-suit {width:32px;height:42px;font-size:30px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-name h3 {font-size:13px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-name>span {font-size:9px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-stat-grid>div {display:block;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-stat-grid b {display:block;margin-top:4px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-actions .rpgBuy {font-size:11px!important;min-height:44px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-actions .rpgBuy small {font-size:9px;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-note {font-size:10px;padding:10px;}
+}
+@media(max-width:560px){
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-grid,:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-upgrade-list {grid-template-columns:1fr;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-ticket-grid {grid-template-columns:1fr 1fr;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-supply-grid {grid-template-columns:1fr;}
+:root body.mobile :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-stat-grid>div {display:flex;}
+}
+
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-eyebrow {opacity:1;}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #gmgStop span {opacity:1!important;}
+/* Adjacent castle tabs and finance subviews keep the selected book cover. */
+html body :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) {
+ --theme-panel:#faeecf;--theme-card:#fff6df;--theme-raised:#fff5db;--theme-inset:#efdfb7;
+ --theme-ink:#5c452c;--theme-muted:#755e3f;--theme-line:#d5be8f;--theme-gold:#795822;
+ --theme-accent:#9a532e;--theme-good:#376849;--theme-shadow:#d0b78040;
+ background:#faeecf;color:#5c452c;border:7px solid #96703e;border-radius:27px;box-shadow:0 4px 0 #5e4b30,0 15px 35px #30241438;
+}
+html body :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) .v2-modal-head {
+ padding:16px 23px;background:#eee0b7;background-image:none;border-bottom:1px solid #d5bd86;box-shadow:0 2px 0 #dbc69a;backdrop-filter:none;
+}
+html body :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) .v2-modal-head::before,
+html body :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) .v2-modal-head::after {content:none;}
+html body :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) :is(#shopTitle,#chipTitle) {color:#5c452c;text-shadow:none;}
+html body :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) .v2-eyebrow {color:#755e3f;text-shadow:none;letter-spacing:.5px;}
+html body :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) .v2-modal-head>.v2-icon-tile {color:#6b5133;background:#e3d09e;border-color:#cbb57f;border-radius:16px;box-shadow:none;}
+html body :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) :is(#shopClose,#chipClose) {color:#725536;background:#f3e3bd;border:1px solid #cdb581;border-radius:11px;box-shadow:0 2px 0 #c5aa79;text-shadow:none;}
+html body :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) :is(#shopBody,#chipBody,#shopGoldRow) {background:#faeecf;}
+html body :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) .v2-wallet>span {background:#f0dfb6;border-color:#dbc599;box-shadow:none;border-radius:17px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-tabs {background:#efdfb7;border:0;box-shadow:none;border-radius:22px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-tab {background:transparent;border-color:transparent;box-shadow:none;text-shadow:none;border-radius:17px;color:#755e3f;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-tab[aria-pressed="true"] {background:#607447;color:#fff8e8;box-shadow:0 2px 0 #4b6039;}
+html body #shopWin[data-view="castle"] :is(.roster-upgrade,.roster-train,.roster-ascension,.roster-dex-card) {background:#fff6df;border-color:#dbc599;border-radius:20px;box-shadow:0 3px 0 #d4be8c40;}
+html body #shopWin[data-view="castle"] :is(.roster-stat,.roster-power) {background:#efdfb7;border-color:#d5be8f;box-shadow:none;}
+html body #shopWin[data-view="castle"] .roster-banner {background:#586f42;border-color:#8b9965;border-radius:20px;box-shadow:none;}
+html body #shopWin[data-view="castle"] .roster-hero-banner {background:#796346;border-color:#af966f;border-radius:20px;box-shadow:none;}
+html body #shopWin[data-view="castle"] .roster-dex-card.is-locked {background:#eee2c6;box-shadow:none;}
+html body #shopWin[data-view="castle"] :is(.roster-upgrade,.roster-train,.roster-ascension) .rpgBuy {background:#376849;border-color:#345435;border-radius:13px;box-shadow:0 3px 0 #294d34;color:#fff7e8;text-shadow:none;}
+html body #shopWin[data-view="castle"] :is(.roster-gamble,.roster-ascend-buy) {background:#9a532e!important;color:#fff7e8!important;border-color:#7e4527!important;box-shadow:0 3px 0 #6f452e!important;text-shadow:none!important;}
+@media(orientation:landscape) and (max-height:500px){
+html body.mobile :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) {border-width:4px;max-height:calc(100dvh - 20px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));width:min(750px,calc(100vw - 24px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)));}
+html body.mobile :is(#shopWin[data-view="castle"]:not([data-ctab="upg"]),#chipWin:not([data-view="finance"])) .v2-modal-head {padding:10px 16px;}
+}
+/* Keep the log from introducing a blue block below the honey controls. */
+html body #log {background:#f6ebd0;border-color:#d6c092;border-radius:14px;}
+
+/* 09 palette extends to poker and controls. All selectors use original hooks. */
+:root {--hs-paper:#faeecf;--hs-raised:#fff6df;--hs-inset:#efdfb7;--hs-wood:#96703e;--hs-edge:#5e4b30;--hs-line:#d5be8f;--hs-ink:#5c452c;--hs-muted:#755e3f;--hs-green:#376849;--hs-copper:#9a532e;}
+body:not(.at-title) {background:#eee7d5;color:var(--hs-ink);}
+body:not(.at-title) #wrap>h1 {color:#624d32;}
+body:not(.at-title) #wrap>h1 small {color:#7a694e;}
+/* Slim parchment HUD. Preserve every original position and measured width. */
+html body #topbar {background:#faeecf;color:#655035;border-color:#d2bb89;box-shadow:0 3px 0 #d9c69b;border-radius:15px;}
+html body #topbar b {color:#5c452c;}
+html body #bigTimer .p {color:#725b3a;}
+html body #cvWrap #tIntWrap {background:#654f36;border-color:#a99268;color:#fff2ca;}
+html body #topbar b#tMkt {color:#ffada1;}
+html body #topbar b#tMkt.open {color:#ffe8a4;}
+/* Rounded wooden card tray; the game still owns transform and --slide. */
+html body #pokerPanel {background:var(--hs-paper);border:6px solid var(--hs-wood);border-radius:25px 25px 0 0;box-shadow:inset 0 0 0 1px #ffe9b8,0 -3px 0 #6e542f;padding:15px 18px 16px;gap:18px;color:var(--hs-ink);transition:transform .16s ease-out;}
+html body #pokerPanel::before {content:none;}
+html body #pokerMain::after {content:none;}
+html body #pokerBanner {color:var(--hs-muted);font-size:12px;line-height:1.5;min-height:19px;margin-bottom:7px;letter-spacing:0;}
+html body #pokerBanner .hidden-chance,html body #pokerPanel .jackpot {color:#9c3661;animation:none;}
+html body #pokerBanner .poker-boss-warning {color:#9c3928;}
+html body #pokerBanner .poker-event-notice {color:#71551f;}
+html body #pokerTimerBar {height:5px;background:#dfcda4;border-radius:20px;margin:7px auto 11px;width:440px;max-width:88%;border:0;}
+html body #pokerTimerFill {background:linear-gradient(90deg,#b59145,#d9b660);border-radius:20px;transition:width .16s linear;}
+html body #cards {gap:12px;margin-bottom:13px;}
+html body #pokerPanel .handRow {padding:9px 14px 15px;border:1px solid #d8bd87;border-radius:20px;background:#efdfb7;box-shadow:inset 0 1px 0 #fff3d5;max-width:100%;}
+html body #pokerPanel .handRow.match {border:2px solid #ad6080;background:#f4e1ce;box-shadow:inset 0 0 0 2px #fff1d5;}
+html body #pokerPanel .handLabel {font-size:12px;line-height:1.4;color:#745b39;margin:0 0 10px;}
+html body #pokerPanel .handLabel b {color:#426044;font-weight:800;}
+html body #pokerPanel .handCards {gap:12px;}
+html body #pokerPanel .card {width:80px;height:108px;border:1px solid #d4c39e;border-radius:13px;background:linear-gradient(145deg,#fffdf3,#fff5dc);box-shadow:0 4px 0 #c2a777,0 7px 9px #76592c20,inset 0 1px 0 #fff;transition:transform .12s,border-color .12s;}
+html body #pokerPanel .card::after {border-radius:10px;}
+html body #pokerPanel .card:not(.spin):not(.swapped):hover {transform:translateY(-4px) rotate(-2deg);border-color:#9f8454;}
+html body #pokerPanel .card.sm {width:58px;height:80px;}
+html body #pokerPanel .card .rk {font-size:30px;}
+html body #pokerPanel .card .st {font-size:23px;}
+html body #pokerPanel .card .corner {font-size:11px;left:6px;top:5px;}
+html body #pokerPanel .card small {font-size:9px;bottom:5px;color:#746144;}
+html body #pokerPanel .card.sm .rk {font-size:23px;}
+html body #pokerPanel .card.sm .st {font-size:17px;}
+html body #pokerPanel .card.sm .corner {font-size:9px;left:5px;top:4px;}
+html body #pokerPanel .card.sm small {font-size:8px;bottom:4px;}
+html body #pokerPanel .card.swapped {background:#ece2c9;border-color:#bba983;box-shadow:0 3px 0 #baaa87,0 5px 7px #76592c17;top:3px;}
+html body #pokerPanel .card.swapped::before {inset:0;transform:translate(5px,7px);border:3px solid #f7edcf;border-radius:12px;background:repeating-linear-gradient(45deg,#e6ce972b 0 2px,transparent 2px 8px),#8b7448;box-shadow:1px 2px 0 #96703e55;}
+html body #pokerPanel .card.swapped small {color:#345c37;}
+html body #pokerPanel .card.made {outline:2px solid #b48f3d;outline-offset:1px;}
+html body #pokerPanel .reswap {width:23px;height:23px;top:-8px;right:-7px;border:2px solid #fff4d5;background:#9a532e;color:#fff7e8;box-shadow:0 2px 0 #6e4529;}
+html body #pokerPanel .rerollInfo {font-size:10px;line-height:1.5;max-width:none;color:#8c482b;}
+html body #summonBtn {min-height:43px;padding:10px 34px;border:1px solid #345435;border-radius:15px;background:linear-gradient(#56784c,#376849);color:#fff8e8;font-size:15px;font-weight:800;box-shadow:inset 0 1px 0 #a4b589,0 4px 0 #28492f;letter-spacing:0;transition:transform .12s,box-shadow .12s;}
+html body #summonBtn:hover:not(:disabled) {background:#46744c;filter:none;}
+html body #summonBtn:active:not(:disabled) {transform:translateY(2px);box-shadow:0 2px 0 #28492f;}
+html body #summonBtn:disabled {background:#d9c9a4;color:#76654b;border-color:#bdab83;box-shadow:none;opacity:1;}
+html body #handResult {color:#426044;font-size:11px;line-height:1.4;margin-top:8px;}
+html body #pokerGuide {flex:0 0 253px;padding:12px 13px;background:#f4e5be;border:1px solid #d4bb88;border-radius:19px;box-shadow:inset 0 1px 0 #fff4d3;}
+html body #pokerGuide .pgHead {border-bottom:1px solid #d6bf8e;padding-bottom:9px;margin-bottom:6px;}
+html body #pokerGuide .pgHead b {color:#654b2d;font-size:13px;letter-spacing:-.2px;}
+html body #pokerGuide .pgHelp {width:26px;height:26px;color:#6d5737;border-color:#c6ad7a;background:#fff3d4;box-shadow:0 2px 0 #cbb17f;font-weight:800;}
+html body #pokerGuide .pgRow {padding:3px 5px;border-radius:7px;}
+html body #pokerGuide .pgRow .pgn {color:#6f593b;font-size:10px;}
+html body #pokerGuide .pgRow.on {background:#e9d391;box-shadow:inset 0 0 0 1px #b2903f;}
+html body #pokerGuide .pgRow.on .pgn {color:#58431f;font-weight:800;}
+html body #pokerGuide .mcard {background:#fff9e9;border-color:#d7c39a;box-shadow:0 1px 0 #c8ad7f;}
+html body #pokerGuide .mcard i {color:#493d2c;}
+html body #pokerGuide .mcard.hl {background:#ffe5a2;border-color:#b28a33;}
+html body #pokerHandle {height:30px;padding:0 23px;color:#fff3d2;background:#89663c;border:1px solid #684d2e;border-bottom:0;border-radius:13px 13px 0 0;box-shadow:inset 0 1px 0 #d6ba80,0 -2px 0 #4d422b26;transition:transform .16s ease-out;}
+html body #pokerHandle:hover {filter:none;background:#977141;}
+/* One tactile button family: source emoji/text continue to show real state. */
+html body #toolbar {gap:8px;}
+html body #toolbar .tbGroup {gap:7px;padding:5px;border:1px solid #d5be8f;background:#e7d6ae;border-radius:17px;}
+html body #toolbar .shopIcon {width:42px;height:40px;background:linear-gradient(#fff5da,#f4e3ba);border:1px solid #bd9e67;border-radius:12px;color:#664c2e;box-shadow:inset 0 1px 0 #fff9e6,0 3px 0 #b59a65;font-size:18px;line-height:1;transition:transform .12s,box-shadow .12s,background-color .12s;}
+html body #toolbar .shopIcon::before {content:none;}
+html body #toolbar .shopIcon::after {content:none;}
+html body #toolbar .shopIcon:hover {transform:translateY(-1px);background:#fff5d4;border-color:#99743e;filter:none;}
+html body #toolbar .shopIcon:active {transform:translateY(2px);box-shadow:0 1px 0 #a58651;}
+html body #toolbar .shopIcon.open {background:#dce4b8;border-color:#637d45;box-shadow:inset 0 1px 0 #f4fad6,0 3px 0 #73884e;}
+html body #toolbar .shopIcon.off {background:#e1d6bb;border-color:#afa086;opacity:1;filter:none;color:#786b53;box-shadow:inset 0 2px 2px #6b5b3714,0 2px 0 #b7a88b;}
+html body #toolbar .shopIcon.off::after {content:'';position:absolute;right:5px;top:5px;left:auto;transform:none;width:6px;height:6px;background:#8a7160;border:1px solid #f9efda;border-radius:50%;pointer-events:none;}
+html body #toolbar .shopIcon.restartBtn {width:auto;padding:0 14px;background:#f2dcc0;border-color:#bc9670;font-size:13px;color:#7e4935;}
+html body #toolbar .shopIcon.restartBtn:hover {background:#f5d4b4;}
+html body :is(#toolbar .shopIcon,#summonBtn,#pokerHandle,#pokerGuide .pgHelp,#mobTabs button,#stCasino):focus-visible {outline:3px solid #805f2f;outline-offset:3px;}
+html body #stCasino {background:linear-gradient(#fff3cd,#ead094);border:2px solid #95713c;border-radius:15px;color:#644923;box-shadow:inset 0 1px 0 #fffbe7,0 3px 0 #6e5531;}
+html body #stCasino .cl {color:#654b2b;}
+html body #stCasino:hover {filter:none;background:#f8e4b0;}
+html body #log {color:#796343;}
+html body.mobile #mobTabs {background:#ebd8ad;border:1px solid #b8975d;box-shadow:0 3px 0 #917346;border-radius:16px;}
+html body.mobile #mobTabs button {color:#705637;background:transparent;border-radius:12px;}
+html body.mobile #mobTabs button.active {background:#627947;color:#fff5d8;box-shadow:inset 0 1px 0 #a8b580;}
+@media(min-width:1000px){
+html body:not(.mobile) #cards:has(.handRow:nth-child(2)) {flex-direction:row;align-items:stretch;justify-content:center;flex-wrap:wrap;gap:10px;}
+html body:not(.mobile) #cards:has(.handRow:nth-child(2)) .handRow {flex:1;min-width:288px;padding:8px 9px 14px;}
+html body:not(.mobile) #cards:has(.handRow:nth-child(2)) .handCards {gap:7px;}
+html body:not(.mobile) #cards:has(.handRow:nth-child(2)) .card.sm {width:48px;height:74px;}
+html body:not(.mobile) #cards:has(.handRow:nth-child(2)) .handLabel {font-size:10px;min-height:28px;}
+html body:not(.mobile) #cards:has(.handRow:nth-child(2))>.rerollInfo {flex:1 0 100%;margin:0;}
+}
+/* The existing mobile battle rail remains outside the canvas. */
+@media(orientation:landscape){
+html body.mobile[data-tab="battle"],html body.mobile[data-tab="battle"] #wrap {background:#705a39;}
+html body.mobile[data-tab="battle"] #topbar {background:#faeecf;border:0;border-radius:0;color:#675035;box-shadow:none;}
+html body.mobile[data-tab="battle"] #topbar b {color:#5c452c;}
+html body.mobile[data-tab="battle"] #bigTimer .p {color:#705736;}
+html body.mobile[data-tab="battle"] #toolbar {padding:0;gap:3px;}
+html body.mobile[data-tab="battle"] #toolbar .tbGroup {padding:2px;gap:3px;background:#dec697;border-color:#a18555;border-radius:10px;}
+html body.mobile[data-tab="battle"] #toolbar .shopIcon {width:28px;height:27px;min-height:0;padding:0;border-radius:8px;font-size:13px;box-shadow:0 2px 0 #ad905b;}
+html body.mobile[data-tab="battle"] #toolbar .shopIcon.off::after {width:4px;height:4px;top:2px;right:2px;}
+html body.mobile[data-tab="battle"] #mobTabs {padding:3px;border-radius:13px;}
+html body.mobile[data-tab="battle"] #mobTabs button {width:32px;height:31px;min-height:31px;border-radius:9px;padding:0;}
+/* Poker landscape has two compact hands and a reserved bottom control row. */
+html body.mobile[data-tab="poker"] {padding:0;background:#faeecf;}
+html body.mobile[data-tab="poker"] #wrap {max-width:none;background:#faeecf;}
+html body.mobile[data-tab="poker"] #topbar {min-height:27px;margin:0;padding:4px max(8px,env(safe-area-inset-right)) 4px max(8px,env(safe-area-inset-left));font-size:10px;line-height:1;gap:8px;border:0;border-bottom:1px solid #cdb47e;border-radius:0;box-shadow:none;flex-wrap:nowrap;}
+html body.mobile[data-tab="poker"] #topbar #tStage {display:none;}
+html body.mobile[data-tab="poker"] #bigTimer .p {font-size:10px;}
+html body.mobile[data-tab="poker"] #cvWrap {box-shadow:none;}
+html body.mobile[data-tab="poker"] #pokerPanel {position:static;transform:none;transition:none;padding:8px max(10px,env(safe-area-inset-right)) 10px max(10px,env(safe-area-inset-left));border-width:0 4px 4px;border-radius:0 0 20px 20px;gap:0;box-shadow:0 2px 0 #d5bb85;}
+html body.mobile[data-tab="poker"] #pokerBanner {font-size:10px;line-height:1.35;min-height:14px;margin-bottom:4px;}
+html body.mobile[data-tab="poker"] #pokerTimerBar {height:4px;margin:4px auto 7px;width:65%;}
+html body.mobile[data-tab="poker"] #cards {flex-direction:row;justify-content:center;align-items:stretch;gap:9px;margin:0 0 18px;}
+html body.mobile[data-tab="poker"] #cards .handRow {flex:1 1 0;min-width:0;max-width:440px;padding:7px 8px 12px;border-radius:14px;}
+html body.mobile[data-tab="poker"] .handLabel {font-size:10px;line-height:1.3;min-height:14px;margin-bottom:8px;}
+html body.mobile[data-tab="poker"] #cards:has(.handRow:nth-child(2)) .handLabel {min-height:26px;}
+html body.mobile[data-tab="poker"] .handCards {gap:7px;}
+html body.mobile[data-tab="poker"] #pokerPanel .card {width:58px;height:80px;border-radius:10px;}
+html body.mobile[data-tab="poker"] #pokerPanel .card.sm {width:clamp(42px,6.5vw,52px);height:68px;}
+html body.mobile[data-tab="poker"] #pokerPanel .card .rk {font-size:23px;}
+html body.mobile[data-tab="poker"] #pokerPanel .card .st {font-size:17px;}
+html body.mobile[data-tab="poker"] #pokerPanel .card .corner {font-size:9px;left:4px;top:4px;}
+html body.mobile[data-tab="poker"] #pokerPanel .card small {font-size:8px;bottom:4px;}
+html body.mobile[data-tab="poker"] #pokerPanel .card.sm .rk {font-size:21px;}
+html body.mobile[data-tab="poker"] #pokerPanel .card.sm .st {font-size:15px;}
+html body.mobile[data-tab="poker"] #pokerPanel .card.sm .corner {font-size:8px;}
+html body.mobile[data-tab="poker"] #pokerPanel .card.sm small {font-size:8px;bottom:3px;}
+html body.mobile[data-tab="poker"] #cards>.rerollInfo {position:absolute;top:100%;left:0;right:0;margin:4px 0 0;font-size:9px;line-height:12px;max-width:100%;}
+html body.mobile[data-tab="poker"] #summonBtn {min-height:36px;font-size:13px;padding:8px 27px;border-radius:12px;box-shadow:0 3px 0 #28492f;}
+html body.mobile[data-tab="poker"] #handResult {margin-top:5px;font-size:10px;}
+html body.mobile[data-tab="poker"] #toolbar {margin:6px 0 7px;padding:0 calc(154px + env(safe-area-inset-right,0px)) 0 max(8px,env(safe-area-inset-left));gap:10px;}
+html body.mobile[data-tab="poker"] #toolbar .tbGroup {padding:3px;gap:5px;border-radius:12px;}
+html body.mobile[data-tab="poker"] #toolbar .shopIcon {width:30px;height:29px;font-size:14px;padding:0;border-radius:9px;}
+html body.mobile[data-tab="poker"] #mobTabs {right:max(8px,env(safe-area-inset-right));left:auto;transform:none;bottom:calc(7px + env(safe-area-inset-bottom,0px));padding:3px;}
+html body.mobile[data-tab="poker"] #mobTabs button {min-height:30px;height:30px;padding:0 12px;font-size:12px;}
+html body.mobile[data-tab="poker"] #log {margin:0;padding:0 10px 44px;font-size:10px;}
+}
+@media(prefers-reduced-motion:reduce){html body :is(#pokerPanel,#pokerHandle,#pokerTimerFill,#toolbar .shopIcon,#summonBtn,#pokerPanel .card){transition:none;}}
+/* The game clears this node before every deal; an empty result reserves no space. */
+html body #pokerPanel #handResult:empty {display:none;}
+/* Strengthen numeric ranks only. The second corner line and central suits retain
+   the source .red/.black meaning colors. */
+html body #pokerPanel .card.red .rk,
+html body #pokerPanel .card.red .corner::first-line {color:#b32645;}
+/* Fullscreen uses a CSS corner icon; no image/font dependency or DOM replacement. */
+html body #toolbar #btnFull {font-size:0;}
+html body #toolbar #btnFull::before {content:"";display:block;position:static;width:16px;height:16px;margin:auto;border:0;border-radius:0;pointer-events:none;background:linear-gradient(currentColor,currentColor) left top/6px 2px,linear-gradient(currentColor,currentColor) left top/2px 6px,linear-gradient(currentColor,currentColor) right top/6px 2px,linear-gradient(currentColor,currentColor) right top/2px 6px,linear-gradient(currentColor,currentColor) left bottom/6px 2px,linear-gradient(currentColor,currentColor) left bottom/2px 6px,linear-gradient(currentColor,currentColor) right bottom/6px 2px,linear-gradient(currentColor,currentColor) right bottom/2px 6px;background-repeat:no-repeat;}
+html body.mobile #toolbar #btnFull::before {width:13px;height:13px;}
+
+</style>
+<style id="dpd-1001">
+/* 10-01 유저 요청 배치 — 우리 쪽 보정은 GPT 블록(honey-storybook)을 건드리지 않고 여기에 모은다 */
+/* 🃏 전투가 끝나도 포커로 자동 전환하지 않는다 — 소환장(PEN 중심 440,250) 위 버튼. 포커 시계는 그대로 흐르며 남은 초를 보여준다 */
+#goPoker {position:absolute;left:46.81%;top:50%;transform:translate(-50%,-50%);z-index:8;display:none;min-height:43px;padding:9px 22px;border:1px solid #345435;border-radius:15px;background:linear-gradient(#56784c,#376849);color:#fff8e8;font-size:15px;font-weight:800;box-shadow:inset 0 1px 0 #a4b589,0 4px 0 #28492f,0 8px 18px #0006;cursor:pointer;white-space:nowrap;font-family:inherit;}
+#goPoker.show {display:block;}
+#goPoker:active {transform:translate(-50%,calc(-50% + 2px));box-shadow:0 2px 0 #28492f;}
+#goPoker b {display:inline-block;min-width:2.2em;margin-left:6px;padding:1px 6px;border-radius:9px;background:#fff3cf;color:#376849;font-size:13px;}
+#goPoker:focus-visible {outline:3px solid #805f2f;outline-offset:3px;}
+body.mobile #goPoker {min-height:0;padding:6px 14px;font-size:13px;border-radius:12px;}
+body.mobile #goPoker b {font-size:11px;}
+/* 💬 토스트는 누르면 바로 사라진다 (보일 때만 입력을 받는다 — 투명한 토스트가 캔버스를 막지 않게) */
+#rewardToast {pointer-events:auto;cursor:pointer;} /* design-system.css가 none으로 덮어 기존 '누르면 닫기'가 죽어 있었다 */
+#duelToast.on, #mktToast.on {pointer-events:auto;cursor:pointer;}
+/* 👑 뽑기 상자 연출: wd-completion의 #chipModal 애니메이션 일괄 차단이 상자 펄떡임·결과 글자(opacity 0→1)까지 막았다 — 이 무대만 되살린다 */
+@media (prefers-reduced-motion: no-preference) {
+  #chipModal .gbx {animation:gbxHop .42s ease-in-out 3 !important;}
+  #chipModal .gbxShadow {animation:gbxShHop .42s ease-in-out 3 !important;}
+  #chipModal .gbxStage.winfx .gbxGlow {animation:gbxBurst .8s ease-out forwards !important;}
+  #chipModal .gbxStage.winfx .gbxRays {animation:gbxRaySpin 1.5s ease-out forwards !important;}
+  #chipModal .gbxStage:is(.winfx,.failfx) .gbxReveal {animation:gbxPop .55s cubic-bezier(.2,1.6,.4,1) forwards !important;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .gbxStage:is(.winfx,.failfx) .gbxReveal {opacity:1;}
+}
+/* 🎁 캡슐 뽑기 기계 (구 777 슬롯 — 10-01 유저: 도박 느낌 없는 뽑기). 낙하·개봉·손잡이 = transition, 덜컹·흔들림만 animation */
+.capMachine {position:relative;width:150px;height:206px;margin:12px auto 2px;}
+.capDome {position:absolute;left:13px;top:0;width:124px;height:124px;border-radius:50%;overflow:hidden;z-index:1;
+  background:radial-gradient(circle at 34% 28%,#ffffffd9 0 9%,#ffffff40 22%,#dcecf033 55%,#9bbcc566 100%);border:3px solid #6f4a2b;box-shadow:inset 0 -10px 18px #00000026,0 3px 0 #4f331d;}
+.capDome i, .capDot {position:absolute;width:22px;height:22px;margin:-11px;border-radius:50%;overflow:hidden;background:var(--c);box-shadow:inset 0 -2px 3px #0003,0 1px 1px #0004;}
+.capDome i::after, .capDot::after {content:'';position:absolute;left:0;right:0;bottom:0;height:50%;background:#fbf7ee;box-shadow:inset 0 1px 0 #0000001f;}
+.capBody {position:absolute;left:22px;top:110px;width:106px;height:66px;border-radius:10px 10px 16px 16px;background:linear-gradient(#b8503b,#8a3325);border:3px solid #62231a;box-shadow:inset 0 2px 0 #f0a08b66,0 4px 0 #461710;}
+.capKnob {position:absolute;left:14px;top:14px;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#fff6d8,#e5c064 58%,#a37a2b);border:2px solid #74551c;transition:transform .75s cubic-bezier(.3,.8,.3,1);}
+.capKnob::before {content:'';position:absolute;left:50%;top:4px;bottom:4px;width:7px;margin-left:-3.5px;border-radius:4px;background:#74551c;}
+.capKnob.turn {transform:rotate(360deg);}
+.capChute {position:absolute;right:12px;bottom:8px;width:32px;height:22px;border-radius:7px 7px 4px 4px;background:#2e0f0b;box-shadow:inset 0 4px 5px #000b;}
+.capTray {position:absolute;left:0;right:0;top:176px;height:30px;}
+.capBall {position:absolute;right:36px;top:-8px;width:30px;height:30px;opacity:0;transform:translateY(-22px) scale(.55);transition:opacity .12s,transform .5s cubic-bezier(.3,1.7,.5,1);}
+.capBall.drop {opacity:1;transform:translateY(4px) scale(1);}
+.capBall b {position:absolute;left:0;right:0;height:15px;overflow:hidden;}
+.capBall .capTop {top:0;border-radius:15px 15px 0 0;background:var(--c);box-shadow:inset 0 3px 2px #ffffff66;transform-origin:0 100%;transition:transform .38s ease-out,opacity .38s;}
+.capBall .capBot {bottom:0;border-radius:0 0 15px 15px;background:#fbf7ee;box-shadow:inset 0 -3px 3px #0003;}
+.capBall.open .capTop {transform:translate(-8px,-14px) rotate(-75deg);opacity:0;}
+.capPrize {position:absolute;left:50%;top:-118px;z-index:2;white-space:nowrap;padding:4px 12px;border-radius:12px;background:#2e1a0ed9;text-align:center;font-size:15px;font-weight:900;color:#ffe5a4;text-shadow:0 1px 0 #5a3a1e;opacity:0;transform:translateX(-50%) scale(.4);transition:opacity .2s,transform .4s cubic-bezier(.2,1.6,.4,1);pointer-events:none;}
+.capPrize.show {opacity:1;transform:translateX(-50%) scale(1);}
+.capMachine {cursor:pointer;}
+.capDot {position:relative;display:inline-block;width:12px;height:12px;margin:0 6px 0 0;vertical-align:-1px;}
+/* 모바일: 창 제목과 겹치는 큰 간판을 숨기고 기계를 줄여 손잡이·결과가 한 화면에 들어오게 */
+body.mobile #chipWin .v2-slot-mast {display:none;}
+body.mobile #chipWin[data-view="slot"] .v2-wallet {display:none;}
+body.mobile #chipWin .v2-slot-machine {display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;align-items:center;column-gap:14px;padding:8px 14px;}
+body.mobile #chipWin #v2ReelHost {grid-column:1;grid-row:1 / span 2;}
+body.mobile #chipWin #v2LeverHost {grid-column:2;grid-row:1;align-self:end;}
+body.mobile #chipWin #v2ResultHost {grid-column:2;grid-row:2;align-self:start;}
+body.mobile .capMachine {transform:scale(.72);transform-origin:top center;margin:4px auto -56px;}
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes capShake {0%,100% {transform:rotate(0)} 25% {transform:rotate(-3.5deg)} 75% {transform:rotate(3.5deg)}}
+  @keyframes capWob {0%,100% {transform:translateY(4px) rotate(0)} 25% {transform:translateY(2px) rotate(-16deg)} 75% {transform:translateY(2px) rotate(16deg)}}
+  #chipModal .capMachine.spin .capDome {animation:capShake .2s linear 4 !important;}
+  #chipModal .capBall.tease {animation:capWob .24s ease-in-out infinite !important;filter:drop-shadow(0 0 7px #ffe08a);}
+}
+/* 🧭 첫 판 안내: 전투 말풍선 · 안내 끄기 · 카드 살랑 · 소환 두근 · 족보 상승 반짝 · 이미 바꾼 카드 흔들 · 모바일 족보 게이지 · 게임오버 한 줄 */
+#tutTip {position:absolute;z-index:9;display:none;max-width:260px;padding:7px 11px;border-radius:12px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:13px;font-weight:700;line-height:1.45;box-shadow:0 4px 0 #6b4a2a55,0 8px 18px #0005;cursor:pointer;width:max-content;}
+#tutTip.on {display:block;}
+#tutTip[data-place="above"] {transform:translate(-50%,calc(-100% - 8px));}
+#tutTip[data-place="below"] {transform:translate(-50%,8px);}
+#tutTip[data-place="right"] {transform:translate(8px,-50%);}
+.tutOffLink {margin-left:6px;padding:0;border:0;background:none;color:#9a7a55;font-size:10.5px;font-weight:600;text-decoration:underline;cursor:pointer;font-family:inherit;}
+body.mobile #tutTip {font-size:11px;padding:5px 8px;max-width:210px;}
+.rankGauge {display:none;}
+body.mobile .rankGauge {display:inline-flex;gap:2px;margin-left:6px;padding:3px 4px;vertical-align:middle;cursor:pointer;border-radius:6px;background:#0000000d;}
+.rankGauge i {display:block;width:5px;height:10px;border-radius:2px;background:#d6c39b;}
+.rankGauge i.on {background:#e0a82e;box-shadow:0 0 0 1px #8a5a12;}
+.tutGo {margin:6px 0 4px;padding:6px 10px;border-radius:10px;background:#fff3cf;color:#7a4a10;font-weight:800;}
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes tutWig {0%,100% {rotate:0deg} 25% {rotate:-3deg} 75% {rotate:3deg}}
+  @keyframes tutPul {0%,100% {scale:1} 50% {scale:1.07}}
+  @keyframes rankUpFx {0% {background-color:#ffe38a;box-shadow:0 0 0 4px #ffd54f88} 100% {background-color:transparent;box-shadow:0 0 0 0 transparent}}
+  @keyframes nopeFx {0%,100% {translate:0} 20% {translate:-5px} 40% {translate:5px} 60% {translate:-4px} 80% {translate:3px}}
+  #cards .card.tutWiggle {animation:tutWig .5s ease-in-out infinite;}
+  #summonBtn.tutPulse {animation:tutPul .8s ease-in-out 3;}
+  #cards .handLabel.rankUp {animation:rankUpFx .9s ease-out;border-radius:8px;}
+  #cards .card.nope {animation:nopeFx .35s;}
+}
+/* 10-01 크로스체크 반영 — 모바일 전투 레일: 🚪나가기(8번째 칸)가 760×350·아이폰 가로에서 잘렸다 → 간격·높이만 줄임 (8칸 214px) */
+@media (orientation: landscape) {
+  html body.mobile[data-tab="battle"] #toolbar {gap:2px;}
+  html body.mobile[data-tab="battle"] #toolbar .tbGroup {padding:1px;gap:2px;}
+  html body.mobile[data-tab="battle"] #toolbar .shopIcon {height:24px;}
+}
+/* 데스크톱 1280~1366: 누를 수 있게 된 보상 토스트가 열린 창의 ✕를 덮었다 → 창이 열려 있으면 오른쪽 아래로 */
+body:not(.mobile):has(#chipModal[style*="flex"], #shopOverlay[style*="flex"]) #rewardToast {top:auto;bottom:max(16px, env(safe-area-inset-bottom, 0px));}
+body.mobile:has(#chipModal[style*="flex"], #shopOverlay[style*="flex"]) #rewardToast {pointer-events:none;} /* 모바일 상단 띠는 창의 ✕와 겹친다 — 창이 열려 있으면 눌러도 밑으로 통과 */
+/* 모바일 티커·결투 토스트: 글자 폭만큼만 (누르면 닫히는 띠가 캔버스를 필요 이상 막지 않게) */
+.mobile #mktToast, .mobile #duelToast {width:fit-content;max-width:76%;}
+/* 모바일 족보 게이지가 라벨을 한 줄 늘리지 않게 + 더블 포커 두 라벨 높이 맞춤 */
+body.mobile .rankGauge {padding:1px 3px;}
+body.mobile .rankGauge i {height:8px;}
+html body.mobile[data-tab="poker"] #cards:has(.handRow:nth-child(2)) .handLabel {min-height:35px;}
+/* 모바일 유닛 정보창이 포커장 이동 버튼(z8)·딜 순위(z6) 밑에 깔리던 것 */
+.mobile #unitInfo {z-index:9;}
+/* ❤️‍🩹 부활 제안 창 — 결투·왕관 팝업(woodland)과 같은 모양 */
+#reviveModal {display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:380px;max-width:82%;z-index:12;text-align:center;padding:22px;color:#432a1c;border:5px solid #a27039;border-radius:17px;background:linear-gradient(125deg,#fff1c150,transparent 38%,#bf893212),linear-gradient(#f1d6a0,#e8c68b);box-shadow:inset 0 0 0 1px #fff0c2,0 0 0 2px #674023,0 7px 0 #57371f88,0 18px 50px #17251666;max-height:90%;overflow-y:auto;overscroll-behavior:contain;}
+#reviveModal .dcTitle {font-size:18px;font-weight:bold;letter-spacing:-.3px;margin-bottom:10px;color:#614021;text-shadow:0 1px 0 #fff0c2;}
+#reviveModal .dcBody {font-size:13px;line-height:1.65;color:#715333;margin-bottom:14px;}
+#reviveModal .dcBtns {display:flex;gap:10px;justify-content:center;}
+#reviveModal button {flex:1;min-height:44px;padding:9px 10px;font-size:13px;font-weight:bold;font-family:inherit;cursor:pointer;color:#fff0c5;background:linear-gradient(#71904d,#4c7139);border:1px solid #3d5c2d;border-radius:10px;box-shadow:inset 0 1px 0 #a7bc73,0 3px 0 #34532b;}
+#reviveModal button:hover {background:#71944d;}
+#reviveModal button + button {color:#654625;background:linear-gradient(#efd29e,#dbb67b);border-color:#b18951;box-shadow:inset 0 1px 0 #fff0c5,0 3px 0 #a27b44;}
+#reviveModal button + button:hover {background:#f0d3a1;}
+#reviveModal button:disabled {opacity:.6;cursor:default;}
+#reviveModal button:focus-visible {outline:3px solid #315d39;outline-offset:3px;}
+body.mobile #reviveModal {position:fixed;z-index:40;width:min(600px,calc(100vw - 24px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)));max-width:none;max-height:calc(100dvh - 20px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto;padding:14px;}
+body.mobile #reviveModal .dcTitle {font-size:14px;margin-bottom:5px;}
+body.mobile #reviveModal .dcBody {font-size:11px;margin-bottom:7px;}
+body.mobile #reviveModal button {min-height:40px;font-size:12px;padding:8px 6px;}
+</style>
 </head>
 <body class="at-title">
 <div id="page">
@@ -1881,7 +2411,7 @@ body.mobile .wd-result>p{font-size:12px!important;line-height:1.65!important;}
     <span>❤️ <b id="tLife"></b></span>
     <span>💰 <b id="tGold"></b></span>
     <span>⛏️ <b id="tMiner"></b></span>
-    <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 자금 운영에서 룰렛·슬롯·광부 고용에 사용">🎰 <b id="tChips" style="color:#c9a227">0</b></span>
+    <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 자금 운영에서 뽑기·광부 고용에 사용">🪙 <b id="tChips" style="color:#c9a227">0</b></span>
     <span title="재변경권 — 교환을 마친 카드를 한 번 더 교환">🎟️ <b id="tTickets" style="color:#e0525e">0</b></span>
     <span>🏳️ 스테이지 <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
     <div id="bigTimer"><div class="p" id="tPhase"></div></div>
@@ -1894,6 +2424,8 @@ body.mobile .wd-result>p{font-size:12px!important;line-height:1.65!important;}
     <div id="objInfo"></div>
     <div id="duelToast"></div>
     <div id="mktToast"></div>
+    <button id="goPoker" title="포커장으로 이동">🃏 포커장으로 이동<b id="goPokerT"></b></button>
+    <div id="tutTip" role="status" aria-live="polite"></div>
     <div id="duelConfirm">
       <div class="dcTitle">🏛️ 결투장</div>
       <div class="dcBody">입장하면 결투가 끝날 때까지 나올 수 없다.<br>시간 안에 도전자를 쓰러뜨리지 못하면 이 유닛은 사망한다.<br>(결투 시작 직후, 아주 잠깐 도망칠 기회는 있다)</div>
@@ -1903,14 +2435,19 @@ body.mobile .wd-result>p{font-size:12px!important;line-height:1.65!important;}
       </div>
     </div>
     <div id="crownModal">
-      <div class="dcTitle">👑 대관식 — 왕관을 씌울 족보를 고르세요</div>
-      <div class="dcBody">선택한 족보 라인의 공격력이 게임 끝까지 배수만큼 강해집니다. (영웅·에이스 포함)<br><b>한 번 정하면 바꿀 수 없습니다.</b></div>
+      <div class="dcTitle">👑 대관식 — 왕관을 씌울 종족을 고르세요</div>
+      <div class="dcBody">선택한 종족의 공격력이 게임 끝까지 배수만큼 강해집니다. (영웅·에이스 포함)<br><b>한 번 정하면 바꿀 수 없습니다.</b></div>
       <div class="crGrid" id="crGrid"></div>
       <div class="dcBtns"><button onclick="crownCancel()">🕰️ 아직 결심이 안 섰다 (왕관 회수)</button></div>
     </div>
+    <div id="reviveModal">
+      <div class="dcTitle">💀 쓰러지기 직전!</div>
+      <div class="dcBody">한 판에 한 번, 다시 일어설 수 있다.<br>이 전투를 <b>45초</b> 더 싸운다.</div>
+      <div class="dcBtns"><button id="rvYes">❤️‍🩹 부활 (+45초)</button><button id="rvNo">포기한다</button></div>
+    </div>
     <!-- 좌측 카지노: 칩(보스·결투)으로 룰렛·슬롯·광부, 골드로 비상 물자 -->
     <div id="chipBar">
-      <button class="chipStation" id="stCasino" title="자금 운영 — 룰렛·슬롯·광부·투자·비상 물자"><span class="ci">💰</span><span class="cl">자금운영</span></button>
+      <button class="chipStation" id="stCasino" title="자금 운영 — 뽑기·광부·투자·비상 물자"><span class="ci">💰</span><span class="cl">자금운영</span></button>
       <div id="dpsRank"><div id="dpsHead" title="이번 판 누적 딜 1~3위">▼ 딜 순위</div><div id="dpsBody"></div></div>
     </div>
     <!-- 포커 패널: 캔버스 위로 '샥' 오르내리는 오버레이 (평소엔 캔버스가 이 공간을 전부 쓴다) -->
@@ -1943,6 +2480,7 @@ body.mobile .wd-result>p{font-size:12px!important;line-height:1.65!important;}
       <button class="shopIcon" id="bLowSpec" title="저사양 모드 — 렌더 해상도를 절반으로 (끊길 때)">🔋</button>
       <button class="shopIcon" id="btnFull" title="전체화면">⛶</button>
       <button class="shopIcon restartBtn" id="btnRestart" title="처음부터 다시">🔄<span class="rbTxt"> 다시하기</span></button>
+      <button class="shopIcon restartBtn" id="btnExit" title="타이틀로 나가기">🚪<span class="rbTxt"> 나가기</span></button>
     </div>
   </div>
   <div id="log"></div>
@@ -1994,6 +2532,7 @@ body.mobile .wd-result>p{font-size:12px!important;line-height:1.65!important;}
   <h2 id="titleHelpHeading">작은 카드로, 커다란 모험</h2>
   <ol><li><b>포커 족보를 만들어요.</b><br>준비 시간에 카드를 교환하고 유닛을 소환해요.</li><li><b>나만의 군단을 배치해요.</b><br>더 좋은 족보로 더 강한 무기를 얻어요.</li><li><b>몰려오는 몬스터를 막아요.</b><br>골드로 성장하며 80라운드 클리어에 도전해요.</li></ol>
   <p>PC: 드래그로 선택 · 우클릭으로 이동 · A + 클릭으로 공격<br>모바일: 유닛을 집어 옮기기 · 두 번 탭해 같은 유닛 선택</p>
+  <p><button type="button" class="title-link" id="btnTutAgain">처음 안내 다시 보기</button></p>
   <form method="dialog"><button class="title-link">알겠어요</button></form>
 </dialog>
 <div id="shopOverlay"><div id="shopWin">
@@ -2021,6 +2560,7 @@ body.mobile .wd-result>p{font-size:12px!important;line-height:1.65!important;}
   <h2>게임 오버</h2>
   <p id="finalScore"></p>
   <button onclick="reset()">다시 시작</button>
+  <button onclick="exitToTitle(false)" style="margin-top:8px">🚪 타이틀로</button>
   </div>
 </div>
 <div id="winOverlay" style="position:fixed;inset:0;background:rgba(20,20,30,0.88);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:10;color:#fff">
@@ -2378,7 +2918,7 @@ function gameDialogVisible(id) {
 function syncGamePause() {
   if (!S) return;
   S.paused = !!(S.mapTest || // 게임오버는 일부러 제외: 사망 화면 뒤 배경은 계속 흐른다(기존 설계, update()의 gameover 가드가 부작용 차단). 오버레이가 툴바·캔버스를 inert로 막는다
-    ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal'].some(gameDialogVisible));
+    ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal'].some(gameDialogVisible));
   window.dispatchEvent(new Event('dpd:modalchange'));
 }
 // 🎰 카지노 지연 보상(룰렛 5.1s·슬롯 3s·교환 0.9s)은 창을 닫아도 계속 흘러 보상을 지급한다(의도).
@@ -2413,6 +2953,8 @@ function resetTransientUI() {
   const mt = document.getElementById('mktToast'); if (mt) mt.classList.remove('on');
   const dc = document.getElementById('duelConfirm'); if (dc) dc.style.display = 'none'; // 🏛️ 결투 입장 팝업이 새 판까지 남지 않게 (참조·pause 잔류 방지)
   const cm = document.getElementById('crownModal'); if (cm) cm.style.display = 'none'; // 👑 왕관 모달도 동일 (새 S가 paused/crown 상태를 리셋)
+  const rv = document.getElementById('reviveModal'); if (rv) rv.style.display = 'none'; // ❤️‍🩹 부활 제안 창도 동일
+  tutTipHide(); // 🧭 첫 판 안내 말풍선
   duelAskU = null; duelLockFloatT = -10;
   window.dispatchEvent(new Event('dpd:resetui'));
 }
@@ -2440,7 +2982,9 @@ function reset() {
     speed: 1, time: 0, paused: false,
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0, slowT: 0, graves: [], // 🪦 결투 전사자 비석 (판 내 영구 누적)
     lifeLog: [], maxCombo: 0, bestHand: 0, aceN: 0, superAceN: 0, castleOpened: castleSeen(), // 📋 09-08: 게임오버 정산용(목숨 타임라인·최고 콤보·최고 족보·에이스 수) / 🏰 성 강화창 안내 라벨 — 브라우저당 1회(dpd_castle_seen)
-    crownTier: -1, crownDropped: false, // 👑 왕관: 선택한 족보 tier (-1 = 미선택) / 석탄 보상 왕관 지급 여부 (잭팟 2배 중복 방지)
+    tutStep: 0, tutHold: false, tutHoldT: 0, r1High: false, // 🧭 첫 판 안내: 포커 배너 단계(1 = T1, 2 = T2) / 포커 시계 정지 / 정지 상한(게임 시간) / R1을 하이카드로 소환
+    reviveUsed: false, revived: false, reviveWave: false, // ❤️‍🩹 부활: 이번 판 제안 소진(수락·포기) / 수락함 / 지금 전투가 부활 연장전 (스피드 보너스 없음)
+    crownRace: -1, crownDropped: false, // 👑 왕관: 선택한 종족 (-1 = 미선택 — ⚠️ null 금지: 광부 race가 null이라 일치해 버린다) / 석탄 보상 왕관 지급 여부 (잭팟 2배 중복 방지)
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
     stimT: 0, acidPools: [],  // 💉 스팀팩 남은시간 / 🧪 염산 장판
     reviveArmed: false, // 🔄 부활권 봉인 여부
@@ -2559,6 +3103,9 @@ function showDuelToast() {
   clearTimeout(duelToastTimer);
   duelToastTimer = casTimeout(() => el.classList.remove('on'), 6000); // 재시작해도 남지 않게 세대 토큰 경유
 }
+// 💬 10-01 유저: 이벤트 토스트는 누르면 바로 사라진다 (보일 때만 입력을 받는다 — CSS #duelToast.on/#mktToast.on)
+[['duelToast', () => clearTimeout(duelToastTimer)], ['mktToast', () => clearTimeout(mktToastTimer)]].forEach(([id, stop]) =>
+  document.getElementById(id).addEventListener('pointerdown', e => { e.stopPropagation(); stop(); e.currentTarget.classList.remove('on'); }));
 // 🏛️ 결투 창이 열리는 순간: 링 안에 서 있던 전투 유닛을 가장자리 밖으로 밀어내고 목표 해제 (지나가다 갇히는 참사 방지)
 function evacuateArena() {
   let moved = 0;
@@ -2615,17 +3162,18 @@ function duelLockFloat(u) {
   duelLockFloatT = S.time;
   addFloat(u.x, u.y - 30, '🔒 결투 중!', '#ff6b6b', 0.9);
 }
-// 👑 왕관 족보 선택 (08-22 유저) — 카지노·결투 팝업 관례: 모달 중 S.paused (고민 시간 보장)
+// 👑 왕관 종족 선택 (08-22 족보 → 10-01 유저: 종족을 정하는 것으로) — 카지노·결투 팝업 관례: 모달 중 S.paused (고민 시간 보장)
 function openCrownModal() {
   if (S.phase === 'gameover') return; // 게임오버 오버레이(z10) 뒤에서 안 보이는 모달이 열려 배경만 멈추는 것 방지 (크로스체크 P2)
   const g = document.getElementById('crGrid');
   g.innerHTML = '';
-  for (let t = 1; t <= 9; t++) {
+  RACES.forEach((rc, r) => {
     const b = document.createElement('button');
-    b.innerHTML = `${HAND_NAMES[t]}<br><b>×${CROWN_MUL[t].toFixed(2)}</b>`;
-    b.onclick = () => crownChoose(t);
+    const hands = HAND_NAMES.filter((_, t) => RACE_OF_RANK[t] === r).map(n => n.replace('로얄 스트레이트 플러쉬', '로얄').replace('스트레이트 플러쉬', '스티플')).join('·');
+    b.innerHTML = `<span style="color:${rc.color}">${rc.suit}</span> ${rc.name}<br><b>×${CROWN_RACE_MUL[r].toFixed(2)}</b><br><small>${hands}</small>`;
+    b.onclick = () => crownChoose(r);
     g.appendChild(b);
-  }
+  });
   document.getElementById('crownModal').style.display = 'block';
   syncGamePause();
 }
@@ -2633,12 +3181,13 @@ function closeCrownModal() {
   document.getElementById('crownModal').style.display = 'none';
   syncGamePause();
 }
-function crownChoose(t) {
+function crownChoose(r) {
   closeCrownModal();
-  S.crownTier = t;
+  S.crownRace = r;
+  const rc = RACES[r];
   sfx('jackpot'); sfx('hero'); S.goldFlash = 0.7;
-  rewardToast('👑', `${HAND_NAMES[t]} ×${CROWN_MUL[t].toFixed(2)}`, '#e6a817', '👑 대 관 식');
-  logMsg(`👑 <b>${HAND_NAMES[t]}</b>에 왕관을 씌웠다 — 라인 공격력 <b>×${CROWN_MUL[t].toFixed(2)}</b> (영웅·에이스 포함, 히든 제외)`);
+  rewardToast('👑', `${rc.suit} ${rc.name} ×${CROWN_RACE_MUL[r].toFixed(2)}`, '#e6a817', '👑 대 관 식');
+  logMsg(`👑 <b>${rc.suit} ${rc.name}</b> 종족에 왕관을 씌웠다 — 공격력 <b>×${CROWN_RACE_MUL[r].toFixed(2)}</b> (영웅·에이스 포함, 히든 제외)`);
   updateInfoPanel();
 }
 function crownCancel() { // 회수: 왕관을 다시 소환 — 선택 강요 방지 ("언제 확정하나"도 전략)
@@ -2646,13 +3195,15 @@ function crownCancel() { // 회수: 왕관을 다시 소환 — 선택 강요 �
   spawnItemUnit('crown');
   logMsg('👑 왕관을 회수했습니다 — 결심이 서면 다시 제물대로.');
 }
-function startPoker() {
+// fromWave = 전투가 끝나서 온 포커 (10-01 유저): 화면을 자동으로 넘기지 않고 소환장 위 🃏 '포커장으로 이동' 버튼만 띄운다.
+//   포커 시계는 그대로 흐른다 — 광부가 포커 중에도 캐므로 시계를 멈추면 무한 채굴이 된다. 버튼에 남은 초 표시 (updateGoPoker)
+function startPoker(fromWave) {
   S.phase = 'poker';
   // 라운드는 endWave에서 이미 올라갔으므로 S.round = 이번 포커가 준비하는 그 전투. 보스 주와 겹치면 휴장이라 제외.
   // 모바일은 포커 탭에서 캔버스가 통째로 숨겨지므로(#cv display:none) 여기서 띄우면 아무도 못 본다 → 전투 탭으로 넘어가는 startWave에서 띄운다.
   // 태양 강림 라운드는 duelRound()가 휴장 처리 — startWave가 조기 return해 도전자를 안 만들기 때문 (가짜 예고 버그)
-  if (duelRound(S.round)) { if (IS_MOBILE) S.duelCall = true; else showDuelToast(); evacuateArena(); }
-  pokerPeek = false; // 새 포커판은 항상 올라온 상태로 시작
+  if (duelRound(S.round)) { if (IS_MOBILE && !fromWave) S.duelCall = true; else showDuelToast(); evacuateArena(); } // 전투 뒤 포커는 모바일도 전투 탭에 남아 바로 보인다
+  pokerPeek = !!fromWave && !IS_MOBILE; // 첫 판은 올라온 상태로, 전투 뒤엔 내려둔 채 시작 (모바일은 아래 탭 전환을 건너뛰어 같은 효과)
   S.pokerTimer = POKER_TIME;
   S.roomVirgin = true; // 🥚 라운드마다 광석방 첫 입장 기록 리셋
   rollEvent(); // 다음 전투 이벤트를 포커 시간에 미리 알린다
@@ -2664,22 +3215,48 @@ function startPoker() {
     S.poker.hands.push({ deck, cards: deck.splice(0, 5), swapped: [false,false,false,false,false] });
   }
   renderPoker();
-  if (IS_MOBILE) setMobTab('poker');
+  if (IS_MOBILE && !fromWave) setMobTab('poker');
+  updateGoPoker();
 }
+// 🃏 포커 UI가 가려진 포커 페이즈(데스크톱 판 내림 · 모바일 전투 탭)면 버튼 표시 + 남은 포커 시간
+function updateGoPoker() {
+  const b = document.getElementById('goPoker');
+  const on = S.phase === 'poker' && !S.mapTest && (IS_MOBILE ? document.body.dataset.tab !== 'poker' : pokerPeek);
+  if (b.classList.contains('show') !== on) b.classList.toggle('show', on);
+  if (on) hudSet('goPokerT', Math.max(0, Math.ceil(S.pokerTimer)));
+}
+document.getElementById('goPoker').onclick = () => {
+  if (S.phase !== 'poker') return;
+  if (IS_MOBILE) setMobTab('poker'); else { pokerPeek = false; syncPokerPanel(); }
+  updateGoPoker();
+};
 function swapCard(h, i) {
   const hand = S.poker.hands[h];
   if (S.phase !== 'poker' || hand.swapped[i]) return;
+  const before = evalHand(hand.cards);
   hand.swapped[i] = true;
   hand.cards[i] = hand.deck.pop();
+  if (S.tutStep === 1) { S.tutStep = 2; S.tutHold = false; tutMark('t2'); } // 🧭 T1 끝 — 포커 시계 재개, 배너는 T2('마음에 들면 소환!')
+  if (S.round === 2 && S.r1High && tutNew('t4')) tutMark('t4'); // 🧭 T4는 실제로 카드를 만진 뒤에 '봤다'로 친다 (판 내림 상태 자동 소환 때 안 보고 소진되지 않게)
   renderPoker({ h, i }); // 해당 카드에 회전 이펙트
+  pokerRankFlash(h, before);
 }
 function ticketReswap(h, i) {
   const hand = S.poker.hands[h];
   if (S.phase !== 'poker' || S.items.reroll <= 0 || !hand.swapped[i]) return;
   S.items.reroll--;
+  const before = evalHand(hand.cards);
   hand.cards[i] = hand.deck.pop();
   logMsg(`🎟️ 재변경권으로 ${i + 1}번 카드만 다시 교환! (남은 ${S.items.reroll})`);
   renderPoker({ h, i }); // 해당 카드 회전 이펙트
+  pokerRankFlash(h, before);
+}
+// 교환으로 족보가 올라갔을 때만 라벨이 잠깐 반짝 (10-01 튜토리얼 제안 — 상시)
+function pokerRankFlash(h, before) {
+  const hand = S.poker && S.poker.hands[h];
+  if (!hand || evalHand(hand.cards) <= before) return;
+  const lb = document.querySelectorAll('#cards .handRow .handLabel')[h];
+  if (lb) { lb.classList.remove('rankUp'); void lb.offsetWidth; lb.classList.add('rankUp'); }
 }
 function evalHand(cards) {
   const rs = cards.map(c => c.r).sort((a,b) => a-b);
@@ -2743,25 +3320,29 @@ function madeCardIdx(cards, rank) {
 const keyMul = kr => 1 + (kr - 2) / 12 * 0.2;
 function confirmHand() {
   if (S.phase !== 'poker') return;
+  if (S.round === 2 && S.r1High && tutNew('t4') && (IS_MOBILE ? document.body.dataset.tab === 'poker' : !pokerPeek)) tutMark('t4'); // 🧭 포커 화면이 보이는 채 소환했으면 T4 봄
+  S.tutStep = 0; S.tutHold = false; // 🧭 T1·T2는 첫 소환으로 끝 (기록은 보여 준 순간에 이미 했다)
+  document.getElementById('summonBtn').classList.remove('tutPulse');
   const res = S.poker.hands.map(hand => {
     const rank = evalHand(hand.cards);
     const back = isBackStraight(hand.cards); // A-2-3-4-5 (같은 무늬면 rank 8) — bs는 전용 배수용(rank 4 한정), bsAny는 A보너스용
     return { rank, race: RACE_OF_RANK[rank], keyRank: handKeyRank(hand.cards, rank), bs: rank === 4 && back, bsAny: back, mtn: isMountain(hand.cards) };
   });
   for (const r of res) if (r.rank > S.bestHand) S.bestHand = r.rank; // 📋 정산: 이번 판 최고 족보
+  if (S.round === 1) S.r1High = res.length === 1 && res[0].rank === 0; // 🧭 T4 조건: 첫 소환이 하이카드
   // 에이스 잭팟은 원페어부터 (페어 없는 하이카드 일치는 너무 쉬움)
   if (res.length === 2 && res[0].rank === res[1].rank && res[0].rank > 0) {
     // 두 족보 일치(하이카드 제외) → 에이스. 핵심 숫자까지 일치(5원페어+5원페어) → 슈퍼에이스(기본 2배)!
     const superA = res[0].keyRank === res[1].keyRank;
     spawnUnit(res[0].rank, 0, true, 14, superA);
     if (superA) {
-      logMsg(`🌈💥 더블 잭팟!! ${rankLabel(res[0].keyRank)} ${HAND_NAMES[res[0].rank]} 완전 일치! ♠♠ 슈퍼에이스 강림!! 💥🌈`);
+      logMsg(`🌈💥 더블 매치!! ${rankLabel(res[0].keyRank)} ${HAND_NAMES[res[0].rank]} 완전 일치! ♠♠ 슈퍼에이스 강림!! 💥🌈`);
       addFloat(CX, CY - 120, '★★ ♠♠ 슈퍼에이스!! ★★', '#ff2d95', 3);
       sfx('jackpot'); sfx('hero');
       S.superAceN++; S.slowT = 1.5; // 09-08: 게임의 1번 도파민인데 광산 발굴(슬로모 2초)보다 연출이 약했다 (골드 섬광은 🎰 배너 = 카지노 언어라 제외)
-      rewardToast('♠♠', `슈퍼에이스 ${HAND_NAMES[res[0].rank]}!!`, '#ff2d95', '더 블 잭 팟');
+      rewardToast('♠♠', `슈퍼에이스 ${HAND_NAMES[res[0].rank]}!!`, '#ff2d95', '더 블 매 치');
     } else {
-      logMsg(`💥💥 잭팟! ${HAND_NAMES[res[0].rank]} 더블! ♠ 에이스 유닛 소환 (공격력 ×${ACE_MUL[res[0].rank] || 1.5})!! 💥💥`);
+      logMsg(`💥💥 더블 매치! ${HAND_NAMES[res[0].rank]} 일치! ♠ 에이스 유닛 소환 (공격력 ×${ACE_MUL[res[0].rank] || 1.5})!! 💥💥`);
       addFloat(CX, CY - 120, '★ ♠ 에이스! ★', '#e91e8c', 2.5);
       sfx('jackpot');
       S.aceN++; S.slowT = 0.8;
@@ -2940,14 +3521,19 @@ function fuseCount(u) {
 // 가속 시작 20→15→12 (2026-08-03 시뮬 결과): L15로는 R30 도달선이 L14라 아무도 가속 구간을 못 탔다.
 // L12는 R25 도달선(L13) 바로 아래라 즉시 체감되고, 광산 복리를 굴린 쪽이 먼저 벽을 넘는다.
 function upgEff(lv) { return lv <= 12 ? lv : lv + (lv - 12) * (lv - 12) * 0.10; }
-// 👑 왕관 (08-22 유저): 석탄(1단계) 완채 보상 아이템 — 제물대에 바치면 족보 하나를 골라 그 라인(유닛·영웅·슈퍼·에이스, 히든 제외) 최종 공격력 ×배수, 게임당 1회
+// 👑 왕관 (08-22 유저 · 10-01 종족 선택으로 변경): 석탄(1단계) 완채 보상 아이템 — 제물대에 바치면 종족 하나를 골라 그 종족(유닛·영웅·슈퍼·에이스, 히든 제외) 최종 공격력 ×배수, 게임당 1회
 // 배수 = 희귀도 사다리. 근거 = 실측 라인 화력 비중(족보 빈도 15만판 × L12 유닛 군집 DPS): 원50.5/투19.0/트20.3/스3.6/플1.5/풀4.1/포0.8%.
 // 원페어는 노력 없이 EV +5.1%, 희귀 족보는 빌드 집중(교환 추격·뽑기권·영웅 몰빵) 성공 시 그 이상 — "희귀 쪽이 살짝 더 달게" (유저 지정)
-const CROWN_MUL = [0, 1.10, 1.16, 1.18, 1.28, 1.34, 1.38, 1.44, 1.52, 1.60]; // 인덱스 = tier (원페어~로얄)
+// 10-01 유저: 족보 → 종족 선택으로 변경, 종족별 차등 배수. 실측 종족 화력 비중(위 라인 비중을 RACE_OF_RANK로 합산) ♥55% · ♦24% · ♣20.5%
+//   → 기대 화력이 셋 다 ≈+5% (♥ +5.5 · ♦ +4.9 · ♣ +5.1) = 구 원페어 EV +5.05%와 같아 CROWN_HP_COMP 1.08 그대로 유효. 내 빌드를 보고 고르는 선택.
+const CROWN_RACE_MUL = [1.20, 1.10, 1.25]; // 인덱스 = race (RACES 순서: ♦ 다이아 · ♥ 하트 · ♣ 클로버)
+// 왕관 판정용 종족: 에이스 계열은 스폰 경로마다 u.race가 제각각(두 패 일치·에이스 뽑기권·포털 합성 = 0 고정, 뽑기권 영웅 = 족보 종족)이라
+// 자기 족보(u.tier)의 종족으로 본다 (10-01 크로스체크 P1 — u.race 자체는 fuseKey·색이 참조하므로 건드리지 않음)
+function crownRaceOf(u) { return (u.hidden || u.ace) ? RACE_OF_RANK[u.tier] : u.race; }
 function effDmg(u) {
   const heroUp = 1 + 0.15 * (u.heroUpLv || 0); // ⭐ 영웅 단련: 히든 영웅 전용 (레벨당 총 공격력 +15%)
   if (isHiddenCombo(u)) return u.dmg * heroUp; // 히든 영웅은 종족이 없다 — 종족 업글 미적용, 단련(+제물 승급)으로만 성장 (08-13 유저: 투석기 ♦ 다이아 중복 특례 제거 — 단련으로 통일. 👑 왕관도 미적용 — 조커 t1·투석기 t7 공유 함정)
-  const crown = (S.crownTier > 0 && u.tier === S.crownTier) ? CROWN_MUL[u.tier] : 1; // 👑 왕관 족보 라인 강화 (최종 배수). ⚠️ > 0 가드 필수: 광부 tier −1 = 미선택 센티널 −1과 충돌(NaN), CROWN_MUL[0] = 0 지뢰 (크로스체크 P1)
+  const crown = (S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? CROWN_RACE_MUL[S.crownRace] : 1; // 👑 왕관 종족 강화 (최종 배수). ⚠️ ♦ 다이아 = race 0도 유효 선택이라 가드는 >= 0 (광부 race null은 불일치)
   const per = upgPer(u) * fuseCount(u);
   if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return (u.dmg + per * (upgEff(s[0]) + upgEff(s[1]))) * crown; } // 에이스: 상위 2종족 합산 (가속 반영)
   return (u.dmg + per * upgEff(S.upg[u.race])) * crown;
@@ -2977,7 +3563,7 @@ const ITEM_META = {
   gachaAceHero: { icon:'👑', name:'에이스 영웅 뽑기권', active:true },
   gachaSuper:   { icon:'👑', name:'슈퍼에이스 영웅 뽑기권', active:true },
   oreGift:      { icon:'💎', name:'보상 광석', active:true }, // 광석방 완채 보상 (08-16 — 제물대에서 깨서 개봉)
-  crown:        { icon:'👑', name:'왕관', active:true }, // 👑 석탄 완채 보상 (08-22 — 제물대에 바치면 족보 하나를 골라 라인 강화, 게임당 1회)
+  crown:        { icon:'👑', name:'왕관', active:true }, // 👑 석탄 완채 보상 (08-22 — 제물대에 바치면 종족 하나를 골라 강화(10-01), 게임당 1회)
 };
 // 👑 뽑기권 링 색 (드로잉·구분용)
 const GACHA_COL = { gachaHero:'#c9a227', gachaAce:'#e91e8c', gachaAceHero:'#8c5bff', gachaSuper:'#ff2d95' };
@@ -3152,8 +3738,41 @@ function spawnMonster(hp, isBoss, opt) {
   return m;
 }
 // ⏱️ 스피드 보너스: 남은 시간 × (1 + 라운드×0.25)G/초 — 같은 시간 광산을 돌리는 것보단 달게, 킬 수입보단 작게 (HUD 실시간 표시와 정산이 같은 공식을 쓴다)
-function speedBonus() { return S.timer > 1 ? Math.round(S.timer * (1 + S.round * 0.25)) : 0; }
+function speedBonus() { return S.timer > 1 && !S.reviveWave ? Math.round(S.timer * (1 + S.round * 0.25)) : 0; } // ❤️‍🩹 부활 연장전은 0 — 45초가 골드로 바뀌지 않게
+// ❤️‍🩹 부활 (10-01 유저): 죽게 될 전투가 끝나는 순간(보스 생존 또는 누수로 목숨 0) 판당 1회 제안 → 수락하면 같은 전투를 45초 더.
+//    보스·몹이 그대로 남아 보스를 건너뛰지 않는다. 오늘의 시드(기록 경쟁)에선 제안하지 않는다.
+//    유저 선택 = '광고 보고 부활' — 광고 SDK는 앱 빌드에서 붙는다. 그 전(웹)은 무료 1회: ADS_READY=false, showRewardedAd()는 즉시 성공.
+const REVIVE_SEC = 45, ADS_READY = false;
+function showRewardedAd() { return Promise.resolve(true); } // 앱: 보상형 광고 시청 완료면 true, 닫기·실패면 false
+function reviveOffer() {
+  if (gameDialogVisible('reviveModal')) return true; // 이미 떠 있다 (중복 오픈·효과음 겹침 방지)
+  if (S.reviveUsed || S.reviveArmed || dailySeed != null || S.phase !== 'wave') return false; // 🔄 봉인한 부활권(샌드박스)이 있으면 그쪽이 먼저
+  if (!(S.monsters.some(m => m.boss) || S.life - S.monsters.length <= 0)) return false;
+  const yes = document.getElementById('rvYes'), no = document.getElementById('rvNo');
+  yes.textContent = ADS_READY ? '📺 광고 보고 부활 (+45초)' : '❤️‍🩹 부활 (+45초)';
+  yes.disabled = no.disabled = false;
+  document.getElementById('reviveModal').style.display = 'block';
+  tutTipHide(); syncGamePause(); sfx('leak');
+  return true;
+}
+function closeRevive() { document.getElementById('reviveModal').style.display = 'none'; syncGamePause(); }
+document.getElementById('rvYes').onclick = () => {
+  if (S.phase !== 'wave') { closeRevive(); return; } // 방어: 전투가 아닌데 남은 창은 아무 일도 하지 않는다
+  const yes = document.getElementById('rvYes'), no = document.getElementById('rvNo'), gen = gameGen;
+  yes.disabled = no.disabled = true;
+  showRewardedAd().then(ok => {
+    if (gen !== gameGen || S.reviveUsed) return; // 그 사이 재시작·나가기
+    if (!ok) { yes.disabled = no.disabled = false; return; } // 광고를 끝까지 못 봤다 — 다시 누르거나 포기
+    S.reviveUsed = S.revived = S.reviveWave = true;
+    S.timer += REVIVE_SEC;
+    closeRevive();
+    addFloat(CX, CY, '❤️‍🩹 부활! +45초', '#43a047', 2.5); sfx('hero'); // 업적 '기사회생'은 부활권 전용 — 판당 무료 부활로는 풀지 않는다
+    logMsg('❤️‍🩹 <b>부활!</b> 이 전투를 45초 더 싸운다 (한 판에 한 번)', true);
+  });
+};
+document.getElementById('rvNo').onclick = () => { if (S.phase !== 'wave') { closeRevive(); return; } S.reviveUsed = true; closeRevive(); endWave(); };
 function endWave() {
+  if (reviveOffer()) return; // ❤️‍🩹 부작용(결투 정리·폭격 잔탄·누수 차감·몹 제거) 전에 가로챈다 — 창이 열린 동안 게임은 멈춘다
   S.slotBombs = []; // 잭팟 폭격 잔탄이 다음 웨이브로 넘어가 엉뚱한 좌표에서 터지지 않게
   // 🏛️ 결투 제한시간 = 그 라운드 전투 시간. 시간 내에 못 잡으면 도전자는 퇴장한다 (보상 없음).
   // ⚠️ 한때 포커 페이즈까지 결투를 끌고 갔었는데(창을 150초로 넓히려던 의도),
@@ -3220,9 +3839,9 @@ function endWave() {
         (S.minerGold ? `<div style="margin-top:8px;text-align:left;font-size:12px;color:#e6c36a">⛏️ 광부 총 수입: <b>${fmt(S.minerGold)}G</b> (${S.units.filter(u => u.miner).length}명 · 광산 ${S.mineLayer - 1}겹 파괴)</div>` : '');
       // 📋 09-08 디렉터 리뷰: '왜 졌는지'가 없었다 — 목숨 타임라인(최근 6건) + 이번 판의 순간들(최고 콤보·족보·에이스·왕관)
       const lifeHTML = S.lifeLog.length ? `<div style="margin-top:8px;text-align:left;font-size:12px;color:#ef9a9a">❤️ 목숨: ${S.lifeLog.slice(-6).map(e => `R${e.r} ${e.d > 0 ? '−' + e.d : '+' + (-e.d)} ${e.why}`).join(' · ')}</div>` : '';
-      const runHTML = `<div style="margin-top:6px;text-align:left;font-size:12px;color:#cfc6f5">🔥 최고 콤보 <b>${S.maxCombo}</b> · 🃏 최고 족보 <b>${HAND_NAMES[S.bestHand]}</b>${S.aceN ? ` · ♠ 에이스 ${S.aceN}` : ''}${S.superAceN ? ` · ♠♠ 슈퍼에이스 ${S.superAceN}` : ''}${S.crownTier > 0 ? ` · 👑 ${HAND_NAMES[S.crownTier]}` : ''}</div>`;
+      const runHTML = `<div style="margin-top:6px;text-align:left;font-size:12px;color:#cfc6f5">🔥 최고 콤보 <b>${S.maxCombo}</b> · 🃏 최고 족보 <b>${HAND_NAMES[S.bestHand]}</b>${S.aceN ? ` · ♠ 에이스 ${S.aceN}` : ''}${S.superAceN ? ` · ♠♠ 슈퍼에이스 ${S.superAceN}` : ''}${S.crownRace >= 0 ? ` · 👑 ${RACES[S.crownRace].suit} ${RACES[S.crownRace].name}` : ''}${S.revived ? ' · ❤️‍🩹 부활' : ''}</div>`;
       document.getElementById('finalScore').innerHTML =
-        `도달 스테이지: <b>${S.round}</b> (${stageInfo(S.round).name}) · ${DIFF_NAME}<br>` +
+        `도달 스테이지: <b>${S.round}</b> (${stageInfo(S.round).name}) · ${DIFF_NAME}<br>` + tutGameOverLine() + // 🧭 처음 3번만 한 줄 힌트
         `🏆 최고 기록: <b>${best}</b> 스테이지` + (isNew ? ' <span style="color:#ffd166">★ 신기록! ★</span>' : '') +
         runHTML + lifeHTML + statsHTML;
       diffBestLabel();
@@ -3241,6 +3860,7 @@ function endWave() {
     if (DIFF_MUL >= 2) markAchv('hell80'); else if (DIFF_MUL >= 1.4) markAchv('hard80'); // 공식 목표 달성 = R80 '클리어' 시점 (r80 '도달'과 구분)
   }
   S.round++;
+  S.reviveWave = false; // ❤️‍🩹 부활 연장전 종료 — 다음 전투부터 스피드 보너스 정상
   S.duelEnded = false; // 🏛️ 새 라운드 — 다음 결투 창을 위해 리셋
   settleInvests(); // 📈 만기 도래한 예치금 지급 (라운드가 올라간 직후 = "N라운드 뒤")
   if (S.round >= 40) markAchv('r40');
@@ -3252,7 +3872,7 @@ function endWave() {
     logMsg(`💎⛏️ 광석방 채굴 정원이 늘었습니다! 이제 동시에 ${oreCap()}명까지 캘 수 있습니다.`);
     addFloat(ROOM.cx, ROOM.cy - 30, `⛏ 정원 +1 (${oreCap()}명)`, '#c8752f', 2.5);
   }
-  startPoker();
+  startPoker(true);
 }
 
 // 울타리 충돌: 안에 들어오면 가까운 가장자리로 밀어낸다 (돌격 스킬 중인 유닛은 예외)
@@ -3314,7 +3934,7 @@ function spawnGambler(x, y) {
     dmg: 100, cd: 0.85, range: 300, splash: 0, bounce: 6, atk: 'boomerang', proj: 'chip', vis: null,
     pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 갬블러', cool: 0, selected: true, walk: 0, speed: 85,
   });
-  addFloat(x, y - 30, '🎲 도박의 신 강림!! 🎲', '#ffd54f', 2.8);
+  addFloat(x, y - 30, '🎲 행운의 신 강림!! 🎲', '#ffd54f', 2.8);
   sfx('jackpot'); sfx('hero');
   logMsg('🎲✨ 히든 조합 발견!! [1·2·3] → 히든 영웅 <b>갬블러</b>! 주사위를 던져 1~6회 팅기는 공격!');
   markHidden('gambler');
@@ -3411,7 +4031,7 @@ function spawnSlot(x, y) {
   });
   addFloat(x, y - 30, '🎰 슬롯머신 강림!! 🎰', '#ffd54f', 2.8);
   sfx('jackpot'); sfx('hero');
-  logMsg('🎰✨ 히든 조합 발견!! [같은 숫자 트리플×3] → 히든 영웅 <b>슬롯머신</b>! 잭팟 폭격 스킬 보유!');
+  logMsg('🎰✨ 히든 조합 발견!! [같은 숫자 트리플×3] → 히든 영웅 <b>슬롯머신</b>! 대박 폭격 스킬 보유!');
   markHidden('slot');
 }
 // 🃏 조커: 원페어·투페어·트리플 영웅 각 1기 → 낫으로 베며 몹을 끌어당기는 클럼핑 딜러
@@ -3594,7 +4214,7 @@ function updateAltar() {
     if (it.item === 'revive') { S.reviveArmed = true; addFloat(ALTAR.x, ALTAR.y - 44, '🔄 부활 봉인!', '#43a047', 2); sfx('hero'); logMsg('🔄 부활권 봉인 — 이번 라운드 사망 시 부활! (무사 클리어 시 소멸)'); }
     else if (it.item === 'plank') { S.plank = true; addFloat(CX, CY + PEN.h/2 + 22, '🪵 나무판자 설치!', '#a1887f', 2); sfx('pick'); logMsg('🪵 나무판자 설치 — 소환장 중앙 하단에 발판! 단검(풀하우스)을 올려보세요.'); }
     else if (it.item === 'oreGift') { openOreGift(it.oreStage || 1); } // 💎 보상 광석 — 깨서 개봉
-    else if (it.item === 'crown') { openCrownModal(); } // 👑 왕관 — 족보 선택 모달 (취소 시 왕관 재소환)
+    else if (it.item === 'crown') { openCrownModal(); } // 👑 왕관 — 종족 선택 모달 (취소 시 왕관 재소환)
     else { ({ timestop: useTimestop, stimpack: useStimpack, acid: useAcid, bombard: useBombard,
       sand: useSandItem, vbomb: useVBombItem, pray: usePrayItem,
       gachaHero: useGachaHero, gachaAce: useGachaAce, gachaAceHero: useGachaAceHero, gachaSuper: useGachaSuper })[it.item](); } // 🛒 비상 물자 3종 + 👑 뽑기권 4종도 제물대 발동
@@ -3891,7 +4511,10 @@ function update(dt) {
         if (u.oreSlot && u.cool <= 0 && !u.moving && inOreRange(u)) { u.cool = effCd(u); fireAtOre(u); } // 광석도 사거리 판정 (근접 무기는 붙어야 캔다)
       }
     }
-    S.pokerTimer -= dt;
+    // 🧭 첫 판 안내 T1: 첫 카드를 누를 때까지 포커 시계 정지 — 단, 게임 시간 25초 상한 + 광부·아이템 등 유닛이 생기면 즉시 해제
+    //    (10-01 크로스체크 P1: 광부는 포커 중에도 캐므로 정지가 길면 무한 채굴이 된다)
+    if (S.tutHold && (S.units.length || S.time > S.tutHoldT)) S.tutHold = false;
+    if (!S.tutHold) S.pokerTimer -= dt;
     if (S.pokerTimer <= 0) {
       logMsg('⏰ 포커 시간 종료 — 현재 패로 자동 소환!');
       let guard = 3;
@@ -4224,8 +4847,8 @@ function update(dt) {
       }
       if (m.boss) {
         S.chips++; // 보스 처치 → 카지노 칩 지급
-        logMsg(`👹 보스 처치! +${g}G · 🎰 칩 +1 (좌측 자금 운영에서 사용!)`);
-        addFloat(m.x, m.y - 20, `+${g}G · 🎰 칩+1!`, '#ffd54f', 2.6);
+        logMsg(`👹 보스 처치! +${g}G · 🪙 칩 +1 (좌측 자금 운영에서 사용!)`);
+        addFloat(m.x, m.y - 20, `+${g}G · 🪙 칩+1!`, '#ffd54f', 2.6);
         for (let i = 0; i < 3; i++) S.parts.push({ x: m.x, y: m.y, vx: (Math.random()-0.5)*120, vy: -80 - Math.random()*80, coin: true, chipFx: true, t: 1.6, r: 3.4, c: '#ffd54f' });
       }
       // 💥 보스 분열 (R80+): 처치 시 5조각 — 각 30% HP, 잡을만하게
@@ -4299,7 +4922,7 @@ function fireAt(u, target) {
   let gambleBounce = 0;
   if (u.gamble) { // 🎲 갬블러: 주사위를 던져 1~6회 팅기는 공격 (6=잭팟 / 승급1: 최소2 / 승급2: 잭팟 8연타)
     gambleBounce = (u.ascend || 0) >= 1 ? 2 + Math.floor(Math.random() * 5) : 1 + Math.floor(Math.random() * 6);
-    addFloat(u.x, u.y - 32, gambleBounce === 6 ? '🎲 6! 잭팟!!' : `🎲 ${gambleBounce}`, gambleBounce >= 5 ? '#ffd54f' : gambleBounce === 1 ? '#9e9e9e' : '#fff', gambleBounce === 6 ? 0.9 : 0.6);
+    addFloat(u.x, u.y - 32, gambleBounce === 6 ? '🎲 6! 대박!!' : `🎲 ${gambleBounce}`, gambleBounce >= 5 ? '#ffd54f' : gambleBounce === 1 ? '#9e9e9e' : '#fff', gambleBounce === 6 ? 0.9 : 0.6);
     if (gambleBounce === 6) { // 🎲✨ 6 잭팟: 갬블러 머리 위에서만 터지는 골드 분수 (화면 전체 연출은 과해서 제거)
       sfx('coin');
       for (let i = 0; i < 12; i++) { const aa = Math.random()*6.28, v = 70 + Math.random()*120; S.parts.push({ x: u.x, y: u.y - 20, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 50, g: true, t: 0.55, r: 1.5 + Math.random()*2.2, c: i%2 ? '#ffd54f' : '#fff3b0' }); }
@@ -4968,9 +5591,9 @@ function openOreGift(stage) {
     revealIcon: R[0], revealText: R[1] + (jackpot ? ' ×2!!' : ''), color: jackpot ? '#ffd166' : R[3],
     onReveal: () => {
       R[2]();
-      if (jackpot) { R[2](); showMktToast('🎰 잭팟!!', `${ore.name} 보상이 2배로 쏟아졌다!`); S.goldFlash = 0.7; sfx('jackpot'); }
-      rewardToast(R[0], R[1] + (jackpot ? ' ×2!!' : ''), R[3], `⛏️ ${ore.name} 채굴 보상${jackpot ? ' — 🎰 잭팟!' : ''}`);
-      logMsg(`💎 ${ore.name} 보상 개봉: ${R[1]}${jackpot ? ' — 🎰 잭팟 2배!!' : ''}`);
+      if (jackpot) { R[2](); showMktToast('✨ 대박!!', `${ore.name} 보상이 2배로 쏟아졌다!`); S.goldFlash = 0.7; sfx('jackpot'); }
+      rewardToast(R[0], R[1] + (jackpot ? ' ×2!!' : ''), R[3], `⛏️ ${ore.name} 채굴 보상${jackpot ? ' — ✨ 대박!' : ''}`);
+      logMsg(`💎 ${ore.name} 보상 개봉: ${R[1]}${jackpot ? ' — ✨ 대박 2배!!' : ''}`);
       if (stage >= 9) { sfx('jackpot'); sfx('hero'); }
     },
   });
@@ -4991,7 +5614,7 @@ function spawnSuperMiner() {
 const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단련 담당) — needs: 제단 위 제물 [{tier, hero?, n}]
   gamble: [
     { needs: [{ tier: 3, n: 3 }], mat: '트리플 3기', desc: '주사위 최소 2 (1 없음)' },
-    { needs: [{ tier: 3, hero: true, n: 1 }], mat: '트리플 영웅 1기', desc: '6 잭팟 시 8연타' },
+    { needs: [{ tier: 3, hero: true, n: 1 }], mat: '트리플 영웅 1기', desc: '6이 나오면 8연타' },
   ],
   junk: [
     // 2026-08-04 유저: 하이카드 2기가 재료였는데 🪨 제물대(투석기)가 하이카드를 먼저 먹어버려 승급 제물로 못 썼다 → 원3·투3으로 교체.
@@ -5072,7 +5695,7 @@ const MUTTERS = {
   execute: ['다음 목을 가져와라', '날이 녹슬 틈이 없군', '심판의 시간이다'],
   shogun: ['아직 멀었다', '내 칼은 식지 않는다', '더 강한 놈은 없나'],
   chrono: ['시간은 내 편이지', '서두를 것 없다…', '똑, 딱, 똑, 딱'],
-  slot: ['릴이 돌아간다~ 착착', '다음 잭팟은 언제쯤?', '7… 7… 7…!'],
+  slot: ['손잡이가 돌아간다~ 드르륵', '다음 대박은 언제쯤?', '무지개… 무지개…!'],
   joker: ['후후, 다들 이리 와~', '오늘도 즐거운 파티군 🎪', '도망은 못 가~'],
   catapult: ['…(돌 갈리는 소리)', '장전 완료.', '…발사 준비 끝.'],
 };
@@ -6853,14 +7476,14 @@ function draw() {
     ctx.fillStyle = '#ff6b9d'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(`🔥 FEVER ×2 (${Math.ceil(S.feverT)}s) 🔥`, CX, 112); ctx.textAlign = 'left'; // 시계(y10~66)·콤보(y88) 아래로 — 가림 방지
   }
-  if (S.goldFlash > 0) { // 🎲✨ 갬블러 6 잭팟: 화면 전체 골드 섬광 + JACKPOT 배너
+  if (S.goldFlash > 0) { // 🎲✨ 갬블러 6 대박: 화면 전체 골드 섬광 + 대박 배너 (10-01: 'JACKPOT'·🎰 = 도박 언어라 교체)
     const k = S.goldFlash / 0.55; // 1→0 페이드
     const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, 620);
     g.addColorStop(0, `rgba(255,215,79,${(0.32 * k).toFixed(2)})`); g.addColorStop(1, 'rgba(255,180,0,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, 940, 500);
     ctx.save(); ctx.textAlign = 'center'; ctx.font = `bold ${Math.round(34 + (1 - k) * 16)}px sans-serif`;
-    ctx.strokeStyle = `rgba(90,50,5,${k.toFixed(2)})`; ctx.lineWidth = 7; ctx.strokeText('🎰 JACKPOT! 🎰', CX, CY - 40); // 두꺼운 진갈색 외곽선 — 골드 섬광 위에서도 또렷
-    ctx.fillStyle = `rgba(255,255,255,${k.toFixed(2)})`; ctx.fillText('🎰 JACKPOT! 🎰', CX, CY - 40); ctx.restore(); ctx.textAlign = 'left';
+    ctx.strokeStyle = `rgba(90,50,5,${k.toFixed(2)})`; ctx.lineWidth = 7; ctx.strokeText('✨ 대박!! ✨', CX, CY - 40); // 두꺼운 진갈색 외곽선 — 골드 섬광 위에서도 또렷
+    ctx.fillStyle = `rgba(255,255,255,${k.toFixed(2)})`; ctx.fillText('✨ 대박!! ✨', CX, CY - 40); ctx.restore(); ctx.textAlign = 'left';
   }
 }
 // ⏳ 제한시간 긴장감 (09-30 유저: "반 지났을 때부터 점점 고조, 화면 전체적으로") — 시계와 같은 경과율(1 - S.timer/WAVE_TIME)로
@@ -9465,7 +10088,7 @@ function updateInfoPanel() {
   if (u.execute) traits.push('⚔️ 빈사 몬스터 즉시 처형');
   if (u.shogun) traits.push('🔥 불타는 참격');
   if (u.chrono) traits.push('⏳ 시간 정지 스킬 (쿨 150초)');
-  if (u.slot) { traits.push('🎰 잭팟 폭격 스킬 (쿨 75초)'); traits.push('7️⃣ 자금 운영 슬롯의 7이 잘 붙는다'); } // 수치는 노출하지 않는다 (UI 미니멀 원칙)
+  if (u.slot) { traits.push('🎰 대박 폭격 스킬 (쿨 75초)'); traits.push('🌈 캡슐 뽑기에서 무지개 캡슐이 잘 나온다'); } // 수치는 노출하지 않는다 (UI 미니멀 원칙)
   if (u.joker) traits.push('🃏 견인 스킬 (지속 15초 · 쿨 60초) — 낫에 걸린 몹을 끌어당김');
   if (u.catapult) traits.push('🪨 설치형 공성병기 (이동 불가)');
   if (u.ascend) traits.push(`<b style="color:#ff6b9d">🩸 승급 Lv.${u.ascend}</b>`);
@@ -9489,7 +10112,7 @@ function updateInfoPanel() {
   el.innerHTML =
     `<b>${u.hidden ? '♠ ' + u.weapon : u.weapon}</b> (${sub})<br>` +
     raceLine + '<br>' +
-    `공격력: <b>${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownTier > 0 && u.tier === S.crownTier) ? ` 👑×${CROWN_MUL[u.tier].toFixed(2)}` : ''}${isHiddenCombo(u) ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
+    `공격력: <b>${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? ` 👑×${CROWN_RACE_MUL[S.crownRace].toFixed(2)}` : ''}${isHiddenCombo(u) ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
     `공속: ${(u.spdBuff || 1) < 1
       ? `<b style="color:#00a3ff">${(1/effCd(u)).toFixed(1)}회/초</b> <span style="color:#00a3ff;font-size:10px">📯 +20%</span>`
       : `${(1/effCd(u)).toFixed(1)}회/초`} · 사거리: ${Math.round(effRange(u))}<br>` + // 콰르텟 버프·히든 페널티 반영된 실제 값
@@ -9508,7 +10131,7 @@ function updateInfoPanel() {
   placeInfoPanel();
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
   if (el.querySelector('#chronoBtn')) el.querySelector('#chronoBtn').onclick = () => { activateChrono(u); updateInfoPanel(); };
-  if (el.querySelector('#slotBtn')) el.querySelector('#slotBtn').onclick = () => { activateSlot(u); updateInfoPanel(); };
+  if (el.querySelector('#slotSkillBtn')) el.querySelector('#slotSkillBtn').onclick = () => { activateSlot(u); updateInfoPanel(); }; // id 분리(10-01): 캡슐 손잡이 #slotBtn과 겹치면 손잡이 대신 이 버튼이 잡혔다
   if (el.querySelector('#jokerBtn')) el.querySelector('#jokerBtn').onclick = () => { activateJoker(u); updateInfoPanel(); };
   if (el.querySelector('#copyBtn')) el.querySelector('#copyBtn').onclick = () => copyUnit(u);
 }
@@ -9536,7 +10159,7 @@ function heroUpRow(u) {
   if (lv >= HERO_UP_MAX) return `<br><span style="color:#c9971a;font-weight:bold">⭐ 단련 완료 (Lv.${HERO_UP_MAX} · 총 공격력 ×${(1 + 0.15 * HERO_UP_MAX).toFixed(1)})</span>`;
   const cost = heroUpCost(u), ok = S.gold >= cost;
   return `<br><button id="heroUpBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:#c9971a;font-weight:bold">⭐ 영웅 단련 Lv.${lv}→${lv + 1} (총 공격력 +15%) — 💰${cost.toLocaleString()}G</button>` +
-    `<button id="heroUpGBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:4px;text-align:center;color:#8e44ad;font-weight:bold" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎰 도박 단련 (25% 확률 +3Lv) — 💰${cost}G</button>`;
+    `<button id="heroUpGBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:4px;text-align:center;color:#8e44ad;font-weight:bold" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎯 도전 단련 (25% 확률 +3Lv) — 💰${cost}G</button>`;
 }
 function heroTrain(u, gamble, perfect, skipRefresh) {
   const lv = u.heroUpLv || 0;
@@ -9552,10 +10175,10 @@ function heroTrain(u, gamble, perfect, skipRefresh) {
     const p = (perfect ? 0.35 : 0.2) + (S.units.some(v => v.gamble) ? 0.10 : 0);
     if (Math.random() < p) {
       u.heroUpLv = Math.min(HERO_UP_MAX, lv + 3);
-      logMsg(`🎰✨ <b>도박 단련 대성공!!</b> ${u.weapon} Lv.${u.heroUpLv} (총 공격력 +${u.heroUpLv * 15}%)`);
-      addFloat(u.x, u.y - 28, '🎰 단련 ×3!!', '#ffd54f', 2.2); S.goldFlash = 0.55; sfx('jackpot');
+      logMsg(`🎯✨ <b>도전 단련 대성공!!</b> ${u.weapon} Lv.${u.heroUpLv} (총 공격력 +${u.heroUpLv * 15}%)`);
+      addFloat(u.x, u.y - 28, '🎯 단련 ×3!!', '#ffd54f', 2.2); S.goldFlash = 0.55; sfx('jackpot');
     } else {
-      logMsg(`🎰💨 도박 단련 실패… ${cost}G만 날렸습니다`);
+      logMsg(`💨 도전 단련 실패… ${cost}G가 사라졌습니다`);
       addFloat(u.x, u.y - 28, '💨 실패…', '#8d8d8d', 1.2); sfx('leak');
     }
   }
@@ -9651,15 +10274,15 @@ function activateSlot(u) {
     const ex = CX + (Math.random() - 0.5) * PEN.w * 0.9, ey = CY + (Math.random() - 0.5) * PEN.h * 0.9;
     S.slotBombs.push({ delay: i * (1.2 / n), ex, ey, dmg, owner: u });
   }
-  addFloat(u.x, u.y - 28, '🎰 잭팟 폭격!', '#ffd54f', 1.6);
-  logMsg(`🎰 ${u.weapon} 잭팟 폭격! 소환장에 폭탄 세례!`);
+  addFloat(u.x, u.y - 28, '🎰 대박 폭격!', '#ffd54f', 1.6);
+  logMsg(`🎰 ${u.weapon} 대박 폭격! 소환장에 폭탄 세례!`);
   sfx('jackpot');
 }
 function slotRow(u) {
   const cd = u.slotCd || 0;
-  const label = cd > 0 ? `🎰 잭팟 폭격 (재사용 ${cd.toFixed(0)}초)` : '🎰 잭팟 폭격 스킬 (쿨 75초)';
+  const label = cd > 0 ? `🎰 대박 폭격 (재사용 ${cd.toFixed(0)}초)` : '🎰 대박 폭격 스킬 (쿨 75초)';
   const dis = cd > 0 ? 'disabled' : '';
-  return `<br><button id="slotBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:#b8860b;font-weight:bold">${label}</button>`;
+  return `<br><button id="slotSkillBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:#b8860b;font-weight:bold">${label}</button>`;
 }
 // 공격 우선순위 버튼 UI
 function priorityRow(cur) {
@@ -9722,7 +10345,7 @@ const HAND_GUIDE = [
 ];
 // 📖 히든 조합 도감: 발견 전엔 recipe 대신 riddle(hint)을 보여준다 (localStorage dpd_hidden으로 발견 여부 판정)
 const HIDDEN_DEX = [
-  { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '주사위를 던져 1~6회 팅기는 공격 + 룰렛·슬롯 행운 +10%',
+  { id: 'gambler', icon: '🎲', name: '갬블러', recipe: '원페어×1 + 투페어×2 + 트리플×3', desc: '주사위를 던져 1~6회 팅기는 공격 + 뽑기 행운 +10%',
     voice: '운이야말로 실력이지. 내 주사위가 몇 번 튕길지는 나도 몰라 🎲', hint: '아래에서 셋째 칸까지 오르는 계단. 각 칸에는 제 번호만큼 세워야 한다.' },
   { id: 'junk', icon: '💰', name: '고물상', recipe: '하이카드×3 + 원페어×3 + 투페어×3', desc: '가장 가까운 유닛 5기 킬 골드 ×1.2 (지원형)',
     voice: '버려진 것들 속에 돈이 있다네. 내 곁에서 싸워보게나 💰', hint: '가장 낮은 세 족보를, 세 벌씩. 쓰레기 더미에서도 금은 반짝인다.' },
@@ -9734,7 +10357,7 @@ const HIDDEN_DEX = [
     voice: '나를 전장에 보내줘. 다 썰어서 태워주지 🔥', hint: '집을 가득 채운 자와 한 빛깔로 물든 자. 여섯이 모이면 칼에 불이 붙는다.' },
   { id: 'chrono', icon: '⏳', name: '시간술사', recipe: '스트레이트×3', desc: '시간 정지 스킬 (쿨 150초)',
     voice: '시간아, 잠깐 멈춰라 ⏳', hint: '끊기지 않고 이어지는 다섯 장. 그것을 세 번 겹치면 시계가 숨을 멈춘다.' },
-  { id: 'slot', icon: '🎰', name: '슬롯머신', recipe: '같은 숫자 트리플×3', desc: '잭팟 폭격 스킬 (쿨 75초)',
+  { id: 'slot', icon: '🎰', name: '슬롯머신', recipe: '같은 숫자 트리플×3', desc: '대박 폭격 스킬 (쿨 75초)',
     voice: '릴이 맞아떨어지는 순간… 하늘을 봐 🎰', hint: '같은 얼굴 셋이, 다시 세 번. 릴이 맞아떨어지면 하늘이 쏟아진다.' },
   { id: 'joker', icon: '🃏', name: '조커', recipe: '원페어·투페어·트리플 영웅 각 1', desc: '낫으로 베며 몹을 끌어당김 (클럼핑)',
     voice: '이리 와~ 같이 놀자고. 도망은 못 가 🃏', hint: '아래 세 칸의 왕관들이 손을 맞잡을 때, 광대가 낫을 든다.' },
@@ -9756,7 +10379,7 @@ function heroSectionHTML() {
       <div class="rpgInfo"><b>${h.weapon}</b> <span class="lv">단련 Lv.${lv}</span><br>
         <span class="desc">${maxed ? `단련 완료 — 총 공격력 ×${(1 + 0.15 * HERO_UP_MAX).toFixed(1)}` : `총 공격력 +${(lv + 1) * 15}%까지 · ${cost.toLocaleString()}G`}</span></div>
       ${maxed ? '' : `<button class="rpgBuy" data-ht="${i}" ${ok ? '' : 'disabled'}>💰 단련</button>
-      <button class="rpgBuy" data-htg="${i}" ${ok ? '' : 'disabled'} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)">🎰 ×3</button>`}
+      <button class="rpgBuy" data-htg="${i}" ${ok ? '' : 'disabled'} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)">🎯 ×3</button>`}
     </div>`;
     // 🩸 제물 승급 (쇼군·조커·갬블러) — 제단 위 재료를 바쳐 강화
     const ak = ascendKey(h);
@@ -9816,7 +10439,7 @@ const ACHV = [
   { id: 'golden', icon: '✨', name: '황금 사냥꾼', desc: '황금 몬스터 처치' },
   { id: 'revive', icon: '🔄', name: '기사회생', desc: '부활권으로 생환' },
   { id: 'fever', icon: '🎉', name: '피버!', desc: '피버 타임 발동' },
-  { id: 'lotto50', icon: '🎰', name: '대박', desc: '슬롯·룰렛 100만 골드 이상 잭팟' },
+  { id: 'lotto50', icon: '🎁', name: '대박', desc: '캡슐 뽑기에서 100만 골드 이상' },
   { id: 'r40', icon: '🏳️', name: '40 라운드', desc: '' },
   { id: 'r80', icon: '👹', name: '헬 게이트', desc: '80 라운드 돌파' },
   { id: 'hard80', icon: '🔥', name: '어려움 헬 게이트', desc: '어려움 난이도로 80 라운드 돌파' }, // 09-08: 공식 목표(어려움 5%·지옥 2%)를 게임이 기록·축하하지 않았다
@@ -9842,9 +10465,9 @@ function upgItemsHTML() {
       <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
         <span class="desc">단일 +${(upgEff(S.upg[i])*2.5).toFixed(1)} · 스플래시 초당 +${(upgEff(S.upg[i])*0.55).toFixed(1)}/마리 · 전체 초당 +${(upgEff(S.upg[i])*0.15).toFixed(1)}/마리${S.upg[i] > 12 ? ' <b style="color:#c9971a">⚡가속!</b>' : ''}</span></div>
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
-      <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값으로 3레벨 도전 — 타이밍바 중앙에 맞추면 35%">🎰 ×3</button>
+      <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값으로 3레벨 도전 — 타이밍바 중앙에 맞추면 35%">🎯 ×3</button>
     </div>`).join('') +
-    '<div class="rpgGuide">🎰 <b>도박 업그레이드</b>: 같은 값으로 <b>3레벨</b> 업그레이드 도전 — 타이밍바 중앙에 맞추면 확률 <b>35%</b></div>';
+    '<div class="rpgGuide">🎯 <b>도전 강화</b>: 같은 값으로 <b>3레벨</b> 업그레이드 도전 — 타이밍바 중앙에 맞추면 확률 <b>35%</b></div>';
 }
 function wireUpg(el) {
   el.querySelectorAll('[data-upg]').forEach(b => b.onclick = () => {
@@ -9869,9 +10492,9 @@ function wireUpg(el) {
       if (win) {
         S.upg[i] += 3;
         S.upgCost[i] = Math.floor(S.upgCost[i] * 1.45 * 1.45 * 1.45); // 3레벨 분량만큼 가격도 전진
-        logMsg(`🎰✨ <b>도박 대성공!!</b> ${RACES[i].name} 공격력 +3 → Lv.${S.upg[i]}`);
+        logMsg(`🎯✨ <b>도전 대성공!!</b> ${RACES[i].name} 공격력 +3 → Lv.${S.upg[i]}`);
         S.goldFlash = 0.55; sfx('jackpot');
-      } else { logMsg(`🎰💨 도박 실패… (${Math.round(p * 100)}%의 벽)`); sfx('leak'); }
+      } else { logMsg(`💨 도전 실패… (${Math.round(p * 100)}%의 벽)`); sfx('leak'); }
       showGambleResult(host, perfect, win, win ? `${RACES[i].name} 공격력 +3 → Lv.${S.upg[i]}` : '');
       updateInfoPanel();
     });
@@ -9917,7 +10540,7 @@ function runGambleBar(host, onStop) {
 function showGambleResult(host, perfect, win, detail, refresh) {
   host.innerHTML = `<div style="text-align:center;margin:8px 0;font-weight:bold">
     ${perfect ? '<div style="color:#c9971a;font-size:12px">🎯 퍼펙트! 확률 35% 적용</div>' : '<div style="color:#9a8a60;font-size:12px">타이밍 빗나감 — 기본 확률</div>'}
-    <div style="font-size:17px;color:${win ? '#c9971a' : '#e57373'};margin-top:4px">${win ? '🎰✨ 잭팟!! ×3 강화!!' : '💨 꽝… 골드만 사라졌다'}</div>
+    <div style="font-size:17px;color:${win ? '#c9971a' : '#e57373'};margin-top:4px">${win ? '🎯✨ 대성공!! ×3 강화!!' : '💨 꽝… 골드만 사라졌다'}</div>
     ${detail ? `<div style="font-size:12px;color:#7a6a52;margin-top:2px">${detail}</div>` : ''}
     <button class="chipBtn" id="gmgOk" style="margin-top:8px">확인</button></div>`;
   host.querySelector('#gmgOk').onclick = () => (refresh || renderShop)();
@@ -10009,7 +10632,7 @@ function renderShop() {
     const miners = btn('miner', '⛏️ 광부') + btn('sminer', '⛏️ 슈퍼광부');
     const itemKeys = ['timestop', 'stimpack', 'acid', 'bombard', 'revive', 'plank'];
     const items = itemKeys.map(k => btn('it_' + k, `${ITEM_META[k].icon} ${ITEM_META[k].name}`)).join('');
-    const misc = btn('gold', '💰 골드 +100k') + btn('chip', '🎰 칩 +10');
+    const misc = btn('gold', '💰 골드 +100k') + btn('chip', '🪙 칩 +10');
     const mobs = MATERIALS.map((mt, i) => btn('mob' + i, mt.name)).join('') + btn('boss', '👑 보스') + btn('bossS', '👑💥 분열 보스');
     el.innerHTML = grid('⚔️ 일반 유닛', units) + grid('⭐ 영웅', heroes) + grid('🌟 슈퍼영웅', supers) +
       grid('♠ 에이스', aces) + grid('♠♠ 슈퍼에이스', superAces) + grid('🀄 히든', hiddens) +
@@ -10135,7 +10758,7 @@ function emergencyBomb() {
   logMsg('💣 긴급 폭격!! 모든 몬스터 최대체력 15% 타격!');
 }
 // ===== 🎰 카지노: 단일 진입 → 메뉴 → 3섹션 =====
-function openCasino() { openChip('💰 자금 운영'); casMenu(); }
+function openCasino() { openChip('💰 자금 운영'); casMenu(); if (tutOn()) tutMark('fchip'); } // 🧭 스스로 열어 봤으면 첫 칩 안내는 건너뜀
 function casMenu() {
   // 🛒 비상 물자: 판당 3회 · 살수록 비싸진다 (유저 지정 1만/5만/10만 — 라운드 비례가 아니라 누진이라 미리 쟁여도 이득이 없다)
   // 2026-08-08 유저: 구매 즉시 적용이 아니라 맵에 오브젝트로 소환 → 직접 제물대로 옮겨야 발동 (타이밍 운영이 플레이가 된다)
@@ -10147,12 +10770,12 @@ function casMenu() {
   CB.innerHTML =
     `<div style="text-align:center;font-size:12px;color:#c9b8f0;margin-bottom:8px">보유 🪙 <b style="color:#ffd166">${chipTxt(S.chips)}</b>개 · 💰 <b style="color:#ffd166">${Math.floor(S.gold).toLocaleString()}G</b></div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="chipBtn casItem" data-go="slot" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎰</span> <b style="color:#ffd166">777 슬롯</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 7️⃣7️⃣7️⃣이 뜨면 <b>1000만 골드</b></span></button>
+      <button class="chipBtn casItem" data-go="slot" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎁</span> <b style="color:#ffd166">캡슐 뽑기</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 무지개 캡슐이 나오면 <b>1000만 골드</b></span></button>
       <button class="chipBtn casItem" data-go="miner" style="text-align:left;padding:12px" ${S.chips < 1 ? 'disabled' : ''}><span style="font-size:26px;vertical-align:middle">⛏️</span> <b style="color:#ffd166">광부 고용</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 확실한 투자. 광산에서 꾸준히 골드를 캐 온다 (현재 ${S.units.filter(u => u.miner).length}명)</span></button>
       <button class="chipBtn casItem" data-go="invest" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">📈</span> <b style="color:#ffd166">투자</b><br><span style="font-size:11px;color:#c9b8f0">골드를 묶어 불린다. 오래 묶을수록 많이 붙지만 <b>만기 전엔 못 뺀다</b>${investTotal() ? ` · 예치 중 <b style="color:#7ec8ff">${investTotal().toLocaleString()}G</b>` : ''}</span></button>
     </div>
     <div style="margin-top:12px;border-top:1px dashed rgba(201,167,90,0.4);padding-top:8px">
-      <div style="font-size:12px;color:#c9a75a;font-weight:bold;margin-bottom:6px">👑 뽑기권 도박 <span style="font-weight:normal;color:#9a8a60">— 칩으로 지른다 · 개봉은 제물대에서</span></div>
+      <div style="font-size:12px;color:#c9a75a;font-weight:bold;margin-bottom:6px">👑 뽑기권 상자 <span style="font-weight:normal;color:#9a8a60">— 칩으로 뽑는다 · 개봉은 제물대에서</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px">
         <button class="chipBtn sub" data-gacha="ace" style="padding:8px 4px;font-size:11px" ${S.chips < 1 ? 'disabled' : ''}>👑 에이스 뽑기권<br><span style="font-size:10px">🪙 1개 — <b>70%</b></span></button>
         <button class="chipBtn sub" data-gacha="hero" style="padding:8px 4px;font-size:11px" ${S.chips < 4 ? 'disabled' : ''}>👑 영웅 뽑기권<br><span style="font-size:10px">🪙 4개 — <b>60%</b></span></button>
@@ -10249,9 +10872,8 @@ function casInvest() {
     casInvest(); updateHUD();
   });
 }
-// --- 🎰 777 슬롯: 칩 1개 → 클래식 3릴. 결과 선(先)추첨 후 릴이 맞춰 멈춤 (확률 정확 + 연출 자유) ---
-// (경제 개편: 슬롯 골드 비용 5000G 삭제 — 칩 1개 전용)
-const SLOT_SYMS = { sev: '7', dia: '💎', bell: '🔔', melon: '🍉', cherry: '🍒', bar: 'BAR' };
+// --- 🎁 캡슐 뽑기 (10-01 유저: 카지노 → '도박 느낌 없는 뽑기' — 구 777 슬롯). 칩 1개 전용 ---
+// 확률·지급표(SLOT_TABLE)·행운 보정은 슬롯 그대로, 표현만 캡슐 기계. 결과 선(先)추첨 후 기계가 그 캡슐을 내준다 (확률 정확 + 연출 자유)
 const SLOT_TABLE = [ // [키, 확률‰, 지급G] — 합 ~191.5‰ + 🍒×2 140.6‰, 나머지 꽝. EV ≈ 0.93 (gamblerLuck 시 ~1.02)
   ['777',    0.125, 10000000],
   ['dia3',   1,     750000],
@@ -10273,84 +10895,92 @@ function rollSlot() {
   for (const [key, p, pay] of SLOT_TABLE) { acc += p * L * (key === '777' ? sevenLuck() : 1); if (r < acc) return { key, pay }; }
   return { key: 'miss', pay: 0 };
 }
-const SLOT_FILL = ['sev', 'dia', 'bell', 'melon', 'cherry', 'bar']; // 릴 필러(연출용 — 확률과 무관)
-function slotPick() { return SLOT_FILL[(Math.random() * SLOT_FILL.length) | 0]; }
-function slotSymsFor(key) { // 결과 → 표시 심볼 3개
-  const rnd1 = (not) => { let s; do { s = slotPick(); } while (not.includes(s)); return s; };
-  if (key === '777') return ['sev', 'sev', 'sev'];
-  if (key === 'dia3') return ['dia', 'dia', 'dia'];
-  if (key === 'bell3') return ['bell', 'bell', 'bell'];
-  if (key === 'melon3') return ['melon', 'melon', 'melon'];
-  if (key === 'cher3') return ['cherry', 'cherry', 'cherry'];
-  if (key === 'bar3') return ['bar', 'bar', 'bar'];
-  if (key === 'sev2') { const a = ['sev', 'sev', rnd1(['sev'])]; if (Math.random() < 0.5) [a[1], a[2]] = [a[2], a[1]]; return a; } // 7 두 개 (마지막 7-7-X 긴장은 절반만)
-  if (key === 'cher2') { const a = ['cherry', 'cherry', rnd1(['cherry'])]; const i = (Math.random() * 3) | 0; [a[2], a[i]] = [a[i], a[2]]; return a; }
-  let a; // 꽝: 당첨 패턴(트리플·7둘·체리둘)이 우연히 나오지 않게 리롤
-  do { a = [slotPick(), slotPick(), slotPick()]; }
-  while ((a[0] === a[1] && a[1] === a[2]) || a.filter(s => s === 'sev').length >= 2 || a.filter(s => s === 'cherry').length >= 2);
-  return a;
+// 캡슐 등급 = SLOT_TABLE 키 → [이름, 윗껍질 색] (구 릴 조합 777·💎×3·🔔×3·🍉×3·7×2·🍒×3·BAR×3·🍒×2 순서를 지급액 순으로 매핑)
+const CAPSULE = {
+  '777':  ['무지개', 'linear-gradient(90deg,#ff6b6b,#ffd166,#6ee7a8,#6bb8ff,#c58bff)'],
+  dia3:   ['다이아', '#5ac4f5'],
+  bell3:  ['황금', '#f2c14e'],
+  melon3: ['루비', '#e0445a'],
+  sev2:   ['자수정', '#9b6bd6'],
+  cher3:  ['에메랄드', '#3fae6a'],
+  bar3:   ['사파이어', '#3f6fd1'],
+  cher2:  ['은빛', '#c9d2d9'],
+  miss:   ['빈', '#e9dfc6'],
+};
+const CAP_ORDER = ['777', 'dia3', 'bell3', 'melon3', 'sev2', 'cher3', 'bar3', 'cher2']; // 상품 목록 = 지급액 순
+// 유리 돔 안에 쌓인 캡슐 (장식 — 확률과 무관, 위치 고정)
+const CAP_PILE = [['cher2', 18, 74], ['bar3', 38, 80], ['cher3', 60, 78], ['melon3', 80, 72], ['sev2', 28, 58], ['cher2', 50, 62], ['bell3', 70, 56],
+  ['cher3', 16, 44], ['dia3', 40, 42], ['cher2', 62, 40], ['bar3', 84, 46], ['777', 52, 22], ['melon3', 30, 26], ['cher2', 74, 26]];
+function capMachineHTML() {
+  return `<div class="capMachine" id="capM"><div class="capDome">${CAP_PILE.map(([k, x, y]) => `<i style="--c:${CAPSULE[k][1]};left:${x}%;top:${y}%"></i>`).join('')}</div>` +
+    `<div class="capBody"><div class="capKnob" id="capKnob"></div><div class="capChute"></div></div>` +
+    `<div class="capTray"><div class="capBall" id="capBall"><b class="capTop"></b><b class="capBot"></b></div><div class="capPrize" id="capPrize"></div></div></div>`;
 }
-function slotCellHTML(s) { return `<div class="slotCell ${s === 'bar' ? 'bar' : s === 'sev' ? 'sev' : ''}">${SLOT_SYMS[s]}</div>`; }
 function casSlot() {
-  const luckMsg = (gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '')
-    + (sevenLuck() > 1 ? '<div style="text-align:center;color:#ffd166;font-weight:bold;font-size:12px;margin-bottom:6px">🎰 슬롯머신이 릴을 봐주고 있다 — 7이 잘 붙는다</div>' : '');
+  const luckMsg = (gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 갬블러의 가호 — 행운 +10%</div>' : '')
+    + (sevenLuck() > 1 ? '<div style="text-align:center;color:#ffd166;font-weight:bold;font-size:12px;margin-bottom:6px">🎰 슬롯머신 영웅이 기계를 두드려 준다 — 무지개 캡슐이 잘 나온다</div>' : '');
   const can = S.chips >= 1; // 경제 개편: 골드 비용 삭제 — 칩 1개로만 돌린다 (유저 지정)
   CB.innerHTML =
     `<span class="back" onclick="casMenu()">‹ 자금 운영</span>` + luckMsg +
     `<div style="font-size:12px;color:#c9b8f0;text-align:center">보유 <b style="color:#ffd166">${Math.floor(S.gold).toLocaleString()}G</b> · 칩 <b style="color:#ffd166">${chipTxt(S.chips)}</b>개</div>` +
-    `<div class="slotBox">` + [0, 1, 2].map(i => `<div class="slotWin"><div class="slotStrip" id="srp${i}">${slotCellHTML(slotPick())}</div></div>`).join('') + `</div>` +
-    `<table class="slotPay">
-      <tr><td style="color:#ff6b9d;font-weight:bold">7️⃣7️⃣7️⃣ 1000만G</td><td style="text-align:right;color:#ffd166;font-weight:bold">💎×3 75만G</td><td style="text-align:right">🔔×3 20만G</td></tr>
-      <tr><td>🍉×3 5만G</td><td style="text-align:right">🍒×3 2만G · BAR×3 1.25만G</td><td style="text-align:right">7️⃣×2 3만G · 🍒×2 6천G</td></tr>
-    </table>` +
-    `<div style="text-align:center"><button class="chipBtn" id="slotBtn" ${can ? '' : 'disabled'}>🎰 레버 당기기 (🪙1)</button></div>` +
-    `<div class="chipResult" id="slRes" style="text-align:center">${can ? '행운을 시험해 보세요!' : '칩이 필요합니다 (보스·결투장에서 획득)'}</div>`;
+    capMachineHTML() +
+    `<table class="slotPay">${CAP_ORDER.map(k => `<tr><td>${CAPSULE[k][0]} 캡슐</td><td style="text-align:right">${SLOT_TABLE.find(r => r[0] === k)[2].toLocaleString()}G</td></tr>`).join('')}</table>` +
+    `<div style="text-align:center"><button class="chipBtn" id="slotBtn" ${can ? '' : 'disabled'}>🎁 손잡이 돌리기 (🪙1)</button></div>` +
+    `<div class="chipResult" id="slRes" style="text-align:center">${can ? '어떤 캡슐이 나올까요?' : '칩이 필요합니다 (보스·결투장에서 획득)'}</div>`;
   document.getElementById('slotBtn').onclick = slotPull;
+  document.getElementById('capM').onclick = () => { const b = document.getElementById('slotBtn'); if (b && !b.disabled) b.click(); }; // 기계를 눌러도 손잡이
 }
+// 연출: 손잡이 한 바퀴(돔 덜컹) → 포장지 캡슐 톡 → (가끔 반짝이며 흔들림) → 윗껍질이 열리며 등급 색과 상품 (10-01 크로스체크: 떨어질 때 색이 보이면 긴장이 없다)
+// 흔들림 = 황금 이상은 항상, 나머지도 25% (연출만 — 흔들린다고 대박 확정이 아니게. 구 7-7-? 애간장과 같은 헛김)
+// 시각 = plain setTimeout · 지급 = casTimeout(세대 토큰) 분리. 화면 갱신은 이 회차 화면이 아직 보일 때만(capSeq) — 나갔다 다시 들어와 또 뽑아도 섞이지 않게
+const CAPSULE_SHELL = 'linear-gradient(135deg,#f6eed8,#cdbf9a)';
+let capSeq = 0;
 function slotPull() {
   if (S.chips < 1) return;
   S.chips--; sfx('coin'); updateInfoPanel();
   const res = rollSlot();
-  const syms = slotSymsFor(res.key);
+  const [nm, col] = CAPSULE[res.key] || CAPSULE.miss;
+  const big = res.pay >= 200000;
+  const tease = big || Math.random() < 0.25;
+  const seq = ++capSeq;
   const btn = document.getElementById('slotBtn'); btn.disabled = true;
-  document.getElementById('slRes').innerHTML = '<span style="color:#c9b8f0">돌아간다…!</span>';
-  const tease = syms[0] === 'sev' && syms[1] === 'sev'; // 7-7-? → 세 번째 릴 애간장
-  const durs = [1.3, 2.1, tease ? 4.1 : 2.8];
-  const H = 72;
-  [0, 1, 2].forEach(i => {
-    const strip = document.getElementById('srp' + i);
-    const n = 10 + i * 5; // 릴별 스핀 길이
-    let cells = '';
-    for (let k = 0; k < n; k++) cells += slotCellHTML(slotPick());
-    cells += slotCellHTML(syms[i]);
-    strip.innerHTML = cells;
-    strip.style.transition = 'none'; strip.style.transform = 'translateY(0)';
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      strip.style.transition = `transform ${durs[i]}s cubic-bezier(0.16, 0.84, 0.22, 1)`;
-      strip.style.transform = `translateY(-${n * H}px)`;
-    }));
-    setTimeout(() => sfx('pick'), durs[i] * 1000); // 릴 정지음 착·착·착
-  });
-  if (tease) casTimeout(() => { const el = document.getElementById('slRes'); if (el) el.innerHTML = '<span style="color:#ff6b9d;font-weight:bold">7️⃣ 7️⃣ …!?</span>'; }, 2300);
+  const m = document.getElementById('capM'), knob = document.getElementById('capKnob'), ball = document.getElementById('capBall'), prize = document.getElementById('capPrize');
+  const live = () => seq === capSeq && m.isConnected && CM.style.display === 'flex';
+  document.getElementById('slRes').innerHTML = '<span style="color:#c9b8f0">드르륵…!</span>';
+  knob.style.transition = 'none'; knob.classList.remove('turn'); void knob.offsetWidth; knob.style.transition = ''; // 역회전 없이 0°로
+  ball.className = 'capBall'; ball.style.setProperty('--c', CAPSULE_SHELL); prize.className = 'capPrize'; prize.textContent = '';
+  knob.classList.add('turn'); m.classList.add('spin');
+  sfx('pick'); setTimeout(() => sfx('pick'), 260); setTimeout(() => sfx('pick'), 520);
+  setTimeout(() => { if (!live()) return; m.classList.remove('spin'); ball.classList.add('drop'); sfx('thud'); }, 800);
+  const openAt = tease ? (big ? 3000 : 2300) : 1500;
+  if (tease) setTimeout(() => {
+    if (!live()) return;
+    ball.classList.add('tease');
+    document.getElementById('slRes').innerHTML = '<span style="color:#ff6b9d;font-weight:bold">반짝… 반짝…!?</span>';
+  }, 1300);
+  setTimeout(() => {
+    if (!live()) return;
+    ball.classList.remove('tease'); ball.style.setProperty('--c', col); ball.classList.add('open');
+    prize.textContent = res.pay ? `${nm} 캡슐!` : '빈 캡슐…'; prize.classList.add('show');
+  }, openAt);
   casTimeout(() => {
     const won = res.pay;
     S.gold += won;
     if (won >= 1000000) markAchv('lotto50');
     updateInfoPanel();
-    const el = document.getElementById('slRes');
-    if (!el) { if (won > 0) logMsg(`🎰 슬롯 당첨: <b>+${won.toLocaleString()}G</b> (창을 닫는 사이 지급되었습니다)`); return; }
-    if (won === 0) { el.innerHTML = `<span style="color:#e57373">💨 꽝! 칩이 허공으로…</span>`; sfx('leak'); }
-    else if (res.key === '777') {
-      el.innerHTML = `<span style="color:#ff6b9d;font-size:19px;font-weight:900">🎆🎆 𝟕𝟕𝟕 잭팟!!! +1,000만G 🎆🎆</span>`;
-      sfx('jackpot'); sfx('hero'); S.goldFlash = 0.9;
-      rewardToast('7️⃣', '+10,000,000G', '#ff6b9d', '𝟕 𝟕 𝟕  잭 팟');
-      logMsg('🎰🎆 𝟕𝟕𝟕 잭팟!!! 1000만 골드!!! 🎆🎰');
+    if (res.key === '777') { sfx('jackpot'); sfx('hero'); S.goldFlash = 0.9; rewardToast('🌈', '+10,000,000G', '#ff6b9d', '무 지 개  캡 슐'); logMsg('🎁🌈 무지개 캡슐!!! 1000만 골드!!! 🌈🎁'); }
+    if (!live()) { // 창을 닫았거나 다른 회차 화면 — 지급은 끝났고 알림만
+      if (won > 0 && res.key !== '777') logMsg(`🎁 캡슐 뽑기: ${nm} 캡슐 <b>+${won.toLocaleString()}G</b> (창을 닫는 사이 지급되었습니다)`);
+      return;
     }
-    else if (won >= 100000) { el.innerHTML = `<span style="color:#ff6b9d;font-size:16px">🎆 대박!! +${won.toLocaleString()}G 🎆</span>`; sfx('jackpot'); S.goldFlash = 0.55; }
-    else { el.innerHTML = `<span style="color:#ffd166">🎉 +${won.toLocaleString()}G</span>`; sfx(won >= 20000 ? 'reward' : 'coin'); }
+    const el = document.getElementById('slRes');
+    if (won === 0) { el.innerHTML = `<span style="color:#e57373">💨 빈 캡슐… 다음엔 꼭!</span>`; sfx('leak'); }
+    else if (res.key === '777') el.innerHTML = `<span style="color:#ff6b9d;font-size:19px;font-weight:900">🌈🌈 무지개 캡슐!!! +1,000만G 🌈🌈</span>`;
+    else if (won >= 100000) { el.innerHTML = `<span style="color:#ff6b9d;font-size:16px">🎆 대박!! ${nm} 캡슐 +${won.toLocaleString()}G 🎆</span>`; sfx('jackpot'); S.goldFlash = 0.55; }
+    else { el.innerHTML = `<span style="color:#ffd166">🎉 ${nm} 캡슐 +${won.toLocaleString()}G</span>`; sfx(won >= 20000 ? 'reward' : 'coin'); }
     const b = document.getElementById('slotBtn');
     if (b) { b.disabled = S.chips < 1; b.textContent = `한 번 더 · 칩 ${chipTxt(S.chips)}개 보유`; }
-  }, durs[2] * 1000 + 250);
+  }, openAt);
 }
 
 // 🃏 카드 교환권 (30% 발급 / 40% 칩 환급 / 30% 소멸)
@@ -10363,7 +10993,7 @@ function doExchange() {
   const out = r < succ ? { back: '🎟️', txt: '<span style="color:#43a047">성공! 포커 재변경권 획득!</span>', apply: () => S.items.reroll++, s: 'reward' }
     : r < succ + 0.40 ? { back: '🔄', txt: '<span style="color:#ffd166">칩 환급! 다시 도전하세요</span>', apply: () => S.chips++, s: 'coin' }
       : { back: '💨', txt: '<span style="color:#e57373">아쉽게 소멸…</span>', apply: () => { }, s: 'leak' };
-  const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '';
+  const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 갬블러의 가호 — 행운 +10%</div>' : '';
   CB.innerHTML = luckMsg + `<div class="flipWrap"><div class="flipCard" id="flipCard"><div class="flipFace flipFront">🃏</div><div class="flipFace flipBack">${out.back}</div></div></div><div class="chipResult" id="exRes">카드를 뒤집는 중…</div><div id="exBtns"></div>`;
   requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('flipCard').classList.add('flipped')));
   casTimeout(() => {
@@ -10403,20 +11033,27 @@ function gachaBoxAnim(host, opts) {
 function doGachaBet(cost, p, kind, label) {
   if (S.chips < cost) return;
   S.chips -= cost; sfx('coin');
-  openChip('👑 ' + label + ' 도박');
+  openChip('👑 ' + label + ' 상자');
   const succ = p * gamblerLuck();
   const win = Math.random() < succ;
-  const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 도박의 신 가호 — 행운 +10%</div>' : '';
-  // 09-30 유저: 구매는 뽑기권을 얻을 뿐이라 상자 연출 불필요 — 성공/실패를 바로 보여준다 (등급 룰렛·상자 연출은 제물대 개봉에서 그대로)
-  CB.innerHTML = luckMsg + `<div class="chipResult" id="gbRes"></div><div id="gbBtns"></div>`;
-  if (win) { spawnItemUnit(kind); logMsg(`👑 <b>${label}</b> 획득! 제물대로 옮기면 개봉합니다.`); sfx('jackpot'); }
-  else { logMsg(`👑💨 ${label} 도박 실패… 칩 ${cost}개가 사라졌습니다.`); sfx('leak'); }
-  updateHUD();
-  document.getElementById('gbRes').innerHTML = win ? `<span style="color:#43a047">성공! ${label} 획득 — 제물대에서 개봉!</span>` : '<span style="color:#e57373">아쉽게 소멸…</span>';
-  const again = S.chips >= cost;
-  document.getElementById('gbBtns').innerHTML = `<button class="chipBtn" id="gbBack">확인</button>${again ? `<button class="chipBtn sub" id="gbAgain">한 번 더 (🪙 ${cost})</button>` : ''}`;
-  document.getElementById('gbBack').onclick = () => casMenu();
-  const ag = document.getElementById('gbAgain'); if (ag) ag.onclick = () => doGachaBet(cost, p, kind, label);
+  const luckMsg = gamblerLuck() > 1 ? '<div style="text-align:center;color:#ff6b9d;font-weight:bold;font-size:12px;margin-bottom:6px">🎲 갬블러의 가호 — 행운 +10%</div>' : '';
+  // 10-01 유저: 확률이 걸린 구매는 상자 연출을 다시 — "긴장감 있게" (09-30에 뺐던 것 복원. 시각 = setTimeout · 지급 = casTimeout 분리)
+  CB.innerHTML = luckMsg + `<div id="gbHost"></div><div class="chipResult" id="gbRes">상자가 꿈틀거린다…</div><div id="gbBtns"></div>`;
+  const st = gachaBoxAnim(document.getElementById('gbHost'), {
+    win, revealIcon: '👑', revealText: label + ' 획득!', color: '#ffd166',
+    onReveal: () => {
+      if (win) { spawnItemUnit(kind); logMsg(`👑 <b>${label}</b> 획득! 제물대로 옮기면 개봉합니다.`); sfx('jackpot'); }
+      else { logMsg(`👑💨 ${label} 상자가 비어 있었다… (칩 ${cost}개)`); sfx('leak'); }
+      updateHUD();
+      const res = document.getElementById('gbRes'); if (!res || !st.isConnected || CM.style.display !== 'flex') return; // 창을 닫았거나 다시 연 다른 상자 화면 — 보상은 지급 완료, 화면은 안 건드린다
+      res.innerHTML = win ? `<span style="color:#43a047">성공! ${label} 획득 — 제물대에서 개봉!</span>` : '<span style="color:#e57373">텅 빈 상자…</span>';
+      const again = S.chips >= cost;
+      document.getElementById('gbBtns').innerHTML = `<button class="chipBtn" id="gbBack">확인</button>${again ? `<button class="chipBtn sub" id="gbAgain">한 번 더 (🪙 ${cost})</button>` : ''}`;
+      document.getElementById('gbBack').onclick = () => casMenu();
+      const ag = document.getElementById('gbAgain'); if (ag) ag.onclick = () => doGachaBet(cost, p, kind, label);
+      if (IS_MOBILE) document.getElementById('gbBtns').scrollIntoView({ block: 'nearest' }); // 모바일 760×350: 버튼이 창 아래로 잘렸다
+    },
+  });
 }
 document.getElementById('stCasino').onclick = () => { initAudio(); openCasino(); };
 // 📊 딜 순위 위젯 — 클릭마다 상위5 → 전체(큰 화면·딜 바) → 닫힘(▼) 순환 (08-15 유저)
@@ -10503,6 +11140,22 @@ document.getElementById('bSpeed').onclick = () => {
 document.getElementById('btnRestart').onclick = () => {
   if (confirm('처음부터 다시 시작할까요? 현재 진행 상황은 사라집니다.')) reset();
 };
+// 🚪 나가기 (10-01 유저): 판을 버리고 타이틀로. 지금은 저장·기록 없음 — 단계별 저장이 붙으면 여기서 저장한다.
+//    타이틀 뒤에는 부팅 때처럼 더미 판(reset)이 멈춘 채 깔린다 (startOverlay가 보이면 syncGamePause가 정지)
+function exitToTitle(ask) {
+  if (ask && !confirm('타이틀로 나갈까요? 지금 판은 저장되지 않습니다.')) return;
+  document.body.classList.add('at-title'); // reset()보다 먼저 — 타이틀 뒤 더미 판이 첫 판 안내(T1)를 소진하지 않게 (tutOn이 at-title을 본다)
+  dailySeed = null;
+  reset();
+  document.getElementById('bSandbox').style.display = 'none';
+  document.getElementById('page').inert = true;
+  document.getElementById('mobTabs').inert = true;
+  document.getElementById('startOverlay').style.display = '';
+  showTitleScreen('title', 'btnSolo');
+  dailyBestLabel(); diffBestLabel();
+  syncGamePause();
+}
+document.getElementById('btnExit').onclick = () => exitToTitle(true);
 function lockLandscape() {
   const el = document.documentElement;
   const rf = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -10560,6 +11213,8 @@ function renderPoker(spin) {
   } else {
     banner.textContent = `스테이지 ${S.round} 준비 — 카드 클릭으로 교환 (각 1회)`;
   }
+  const tutLine = tutPokerLine(ranks); // 🧭 첫 판 안내: 배너 첫 줄을 한 줄 안내로 (보스·이벤트 줄은 그대로 뒤에 붙는다)
+  if (tutLine) banner.innerHTML = tutLine;
   if (S.round % 10 === 0 || (S.round >= SUN_ROUND && !S.hellCleared)) banner.innerHTML += `<br><span class="poker-boss-warning">${S.round >= SUN_ROUND && !S.hellCleared ? '🌞 태양 강림' : '👹 보스 라운드'} — 시간 안에 못 잡으면 끝</span>`; // 09-08: 즉사 룰이 보스 클릭 팝업에만 있었다 (수치 없음, 미니멀 원칙 내)
   if (S.event) banner.innerHTML += `<br><span class="poker-event-notice">✨ 다음 전투 이벤트: ${S.event.name} — ${S.event.desc}</span>`;
   btn.textContent = double ? '유닛 2기 동시 소환!' : '유닛 소환!';
@@ -10574,7 +11229,10 @@ function renderPoker(spin) {
     label.innerHTML = (double ? `${h + 1}번 패 — ` : '족보: ')
       + (bs ? `<b>B 빽스트레이트</b> (${WEAPONS[4].name}, 공격력 ×${BACK_STRAIGHT_MUL.toFixed(1)})`
             : `<b>${rankLabel(kr)} ${HAND_NAMES[ranks[h]]}</b> (${WEAPONS[ranks[h]].name}, 공격력 ×${keyMul(kr).toFixed(1)})`)
-      + (match ? ' <span class="jackpot">✨ 일치! 에이스 확정! ✨</span>' : '');
+      + (match ? ' <span class="jackpot">✨ 일치! 에이스 확정! ✨</span>' : '')
+      + `<span class="rankGauge" title="족보 순위 — 눌러서 족보 도감">${HAND_NAMES.map((_, k) => `<i${k === ranks[h] ? ' class="on"' : ''}></i>`).join('')}</span>`; // 📱 폰엔 족보 순위표가 없다 — 칸 위치로만 (숫자 없음)
+    const gauge = label.querySelector('.rankGauge');
+    gauge.onclick = e => { e.stopPropagation(); toggleShop('book'); };
     const cardsRow = document.createElement('div');
     cardsRow.className = 'handCards';
     const madeIdx = madeCardIdx(hand.cards, ranks[h]);
@@ -10585,7 +11243,11 @@ function renderPoker(spin) {
       const rname = {11:'J',12:'Q',13:'K',14:'A'}[c.r] || c.r;
       el.innerHTML = `<div class="corner">${rname}<br>${c.s}</div><div class="rk">${rname}</div><div class="st">${c.s}</div><small>${hand.swapped[i] ? '교환 완료' : '클릭 = 교환'}</small>`
         + (hand.swapped[i] && S.items.reroll > 0 ? `<div class="reswap" title="재변경권으로 이 카드만 다시 교환">🎟️</div>` : '');
-      el.onclick = () => swapCard(h, i);
+      el.onclick = () => {
+        if (hand.swapped[i]) { el.classList.remove('nope'); void el.offsetWidth; el.classList.add('nope'); return; } // 이미 바꾼 카드: 흔들림으로 '한 번뿐'
+        swapCard(h, i);
+      };
+      if (S.tutStep === 1 && !hand.swapped[i] && !madeIdx.includes(i)) el.classList.add('tutWiggle'); // 🧭 T1: 금테 없는 카드가 살랑
       const rb = el.querySelector('.reswap');
       if (rb) rb.onclick = (e) => { e.stopPropagation(); ticketReswap(h, i); };
       if (spin && spin.h === h && spin.i === i) { el.classList.add('spin'); el.addEventListener('animationend', () => el.classList.remove('spin'), { once: true }); } // 애니 끝나면 spin 제거 — 안 그러면 뒷면(::before)이 다음 리렌더까지 안 보임
@@ -10606,6 +11268,90 @@ function renderPoker(spin) {
 }
 document.getElementById('summonBtn').onclick = confirmHand;
 
+// ==================== 🧭 첫 판 안내 (10-01 유저 — 과금·튜토리얼 제안서 5장 + 광석 캐기·5마리 포털 강화·첫 칩 결정) ====================
+// 원칙: 평생 1회 · 게임을 멈추는 창 0개 · 모를 때만. 기록이 있는 기존 유저는 첫 부팅 때 자동으로 건너뛴다 (업데이트 날 모두에게 뜨지 않게).
+// 샌드박스·맵 미리보기·오늘의 시드에선 끈다. 끄기 = 안내 줄 끝 '안내 끄기' · 다시 = 게임 안내 창 '처음 안내 다시 보기'
+const TUT_KEY = 'dpd_tut';
+const tut = (() => {
+  let t = null; try { t = JSON.parse(localStorage.getItem(TUT_KEY) || 'null'); } catch (e) {}
+  if (t && t.seen) return t;
+  let veteran = false;
+  try { veteran = Object.keys(localStorage).some(k => k.startsWith('dpd_best') || ['dpd_castle_seen', 'dpd_daily', 'dpd_mondex', 'dpd_achv', 'dpd_hidden', 'dpd_hint'].includes(k)); } catch (e) {}
+  t = { seen: {}, off: veteran };
+  try { localStorage.setItem(TUT_KEY, JSON.stringify(t)); } catch (e) {}
+  return t;
+})();
+function tutSave() { try { localStorage.setItem(TUT_KEY, JSON.stringify(tut)); } catch (e) {} }
+// 타이틀 뒤 부팅 더미 판·맵 미리보기(at-title 중 reset)와 샌드박스(reset이 S.sandbox=true보다 먼저 돈다 — DIFF_NAME은 그 전에 정해짐)는 끈다
+function tutOn() { return !tut.off && S && !S.sandbox && !S.mapTest && dailySeed == null && DIFF_NAME !== '샌드박스' && !document.body.classList.contains('at-title'); }
+function tutNew(id) { return tutOn() && !tut.seen[id]; }
+function tutMark(id) { if (!tut.seen[id]) { tut.seen[id] = 1; tutSave(); } }
+function tutOff() {
+  tut.off = true; tutSave(); tutTipHide();
+  S.tutStep = 0; S.tutHold = false; document.getElementById('summonBtn').classList.remove('tutPulse');
+  if (S.phase === 'poker') renderPoker();
+}
+const TUT_OFF_LINK = ' <button type="button" class="tutOffLink" onclick="tutOff()">안내 끄기</button>';
+// 포커 배너 첫 줄 (renderPoker가 부른다). T1 = 첫 포커, T2 = 첫 교환 뒤, T4 = 첫 소환이 하이카드였을 때만 R2에서
+function tutPokerLine(ranks) {
+  if (S.poker.hands.length !== 1) return '';
+  if (S.round === 1 && !S.tutStep && tutNew('t1')) { // 보여 주는 순간 기록 — 나가기·다시하기로 정지를 다시 걸 수 없다 (평생 1회)
+    tutMark('t1'); S.tutStep = 1;
+    if (!tut.replay) { S.tutHold = true; S.tutHoldT = S.time + 25; } // '처음 안내 다시 보기'면 문구만, 시계는 흐른다
+  }
+  if (S.round === 1 && S.tutStep === 1 && tutOn()) return (madeCardIdx(S.poker.hands[0].cards, ranks[0]).length ? '같은 숫자끼리 모으면 강해져요. 금테 없는 카드를 눌러 바꿔보세요.'
+      : '같은 숫자 두 장이 생기면 금테가 둘러져요. 카드를 눌러 바꿔보세요.') + TUT_OFF_LINK;
+  if (S.round === 1 && S.tutStep === 2 && tutOn()) { document.getElementById('summonBtn').classList.add('tutPulse'); return '마음에 들면 소환!' + TUT_OFF_LINK; }
+  if (S.round === 2 && S.r1High && tutNew('t4')) return '하이카드는 가장 약한 패예요. 같은 숫자를 노려보세요.' + TUT_OFF_LINK;
+  return '';
+}
+// 전투 중 말풍선 — 한 번에 하나, 몇 초 뒤(게임 시간) 또는 누르면 사라진다. 위치 = 캔버스 논리 좌표(%)라 모바일·데스크톱 공통
+let tutTipId = null, tutTipT = 0;
+function tutTip(id, text, x, y, place, sec) {
+  tutMark(id);
+  const el = document.getElementById('tutTip');
+  el.innerHTML = `<span>${text}</span>` + TUT_OFF_LINK;
+  el.dataset.place = place;
+  el.style.left = (x / 940 * 100) + '%'; el.style.top = (y / 500 * 100) + '%';
+  el.classList.add('on');
+  const cw = document.getElementById('cvWrap').getBoundingClientRect(), r = el.getBoundingClientRect(); // 가장자리에서 잘리지 않게 가로만 밀어 넣기
+  if (r.width && r.left < cw.left + 4) el.style.left = `calc(${el.style.left} + ${Math.ceil(cw.left + 4 - r.left)}px)`;
+  else if (r.width && r.right > cw.right - 4) el.style.left = `calc(${el.style.left} - ${Math.ceil(r.right - cw.right + 4)}px)`;
+  if (place === 'above' && r.height && r.top < cw.top + 4) { el.dataset.place = 'below'; el.style.top = ((y + 44) / 500 * 100) + '%'; } // 위로 잘리면 대상 아래로
+  tutTipId = id; tutTipT = S.time + sec;
+}
+function tutTipHide() { const el = document.getElementById('tutTip'); if (el) el.classList.remove('on'); tutTipId = null; }
+document.getElementById('tutTip').addEventListener('pointerdown', e => { if (!e.target.closest('.tutOffLink')) { e.stopPropagation(); tutTipHide(); } });
+function tutTick() {
+  if (tutTipId && (S.phase !== 'wave' || S.paused || S.time > tutTipT || (tutTipId === 'fchip' && CM.style.display === 'flex'))) tutTipHide(); // 전투가 끝나거나 창이 열리면 바로 내린다
+  if (tutTipId || !tutOn() || S.phase !== 'wave' || S.paused) return;
+  if (S.round === 1 && tutNew('t3')) {
+    if (IS_MOBILE && document.getElementById('mktToast').classList.contains('on')) return; // 모바일: 전투 시작 티커가 내려간 뒤에 (겹침)
+    return tutTip('t3', '👹 시간 안에 모두 잡으면 클리어', 470, 76, 'below', 6);
+  }
+  if (S.round === 1 && S.timer < WAVE_TIME - 10 && S.chips >= 1 && !S.units.some(u => u.miner) && tutNew('fchip')) { // 첫 결정: 시작 칩으로 광부냐, 모았다 뽑기냐 — 이미 정했으면 안 띄운다
+    const st = document.getElementById('stCasino').getBoundingClientRect(), cw = document.getElementById('cvWrap').getBoundingClientRect();
+    return tutTip('fchip', '🪙 칩으로 광부를 고용할까요, 모아 두었다 뽑기를 할까요?', (st.right - cw.left) / cw.width * 940, (st.top + 6 - cw.top) / cw.height * 500, 'right', 9); // 버튼 윗부분 옆 — 밑의 딜 순위를 안 가리게
+  }
+  const sel = S.units.find(u => u.selected && !u.miner && !u.item);
+  if (sel && tutNew('fmove')) return tutTip('fmove', IS_MOBILE ? '끌어서 옮기기' : '우클릭으로 이동', sel.x, sel.y - 24, 'above', 5);
+  if (S.round >= 2 && tutNew('fore')) return tutTip('fore', '⛏️ 유닛을 이 방에 넣으면 광석을 캐요. 다 캐면 보상!', ROOM.cx, ROOM.cy + ROOM.h / 2 + 4, 'below', 8);
+  if (S.units.some(u => u.fusable) && tutNew('fportal')) return tutTip('fportal', '🌀 강화 포털 — 같은 유닛 5마리를 여기 모으면 강해져요', PORTAL.x + PORTAL.r + 4, PORTAL.y, 'right', 8);
+  if (S.units.some(u => u.item) && tutNew('faltar')) return tutTip('faltar', IS_MOBILE ? '🎁 끌어서 제물대로' : '🎁 제물대로 옮기면 열려요', ALTAR.x, ALTAR.y - ALTAR.h / 2 - 4, 'above', 7);
+}
+// 게임오버 한 줄 — 처음 3번만, 가장 그럴듯한 이유 하나
+function tutGameOverLine() {
+  if (tut.off || S.sandbox || dailySeed != null) return '';
+  let n = 0; try { n = +localStorage.getItem('dpd_go_n') || 0; } catch (e) {}
+  if (n >= 3) return '';
+  const last = S.lifeLog[S.lifeLog.length - 1];
+  const t = last && last.why === '👹 보스 실패' ? '👹 보스는 기다려주지 않아요.' : !S.castleOpened ? '🏰 성을 눌러본 적 있나요?' : S.bestHand <= 1 ? '🃏 같은 숫자를 모을수록 강해져요.' : '';
+  if (!t) return ''; // 보여 줄 말이 없으면 3회 중 하나를 쓰지 않는다
+  try { localStorage.setItem('dpd_go_n', n + 1); } catch (e) {}
+  return `<div class="tutGo">${t}</div>`;
+}
+document.getElementById('btnTutAgain').onclick = e => { tut.seen = {}; tut.off = false; tut.replay = true; tutSave(); e.currentTarget.textContent = '다음 판부터 처음 안내를 다시 보여줄게요'; };
+
 // ==================== HUD ====================
 function fmtTime(s) {
   s = Math.max(0, Math.ceil(s));
@@ -10625,6 +11371,8 @@ function hudSet(id, txt) { const el = document.getElementById(id); if (el && el.
 function hudSetHtml(id, html) { const el = document.getElementById(id); if (el && el.__hud !== html) { el.__hud = html; el.innerHTML = html; } }
 function updateHUD() {
   syncPokerPanel(); // 포커 페이즈에만 패널이 올라와 있게 (모든 전환 경로를 한 곳에서 보장)
+  updateGoPoker();  // 🃏 포커장 이동 버튼도 같은 자리에서 (판 내림·탭 전환·전투 시작 모든 경로)
+  tutTick();        // 🧭 첫 판 안내 말풍선
   refreshInfoOnBuffChange();
   placeInfoPanel(); // 유닛이 카드 쪽으로 이동하면 반대편으로 비켜준다
   if (S.selMon) { // 🎯 선택한 몬스터 체력 실시간 갱신 (죽거나 사라지면 팝업 닫기)
@@ -12147,7 +12895,7 @@ function frame(now) {
     if (S.hitstop > 0) S.hitstop -= dt; // 보스 킬 히트스톱: 잠깐 세상이 멈춘다
     else {
       // 배속은 큰 스텝 1번이 아니라 작은 스텝 여러 번(서브스텝)으로 → 모션 부드럽고 물리 안정
-      try { for (let i = 0; i < S.speed; i++) update(dt); }
+      try { for (let i = 0; i < S.speed && !S.paused; i++) update(dt); } // 서브스텝 중 창이 열리면(부활·왕관) 남은 스텝을 멈춘다 — 10-01 크로스체크 P1: 창이 뜬 채 전투가 끝나던 경합
       catch (e) { reportLoopError('update', e); }
     }
   }
@@ -12529,7 +13277,6 @@ if (WORLD_MOTION_V2) (() => {
     back:'<path d="m14 5-7 7 7 7"/>',
     pick:'<path d="m6 3 4 2 9 9 2 5-5-2-9-9-4-2 3-3Z"/><path d="m12 10-8 10"/>',
     chart:'<path d="M4 4v16h16M7 14l4-4 4 2 5-7M16 5h4v4"/>',
-    slot:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M7 9h3l-2 6m6-6h3l-2 6"/>',
     crown:'<path d="m3 7 5 4 4-7 4 7 5-4-2 12H5L3 7Z"/><path d="M6 16h12"/>',
     sword:'<path d="m5 20 3-3m-3-3 5 5M8 16 19 5V3h-2L6 14"/>',
     shield:'<path d="m12 3 8 3v6c0 5-8 9-8 9S4 17 4 12V6l8-3Z"/><path d="m8 12 3 3 5-6"/>',
@@ -12537,23 +13284,10 @@ if (WORLD_MOTION_V2) (() => {
     heart:'<path d="M20 5c-3-3-7-1-8 2-1-3-5-5-8-2-5 5 8 15 8 15S25 10 20 5Z"/>',
     star:'<path d="m12 3 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1 3-6Z"/>',
     speed:'<path d="M4 18a9 9 0 1 1 16 0M12 13l5-5M4 18h16"/><circle cx="12" cy="13" r="1"/>',
-    box:'<path d="m3 7 9-4 9 4v11l-9 4-9-4V7Zm0 0 9 5 9-5M12 12v10M7 5l10 5"/>'
+    box:'<path d="m3 7 9-4 9 4v11l-9 4-9-4V7Zm0 0 9 5 9-5M12 12v10M7 5l10 5"/>',
+    capsule:'<path d="M5 12a7 7 0 0 1 14 0Z"/><path d="M5 12a7 7 0 0 0 14 0"/><path d="M8.5 8.5h2"/>'
   };
   const icon = name => `<svg class="v2-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.star}</svg>`;
-  // Slot symbols are code-native vectors so every platform sees the same art.
-  // Cell height stays 72 px: slotPull's reel travel math relies on that height.
-  const slotArt = {
-    dia: '<path d="m12 10 24 0 8 12-20 24L4 22 12 10Z" fill="#5ac4f5" stroke="#228aba" stroke-width="2.2" stroke-linejoin="round"/><path d="m12 10 5 12 7-12 7 12 5-12M4 22h40M17 22l7 24 7-24" fill="none" stroke="#daf6ff" stroke-width="2" stroke-linejoin="round"/><path d="m9 18 4-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>',
-    bell: '<path d="M12 28v-8c0-7 5-12 12-12s12 5 12 12v8l5 7H7l5-7Z" fill="#ffd454" stroke="#c28f24" stroke-width="2.2" stroke-linejoin="round"/><path d="M18 39c1 6 11 6 12 0" fill="#efb33b" stroke="#c28f24" stroke-width="2.2" stroke-linecap="round"/><path d="M21 7V5h6v2" fill="#ffe8a2" stroke="#c28f24" stroke-width="2.2" stroke-linecap="round"/><path d="M17 23v-4c0-3 2-5 4-6" fill="none" stroke="#fff2b9" stroke-width="3" stroke-linecap="round"/><path d="M12 31h24" stroke="#e9af35" stroke-width="2"/>',
-    melon: '<path d="M5 17h38c0 18-10 28-19 28S5 35 5 17Z" fill="#68c78f" stroke="#2b9762" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 18h30c-1 14-8 22-15 22S10 32 9 18Z" fill="#f6edb5"/><path d="M12 18h24c-1 12-6 18-12 18S13 30 12 18Z" fill="#f4776d"/><path d="m18 23 1 3m10-3-1 3m-4 3v2" stroke="#6e4347" stroke-width="2.5" stroke-linecap="round"/><path d="M8 16h32" stroke="#2b9762" stroke-width="2.2" stroke-linecap="round"/>',
-    cherry: '<path d="M14 29c1-12 7-18 17-22-3 9-2 14 5 22" fill="none" stroke="#388b59" stroke-width="2.7" stroke-linecap="round"/><path d="M29 10c-8-9-14-5-15-2 4 5 9 6 15 2Z" fill="#82c56c" stroke="#388b59" stroke-width="1.8" stroke-linejoin="round"/><circle cx="14" cy="33" r="10" fill="#ef756b" stroke="#c85755" stroke-width="2.2"/><circle cx="34" cy="33" r="10" fill="#e96562" stroke="#bd5052" stroke-width="2.2"/><path d="M9 30c0-2 2-4 4-4m16 4c0-2 2-4 4-4" fill="none" stroke="#ffd5bf" stroke-width="3" stroke-linecap="round"/>'
-  };
-  slotCellHTML = function (s) {
-    if (s === 'sev') return '<div class="slotCell sev">7</div>';
-    if (s === 'bar') return '<div class="slotCell bar">BAR</div>';
-    const label = {dia:'다이아몬드',bell:'종',melon:'수박',cherry:'체리'}[s];
-    return `<div class="slotCell"><svg class="v2-slot-symbol" viewBox="0 0 48 48" role="img" aria-label="${label || ''}">${slotArt[s] || ''}</svg></div>`;
-  };
   const badge = (name, tone='blue') => `<span class="v2-icon-tile v2-${tone}">${icon(name)}</span>`;
   const wallet = () => `<div class="v2-wallet" aria-label="보유 자원"><span>${icon('coin')}<span><small>보유 골드</small><b data-v2-gold>${gold(S.gold)}<em>G</em></b></span></span><span>${icon('chip')}<span><small>보유 칩</small><b data-v2-chips>${chipTxt(S.chips)}<em>개</em></b></span></span></div>`;
   const shortage = (cost, kind='gold') => kind === 'gold' ? `${gold(Math.max(0, cost - S.gold))}G 부족` : `칩 ${chipTxt(Math.max(0, cost - S.chips))}개 부족`;
@@ -12589,7 +13323,7 @@ if (WORLD_MOTION_V2) (() => {
       return `<article class="rpgItem v2-upgrade" style="--race:${r.color}">
         <div class="v2-upgrade-top"><span class="v2-suit" aria-hidden="true">${r.suit}</span><div class="v2-upgrade-name"><h3>${esc(r.name)} 공격력</h3><span>종족 전체 적용${lv > 12 ? ' · 가속 성장' : ''}</span></div><span class="v2-level">Lv.${lv}<span>→</span><b>${lv + 1}</b></span></div>
         <div class="v2-stat-grid"><div><span>단일 공격</span><b>+${(current*2.5).toFixed(1)}<i>→</i><strong>+${(next*2.5).toFixed(1)}</strong></b></div><div><span>스플래시 / 초·마리</span><b>+${(current*.55).toFixed(1)}<i>→</i><strong>+${(next*.55).toFixed(1)}</strong></b></div><div><span>전체 공격 / 초·마리</span><b>+${(current*.15).toFixed(1)}<i>→</i><strong>+${(next*.15).toFixed(1)}</strong></b></div></div>
-        <div class="v2-upgrade-actions"><span class="v2-cost-label">강화 비용<b>${gold(cost)}<small> G</small></b></span><button class="rpgBuy v2-upgrade-buy" data-upg="${i}" ${can ? '' : 'disabled'}><span>+1 강화</span><small>${can ? '확정 성장' : shortage(cost)}</small></button><button class="rpgBuy v2-gamble" data-gupg="${i}" ${can ? '' : 'disabled'} title="같은 비용으로 +3레벨 도전. 기본 ${basic}%, 중앙 명중 ${perfect}%. 실패 시 골드 소모."><span>+3 도전</span><small>${can ? '타이밍 도박' : shortage(cost)}</small></button></div>
+        <div class="v2-upgrade-actions"><span class="v2-cost-label">강화 비용<b>${gold(cost)}<small> G</small></b></span><button class="rpgBuy v2-upgrade-buy" data-upg="${i}" ${can ? '' : 'disabled'}><span>+1 강화</span><small>${can ? '확정 성장' : shortage(cost)}</small></button><button class="rpgBuy v2-gamble" data-gupg="${i}" ${can ? '' : 'disabled'} title="같은 비용으로 +3레벨 도전. 기본 ${basic}%, 중앙 명중 ${perfect}%. 실패 시 골드 소모."><span>+3 도전</span><small>${can ? '타이밍 도전' : shortage(cost)}</small></button></div>
       </article>`;
     }).join('') + `</div><div class="v2-note">${icon('shield')}<span><b>확정 강화 또는 +3레벨 도전</b>도전 성공률 ${basic}% · 타이밍 중앙 명중 시 ${perfect}%${boosted ? ' (갬블러 가호 포함)' : ''}. 실패해도 골드는 소모돼요.</span></div>`;
   };
@@ -12669,7 +13403,7 @@ if (WORLD_MOTION_V2) (() => {
     CB.innerHTML = wallet()+`<div class="v2-hub-grid">
       <button class="v2-hub-card v2-hub-invest" data-go="invest">${badge('chart','blue')}<span class="v2-hub-main"><small>내일을 준비해요</small><b>골드 투자</b><span>${investTotal()?`예치 중 ${gold(investTotal())}G`:'기간을 정하고 골드를 불려요'}</span></span>${icon('arrow')}<span class="v2-hub-foot">${S.mktOpen?'지금 개장 중':'투자 현황 보기'}<b>만기 전 인출 불가</b></span></button>
       <button class="v2-hub-card" data-go="miner" ${S.chips>=1?'':'disabled'}>${badge('pick','mint')}<span class="v2-hub-main"><small>꾸준한 골드 수입</small><b>광부 고용</b><span>현재 ${miners}명</span></span><span class="v2-hub-foot">칩 1개<b>${S.chips>=1?'고용하기':shortage(1,'chip')}</b></span></button>
-      <button class="v2-hub-card" data-go="slot">${badge('slot','coral')}<span class="v2-hub-main"><small>777의 행운</small><b>슬롯머신</b><span>잭팟 1,000만 G</span></span><span class="v2-hub-foot">칩 1개<b>입장하기 ${icon('arrow')}</b></span></button>
+      <button class="v2-hub-card" data-go="slot">${badge('capsule','coral')}<span class="v2-hub-main"><small>행운의 캡슐</small><b>캡슐 뽑기</b><span>최고 상품 1,000만 G</span></span><span class="v2-hub-foot">칩 1개<b>입장하기 ${icon('arrow')}</b></span></button>
     </div>`+section('뽑기권','획득한 뽑기권을 제물대로 옮기면 개봉해요.')+
     `<div class="v2-ticket-grid">${gacha.map(([key,label,cost,p,tone])=>{const can=S.chips>=cost, rate=key==='super'?100:Math.round(p*gamblerLuck()*100);return `<button class="v2-ticket v2-${tone}" data-gacha="${key}" ${can?'':'disabled'}><span class="v2-ticket-top">${icon('crown')}<span class="v2-probability">${key==='super'?'확정 획득':`성공 ${rate}%`}</span></span><b>${label}</b><span class="v2-ticket-caption">뽑기권</span><span class="v2-ticket-cost">${icon('chip')} ${cost}개</span>${can?'':`<small class="v2-shortage">${shortage(cost,'chip')}</small>`}</button>`;}).join('')}</div><p class="v2-fineprint">${gamblerLuck()>1?'갬블러 가호가 성공률에 반영돼 있어요. ':''}확률 뽑기 실패 시 칩이 소모돼요.</p>`+
     section('비상 물자','구매 후 맵에 배치돼요. 제물대로 옮겨 사용하세요.')+
@@ -12704,14 +13438,13 @@ if (WORLD_MOTION_V2) (() => {
   const baseCasSlot=casSlot;
   casSlot=function(){
     baseCasSlot();
-    const box=CB.querySelector('.slotBox'), result=$('slRes'), button=$('slotBtn');
-    financeView('slot','777 슬롯머신');
-    const labels={777:'7 · 7 · 7',dia3:'다이아몬드 ×3',bell3:'종 ×3',melon3:'수박 ×3',cher3:'체리 ×3',bar3:'BAR ×3',sev2:'7 ×2',cher2:'체리 ×2'};
-    CB.innerHTML=backButton()+wallet()+`<div class="v2-slot-machine"><div class="v2-slot-mast"><span>LUCKY SEVEN</span><b>777</b><small>잭팟 10,000,000 G</small></div><div id="v2ReelHost"></div><div id="v2LeverHost"></div><div id="v2ResultHost"></div></div>`+
-      (gamblerLuck()>1||sevenLuck()>1?`<p class="v2-luck">${gamblerLuck()>1?'갬블러 가호 · 당첨 확률 ×1.1 ':''}${sevenLuck()>1?'슬롯머신 영웅 · 777 확률 ×2.5':''}</p>`:'')+
-      `<details class="v2-payout" open><summary>당첨 보상</summary><div>${SLOT_TABLE.map(([key,p,pay])=>`<span${key==='777'?' class="v2-jackpot"':''}><b>${labels[key]}</b><strong>${gold(pay)} G</strong></span>`).join('')}</div></details>`;
+    const box=CB.querySelector('.capMachine'), result=$('slRes'), button=$('slotBtn');
+    financeView('slot','캡슐 뽑기');
+    CB.innerHTML=backButton()+wallet()+`<div class="v2-slot-machine"><div class="v2-slot-mast"><span>LUCKY CAPSULE</span><b>캡슐 뽑기</b><small>최고 상품 10,000,000 G</small></div><div id="v2ReelHost"></div><div id="v2LeverHost"></div><div id="v2ResultHost"></div></div>`+
+      (gamblerLuck()>1||sevenLuck()>1?`<p class="v2-luck">${gamblerLuck()>1?'갬블러의 가호가 함께한다 ':''}${sevenLuck()>1?'슬롯머신 영웅이 무지개 캡슐을 불러온다':''}</p>`:'')+
+      `<details class="v2-payout" open><summary>상품 목록</summary><div>${CAP_ORDER.map(k=>`<span${k==='777'?' class="v2-jackpot"':''}><b><i class="capDot" style="--c:${CAPSULE[k][1]}"></i>${CAPSULE[k][0]} 캡슐</b><strong>${gold(SLOT_TABLE.find(r=>r[0]===k)[2])} G</strong></span>`).join('')}</div></details>`;
     $('v2ReelHost').append(box); $('v2LeverHost').append(button); $('v2ResultHost').append(result);
-    button.classList.add('v2-lever'); button.innerHTML=`${icon('slot')}<span>레버 당기기 <small>칩 1개</small></span>`;
+    button.classList.add('v2-lever'); button.innerHTML=`${icon('capsule')}<span>손잡이 돌리기 <small>칩 1개</small></span>`;
     result.setAttribute('role','status'); result.setAttribute('aria-live','polite');
     wireBack();
   };
@@ -12731,7 +13464,7 @@ if (WORLD_MOTION_V2) (() => {
   const baseUpdateHUD=updateHUD;
   updateHUD=function(...args){
     const result=baseUpdateHUD.apply(this,args);
-    if (CM.style.display==='flex') { const lever=$('slotBtn'); if(lever&&lever.classList.contains('v2-lever')&&!lever.querySelector('svg')) lever.innerHTML=`${icon('slot')}<span>${esc(lever.textContent)}</span>`; } // 원본 slotPull 지급 콜백이 updateInfoPanel 뒤에 textContent로 덮어 SVG가 사라짐 → 20Hz HUD에서 재장식 (크로스체크 P3)
+    if (CM.style.display==='flex') { const lever=$('slotBtn'); if(lever&&lever.classList.contains('v2-lever')&&!lever.querySelector('svg')) lever.innerHTML=`${icon('capsule')}<span>${esc(lever.textContent)}</span>`; } // 원본 slotPull 지급 콜백이 updateInfoPanel 뒤에 textContent로 덮어 SVG가 사라짐 → 20Hz HUD에서 재장식 (크로스체크 P3)
     if (openShop) {
       const row=$('shopGoldRow');
       if (row) {
@@ -12740,7 +13473,7 @@ if (WORLD_MOTION_V2) (() => {
       }
       if (!$('gmgTrack')) $('shopBody').querySelectorAll('.v2-upgrade-buy[data-upg],.v2-gamble[data-gupg]').forEach(b=>{
         const i=+(b.dataset.upg??b.dataset.gupg), cost=S.upgCost[i], can=S.gold>=cost, sm=b.querySelector('small');
-        const txt=can?(b.dataset.upg!=null?'확정 성장':'타이밍 도박'):shortage(cost); if(sm&&sm.textContent!==txt) sm.textContent=txt;
+        const txt=can?(b.dataset.upg!=null?'확정 성장':'타이밍 도전'):shortage(cost); if(sm&&sm.textContent!==txt) sm.textContent=txt;
       });
     }
     return result;
@@ -12806,7 +13539,7 @@ if (WORLD_MOTION_V2) (() => {
   }
   function training(hero,index) {
     const lv=hero.heroUpLv||0, done=lv>=HERO_UP_MAX, cost=heroUpCost(hero), can=S.gold>=cost;
-    return `<div class="roster-hero-group"><article class="rpgItem roster-train ${done?'is-complete':''}"><div class="roster-train-head">${tile(heroId(hero),'is-hero')}<div class="rpgInfo"><span class="roster-kicker">함께 싸우는 히든 영웅</span><h3>${esc(hero.weapon)}</h3></div><span class="roster-owned">출전 중</span></div><div class="roster-training-meter"><span>단련 <b>Lv.${lv}</b> <small>/ ${HERO_UP_MAX}</small></span><span>${done?'단련 완료':'공격력 성장'}</span><i><b style="width:${Math.min(100,lv/HERO_UP_MAX*100)}%"></b></i></div><div class="roster-power"><span>총 공격력</span><b>×${(1+.15*lv).toFixed(2)}</b>${done?`<span class="roster-finished">${icon('check')}최대 성장</span>`:`${icon('arrow')}<strong>×${(1+.15*(lv+1)).toFixed(2)}</strong><small>다음 단련</small>`}</div>${done?'':`<div class="roster-train-actions"><span class="roster-price">단련 비용<b>${num(cost)}<small>G</small></b></span><button class="rpgBuy roster-buy" data-ht="${index}" ${can?'':'disabled'}><span>+1 단련</span><small>${can?'확정 성장':short(cost)}</small></button><button class="rpgBuy roster-gamble" data-htg="${index}" ${can?'':'disabled'} title="같은 비용으로 최대 3레벨. 실패 시 골드 소모."><span>+3 도전</span><small>${can?'타이밍 도박':short(cost)}</small></button></div>`}</article>${ascension(hero,index)}</div>`;
+    return `<div class="roster-hero-group"><article class="rpgItem roster-train ${done?'is-complete':''}"><div class="roster-train-head">${tile(heroId(hero),'is-hero')}<div class="rpgInfo"><span class="roster-kicker">함께 싸우는 히든 영웅</span><h3>${esc(hero.weapon)}</h3></div><span class="roster-owned">출전 중</span></div><div class="roster-training-meter"><span>단련 <b>Lv.${lv}</b> <small>/ ${HERO_UP_MAX}</small></span><span>${done?'단련 완료':'공격력 성장'}</span><i><b style="width:${Math.min(100,lv/HERO_UP_MAX*100)}%"></b></i></div><div class="roster-power"><span>총 공격력</span><b>×${(1+.15*lv).toFixed(2)}</b>${done?`<span class="roster-finished">${icon('check')}최대 성장</span>`:`${icon('arrow')}<strong>×${(1+.15*(lv+1)).toFixed(2)}</strong><small>다음 단련</small>`}</div>${done?'':`<div class="roster-train-actions"><span class="roster-price">단련 비용<b>${num(cost)}<small>G</small></b></span><button class="rpgBuy roster-buy" data-ht="${index}" ${can?'':'disabled'}><span>+1 단련</span><small>${can?'확정 성장':short(cost)}</small></button><button class="rpgBuy roster-gamble" data-htg="${index}" ${can?'':'disabled'} title="같은 비용으로 최대 3레벨. 실패 시 골드 소모."><span>+3 도전</span><small>${can?'타이밍 도전':short(cost)}</small></button></div>`}</article>${ascension(hero,index)}</div>`;
   }
   heroSectionHTML = function () {
     const heroes=shopHeroes(), seen=HIDDEN_DEX.filter(hd=>hiddenSeen(hd.id)).length;
@@ -12836,6 +13569,7 @@ if (WORLD_MOTION_V2) (() => {
   const entries = [
     ['duelConfirm', '.dcTitle', null],
     ['crownModal', '.dcTitle', null],
+    ['reviveModal', '.dcTitle', null],
     ['shopOverlay', '#shopTitle', '#shopClose'],
     ['overlay', 'h2', null],
     ['winOverlay', 'h2', null],
