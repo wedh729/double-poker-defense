@@ -2298,6 +2298,11 @@ body.mobile #goPoker b {font-size:11px;}
 /* 💬 토스트는 누르면 바로 사라진다 (보일 때만 입력을 받는다 — 투명한 토스트가 캔버스를 막지 않게) */
 #rewardToast {pointer-events:auto;cursor:pointer;} /* design-system.css가 none으로 덮어 기존 '누르면 닫기'가 죽어 있었다 */
 #duelToast.on, #mktToast.on {pointer-events:auto;cursor:pointer;}
+/* ⏳ 제한시간 막판 15초 (10-01 유저 #5 "끝나갈수록 긴장감이 없다"): 전투 시계가 붉게 달아오르고 가운데 남은 초. 박동 쿵(scale)은 JS tenseBeat가 심장 소리와 같은 박자로 — 여긴 정적 스타일만 */
+#clock.tense {border-color:#ffe1d6;box-shadow:0 0 0 2px #c62828,0 0 12px 3px #e53935aa,0 4px 10px #18355226;}
+#clock.tense #clockHub {display:none;}
+#clock.tense::after {content:attr(data-sec);position:absolute;left:50%;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:#fffdf5;box-shadow:0 0 0 1.5px #c62828;color:#c62828;font-size:16px;font-weight:900;line-height:28px;text-align:center;font-variant-numeric:tabular-nums;}
+body.mobile #clock.tense::after {width:22px;height:22px;margin:-11px 0 0 -11px;font-size:13px;line-height:22px;}
 /* 👑 뽑기 상자 연출: wd-completion의 #chipModal 애니메이션 일괄 차단이 상자 펄떡임·결과 글자(opacity 0→1)까지 막았다 — 이 무대만 되살린다 */
 @media (prefers-reduced-motion: no-preference) {
   #chipModal .gbx {animation:gbxHop .42s ease-in-out 3 !important;}
@@ -2375,8 +2380,22 @@ body.mobile .rankGauge {display:inline-flex;gap:2px;margin-left:6px;padding:3px 
   html body.mobile[data-tab="battle"] #toolbar .shopIcon {height:24px;}
 }
 /* 데스크톱 1280~1366: 누를 수 있게 된 보상 토스트가 열린 창의 ✕를 덮었다 → 창이 열려 있으면 오른쪽 아래로 */
-body:not(.mobile):has(#chipModal[style*="flex"], #shopOverlay[style*="flex"]) #rewardToast {top:auto;bottom:max(16px, env(safe-area-inset-bottom, 0px));}
-body.mobile:has(#chipModal[style*="flex"], #shopOverlay[style*="flex"]) #rewardToast {pointer-events:none;} /* 모바일 상단 띠는 창의 ✕와 겹친다 — 창이 열려 있으면 눌러도 밑으로 통과 */
+/* 🔋 10-01 배터리: 예전 :has(#chipModal[style*="flex"]…)는 페이지의 모든 인라인 style 쓰기(포커 타이머 막대·전투 시계 20Hz)마다 body 전체 스타일 재계산을 일으켰다 → updateHUD가 켜고 끄는 body.dpd-modal (창이 열려 있음) */
+html body:not(.mobile).dpd-modal #rewardToast {top:auto;bottom:max(16px, env(safe-area-inset-bottom, 0px));}
+html body.mobile.dpd-modal #rewardToast {pointer-events:none;} /* 모바일 상단 띠는 창의 ✕와 겹친다 — 창이 열려 있으면 눌러도 밑으로 통과 */
+/* 🔋 box-shadow 무한 애니메이션(자금운영 발광·탭 알림·개장 시계)은 매 프레임 스타일·페인트·래스터를 강제했다 → 큰 광은 고정 그림자 ::after에 두고 opacity만 애니메이션 (거의 동일 — 맥동 정점에서 광이 약간 더 촘촘) */
+html body .chipStation.ready, html body #stCasino.ready {animation:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.8),0 0 6px 1px rgba(255,193,7,.5);}
+html body .chipStation.ready::after {content:'';position:absolute;inset:-2px;border-radius:inherit;box-shadow:0 0 16px 4px rgba(255,193,7,.85);opacity:0;pointer-events:none;animation:dpdGlowO 1s ease-in-out infinite alternate;}
+@keyframes dpdGlowO {to {opacity:1;}}
+html body #mobTabs button {position:relative;}
+html body #mobTabs button.alert {animation:none;}
+html body #mobTabs button.alert::after {content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 4px rgba(255,209,102,.9);opacity:0;pointer-events:none;animation:dpdGlowO .7s ease-in-out infinite alternate;}
+html body b#tMkt.open {animation:none;position:relative;box-shadow:0 0 3px rgba(255,220,90,.4);}
+html body b#tMkt.open::after {content:'';position:absolute;inset:-1px;border-radius:inherit;box-shadow:0 0 11px 3px rgba(255,220,90,.85);opacity:0;pointer-events:none;animation:dpdGlowO .7s ease-in-out infinite alternate;}
+/* 창(블러 오버레이) 아래에서 맥동하면 컴포지터가 매 프레임 전체 화면 블러를 다시 계산한다 → 창이 열려 있는 동안만 정지 (!important: #tMkt 규칙의 animation 단축속성이 이긴다) */
+body.dpd-modal :is(.chipStation.ready, #mobTabs button.alert, #tMkt.open)::after {animation-play-state:paused !important;}
+@media (prefers-reduced-motion: reduce) { html body .chipStation.ready::after {animation:none;} } /* 원본과 같게: 움직임 줄이기면 자금운영 발광만 끈다 (탭 알림·개장 펄스는 원본도 유지) */
+html body.mobile #mobTabs {backdrop-filter:none;} /* 불투명 배경(#ebd8ad) 아래라 보이지 않는 블러 — 별도 합성 레이어·백드롭 패스만 만들었다 */
 /* 모바일 티커·결투 토스트: 글자 폭만큼만 (누르면 닫히는 띠가 캔버스를 필요 이상 막지 않게) */
 .mobile #mktToast, .mobile #duelToast {width:fit-content;max-width:76%;}
 /* 모바일 족보 게이지가 라벨을 한 줄 늘리지 않게 + 더블 포커 두 라벨 높이 맞춤 */
@@ -2400,6 +2419,95 @@ body.mobile #reviveModal {position:fixed;z-index:40;width:min(600px,calc(100vw -
 body.mobile #reviveModal .dcTitle {font-size:14px;margin-bottom:5px;}
 body.mobile #reviveModal .dcBody {font-size:11px;margin-bottom:7px;}
 body.mobile #reviveModal button {min-height:40px;font-size:12px;padding:8px 6px;}
+/* 🏰 성 강화 창 세로 압축 (10-01 유저: "강화창 글씨간격을 줄여서 세로폭을 줄이기 — 지금은 너무 넓음")
+   글자 크기·색은 그대로 두고 줄간격·여백·간격만 줄인다. 두 줄로 접힐 수 있는 글은 line-height ≥1.4 유지.
+   ① 유닛 강화 탭 = honey 블록: 같은 무게(1,3,1)의 선택자를 뒤에 두어 덮는다. #chipWin(자금 운영)은 건드리지 않게 #shopWin으로만 한정 */
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-modal-head {height:auto;padding:10px 22px;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-eyebrow {line-height:1.3;margin-bottom:1px;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] #shopGoldRow {padding:12px 22px 0;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-wallet>span {min-height:0;padding:7px 14px;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] #shopBody {padding:12px 22px 14px;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-tab {padding:7px 8px;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-intro {margin:9px 0;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-upgrade-list {gap:10px;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-upgrade {padding:12px 14px 10px;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-upgrade-name>span {margin-top:2px;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-level {margin-top:4px;padding-bottom:6px;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-stat-grid {gap:5px;margin:8px 0;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-cost-label {padding:6px 0 7px;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .rpgBuy {min-height:42px;gap:1px;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-upgrade-actions .rpgBuy {padding:5px!important;}
+:root body #shopWin[data-view="castle"][data-ctab="upg"] .v2-note {margin-top:10px;padding-top:6px;padding-bottom:6px;line-height:1.5;}
+@media (max-width:850px) {
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] .v2-modal-head {height:auto;padding:6px 14px;}
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] #shopGoldRow {padding:8px 14px 0;}
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] .v2-wallet>span {min-height:0;padding:5px 11px;}
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] .v2-wallet>span>span {display:flex;align-items:baseline;gap:8px;}
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] #shopBody {padding:8px 14px 12px;}
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] .v2-tabs {padding:3px;}
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] .v2-intro {margin:7px 0;}
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] .v2-upgrade {padding:9px 10px 8px;}
+  /* 능력치 줄: 라벨 위·값 아래(2줄) → 한 줄, 폭이 모자라면 값만 다음 줄 오른쪽으로 */
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] .v2-stat-grid>div {display:flex;flex-wrap:wrap;column-gap:6px;}
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] .v2-stat-grid b {margin:0 0 0 auto;}
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] .v2-upgrade-actions .rpgBuy {min-height:38px;}
+  :root body.mobile #shopWin[data-view="castle"][data-ctab="upg"] .v2-note {padding:6px 4px;}
+}
+/* ② 광부·히든 영웅 탭 (roster) — honey 인접 탭 규칙과 같은 무게(1,2,2) 접두어 */
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-modal-head {padding-top:10px;padding-bottom:10px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-eyebrow {margin-bottom:1px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) #shopGoldRow {padding-top:9px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) #shopGoldRow .v2-wallet {margin-top:0;margin-bottom:10px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-wallet>span {padding-top:6px;padding-bottom:6px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-tabs {margin-bottom:9px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-tab {min-height:33px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) #shopBody {padding-bottom:14px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .rpgBuy {min-height:40px;padding-top:6px;padding-bottom:6px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .rpgBuy small {margin-top:1px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-section-head {margin:9px 0 6px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-miners .roster-banner {height:auto;padding:8px 20px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-miners .roster-banner h3 {margin:2px 0 3px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-miners .roster-banner p {line-height:1.4;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-miners .roster-mine-art {height:84px;width:108px;margin:-4px 0;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-totals {padding:7px 0 6px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-totals b {margin-top:1px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-hire-note {margin:5px 0;line-height:1.4;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .rpgItem.roster-upgrade {padding:9px 14px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-description {margin:4px 0;line-height:1.4;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-stat {padding:5px 12px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-dots {margin:6px 0;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-upgrade-foot {padding-top:0;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-hero-banner {padding:10px 16px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-hero-banner h3 {margin:2px 0 3px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-hero-group {margin-bottom:10px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .rpgItem.roster-train {padding:11px 14px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-training-meter {margin:8px 0 7px;gap:5px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-power {padding:6px 12px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-train-actions {margin-top:8px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .rpgItem.roster-ascension {margin-top:5px;padding:8px 14px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-ascend-effect {margin:6px 0;line-height:1.45;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-ascend-bottom {padding-top:6px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-ascend-bottom b {margin:1px 0 2px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-ascend-bottom small {line-height:1.4;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-ascend-done {margin-top:6px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-chance {margin:8px 3px 10px;line-height:1.5;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-empty {padding:14px 16px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-empty h4 {margin:8px 0 4px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-empty p {line-height:1.5;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-dex-heading {margin-top:12px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-dex-card {padding:10px 12px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-dex-top {margin-bottom:6px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-dex-card h4 {margin-bottom:2px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-dex-state {line-height:1.4;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) :is(.roster-riddle,.roster-ability) {margin-top:6px;line-height:1.5;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-ability {min-height:3em;} /* 2줄까지는 조합법 줄이 카드끼리 나란히 */
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-recipe {margin-top:7px;padding-top:6px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-recipe>span {margin-bottom:2px;}
+html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-recipe>b {line-height:1.45;}
+@media (orientation:landscape) and (max-height:500px) {
+  html body.mobile #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-modal-head {padding-top:6px;padding-bottom:6px;}
+  html body.mobile #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-tabs {padding:3px;}
+}
 </style>
 </head>
 <body class="at-title">
@@ -2781,7 +2889,9 @@ function rsTarget() {
   if (r.width < 50) return RS; // 캔버스 미표시(모바일 포커 탭 display:none 등) = 배율 미상 → 현행 유지 (탭 전환마다 RS가 널뛰며 캐시 스래시하는 것 방지)
   return Math.round(Math.min(LOW_SPEC ? 1 : 2, Math.max(1, dpr * (r.width / VW))) * 4) / 4; // ¼ 양자화 — 드래그 리사이즈마다 전체 리베이크 방지
 }
+let needRedraw = true; // 🔋 정지(창·타이틀) 중엔 캔버스를 IDLE_GAP마다만 그린다 — 캔버스가 비워지거나(해상도)·탭·창이 바뀌면 이 플래그로 즉시 1회
 function rsSetCanvas() {
+  needRedraw = true; // width 대입 = 캔버스가 비워진다
   cv.width = Math.round(VW * RS); cv.height = Math.round(VH * RS); // width 대입 = 컨텍스트 상태 리셋 → transform 재설정 필수
   const g = cv.getContext('2d'); // 전역 ctx는 베이크 중 임시 스왑될 수 있으니 메인 컨텍스트를 직접 집는다 (동일 객체)
   g.setTransform(RS, 0, 0, RS, 0, 0);
@@ -2808,7 +2918,7 @@ if (IS_MOBILE) document.body.classList.add('mobile');
 let mobTab = 'battle'; // 'battle' | 'poker' — 모바일 하단 탭
 function setMobTab(t) {
   mobTab = t;
-  document.body.dataset.tab = t;
+  document.body.dataset.tab = t; needRedraw = true;
   document.getElementById('mtBattle').classList.toggle('active', t === 'battle');
   document.getElementById('mtPoker').classList.toggle('active', t === 'poker');
   placeCasinoStation();
@@ -2920,6 +3030,7 @@ function syncGamePause() {
   if (!S) return;
   S.paused = !!(S.mapTest || // 게임오버는 일부러 제외: 사망 화면 뒤 배경은 계속 흐른다(기존 설계, update()의 gameover 가드가 부작용 차단). 오버레이가 툴바·캔버스를 inert로 막는다
     ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal'].some(gameDialogVisible));
+  needRedraw = true;
   window.dispatchEvent(new Event('dpd:modalchange'));
 }
 // 🎰 카지노 지연 보상(룰렛 5.1s·슬롯 3s·교환 0.9s)은 창을 닫아도 계속 흘러 보상을 지급한다(의도).
@@ -2943,6 +3054,7 @@ function resetTransientUI() {
   clearTimeout(longPressTimer); longPressFired = false; lastTapTime = 0; lastTapPos = null; grabPos = null; // 모바일 롱프레스/더블탭/집기
   mutter = null; mutterT = 22;              // 이전 판 유닛을 가리키던 말풍선 (유령 말풍선 방지)
   if (S) hideObjInfo();                     // 남아 있던 건물/몬스터 정보 팝업 (hideObjInfo가 S를 만지므로 부팅 시엔 건너뜀)
+  tenseEnd();                               // 💓 막판 심장·BGM 먹먹함·시계 표시 (판 도중 다시하기·나가기 — 먹먹한 BGM이 다음 판에 남지 않게)
   gameGen++;                                // 이전 판의 카지노 지연 보상 무효화
   casTimers.forEach(clearTimeout); casTimers = [];
   if (typeof CM !== 'undefined' && CM) CM.style.display = 'none'; // 카지노 모달이 열린 채 재시작되는 경우
@@ -3773,6 +3885,7 @@ document.getElementById('rvYes').onclick = () => {
 };
 document.getElementById('rvNo').onclick = () => { if (S.phase !== 'wave') { closeRevive(); return; } S.reviveUsed = true; closeRevive(); endWave(); };
 function endWave() {
+  tenseEnd(); // 💓 심장·BGM 먹먹함·시계 막판 표시 즉시 정리 (부활로 이어지면 늘어난 시간 기준으로 tenseTick이 다시 판단)
   if (reviveOffer()) return; // ❤️‍🩹 부작용(결투 정리·폭격 잔탄·누수 차감·몹 제거) 전에 가로챈다 — 창이 열린 동안 게임은 멈춘다
   S.slotBombs = []; // 잭팟 폭격 잔탄이 다음 웨이브로 넘어가 엉뚱한 좌표에서 터지지 않게
   // 🏛️ 결투 제한시간 = 그 라운드 전투 시간. 시간 내에 못 잡으면 도전자는 퇴장한다 (보상 없음).
@@ -4539,6 +4652,7 @@ function update(dt) {
     S.freezeT -= dt;
   } else {
     S.timer -= dt;
+    tenseTick(dt / S.speed); // 💓 막판 심장·시계·BGM 먹먹함 (시계가 흐를 때만 — 시간정지 중엔 이 분기를 안 탄다 · 배속은 실시간 박자 유지)
     // 몬스터 스폰
     if (q.left > 0) {
       q.acc += dt;
@@ -7507,15 +7621,72 @@ function drawTension() {
   const p = Math.max(0, Math.min(1, (1 - S.timer / WAVE_TIME - 0.5) * 2));
   if (p <= 0) return;
   const e = Math.pow(p, 1.5); // 초반은 은은하게, 막판으로 갈수록 몰아서 (p²는 경과 75%에서 너무 옅었다)
-  const t2 = WAVE_TIME * 0.5 - S.timer; // 절반 이후 경과 초 → 맥동 위상 (0.6Hz에서 막판 ~1.8Hz까지 가속)
-  const beat = TENSE_STILL ? 0 : Math.pow(Math.max(0, Math.sin(2 * Math.PI * (0.6 * t2 + 1.2 * t2 * t2 / WAVE_TIME))), 6) * p;
+  const beat = TENSE_STILL ? 0 : Math.pow(Math.max(0, Math.cos(2 * Math.PI * (S.tensePh || 0))), 6) * p; // 맥동 위상 = 심장 박동 위상(tenseTick, 0.6→1.8Hz) — 정수 지점(쿵)에서 정점
   ctx.save(); ctx.setTransform(RS, 0, 0, RS, 0, 0); ctx.imageSmoothingQuality = 'low'; // 흔들림(shake) 변환과 무관하게 화면 고정 · 비네트 확대는 저품질 보간으로 충분
   ctx.fillStyle = `rgba(10,5,18,${(TENSE_DIM * e * (1 + 0.3 * beat)).toFixed(3)})`; ctx.fillRect(0, 0, 940, 500);
-  ctx.globalAlpha = TENSE_EDGE * e * (1 + 0.4 * beat); ctx.drawImage(tenseVignette(), 0, 0, 940, 500);
+  ctx.globalAlpha = TENSE_EDGE * e * (1 + 0.8 * beat); ctx.drawImage(tenseVignette(), 0, 0, 940, 500); // 박동마다 가장자리만 조여든다 (중앙 가독성은 그대로)
   const r = Math.max(0, (p - 0.6) / 0.4); // 경과 80%부터
   if (r > 0) { ctx.globalAlpha = 1; ctx.fillStyle = `rgba(150,12,12,${(TENSE_RED * r * r * (0.85 + 0.3 * beat)).toFixed(3)})`; ctx.fillRect(0, 0, 940, 500); }
   ctx.restore();
 }
+// 💓 막판 심장 박동 (10-01 유저 #5 "제한시간이 다 되어갈수록 긴장감 고조가 없다" — 진단: 화면 어둠은 45초에 걸쳐 서서히 번져 '변화'로 안 느껴지고,
+//    소리·시계엔 아무 신호가 없었다. 화면에서 제일 눈에 띄는 숫자 시계(LED)는 시장 시계 tMkt이고 전투 시계는 숫자 없는 원판뿐)
+//    남은 TENSE_HB_SEC초 = 쿵-쿵 심장 소리(sfxGain) + 전투 시계가 붉어지며 남은 초 + 박동마다 시계 쿵 / 남은 TENSE_LP_SEC초 = BGM이 점점 먹먹해진다(저역통과).
+//    박자 = drawTension 맥동과 같은 위상 S.tensePh (0.6→1.8Hz 가속). tenseTick은 update()의 시계 진행부(S.timer -= dt 바로 뒤)에서만 불린다
+//    → 일시정지(창)·히트스톱·시간술사 정지(S.timer 정지) 땐 심장도 멎고, 모바일 포커 탭(draw 생략)에서도 소리는 계속된다.
+//    배속은 서브스텝마다 dt/S.speed — 박자는 실시간 1배속 그대로(3배속에서 400bpm 윙윙 방지), 막판 가속 곡선만 압축된다.
+const TENSE_HB_SEC = 15, TENSE_LP_SEC = 12; // 심장·시계 시작 / BGM 먹먹함 시작 (남은 초)
+let tenseBus = null, tenseLP = null, tenseLv = 0, tenseSec = 0; // 마지막 박동 출력(즉시 끊기용) · BGM 저역통과(첫 사용 때 musicGain 뒤에 끼움) · 먹먹함 단계 · 시계 표시 초
+function tenseTick(dt) {
+  const p = Math.max(0, Math.min(1, (1 - S.timer / WAVE_TIME - 0.5) * 2)); // drawTension과 같은 진행도 (남은 45초 → 0초 = 0 → 1)
+  const ph0 = S.tensePh || 0;
+  S.tensePh = ph0 + (0.6 + 1.2 * p) * dt;
+  const live = S.timer > 0 && S.monsters.length > 0; // 몹이 다 죽고 결투만 남은 막판(누수 위험 없음)엔 심장·먹먹함 없음
+  if (live && S.timer <= TENSE_HB_SEC && Math.floor(S.tensePh) > Math.floor(ph0)) tenseBeat(1 - S.timer / TENSE_HB_SEC);
+  tenseMuffle(live && S.timer <= TENSE_LP_SEC ? 1 + Math.floor((1 - S.timer / TENSE_LP_SEC) * 12) : 0);
+  tenseClock(S.timer > 0 && S.timer <= TENSE_HB_SEC ? Math.ceil(S.timer) : 0);
+}
+function tenseBeat(k) { // 쿵-쿵 한 번 (k: 0 = 15초 남음 → 1 = 끝, 갈수록 세게). 음정 없는 저음 두 번 = BGM과 화성 충돌 없음 · 콤보 '퍽'(단타)과는 리듬으로 구별
+  if (!TENSE_STILL) { const c = document.getElementById('clock'); if (c.animate) c.animate([{ transform: 'translateX(-50%) scale(1.15)' }, { transform: 'translateX(-50%) scale(1)' }], { duration: 230, easing: 'cubic-bezier(.2,.7,.3,1)' }); } // #clock 기본 transform(translateX -50%, 데스크톱·모바일 공통)을 키프레임에 포함 — transform만이라 합성 단계에서 끝난다
+  if (!AC || !sfxOn || document.hidden) return;
+  const t = AC.currentTime, bus = AC.createGain(); bus.connect(sfxGain); tenseBus = bus;
+  for (const [d, a] of [[0, 1], [0.15, 0.62]]) { // 쿵(lub) · 0.15초 뒤 약한 쿵(dub)
+    const v = a * (0.22 + 0.18 * k), o = AC.createOscillator(), h = AC.createOscillator(), g = AC.createGain(), gh = AC.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(150, t + d); o.frequency.exponentialRampToValueAtTime(46, t + d + 0.12); // 몸통 (이어폰)
+    h.type = 'triangle'; h.frequency.setValueAtTime(300, t + d); h.frequency.exponentialRampToValueAtTime(92, t + d + 0.1); // 배음 — 저역이 안 나오는 폰 스피커에서도 '툭'이 들리게
+    g.gain.setValueAtTime(0.0001, t + d); g.gain.linearRampToValueAtTime(v, t + d + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.2);
+    gh.gain.setValueAtTime(0.0001, t + d); gh.gain.linearRampToValueAtTime(v * 0.22, t + d + 0.004); gh.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.09);
+    o.connect(g); h.connect(gh); g.connect(bus); gh.connect(bus);
+    o.start(t + d); h.start(t + d); o.stop(t + d + 0.22); h.stop(t + d + 0.11);
+  }
+}
+function tenseMuffle(lv) { // BGM 버스 저역통과: 0 = 원음(나이퀴스트 = 필터 완전 통과) · 1~12 = 5.2kHz → 1.4kHz (남은 12초 → 0초). musicGain(음악 토글이 .value를 직접 씀)·덱 게인(크로스페이드)은 안 건드린다
+  if (lv === tenseLv || !AC || !musicGain) return;
+  const nyq = AC.sampleRate / 2;
+  if (!tenseLP) { // 첫 막판에 1회: musicGain → 필터 → 출력 (iOS 잠금 해제·덱 연결은 musicGain 앞단이라 무관). Q −3dB = 버터워스(공진 없음 → 음량은 그대로, 밝기만 깎인다)
+    tenseLP = AC.createBiquadFilter(); tenseLP.type = 'lowpass'; tenseLP.Q.value = -3; tenseLP.frequency.value = nyq;
+    musicGain.disconnect(); musicGain.connect(tenseLP); tenseLP.connect(AC.destination);
+  }
+  tenseLv = lv;
+  const f = tenseLP.frequency, t = AC.currentTime;
+  f.cancelScheduledValues(t);
+  if (lv) f.setTargetAtTime(5200 * Math.pow(1200 / 5200, (lv - 1) / 12), t, 0.12);
+  else { f.setTargetAtTime(nyq, t, 0.15); f.setValueAtTime(nyq, t + 1.2); } // 복원은 끝에 정확히 나이퀴스트(통과)로 못박는다
+}
+function tenseClock(sec) { // 전투 시계 막판 표시 — 남은 초가 바뀔 때만 DOM을 쓴다
+  if (sec === tenseSec) return;
+  tenseSec = sec;
+  const c = document.getElementById('clock');
+  c.classList.toggle('tense', sec > 0);
+  if (sec) c.dataset.sec = sec;
+}
+function tenseCut() { // 일시정지(창)·탭 숨김: 울리던 박동을 즉시(20ms 페이드) 끊고 BGM 원음 복귀 — 재개되면 다음 tenseTick이 다시 건다
+  if (tenseBus) { const g = tenseBus.gain, t = AC.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + 0.02); tenseBus = null; }
+  tenseMuffle(0);
+}
+function tenseEnd() { tenseCut(); tenseClock(0); } // 전투 끝·판 리셋: 시계 표시까지 정리
+window.addEventListener('dpd:modalchange', () => { if (S && S.paused) tenseCut(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) tenseCut(); });
 // 🏗️ 정적 건물 레이어 캐시 (2026-08-08 최적화): 같은 그리기 코드를 오프스크린에 1회만 실행해 저장 — 결과 픽셀 동일.
 // 상태(키)가 바뀌면 그 상태로 새로 굽는다. 움직이는 요소(포털 회오리·광석·게이지·라벨 카운트)는 베이크하지 않고 라이브 유지.
 const bldgLayers = new Map();
@@ -8191,6 +8362,27 @@ const SPR = 88, SPR_C = 44; // 스프라이트 캔버스 크기/중심
 // 스프라이트를 굽는 크기 = 실제로 그려지는 크기(monSize의 재질분). 예전엔 MAT_SIZE를 빼먹고 esc 성장만 반영해서
 // 태양(MAT_SIZE 1.3)은 25.1로 구운 걸 32.6으로 늘려 그렸다 → ×1.3 확대 = 유저가 지적한 화질 저하. 이제 k===1.
 function matSpriteSz(mat) { return 19 * (MAT_SIZE[mat] || 1); }
+// 🔋 10-01 배터리: RS2 몹 스프라이트(176²)에서 그림 bbox는 8~17%뿐 — 투명 픽셀도 GPU는 매번 샘플·블렌딩한다 → bbox만 블릿 (결과 픽셀 동일, 2px 투명 여유)
+let sprScan = null;
+function sprBBox(cnv) {
+  try {
+    const W = cnv.width, H = cnv.height;
+    if (!sprScan || sprScan.width < W || sprScan.height < H) { sprScan = document.createElement('canvas'); sprScan.width = W; sprScan.height = H; }
+    const g = sprScan.getContext('2d', { willReadFrequently: true }); // 읽기는 스크래치에서만 — 스프라이트 캔버스 자체는 GPU 백업 유지
+    g.clearRect(0, 0, W, H); g.drawImage(cnv, 0, 0);
+    const d = g.getImageData(0, 0, W, H).data;
+    let x0 = W, y0 = H, x1 = -1, y1 = -1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) return null;
+    x0 = Math.max(0, x0 - 2); y0 = Math.max(0, y0 - 2); x1 = Math.min(W, x1 + 3); y1 = Math.min(H, y1 + 3);
+    return [x0, y0, x1 - x0, y1 - y0];
+  } catch (e) { return null; }
+}
+function sprBlit(sp, X, Y, S2) { // drawImage(sp, X, Y, S2, S2)와 같은 결과 — bbox 부분만
+  const bb = sp._bb; if (!bb) { ctx.drawImage(sp, X, Y, S2, S2); return; }
+  const f = S2 / sp.width;
+  ctx.drawImage(sp, bb[0], bb[1], bb[2], bb[3], X + bb[0] * f, Y + bb[1] * f, bb[2] * f, bb[3] * f);
+}
 function matSprite(mat, bucket, golden, broken) {
   monReady(); // 아트 로드 완료 순간 1회: 추출 + 캐시 무효화
   const key = (mat * 20 + bucket * 2 + (golden ? 1 : 0)) * 3 + broken; // 기존 키(유일) × 3 + broken(0~2) → 충돌 없음
@@ -8222,6 +8414,7 @@ function matSprite(mat, bucket, golden, broken) {
         drawMatStatic(SPR_C, SPR_C, sz, mat, escB, c, broken);
       }
     } finally { ctx = old; }
+    cnv._bb = sprBBox(cnv); // 🔋 그림 bbox (1회)
     matSprites[key] = cnv;
   }
   return matSprites[key];
@@ -8235,14 +8428,14 @@ function drawMatMob(m, sz, c) {
   if (mat === 0) { // 물풍선: 출렁 (스케일로)
     const w = 1 + 0.06 * Math.sin(t * 5 + m.phase);
     ctx.save(); ctx.translate(x, y); ctx.scale(w, 2 - w);
-    ctx.drawImage(sp, -SPR_C * k, -SPR_C * k, SPR * k, SPR * k);
+    sprBlit(sp, -SPR_C * k, -SPR_C * k, SPR * k);
     ctx.restore();
   } else if (mat === 13) { // 블랙홀: 강착원반 회전 (스프라이트 회전)
     ctx.save(); ctx.translate(x, y); ctx.rotate(t * 2 + m.phase);
-    ctx.drawImage(sp, -SPR_C * k, -SPR_C * k, SPR * k, SPR * k);
+    sprBlit(sp, -SPR_C * k, -SPR_C * k, SPR * k);
     ctx.restore();
   } else {
-    ctx.drawImage(sp, x - SPR_C * k, y - SPR_C * k, SPR * k, SPR * k);
+    sprBlit(sp, x - SPR_C * k, y - SPR_C * k, SPR * k);
   }
   if (mat === 8) { // 불타는 쇠구슬: 화염 펄스
     ctx.fillStyle = `rgba(255,${100 + 80 * Math.sin(t * 8 + m.phase) | 0},20,0.4)`;
@@ -11408,8 +11601,10 @@ function updateHUD() {
     hudSetHtml('tPhase', '🃏 포커 페이즈'); // 두 분기가 __hud 키를 공유해도 문자열이 절대 안 겹쳐 안전
     document.getElementById('pokerTimerFill').style.width = (S.pokerTimer / POKER_TIME * 100) + '%';
   }
-  const deg = Math.max(0, Math.min(1, frac)) * 360;
-  clock.style.background = `conic-gradient(${col} ${deg}deg, #e3e8ee ${deg}deg)`;
+  const deg = Math.round(Math.max(0, Math.min(1, frac)) * 360); // 🔋 1° 단위 + 바뀔 때만 쓰기 — 소수 각도를 매 틱 재기록하면 20Hz 리페인트 (90초 웨이브의 1° = 0.25초)
+  const clockBg = `conic-gradient(${col} ${deg}deg, #e3e8ee ${deg}deg)`;
+  if (clock.__bg !== clockBg) { clock.__bg = clockBg; clock.style.background = clockBg; }
+  document.body.classList.toggle('dpd-modal', CM.style.display === 'flex' || document.getElementById('shopOverlay').style.display === 'flex'); // 🔋 창 열림 표시 (CSS :has 대체)
   // 모바일 탭 배지: 지금 안 보고 있는 탭에서 페이즈가 진행 중이면 깜빡임
   if (IS_MOBILE) {
     document.getElementById('mtPoker').classList.toggle('alert', S.phase === 'poker' && mobTab === 'battle');
@@ -11417,7 +11612,8 @@ function updateHUD() {
   }
   // 상점 버튼 활성화 + 골드 표시 갱신 (열려있을 때만, 🎰 타이밍바 진행 중엔 잠금 유지)
   if (openShop && !document.getElementById('gmgTrack')) {
-    document.getElementById('shopGold').textContent = Math.floor(S.gold).toLocaleString() + 'G';
+    const sg = document.getElementById('shopGold'), sgt = Math.floor(S.gold).toLocaleString() + 'G';
+    if (sg.textContent !== sgt) sg.textContent = sgt; // 🔋 같은 값 재기록 = childList 변이 → honey :has(.gbxStage) 규칙 탓에 문서 전체 스타일 재계산 (10-01 실측)
     document.querySelectorAll('#shopBody button').forEach(b => {
       const i = b.dataset.upg !== undefined ? b.dataset.upg : b.dataset.gupg;
       if (i !== undefined) b.disabled = S.gold < S.upgCost[+i];
@@ -11433,13 +11629,14 @@ let musicOn = true, sfxOn = true; // 배경음악 / 타격음 개별 토글
 try { musicOn = localStorage.getItem('dpd_music') !== '0'; sfxOn = localStorage.getItem('dpd_sfx') !== '0'; } catch (e) {}
 const lastSfx = {};
 function initAudio() {
-  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  if (AC) { if (AC.state === 'suspended' && audioWanted()) AC.resume(); return; }
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
     sfxGain = AC.createGain(); sfxGain.gain.value = sfxOn ? 0.22 : 0; sfxGain.connect(AC.destination);
     musicGain = AC.createGain(); musicGain.gain.value = musicOn ? 0.09 : 0; musicGain.connect(AC.destination);
     startMusic();
     bgmInit(); // 🎼 파일 BGM (실패하면 합성 음악 그대로)
+    audioSync(); // 🔋 숨김 중이거나 음악·효과음 둘 다 꺼진 채 시작하면 바로 재운다
   } catch (e) {}
 }
 function tone(freq, dur, type, node, vol, when) {
@@ -11450,15 +11647,15 @@ function tone(freq, dur, type, node, vol, when) {
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g); g.connect(node); o.start(t); o.stop(t + dur + 0.02);
 }
+let noiseBuf = null; // 🔋 2초 백색잡음 1회 생성 — 전엔 효과음마다 새 버퍼+난수 채우기(전투 중 초당 ~20개, GC 쓰레기)
 function noiseBurst(dur, vol, freq, type) {
   if (!AC) return;
-  const n = AC.createBufferSource(), buf = AC.createBuffer(1, Math.floor(AC.sampleRate * dur), AC.sampleRate);
-  const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  n.buffer = buf;
+  if (!noiseBuf) { noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const n = AC.createBufferSource(); n.buffer = noiseBuf;
   const f = AC.createBiquadFilter(); f.type = type || 'lowpass'; f.frequency.value = freq || 1400;
   if (type === 'bandpass') f.Q.value = 1.2;
   const g = AC.createGain(); g.gain.setValueAtTime(vol, AC.currentTime); g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
-  n.connect(f); f.connect(g); g.connect(sfxGain); n.start();
+  n.connect(f); f.connect(g); g.connect(sfxGain); n.start(AC.currentTime, Math.random() * Math.max(0, 2 - dur), Math.min(dur, 2)); // 무작위 구간 = 매번 다른 잡음
 }
 // 팡! 터지는 소리: 피치가 뚝 떨어지는 사인파(풍선 팡) + 고음 노이즈 크랙
 function popSound(big) {
@@ -11487,7 +11684,7 @@ function comboHit(n) {
   if (n % 10 === 0) { tone(64, 0.2, 'sine', sfxGain, 0.13, t + 0.012); noiseBurst(0.08, 0.07, 520, 'lowpass'); } // 10·20·30… 마디 쿵
 }
 function sfx(type, arg) {
-  if (!AC || !sfxOn) return;
+  if (!AC || !sfxOn || AC.state !== 'running') return;
   const now = performance.now(), gap = { shoot: 45, slash: 90, boom: 55, bigboom: 300, jackpot: 400, combo: 70,
     splash: 70, glass: 70, metal: 65, thud: 80,
     pick: 200, coin: 220, boss: 1500, clear: 1500, leak: 800, reward: 500, hero: 800, chirp: 300 }[type] || 60;
@@ -11558,7 +11755,7 @@ function startMusic() {
     windTick(); // 🌬️ 바람은 페이즈·난이도 무관 상시 (지옥에서도 스산하게 분다)
     musicStep++;
   }, 250);
-  startWind();
+  if (musicOn) startWind(); // 🔋 음악 OFF면 바람 루프(무한 재생 노이즈 소스)를 돌리지 않는다
 }
 // 🌬️ 바람: 루프 노이즈 → 저역 필터 → 게인. 세기는 musicStep을 따라 천천히 출렁이고 가끔 돌풍.
 // musicGain을 거치므로 음악 토글로 함께 꺼진다.
@@ -11573,6 +11770,26 @@ function startWind() {
   windSrc.connect(f); f.connect(windGainNode); windGainNode.connect(musicGain);
   windSrc.start();
 }
+function stopWind() { if (!windSrc) return; try { windSrc.stop(); } catch (e) {} windSrc.disconnect(); windSrc = null; windGainNode = null; }
+// 🔋 10-01 유저(모바일 배터리·발열): 앱 전환·화면 잠금(숨김) 또는 음악·효과음 둘 다 꺼짐이면 오디오 스레드를 재운다.
+//    전엔 숨김 중에도 AC가 running·바람 루프 재생·250ms 타이머가 돌아 안드로이드가 '소리 재생 중' 탭으로 보고 스로틀·동결하지 않았다.
+//    복귀 = visibilitychange/pageshow에서 resume 시도 + iOS처럼 제스처가 필요하면 아래 pointerup/touchend/keydown 리스너가 다음 탭에서 깨운다.
+function audioWanted() { return !document.hidden && (musicOn || sfxOn); }
+function audioSync(e) {
+  if (!AC) return;
+  const off = (e && e.type === 'pagehide') || !audioWanted();
+  if (off) {
+    if (bgm && bgm.decks) bgm.decks.forEach(d => { if (!d.a.paused) d.a.pause(); });
+    if (AC.state === 'running') AC.suspend().catch(() => {});
+    if (document.hidden && musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+  } else {
+    if (AC.state !== 'running') AC.resume().catch(() => {});
+    if (!musicTimer) startMusic();
+  }
+}
+document.addEventListener('visibilitychange', audioSync);
+window.addEventListener('pagehide', audioSync);
+window.addEventListener('pageshow', audioSync);
 function windTick() {
   if (!windGainNode) return;
   const target = 0.04 + 0.035 * (0.5 + 0.5 * Math.sin(musicStep * 0.11)) + (Math.random() < 0.02 ? 0.06 : 0);
@@ -11629,7 +11846,7 @@ function bgmUnlock() { // 사용자 제스처 안에서만 의미 — 아직 한
     if (p) p.then(() => { d.ok = true; if (bgm.cur !== idx || !musicOn) d.a.pause(); }).catch(() => {});
   });
 }
-['pointerup', 'touchend', 'keydown'].forEach(ev => window.addEventListener(ev, () => { if (AC && AC.state !== 'running') AC.resume(); if (bgm && !bgm.failed && bgm.decks.some(d => !d.ok)) { bgmUnlock(); bgmTick(); } }, true)); // 터치는 손을 뗄 때(pointerup/touchend)가 제스처 — 첫 pointerdown에 만든 AC가 suspended로 남는다 (크로스체크 P1). !== 'running' = WebKit 'interrupted'(통화 뒤)도 다음 탭에 복구
+['pointerup', 'touchend', 'keydown'].forEach(ev => window.addEventListener(ev, () => { if (AC && AC.state !== 'running' && audioWanted()) AC.resume(); if (bgm && !bgm.failed && bgm.decks.some(d => !d.ok)) { bgmUnlock(); bgmTick(); } }, true)); // 터치는 손을 뗄 때(pointerup/touchend)가 제스처 — 첫 pointerdown에 만든 AC가 suspended로 남는다 (크로스체크 P1). !== 'running' = WebKit 'interrupted'(통화 뒤)도 다음 탭에 복구
 function bgmSwitch(key, xf = BGM_XF) { // 다른 덱에서 key를 처음부터 틀고 크로스페이드 (같은 곡 반복도 이 경로)
   if (!bgm || bgm.failed) return;
   const ni = bgm.cur === 0 ? 1 : 0, nd = bgm.decks[ni], od = bgm.cur >= 0 ? bgm.decks[bgm.cur] : null;
@@ -11664,6 +11881,8 @@ document.getElementById('bMusic').onclick = () => {
   musicOn = !musicOn;
   try { localStorage.setItem('dpd_music', musicOn ? '1' : '0'); } catch (e) {}
   if (musicGain) musicGain.gain.value = musicOn ? 0.09 : 0;
+  if (musicOn) startWind(); else stopWind(); // 🔋 음악 OFF = 바람 루프 정지 (gain 0이어도 소스·필터는 매 퀀텀 렌더된다)
+  audioSync();
   bgmUnlock(); bgmTick(); // 켜기 = 이 클릭(제스처) 안에서 잠금 해제 + 바로 재생 재개
   document.getElementById('bMusic').textContent = musicOn ? '🎵' : '🎵̶';
   document.getElementById('bMusic').classList.toggle('off', !musicOn);
@@ -11673,6 +11892,7 @@ document.getElementById('bSfx').onclick = () => {
   sfxOn = !sfxOn;
   try { localStorage.setItem('dpd_sfx', sfxOn ? '1' : '0'); } catch (e) {}
   if (sfxGain) sfxGain.gain.value = sfxOn ? 0.22 : 0;
+  audioSync();
   document.getElementById('bSfx').textContent = sfxOn ? '🔊' : '🔇';
 };
 document.getElementById('bMusic').classList.toggle('off', !musicOn);
@@ -12862,10 +13082,31 @@ window.addEventListener('keydown', e => {
 document.getElementById('btnMapTest').onclick = () => { initAudio(); startMapTest(4); };
 document.getElementById('btnMapTest2').onclick = () => { initAudio(); startMapTest(2); };
 
-let perfU = 0, perfD = 0, perfN = 0, perfText = '', hudTick = 0;
+let perfU = 0, perfD = 0, perfN = 0, perfText = '';
 let last = performance.now();
 const BASE_SPEED = 1.3; // 게임 기본 진행 속도 (2배속 시 실질 2.6배)
+// 🔋 프레임 상한 (10-01 유저: 모바일 배터리·발열). 120Hz 폰은 rAF가 초당 120번 와서 update+draw도 120번 돌았다.
+//    rAF 간격 이동평균(rafAvg)으로 디스플레이 주기를 추정 → 9.7ms(120Hz 8.3ms와 90Hz 11.1ms의 중간)보다 짧을 때만 상한: 120Hz→60fps, 144Hz→72fps.
+//    60·90Hz는 상한 자체가 꺼져 타임스탬프가 흔들려도 한 프레임도 건너뛰지 않는다 (간격만 보고 자르면 헤드리스 60Hz에서 5%가 잘렸다 — 10-02 실측).
+//    건너뛴 rAF에선 last를 건드리지 않는다 → 다음 처리 프레임이 누적 dt(16.7ms)를 받아 게임 시간은 정확히 같다 (0.05s 클램프 이내).
+//    정지(타이틀·성 강화·자금 운영·결투/왕관/부활 창)는 S.time이 멈춰 그림이 안 바뀐다 → IDLE_GAP마다만 다시 그린다 (+ needRedraw 즉시 1회).
+const PLAY_GAP = 9.7, IDLE_GAP = 250, HUD_GAP = 45; // ms
+let lastProc = -1e9, lastHud = -1e9, rafPrev = 0, rafAvg = 16.7; // rafAvg = rAF 콜백 간격의 이동평균(ms) ≈ 디스플레이 주기
+function hudMaybe(now) { // HUD는 프레임 수가 아니라 실시간 기준 ≈20Hz (기존 '3프레임에 1번'은 120Hz에서 40Hz, 정지 4fps에선 1.3Hz가 된다)
+  if (now - lastHud < HUD_GAP) return;
+  lastHud = now;
+  try { updateHUD(); } catch (e) { reportLoopError('hud', e); } // 예외로 rAF 루프가 멎지 않게 (Opus)
+}
 function frame(now) {
+  const rd = now - rafPrev; rafPrev = now;
+  if (rd > 2 && rd < 40) rafAvg += (rd - rafAvg) * 0.05; // 숨김 복귀 같은 긴 공백은 평균에서 뺀다
+  const idle = S.paused && !S.mapTest;
+  if (now - lastProc < (idle ? IDLE_GAP : rafAvg < PLAY_GAP ? PLAY_GAP : 0) && !(idle && needRedraw)) {
+    if (idle) { last = now; hudMaybe(now); } // 정지 중엔 시계만 따라간다(재개 첫 dt가 튀지 않게) + 창 안 골드·레버 재장식은 20Hz 유지
+    requestAnimationFrame(frame);
+    return;
+  }
+  lastProc = now;
   // dt 하한 0: 시계가 어떤 이유로든 되감기면(rAF 타임스탬프 혼선·테스트 하네스) 음수 dt가 born 등을 크게 음수로 만들어
   // 캔버스 음수 반지름 → draw 프레임 통째 취소로 이어진다. 실플레이에선 단조 증가지만 클램프 한 줄로 부류 전체를 차단.
   const rawDt = Math.max(0, Math.min((now - last) / 1000, 0.05));
@@ -12889,7 +13130,7 @@ function frame(now) {
   const t1 = performance.now();
   // 한 프레임에서 예외가 나도 루프가 끊겨 게임이 통째로 멈추지 않도록 방어 (원인은 콘솔에 1회만 기록)
   try {
-    if (!(IS_MOBILE && document.body.dataset.tab === 'poker')) draw(); // 포커 탭 중엔 캔버스 안 보이므로 draw 스킵 (update/HUD는 계속)
+    if (!(IS_MOBILE && document.body.dataset.tab === 'poker')) { draw(); needRedraw = false; } // 포커 탭 중엔 캔버스 안 보이므로 draw 스킵 (update/HUD는 계속)
   } catch (e) { reportLoopError('draw', e); }
   if (DEBUG) {
     perfU += t1 - t0; perfD += performance.now() - t1;
@@ -12899,8 +13140,8 @@ function frame(now) {
     }
     if (perfText) { ctx.fillStyle = '#c0392b'; ctx.font = 'bold 11px monospace'; ctx.fillText(perfText, 8, 14); }
   }
-  // HUD는 3프레임에 1번(≈20Hz) — DOM 텍스트 갱신이 프레임당 0.26ms였다. 숫자 표시 20Hz는 체감 불가 (2026-08-08 최적화)
-  if ((hudTick = (hudTick + 1) % 3) === 0) { try { updateHUD(); } catch (e) { reportLoopError('hud', e); } } // 예외로 rAF 루프가 멎지 않게 (Opus)
+  // HUD ≈20Hz — DOM 텍스트 갱신이 프레임당 0.26ms였다. 숫자 표시 20Hz는 체감 불가 (2026-08-08 최적화). 10-01: 프레임 수 → 실시간 기준 (hudMaybe)
+  hudMaybe(now);
   requestAnimationFrame(frame);
 }
 // 루프 예외 보고: 게임을 멈추지 않되 조용히 묻히지도 않게 — 같은 메시지는 한 번만, 새로운 오류는 다시 알린다
