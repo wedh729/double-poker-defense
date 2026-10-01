@@ -2384,8 +2384,10 @@ body.mobile .rankGauge {display:inline-flex;gap:2px;margin-left:6px;padding:3px 
 html body:not(.mobile).dpd-modal #rewardToast {top:auto;bottom:max(16px, env(safe-area-inset-bottom, 0px));}
 html body.mobile.dpd-modal #rewardToast {pointer-events:none;} /* 모바일 상단 띠는 창의 ✕와 겹친다 — 창이 열려 있으면 눌러도 밑으로 통과 */
 /* 🔋 box-shadow 무한 애니메이션(자금운영 발광·탭 알림·개장 시계)은 매 프레임 스타일·페인트·래스터를 강제했다 → 큰 광은 고정 그림자 ::after에 두고 opacity만 애니메이션 (거의 동일 — 맥동 정점에서 광이 약간 더 촘촘) */
+@media (prefers-reduced-motion: no-preference) { /* 움직임 줄이기면 원본처럼 발광 없이 꿀 테마 테두리 그대로 (10-02 크로스체크) */
 html body .chipStation.ready, html body #stCasino.ready {animation:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.8),0 0 6px 1px rgba(255,193,7,.5);}
 html body .chipStation.ready::after {content:'';position:absolute;inset:-2px;border-radius:inherit;box-shadow:0 0 16px 4px rgba(255,193,7,.85);opacity:0;pointer-events:none;animation:dpdGlowO 1s ease-in-out infinite alternate;}
+}
 @keyframes dpdGlowO {to {opacity:1;}}
 html body #mobTabs button {position:relative;}
 html body #mobTabs button.alert {animation:none;}
@@ -2394,7 +2396,6 @@ html body b#tMkt.open {animation:none;position:relative;box-shadow:0 0 3px rgba(
 html body b#tMkt.open::after {content:'';position:absolute;inset:-1px;border-radius:inherit;box-shadow:0 0 11px 3px rgba(255,220,90,.85);opacity:0;pointer-events:none;animation:dpdGlowO .7s ease-in-out infinite alternate;}
 /* 창(블러 오버레이) 아래에서 맥동하면 컴포지터가 매 프레임 전체 화면 블러를 다시 계산한다 → 창이 열려 있는 동안만 정지 (!important: #tMkt 규칙의 animation 단축속성이 이긴다) */
 body.dpd-modal :is(.chipStation.ready, #mobTabs button.alert, #tMkt.open)::after {animation-play-state:paused !important;}
-@media (prefers-reduced-motion: reduce) { html body .chipStation.ready::after {animation:none;} } /* 원본과 같게: 움직임 줄이기면 자금운영 발광만 끈다 (탭 알림·개장 펄스는 원본도 유지) */
 html body.mobile #mobTabs {backdrop-filter:none;} /* 불투명 배경(#ebd8ad) 아래라 보이지 않는 블러 — 별도 합성 레이어·백드롭 패스만 만들었다 */
 /* 모바일 티커·결투 토스트: 글자 폭만큼만 (누르면 닫히는 띠가 캔버스를 필요 이상 막지 않게) */
 .mobile #mktToast, .mobile #duelToast {width:fit-content;max-width:76%;}
@@ -3031,6 +3032,7 @@ function syncGamePause() {
   S.paused = !!(S.mapTest || // 게임오버는 일부러 제외: 사망 화면 뒤 배경은 계속 흐른다(기존 설계, update()의 gameover 가드가 부작용 차단). 오버레이가 툴바·캔버스를 inert로 막는다
     ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal'].some(gameDialogVisible));
   needRedraw = true;
+  document.body.classList.toggle('dpd-modal', ['chipModal', 'shopOverlay'].some(id => document.getElementById(id).style.display === 'flex')); // 🔋 창 여닫는 순간 즉시 (updateHUD 20Hz 토글은 안전망)
   window.dispatchEvent(new Event('dpd:modalchange'));
 }
 // 🎰 카지노 지연 보상(룰렛 5.1s·슬롯 3s·교환 0.9s)은 창을 닫아도 계속 흘러 보상을 지급한다(의도).
@@ -7648,7 +7650,7 @@ function tenseTick(dt) {
 }
 function tenseBeat(k) { // 쿵-쿵 한 번 (k: 0 = 15초 남음 → 1 = 끝, 갈수록 세게). 음정 없는 저음 두 번 = BGM과 화성 충돌 없음 · 콤보 '퍽'(단타)과는 리듬으로 구별
   if (!TENSE_STILL) { const c = document.getElementById('clock'); if (c.animate) c.animate([{ transform: 'translateX(-50%) scale(1.15)' }, { transform: 'translateX(-50%) scale(1)' }], { duration: 230, easing: 'cubic-bezier(.2,.7,.3,1)' }); } // #clock 기본 transform(translateX -50%, 데스크톱·모바일 공통)을 키프레임에 포함 — transform만이라 합성 단계에서 끝난다
-  if (!AC || !sfxOn || document.hidden) return;
+  if (!AC || !sfxOn || document.hidden || AC.state !== 'running') return; // 멈춘 AC에 예약하면 재개 순간 쌓인 박동이 한꺼번에 터진다 (sfx와 같은 게이트)
   const t = AC.currentTime, bus = AC.createGain(); bus.connect(sfxGain); tenseBus = bus;
   for (const [d, a] of [[0, 1], [0.15, 0.62]]) { // 쿵(lub) · 0.15초 뒤 약한 쿵(dub)
     const v = a * (0.22 + 0.18 * k), o = AC.createOscillator(), h = AC.createOscillator(), g = AC.createGain(), gh = AC.createGain();
@@ -7678,7 +7680,7 @@ function tenseClock(sec) { // 전투 시계 막판 표시 — 남은 초가 바�
   tenseSec = sec;
   const c = document.getElementById('clock');
   c.classList.toggle('tense', sec > 0);
-  if (sec) c.dataset.sec = sec;
+  if (sec) c.dataset.sec = sec; else delete c.dataset.sec;
 }
 function tenseCut() { // 일시정지(창)·탭 숨김: 울리던 박동을 즉시(20ms 페이드) 끊고 BGM 원음 복귀 — 재개되면 다음 tenseTick이 다시 건다
   if (tenseBus) { const g = tenseBus.gain, t = AC.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + 0.02); tenseBus = null; }
@@ -8362,7 +8364,7 @@ const SPR = 88, SPR_C = 44; // 스프라이트 캔버스 크기/중심
 // 스프라이트를 굽는 크기 = 실제로 그려지는 크기(monSize의 재질분). 예전엔 MAT_SIZE를 빼먹고 esc 성장만 반영해서
 // 태양(MAT_SIZE 1.3)은 25.1로 구운 걸 32.6으로 늘려 그렸다 → ×1.3 확대 = 유저가 지적한 화질 저하. 이제 k===1.
 function matSpriteSz(mat) { return 19 * (MAT_SIZE[mat] || 1); }
-// 🔋 10-01 배터리: RS2 몹 스프라이트(176²)에서 그림 bbox는 8~17%뿐 — 투명 픽셀도 GPU는 매번 샘플·블렌딩한다 → bbox만 블릿 (결과 픽셀 동일, 2px 투명 여유)
+// 🔋 10-01 배터리: RS2 몹 스프라이트(176²)에서 그림 bbox는 8~17%뿐 — 투명 픽셀도 GPU는 매번 샘플·블렌딩한다 → bbox만 블릿 (거의 동일 — 리샘플 경로 차로 일부 채널 ≤수/255, 육안 불가 · 2px 투명 여유)
 let sprScan = null;
 function sprBBox(cnv) {
   try {
@@ -10279,9 +10281,7 @@ function updateInfoPanel() {
   const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = upgEff(top2[0]) + upgEff(top2[1]);
   const upFlat = isHiddenCombo(u) ? 0 : +(((u.hidden || u.ace) ? aceUp : upgEff(S.upg[u.race])) * upgPer(u) * fuseCount(u)).toFixed(1); // 히든 영웅은 종족 업글 미적용 (⭐ 단련으로 성장)
   const hmI = hiddenMeta(u);
-  const raceLine = u.catapult
-    ? `<span style="color:${RACES[0].color}">♦ 다이아</span> · 다이아 강화 적용`
-    : hmI
+  const raceLine = hmI // 투석기도 히든 영웅 — 08-14부터 다이아 업글 미적용(단련만)이라 예전 '다이아 업그레이드 적용' 문구는 틀린 안내였다
     ? `<span style="color:${hmI[2]}">${hmI[0]} ${hmI[1]}</span> · ⭐ 단련·🩸 승급은 🏰 성에서` // 히든: 종족 없음 — 예전 별도 안내 줄을 여기로 합침
     : (u.hidden || u.ace)
     ? `<span style="color:#e91e8c">♠ 에이스</span> · 상위 2종족 강화 +${upFlat}`
@@ -11688,7 +11688,8 @@ function sfx(type, arg) {
   const now = performance.now(), gap = { shoot: 45, slash: 90, boom: 55, bigboom: 300, jackpot: 400, combo: 70,
     splash: 70, glass: 70, metal: 65, thud: 80,
     pick: 200, coin: 220, boss: 1500, clear: 1500, leak: 800, reward: 500, hero: 800, chirp: 300 }[type] || 60;
-  if (lastSfx[type] && now - lastSfx[type] < gap) return;
+  const mil = type === 'combo' && arg > 0 && arg % 10 === 0; // 10·20·30… 마디 쿵은 스로틀 면제 — 다중 처치 한 틱에선 첫 킬만 통과해 마디가 거의 안 울렸다 (10-02 크로스체크)
+  if (!mil && lastSfx[type] && now - lastSfx[type] < gap) return;
   lastSfx[type] = now;
   if (type === 'shoot') noiseBurst(0.045, 0.17, 2600 + Math.random() * 900, 'bandpass'); // 착! (찰진 슬라이스)
   else if (type === 'slash') { noiseBurst(0.1, 0.2, 1800, 'bandpass'); tone(230, 0.09, 'sawtooth', sfxGain, 0.07); } // 촤악 (썰림)
@@ -11780,7 +11781,7 @@ function audioSync(e) {
   const off = (e && e.type === 'pagehide') || !audioWanted();
   if (off) {
     if (bgm && bgm.decks) bgm.decks.forEach(d => { if (!d.a.paused) d.a.pause(); });
-    if (AC.state === 'running') AC.suspend().catch(() => {});
+    if (AC.state !== 'closed') AC.suspend().catch(() => {}); // state로 거르지 않는다 — 복귀 직후 resume 대기 중(state 아직 suspended)에 다시 숨기면 그 resume이 끝나 숨긴 채 running으로 남았다 (10-02 크로스체크)
     if (document.hidden && musicTimer) { clearInterval(musicTimer); musicTimer = null; }
   } else {
     if (AC.state !== 'running') AC.resume().catch(() => {});
@@ -13091,6 +13092,7 @@ const BASE_SPEED = 1.3; // 게임 기본 진행 속도 (2배속 시 실질 2.6�
 //    건너뛴 rAF에선 last를 건드리지 않는다 → 다음 처리 프레임이 누적 dt(16.7ms)를 받아 게임 시간은 정확히 같다 (0.05s 클램프 이내).
 //    정지(타이틀·성 강화·자금 운영·결투/왕관/부활 창)는 S.time이 멈춰 그림이 안 바뀐다 → IDLE_GAP마다만 다시 그린다 (+ needRedraw 즉시 1회).
 const PLAY_GAP = 9.7, IDLE_GAP = 250, HUD_GAP = 45; // ms
+const CAP_AVG = 8.7; // 상한은 모바일 + 주기 ≤8.7ms(≈115Hz↑)에서만 — 103~115Hz 패널이 2 vsync에 1번(52~57fps)으로 반토막 나지 않게 · 데스크톱 고주사율 모니터는 그대로 (10-02 크로스체크)
 let lastProc = -1e9, lastHud = -1e9, rafPrev = 0, rafAvg = 16.7; // rafAvg = rAF 콜백 간격의 이동평균(ms) ≈ 디스플레이 주기
 function hudMaybe(now) { // HUD는 프레임 수가 아니라 실시간 기준 ≈20Hz (기존 '3프레임에 1번'은 120Hz에서 40Hz, 정지 4fps에선 1.3Hz가 된다)
   if (now - lastHud < HUD_GAP) return;
@@ -13098,10 +13100,12 @@ function hudMaybe(now) { // HUD는 프레임 수가 아니라 실시간 기준 �
   try { updateHUD(); } catch (e) { reportLoopError('hud', e); } // 예외로 rAF 루프가 멎지 않게 (Opus)
 }
 function frame(now) {
+  if (now < lastProc) lastProc = -1e9; // 시계 역행(하네스가 앞선 가짜 시계로 몬 뒤 실 rAF 등) — 리셋 안 하면 lastProc가 미래에 박혀 루프가 멎는다 (10-02 크로스체크)
+  if (now < lastHud) lastHud = -1e9;
   const rd = now - rafPrev; rafPrev = now;
   if (rd > 2 && rd < 40) rafAvg += (rd - rafAvg) * 0.05; // 숨김 복귀 같은 긴 공백은 평균에서 뺀다
   const idle = S.paused && !S.mapTest;
-  if (now - lastProc < (idle ? IDLE_GAP : rafAvg < PLAY_GAP ? PLAY_GAP : 0) && !(idle && needRedraw)) {
+  if (now - lastProc < (idle ? IDLE_GAP : IS_MOBILE && rafAvg < CAP_AVG ? PLAY_GAP : 0) && !(idle && needRedraw)) {
     if (idle) { last = now; hudMaybe(now); } // 정지 중엔 시계만 따라간다(재개 첫 dt가 튀지 않게) + 창 안 골드·레버 재장식은 20Hz 유지
     requestAnimationFrame(frame);
     return;
