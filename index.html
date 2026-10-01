@@ -2287,10 +2287,11 @@ html body.mobile #toolbar #btnFull::before {width:13px;height:13px;}
 <style id="dpd-1001">
 /* 10-01 유저 요청 배치 — 우리 쪽 보정은 GPT 블록(honey-storybook)을 건드리지 않고 여기에 모은다 */
 /* 🃏 전투가 끝나도 포커로 자동 전환하지 않는다 — 소환장(PEN 중심 440,250) 위 버튼. 포커 시계는 그대로 흐르며 남은 초를 보여준다 */
-#goPoker {position:absolute;left:46.81%;top:50%;transform:translate(-50%,-50%);z-index:8;display:none;min-height:43px;padding:9px 22px;border:1px solid #345435;border-radius:15px;background:linear-gradient(#56784c,#376849);color:#fff8e8;font-size:15px;font-weight:800;box-shadow:inset 0 1px 0 #a4b589,0 4px 0 #28492f,0 8px 18px #0006;cursor:pointer;white-space:nowrap;font-family:inherit;}
+/*    10-01 저녁 유저: 초록이라 잔디 위에서 잘 안 보인다 → 붉은 계열 + 크림 테 (텍스트 대비 ≥4.9:1) */
+#goPoker {position:absolute;left:46.81%;top:50%;transform:translate(-50%,-50%);z-index:8;display:none;min-height:43px;padding:9px 22px;border:1px solid #6e1410;border-radius:15px;background:linear-gradient(#c8372d,#9c1f1a);color:#fff8e8;font-size:15px;font-weight:800;box-shadow:0 0 0 2px #fff3cfcc,inset 0 1px 0 #f08a7a,0 4px 0 #6e1410,0 8px 18px #0006;cursor:pointer;white-space:nowrap;font-family:inherit;}
 #goPoker.show {display:block;}
-#goPoker:active {transform:translate(-50%,calc(-50% + 2px));box-shadow:0 2px 0 #28492f;}
-#goPoker b {display:inline-block;min-width:2.2em;margin-left:6px;padding:1px 6px;border-radius:9px;background:#fff3cf;color:#376849;font-size:13px;}
+#goPoker:active {transform:translate(-50%,calc(-50% + 2px));box-shadow:0 0 0 2px #fff3cfcc,0 2px 0 #6e1410;}
+#goPoker b {display:inline-block;min-width:2.2em;margin-left:6px;padding:1px 6px;border-radius:9px;background:#fff3cf;color:#9c1f1a;font-size:13px;}
 #goPoker:focus-visible {outline:3px solid #805f2f;outline-offset:3px;}
 body.mobile #goPoker {min-height:0;padding:6px 14px;font-size:13px;border-radius:12px;}
 body.mobile #goPoker b {font-size:11px;}
@@ -5392,10 +5393,10 @@ function duelWin(u) {
   const gold = 150 + S.round * 20;
   S.gold += gold;
   if (u && u.kills != null) u.kills++;
-  // 🪙 시간 차등 칩 (2026-08-03 유저): 제한시간 절반 안에 잡으면 칩 1개, 그 뒤(연장전 포함)는 반 개.
-  // 반 개 두 번 = 자연히 1개 (0.5 + 0.5) — 카지노는 정수 칩만 소모하므로 반 개는 모아야 쓴다
+  // 🪙 시간 차등 칩 (2026-08-03 유저): 제한시간 절반 안에 잡으면 신속, 그 뒤(연장전 포함)는 느림.
+  // 10-01 유저: 정확히 반으로 — 신속 ½개 · 느림 ¼개 (1개 → ½, ½ → ¼). 카지노는 정수 칩만 소모하므로 조각은 모아야 쓴다
   const fast = S.timer > WAVE_TIME / 2;
-  const chipGain = fast ? 1 : 0.5;
+  const chipGain = fast ? 0.5 : 0.25;
   S.chips += chipGain;
   for (let i = 0; i < (fast ? 3 : 2); i++) S.parts.push({ x: d.x, y: d.y, vx: (Math.random()-0.5)*120, vy: -80 - Math.random()*80, coin: true, chipFx: true, t: 1.6, r: fast ? 3.4 : 2.4, c: '#ffd54f' });
   sfx('jackpot'); S.hitstop = 0.06;
@@ -5403,7 +5404,7 @@ function duelWin(u) {
   for (let i = 0; i < 18; i++) { const a = Math.random() * 6.28, v = 90 + Math.random() * 160;
     S.parts.push({ x: d.x, y: d.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 50, g: true, t: 0.6, r: 1.8 + Math.random() * 2.4, c: i % 3 ? c : '#ffd54f' }); }
   S.effects.push({ type: 'boom', x: d.x, y: d.y, r: 60, t: 0.4 });
-  const chipTxt = fast ? '🪙 칩 +1 (신속 격파!)' : '🪙 칩 +½ (반 개 — 모아서 쓰자)';
+  const chipTxt = fast ? '🪙 칩 +½ (신속 격파!)' : '🪙 칩 +¼ (조각 — 모아서 쓰자)';
   rewardToast('🏆', `도전자 격파! +${gold}G · ${chipTxt}`, '#c9971a', '콜 로 세 움 챔 피 언');
   logMsg(`🏆 결투장 승리!! +${gold}G · ${chipTxt} — 도전자: "...인정."`);
   S.duel = null; S.duelEnded = true; // 승리로 창이 닫힌다 → 승자 즉시 자유
@@ -10042,12 +10043,12 @@ function updateInfoPanel() {
     const skHTML = skUnits.length === 0 ? '' :
       `<br><button id="skillAllBtn" class="shopBtn" ${st6.allReady ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:${st6.allReady ? '#c0392b' : '#999'};font-weight:bold">${st6.label}</button>`;
     el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>${IS_MOBILE ? '유닛을 끌어 옮기기 · 빈 땅 탭 = 선택 해제 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}` +
-      (sel.some(u => !u.miner) ? priorityRow(commonPri) + mobileCmdHTML() : '') +
+      (sel.some(u => !u.miner) ? priorityRow(commonPri) : '') +
       skHTML +
       (canFuse ? `<br><span style="color:#8c5bff;font-weight:bold">🌀 같은 유닛 5기! 좌측 포털로 이동시키면 강화!</span>` : '') +
       deselBtnHTML();
     wirePriorityButtons(el);
-    wireDesel(el); wireMobileCmd(el);
+    wireDesel(el);
     const gb = el.querySelector('#skillAllBtn');
     if (gb) gb.onclick = () => { // 클릭 시점의 선택을 재계산 (렌더 시점 캡처가 낡는 것 방지 — Opus)
       S.units.filter(u => u.selected && u.tier === 6 && !u.clone && !u.miner).forEach(u => activateSkill(u));
@@ -10073,61 +10074,41 @@ function updateInfoPanel() {
     wireDesel(el);
     return;
   }
-  const traits = [];
-  if (u.atk === 'pen') traits.push('<b style="color:#d32f2f">소환장 전체 타격</b>');
-  else if (u.vis === 'flame') traits.push(`화염 스트림 (불길 두께 ${u.splash * 2})`);
-  else if ((u.vis === 'sword' || u.vis === 'twin') && !u.shogun) traits.push('단일 공격');
-  else if (u.splash) traits.push(`스플래쉬 반경 ${u.splash}`);
-  if (u.gamble) traits.push('🎲 주사위만큼 1~6회 랜덤 팅김');
-  else if (u.bounce) traits.push(`팅김 ×${u.bounce}`);
-  if (u.pierce) traits.push(`관통 ×${u.pierce}`);
-  if (u.shards) traits.push(`파편 ${u.shards}개 (${Math.round(u.shardFrac*100)}%)`);
-  if (u.atk === 'sniper') traits.push('🎯 보스·광물 공격력 ×2');
-  if (u.junk) traits.push('💰 가까운 유닛의 킬 골드 상승');
-  if (u.quartet) traits.push('📯 주변 아군 공속 상승');
-  if (u.execute) traits.push('⚔️ 빈사 몬스터 즉시 처형');
-  if (u.shogun) traits.push('🔥 불타는 참격');
-  if (u.chrono) traits.push('⏳ 시간 정지 스킬 (쿨 150초)');
-  if (u.slot) { traits.push('🎰 대박 폭격 스킬 (쿨 75초)'); traits.push('🌈 캡슐 뽑기에서 무지개 캡슐이 잘 나온다'); } // 수치는 노출하지 않는다 (UI 미니멀 원칙)
-  if (u.joker) traits.push('🃏 견인 스킬 (지속 15초 · 쿨 60초) — 낫에 걸린 몹을 끌어당김');
-  if (u.catapult) traits.push('🪨 설치형 공성병기 (이동 불가)');
-  if (u.ascend) traits.push(`<b style="color:#ff6b9d">🩸 승급 Lv.${u.ascend}</b>`);
-  if (u.heroUpLv) traits.push(`<b style="color:#c9971a">⭐ 단련 Lv.${u.heroUpLv} (총 공격력 +${u.heroUpLv * 15}%)</b>`);
-  if (u.stone === 'lava') traits.push('<b style="color:#ff6d1f">🌋 용암 묻은 돌</b>'); // 🥚 획득 후에만 표시 (발견 전 힌트 없음)
-  else if (u.stone === 'wet') traits.push('<b style="color:#42a5f5">💧 물먹은 돌</b>');
-  if (!traits.length) traits.push(u.miner ? '채굴 전용 (전투 불가)' : '단일 공격');
-  if (u.forceTarget) traits.push('<b style="color:#e53935">🎯 집중 공격 중</b>');
+  // 10-01 저녁 유저: 상태창 컴팩트 — 특성 설명·사거리·공격 지정 버튼 삭제. 설명이 아닌 '상태'만 제목 줄 작은 배지로 남긴다
+  const badges = [];
+  if (u.ascend) badges.push(`<b style="color:#ff6b9d">🩸Lv.${u.ascend}</b>`);
+  if (u.heroUpLv) badges.push(`<b style="color:#c9971a">⭐Lv.${u.heroUpLv}</b>`);
+  if (u.stone === 'lava') badges.push('<span title="용암 묻은 돌">🌋</span>'); // 🥚 획득 후에만 표시 (발견 전 힌트 없음)
+  else if (u.stone === 'wet') badges.push('<span title="물먹은 돌">💧</span>');
+  if (u.forceTarget) badges.push('<b style="color:#e53935">🎯 집중</b>');
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
   const sub = u.miner ? '광부' : isHiddenCombo(u) ? '히든 영웅' : keyTag + HAND_NAMES[u.tier] + (u.hero ? ' 영웅' : '');
   const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = upgEff(top2[0]) + upgEff(top2[1]);
   const upFlat = isHiddenCombo(u) ? 0 : +(((u.hidden || u.ace) ? aceUp : upgEff(S.upg[u.race])) * upgPer(u) * fuseCount(u)).toFixed(1); // 히든 영웅은 종족 업글 미적용 (⭐ 단련으로 성장)
   const hmI = hiddenMeta(u);
   const raceLine = u.catapult
-    ? `종족: <span style="color:${RACES[0].color}">♦ 다이아</span> (하이카드 20기 제물 — 다이아 업그레이드 적용)`
+    ? `<span style="color:${RACES[0].color}">♦ 다이아</span> · 다이아 강화 적용`
     : hmI
-    ? `종족: <span style="color:${hmI[2]}">${hmI[0]} ${hmI[1]}</span> (종족 없음 — ⭐ 단련으로 성장)`
+    ? `<span style="color:${hmI[2]}">${hmI[0]} ${hmI[1]}</span> · ⭐ 단련·🩸 승급은 🏰 성에서` // 히든: 종족 없음 — 예전 별도 안내 줄을 여기로 합침
     : (u.hidden || u.ace)
-    ? `종족: <span style="color:#e91e8c">♠ 에이스</span> (상위 2종족 업그레이드 합산 +${upFlat})`
-    : `종족: <span style="color:${RACES[u.race].color}">${RACES[u.race].suit} ${RACES[u.race].name}</span> (업그레이드 Lv.${S.upg[u.race]})`;
+    ? `<span style="color:#e91e8c">♠ 에이스</span> · 상위 2종족 강화 +${upFlat}`
+    : `<span style="color:${RACES[u.race].color}">${RACES[u.race].suit} ${RACES[u.race].name}</span> · 강화 Lv.${S.upg[u.race]}`;
   el.innerHTML =
-    `<b>${u.hidden ? '♠ ' + u.weapon : u.weapon}</b> (${sub})<br>` +
+    `<b>${u.hidden ? '♠ ' + u.weapon : u.weapon}</b> (${sub})${badges.length ? ' ' + badges.join(' ') : ''}<br>` +
     raceLine + '<br>' +
-    `공격력: <b>${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? ` 👑×${CROWN_RACE_MUL[S.crownRace].toFixed(2)}` : ''}${isHiddenCombo(u) ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
-    `공속: ${(u.spdBuff || 1) < 1
-      ? `<b style="color:#00a3ff">${(1/effCd(u)).toFixed(1)}회/초</b> <span style="color:#00a3ff;font-size:10px">📯 +20%</span>`
-      : `${(1/effCd(u)).toFixed(1)}회/초`} · 사거리: ${Math.round(effRange(u))}<br>` + // 콰르텟 버프·히든 페널티 반영된 실제 값
-    `💀 처치: <b id="ipKills">${u.kills || 0}</b>킬<br>` +
-    `특성: ${traits.join(', ')}` +
+    `공격력 <b>${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? ` 👑×${CROWN_RACE_MUL[S.crownRace].toFixed(2)}` : ''}${isHiddenCombo(u) ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
+    `공속 ${(u.spdBuff || 1) < 1
+      ? `<b style="color:#00a3ff">${(1/effCd(u)).toFixed(1)}/초</b> <span style="color:#00a3ff;font-size:10px">📯 +20%</span>`
+      : `${(1/effCd(u)).toFixed(1)}/초`} · 💀 <b id="ipKills">${u.kills || 0}</b>킬` + // 콰르텟 버프·히든 페널티 반영된 실제 값
     (u.miner ? '' : priorityRow(u.priority || 'near')) +
     (u.tier === 6 ? skillRow(u) : '') +
     (u.chrono ? chronoRow(u) : '') +
     (u.joker ? jokerRow(u) : '') +
     (u.slot ? slotRow(u) : '') +
-    (isHiddenCombo(u) && !u.clone ? `<br><span style="font-size:10.5px;color:#9a8a60">⭐ 단련·🩸 승급은 🏰 성에서</span>` : '') +
     ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier}) <span style="color:${u.super?'#c62828':u.hero?'#e57373':'#66bb6a'};font-size:11px">성공률 ${Math.round(copyRate(u)*100)}%</span></button>` : '') +
-    (u.miner ? '' : mobileCmdHTML()) + deselBtnHTML();
+    deselBtnHTML();
   wirePriorityButtons(el);
-  wireDesel(el); wireMobileCmd(el);
+  wireDesel(el);
   placeInfoPanel();
   if (el.querySelector('#skillBtn')) el.querySelector('#skillBtn').onclick = () => { activateSkill(u); updateInfoPanel(); };
   if (el.querySelector('#chronoBtn')) el.querySelector('#chronoBtn').onclick = () => { activateChrono(u); updateInfoPanel(); };
@@ -10135,15 +10116,7 @@ function updateInfoPanel() {
   if (el.querySelector('#jokerBtn')) el.querySelector('#jokerBtn').onclick = () => { activateJoker(u); updateInfoPanel(); };
   if (el.querySelector('#copyBtn')) el.querySelector('#copyBtn').onclick = () => copyUnit(u);
 }
-// 📱 모바일 명령 버튼 (09-08): 공격 지정은 안내 없는 롱프레스뿐이었고 홀드는 터치로 불가능했다
-function mobileCmdHTML() { return IS_MOBILE ? `<br><button id="mAtkBtn" class="shopBtn" style="margin-top:6px">⚔️ 공격 지정</button>` : ''; } // 홀드 버튼은 09-18 삭제(유저)
-function wireMobileCmd(el) {
-  const a = el.querySelector('#mAtkBtn');
-  if (a) { // 토글 + 상태 표시 (모드 중엔 버튼이 '취소'가 된다 — 터치엔 커서 변화가 없어 상시 표시가 필요, 크로스체크 P1)
-    if (attackMode) a.textContent = '⚔️ 탭할 곳을 고르세요 (취소)';
-    a.onclick = () => { setAttackMode(!attackMode); if (attackMode) addFloat(CX, 60, '⚔️ 공격할 곳을 탭!', '#ffb74d', 1.6); updateInfoPanel(); };
-  }
-}
+// 📱 모바일 ⚔️ 공격 지정 버튼(09-08)은 10-01 저녁 유저 요청으로 삭제 — 모바일 공격은 롱프레스
 // 선택 해제 ✕ 버튼 (unitInfo 우상단, 데스크톱/모바일 공용)
 function deselBtnHTML() { return `<button id="deselBtn" title="선택 해제">✕</button>`; }
 function wireDesel(el) {
@@ -10702,8 +10675,9 @@ document.getElementById('shopOverlay').onclick = e => { if (e.target.id === 'sho
 
 // ==================== 🎰 칩 카지노 — 칩(보스·결투): 룰렛·슬롯·광부 고용 / 골드: 비상 물자 ====================
 const CM = document.getElementById('chipModal'), CB = document.getElementById('chipBody'), CT = document.getElementById('chipTitle');
-// 반 개 칩 표기 통일: 0.5 → "½", 1.5 → "1½", 2 → "2" ("0½"처럼 0이 앞에 붙으면 0으로 오독된다)
-function chipTxt(c) { const w = Math.floor(c); return c === w ? String(w) : (w ? w + '½' : '½'); }
+// 칩 조각 표기 통일: 0.25 → "¼", 0.5 → "½", 1.75 → "1¾", 2 → "2" ("0½"처럼 0이 앞에 붙으면 0으로 오독된다)
+// 10-01: 결투 보상이 ½/¼로 내려가며 ¼ 단위 — 0.25 격자로 반올림해 부동소수 찌꺼기에도 안전
+function chipTxt(c) { const q = Math.round(c * 4), w = Math.floor(q / 4), f = ['', '¼', '½', '¾'][q % 4]; return f ? (w ? w + f : f) : String(w); }
 function openChip(title) {
   CT.textContent = title; CB.innerHTML = '';
   CM.style.display = 'flex';
@@ -11499,6 +11473,19 @@ function popSound(big) {
   o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 0.28);
   noiseBurst(big ? 0.12 : 0.05, big ? 0.26 : 0.13, 2300, 'bandpass');
 }
+// 🥊 콤보 타격 악센트: 멜로디(음계)가 없는 '퍽' — 낮은 사인 펀치(피치가 뚝 떨어져 음정이 안 들림) + 짧은 크랙 노이즈.
+//    콤보가 쌓일수록 펀치가 묵직해지고 크랙이 밝아진다(음높이가 아니라 무게로 고조). 10콤보마다 한 번 더 깊은 '쿵'.
+function comboHit(n) {
+  const t = AC.currentTime, k = Math.min(1, n / 30), j = 0.94 + Math.random() * 0.12; // j: 매번 살짝 달라 기관총처럼 안 들리게
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(230 * j, t); o.frequency.exponentialRampToValueAtTime(72, t + 0.06); // 230Hz에서 출발 — 폰 스피커(저역 ~150Hz↓ 안 나옴)에서도 몸통이 들리게
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.08 + 0.06 * k, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09 + 0.04 * k);
+  o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 0.15);
+  noiseBurst(0.028, 0.05 + 0.035 * k, 1700 + 1200 * k, 'bandpass'); // 착 — 타격의 날
+  if (n % 10 === 0) { tone(64, 0.2, 'sine', sfxGain, 0.13, t + 0.012); noiseBurst(0.08, 0.07, 520, 'lowpass'); } // 10·20·30… 마디 쿵
+}
 function sfx(type, arg) {
   if (!AC || !sfxOn) return;
   const now = performance.now(), gap = { shoot: 45, slash: 90, boom: 55, bigboom: 300, jackpot: 400, combo: 70,
@@ -11518,7 +11505,7 @@ function sfx(type, arg) {
   else if (type === 'leak') { tone(311, 0.16, 'sawtooth', sfxGain, 0.15); tone(233, 0.22, 'sawtooth', sfxGain, 0.15, AC.currentTime + 0.13); } // 💔 목숨 잃음
   else if (type === 'reward') [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.12, 'sine', sfxGain, 0.13, AC.currentTime + i * 0.055)); // 💎 보상 반짝
   else if (type === 'hero') { [440, 554, 659, 880].forEach((f, i) => tone(f, 0.16, 'square', sfxGain, 0.08, AC.currentTime + i * 0.07)); noiseBurst(0.12, 0.12); } // ⚡ 영웅 탄생
-  else if (type === 'combo') tone(340 + Math.min(arg || 0, 30) * 24, 0.06, 'square', sfxGain, 0.09); // 연쇄킬: 콤보 오를수록 음이 높아짐
+  else if (type === 'combo') comboHit(arg || 0); // 연쇄킬 (10-01 저녁 유저: 올라가는 '띠링' 음계가 BGM과 안 맞음 → 음정 없는 타격 악센트)
   else if (type === 'splash') { noiseBurst(0.14, 0.16, 900, 'lowpass'); tone(300, 0.1, 'sine', sfxGain, 0.09); tone(150, 0.16, 'sine', sfxGain, 0.08, AC.currentTime + 0.02); } // 첨벙
   else if (type === 'glass') { [2100, 2800, 3400].forEach((f, i) => tone(f, 0.09, 'triangle', sfxGain, 0.075, AC.currentTime + i * 0.015)); noiseBurst(0.05, 0.1, 4000, 'bandpass'); } // 쨍
   else if (type === 'metal') { [520, 780, 1170].forEach((f, i) => tone(f, 0.15, 'square', sfxGain, 0.055, AC.currentTime + i * 0.008)); noiseBurst(0.06, 0.11, 3000, 'bandpass'); } // 챙
