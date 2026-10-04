@@ -3031,6 +3031,51 @@ html body #unitInfo.ui-panel .ui-rate[data-tier="unit"] { background: #1d5b38; c
 html body #unitInfo.ui-panel .ui-rate[data-tier="hero"] { background: #8a2f3a; color: #ffe6e9; }
 html body #unitInfo.ui-panel .ui-rate[data-tier="super"] { background: #5c0d1c; color: #ffd9df; }
 </style>
+<style id="dpd-objinfo-host">
+/* 10-05 유저 요청: 건물·몬스터 정보창(#objInfo)도 유닛 상태창(GPT 인디고 ② 진한 인디고 유리)과 같은 계열로 — 토큰 값은 unitinfo.css와 동일
+   색·테두리·제목 굵기(750)를 덮는다 (글꼴 family는 기존 상속 그대로). position/display/right/bottom/z-index/transition/max-width는 기존 규칙 그대로 (PC 250px · 모바일 46vw, --panelH 슬라이드)
+   padding은 예외: 테두리 1→2px 보정으로 기존값-1을 하드코딩해 덮는다 (PC 11px ← #unitInfo,#objInfo 12px · 모바일 9px ← .mobile #objInfo 10px) — 그 두 규칙을 바꾸면 여기도 같이 바꿀 것
+   :has·무한 애니·backdrop-filter 금지 (10-02 교훈) */
+html body #objInfo {
+  --ui-base: #171e3b;
+  --ui-surface: #34416a;
+  --ui-mid: #232d50;
+  --ui-edge: #9faee6;
+  --ui-line: #727fa8;
+  --ui-text: #f3f4ff;
+  --ui-muted: #c3cce8;
+  --ui-gold: #f2d38a;
+  --oi-track: #0f1430;   /* HP·광석 바 트랙 — 채움색(체력 3색·광석 10종)이 모두 3:1 이상 나오는 어두운 바닥 */
+  --oi-warn: #ffa59a;    /* 보스 즉사 경고 (구 #a04030) — #34416a 대비 5.2:1 */
+  border: 2px solid var(--ui-edge);
+  border-radius: 14px;
+  background: var(--ui-base) linear-gradient(155deg, var(--ui-surface) 0%, var(--ui-mid) 27%, var(--ui-base) 78%);
+  color: var(--ui-text);
+  box-shadow: inset 0 0 0 1px #596688, inset 0 2px 0 #7a87ac, 0 3px 0 #10162c, 0 5px 12px #10162c55;
+  padding: 11px;         /* 테두리 1→2px만큼 안쪽 여백 -1 → 바깥 크기·줄바꿈 HEAD와 동일 (글꼴은 기존 상속 그대로 — 바꾸면 결투장·소환장이 한 줄 늘었다) */
+  font-variant-numeric: tabular-nums;
+  text-shadow: none;
+  color-scheme: dark;
+}
+html body.mobile #objInfo { padding: 9px; } /* 기존 .mobile #objInfo 10px - 1 */
+html body #objInfo b { color: var(--ui-gold); }
+html body #objInfo > b:first-child { color: var(--ui-text); font-weight: 750; } /* 제목 줄 (건물·몬스터 이름) — 유닛 상태창 .ui-name과 같은 흰 굵은 글씨, 강조 숫자·단어는 금빛 */
+/* 💡 팁 = 인디고 위 금빛 안내 칩 (테두리 대신 inset 그림자 — 크기 불변) */
+html body #objInfo .tip { background: #2b2947; border: 0; border-radius: 9px; color: var(--ui-gold); box-shadow: inset 0 0 0 1px #f2d38a59; }
+html body #objInfo .tip b { color: #fff3d0; }
+/* 인라인 색 → 클래스 (showObjInfo·showMonsterInfo·OBJ_INFO.arena) */
+html body #objInfo .oi-note { font-size: 11px; color: var(--ui-muted); }                    /* 결투장 입장 규칙 (구 #8a7a5c) */
+html body #objInfo .oi-done { margin-top: 6px; color: var(--ui-gold); font-weight: bold; }  /* 🏆 10단계 완채 (구 #c9a227 — 4.1:1이라 금빛 토큰으로) */
+html body #objInfo .oi-sub { margin-top: 2px; font-size: 10.5px; color: var(--ui-muted); }  /* 광석 HP 숫자 (구 #6a5f4c) */
+html body #objInfo .oi-quote { color: var(--ui-muted); }                                    /* 보스 한 줄 (구 #7a6a58) */
+html body #objInfo .oi-warn { font-size: 11px; color: var(--oi-warn); }
+html body #objInfo .oi-hp { margin-top: 6px; color: var(--ui-text); }                      /* ❤️ 체력 줄 (구 #333) */
+html body #objInfo .oi-track { overflow: hidden; margin-top: 3px; background: var(--oi-track); border: 1px solid var(--ui-line); }
+html body #objInfo .oi-ore-track { height: 9px; border-radius: 4px; }
+html body #objInfo .oi-hp-track { height: 8px; border-radius: 5px; }
+/* 광석 재질색은 그대로 쓰되 1단계 석탄(#3f3f3f)만 어두운 트랙 위에서 1.7:1이라 같은 회색 계열로 밝힘 (인라인 background를 덮으려면 !important) */
+html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !important; }
+</style>
 </head>
 <body class="at-title">
 <div id="page">
@@ -10506,7 +10551,7 @@ const OBJ_INFO = {
     tip: '💡 풀하우스(단검)의 🗡️암살 스킬만이 유일하게 소환장 안으로 들어갈 수 있습니다.' },
   altar: { t: '🪨 제물대', d: '유닛을 이 위로 이동시키면 <b>제물</b>로 바쳐집니다.',
     tip: '🪨 오래된 돌 위에 무언가를 충분히 쌓으면… 깨어난다고들 한다.' },
-  arena: { t: '🏛️ 결투장', d: '“과연 네가? 나를? 도전한다는 게 너라니, 가소롭구나.”<br><span style="font-size:11px;color:#8a7a5c">⚔️ 유닛 1기만 입장 · 👹 도전자는 보스 판정</span>',
+  arena: { t: '🏛️ 결투장', d: '“과연 네가? 나를? 도전한다는 게 너라니, 가소롭구나.”<br><span class="oi-note">⚔️ 유닛 1기만 입장 · 👹 도전자는 보스 판정</span>',
     tip: '🏛️ 이따금 도전자가 몸을 푼다. 이긴다면… 뭐, 후하게는 주지.' },
 };
 function showObjInfo(k) {
@@ -10518,13 +10563,13 @@ function showObjInfo(k) {
   // 💎 광석 방: 몬스터 정보처럼 현재 광석의 HP바를 함께 (2026-08-08 유저)
   let bar = '';
   if (k === 'room') {
-    if (S.hunt.done) bar = `<div style="margin-top:6px;color:#c9a227;font-weight:bold">🏆 10단계 완채!</div>`;
+    if (S.hunt.done) bar = `<div class="oi-done">🏆 10단계 완채!</div>`; // 🎨 10-05 인디고: 인라인 색 → 클래스 (dpd-objinfo-host)
     else {
       const ore = ORES[Math.min(9, S.hunt.stage - 1)], ratio = Math.max(0, S.hunt.hp / S.hunt.max);
       bar = `<div style="margin-top:7px"><b style="font-size:11.5px">${S.hunt.stage}단계: ${ore.name}</b>
-        <div style="height:9px;background:#e6e0d4;border:1px solid #b9ae99;border-radius:4px;overflow:hidden;margin-top:3px">
+        <div class="oi-track oi-ore-track">
           <div id="oreObjFill" data-stage="${S.hunt.stage}" style="height:100%;background:${ore.col};width:${(ratio * 100).toFixed(1)}%"></div></div>
-        <div id="oreObjTxt" style="font-size:10.5px;color:#6a5f4c;margin-top:2px">${Math.max(0, Math.round(S.hunt.hp)).toLocaleString()} / ${S.hunt.max.toLocaleString()}</div></div>`;
+        <div id="oreObjTxt" class="oi-sub">${Math.max(0, Math.round(S.hunt.hp)).toLocaleString()} / ${S.hunt.max.toLocaleString()}</div></div>`;
     }
   }
   const tip = o.tip; // 히든 소문은 🐦 새를 잡아야 얻는다 (여기서 공짜로 흘리지 않는다)
@@ -10577,7 +10622,7 @@ function showMonsterInfo(m) {
   const mat = MATERIALS[m.mat] || { name: '수수께끼 공' };
   const bi = m.boss ? (BOSS_INFO[m.shape] || ['👹 보스', '정체불명. 아무튼 세다.']) : null;
   const name = m.boss ? bi[0] + ' (보스)' : mat.name + (m.golden ? ' ✨' : '');
-  const desc = m.boss ? `<i style="color:#7a6a58">“${bi[1]}”</i><br><span style="font-size:11px;color:#a04030">시간 내에 못 잡으면 즉사 💀</span>` : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…');
+  const desc = m.boss ? `<i class="oi-quote">“${bi[1]}”</i><br><span class="oi-warn">시간 내에 못 잡으면 즉사 💀</span>` : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…');
   const hp = Math.max(0, Math.ceil(m.hp)), max = Math.max(1, Math.ceil(m.max));
   const pct = Math.max(0, Math.min(1, m.hp / m.max));
   const col = pct > 0.5 ? '#43a047' : pct > 0.25 ? '#ff9800' : '#e53935';
@@ -10586,8 +10631,8 @@ function showMonsterInfo(m) {
   if (m.shield > 0) tags.push('🛡️ 보호막 ' + Math.ceil(m.shield));
   if (m.split) tags.push('💥 분열 보스 — 잡으면 5조각으로 갈라져요!');
   el.innerHTML = `<b>${name}</b><br>${desc}` +
-    `<div style="margin-top:6px;color:#333">❤️ <b>${hp}</b> / ${max}` +
-    `<div style="height:8px;background:#e6e6e6;border-radius:5px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${(pct*100).toFixed(0)}%;background:${col}"></div></div></div>` +
+    `<div class="oi-hp">❤️ <b>${hp}</b> / ${max}` + // 🎨 10-05 인디고: 인라인 색 → 클래스 (체력 3색 채움은 의미 색이라 인라인 유지)
+    `<div class="oi-track oi-hp-track"><div style="height:100%;width:${(pct*100).toFixed(0)}%;background:${col}"></div></div></div>` +
     (tags.length ? `<span class="tip">${tags.join('<br>')}</span>` : '');
   el.style.display = 'block';
 }
