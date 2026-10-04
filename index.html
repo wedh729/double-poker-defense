@@ -2510,6 +2510,527 @@ html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-recipe>b {
   html body.mobile #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-tabs {padding:3px;}
 }
 </style>
+<style data-dpd-source="unitinfo.css">
+/* DPD · UNIT INFO / 02 OPAQUE INDIGO / 2026-10-03
+   기존 스타일 뒤에 삽입. 위치·열기/닫기는 기존 게임이 관리합니다.
+   모든 선택자는 #unitInfo.ui-panel 안으로 한정합니다. */
+html body #unitInfo.ui-panel {
+  --ui-base: #171e3b;
+  --ui-surface: #34416a;
+  --ui-mid: #232d50;
+  --ui-edge: #9faee6;
+  --ui-line: #727fa8;
+  --ui-text: #f3f4ff;
+  --ui-muted: #c3cce8;
+  --ui-gold: #f2d38a;
+  --ui-dark-ink: #211c34;
+  --ui-dia: #87d8ff;
+  --ui-heart: #ffa2b4;
+  --ui-club: #9de8c0;
+  --ui-ace: #ffade5;
+  --ui-hidden-joker: #d9b3ff;
+  --ui-hidden-chrono: #97d1ff;
+  --ui-hidden-slot: #f2d38a;
+  --ui-hidden-orange: #ffbc92;
+  --ui-hidden-other: #e2ccff;
+  --ui-button: #242e50;
+  --ui-button-edge: #8996bf;
+  --ui-skill: #53417f;
+  --ui-skill-ink: #f7f5ff;
+  --ui-skill-edge: #b5a1e0;
+  --ui-skill-active: #c0d0ff;
+  --ui-skill-active-ink: #18233f;
+  --ui-cooldown: #303b52;
+  --ui-cooldown-ink: #ced6e8;
+  --ui-copper: #9a532e;
+  --ui-copper-ink: #fff7e8;
+  box-sizing: border-box;
+  width: 260px;
+  min-width: 0;
+  max-width: 260px;
+  height: auto;
+  min-height: 0;
+  max-height: 220px;
+  padding: 10px;
+  border: 2px solid var(--ui-edge);
+  border-radius: 14px;
+  background: var(--ui-base) linear-gradient(155deg, var(--ui-surface) 0%, var(--ui-mid) 27%, var(--ui-base) 78%);
+  color: var(--ui-text);
+  box-shadow: inset 0 0 0 1px #596688, inset 0 2px 0 #7a87ac,
+              0 3px 0 #10162c, 0 5px 12px #10162c55;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR", system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.38;
+  font-weight: 400;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  text-shadow: none;
+  letter-spacing: normal;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 5px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-edge) var(--ui-base);
+  color-scheme: dark;
+  isolation: isolate;
+  opacity: 1;
+  filter: none;
+  transition: none;
+  animation: none;
+  /* position / display / left / right / top / bottom / z-index는 건드리지 않습니다. */
+}
+html body #unitInfo.ui-panel *,
+html body #unitInfo.ui-panel *::before,
+html body #unitInfo.ui-panel *::after { box-sizing: border-box; }
+html body #unitInfo.ui-panel b,
+html body #unitInfo.ui-panel strong { color: inherit; }
+html body #unitInfo.ui-panel small { font-size: 10px; }
+/* hidden은 게임이 넣은 display 인라인 선언보다 우선해야 합니다. */
+html body #unitInfo.ui-panel[hidden],
+html body #unitInfo.ui-panel [hidden] { display: none !important; }
+html body #unitInfo.ui-panel button {
+  appearance: none;
+  min-width: 0;
+  min-height: 32px;
+  margin: 0;
+  font-family: inherit;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: normal;
+  line-height: 1.25;
+  text-shadow: none;
+  text-decoration: none;
+  cursor: pointer;
+  opacity: 1;
+  filter: none;
+  transform: none;
+  transition: none;
+  animation: none;
+  touch-action: manipulation;
+}
+html body #unitInfo.ui-panel button:focus-visible {
+  outline: 2px solid var(--ui-gold);
+  outline-offset: 2px;
+}
+html body #unitInfo.ui-panel button:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+  filter: none;
+}
+html body #unitInfo.ui-panel #deselBtn {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  bottom: auto;
+  left: auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: var(--ui-mid);
+  color: var(--ui-text);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  box-shadow: none;
+  z-index: 2;
+}
+html body #unitInfo.ui-panel #deselBtn:focus-visible { outline-offset: -3px; }
+html body #unitInfo.ui-panel .ui-head {
+  margin: 0 0 4px;
+  padding: 0 25px 0 0;
+  min-height: 21px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+html body #unitInfo.ui-panel .ui-name {
+  color: var(--ui-text);
+  font-size: 13px;
+  font-weight: 750;
+}
+html body #unitInfo.ui-panel .ui-sub {
+  color: var(--ui-muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+html body #unitInfo.ui-panel .ui-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  width: 100%;
+  margin-top: 4px;
+}
+html body #unitInfo.ui-panel .ui-badges:empty { display: none; }
+html body #unitInfo.ui-panel .ui-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 4px;
+  border: 1px solid var(--ui-line);
+  border-radius: 5px;
+  background: var(--ui-mid);
+  color: var(--ui-muted);
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 650;
+  white-space: nowrap;
+}
+html body #unitInfo.ui-panel .ui-badge[data-badge="ascend"] { color: var(--ui-heart); }
+html body #unitInfo.ui-panel .ui-badge[data-badge="train"] { color: var(--ui-gold); }
+html body #unitInfo.ui-panel .ui-badge[data-badge="stone"] { color: var(--ui-hidden-orange); }
+html body #unitInfo.ui-panel .ui-badge[data-badge="focus"] {
+  color: var(--ui-gold);
+  border-color: var(--ui-gold);
+}
+html body #unitInfo.ui-panel .ui-race {
+  --ui-race-color: var(--ui-dia);
+  margin: 0 0 4px;
+  color: var(--ui-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+html body #unitInfo.ui-panel .ui-race[data-race="dia"] { --ui-race-color: var(--ui-dia); }
+html body #unitInfo.ui-panel .ui-race[data-race="heart"] { --ui-race-color: var(--ui-heart); }
+html body #unitInfo.ui-panel .ui-race[data-race="club"] { --ui-race-color: var(--ui-club); }
+html body #unitInfo.ui-panel .ui-race[data-race="ace"] { --ui-race-color: var(--ui-ace); }
+html body #unitInfo.ui-panel .ui-race[data-race="hidden"] { --ui-race-color: var(--ui-hidden-other); }
+html body #unitInfo.ui-panel .ui-race[data-hidden="joker"] { --ui-race-color: var(--ui-hidden-joker); }
+html body #unitInfo.ui-panel .ui-race[data-hidden="chrono"] { --ui-race-color: var(--ui-hidden-chrono); }
+html body #unitInfo.ui-panel .ui-race[data-hidden="slot"] { --ui-race-color: var(--ui-hidden-slot); }
+/* 나머지 히든 영웅은 게임에서 검증된 밝은 토큰을 --ui-race-color로 연결하세요. */
+html body #unitInfo.ui-panel .ui-suit {
+  color: var(--ui-race-color);
+  font-weight: 650;
+}
+html body #unitInfo.ui-panel .ui-race-note { color: var(--ui-muted); }
+html body #unitInfo.ui-panel .ui-stat {
+  margin: 0 0 4px;
+  color: var(--ui-muted);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+html body #unitInfo.ui-panel .ui-atk {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  min-height: 32px;
+}
+html body #unitInfo.ui-panel .ui-num {
+  color: var(--ui-gold);
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  white-space: nowrap;
+}
+html body #unitInfo.ui-panel .ui-crown {
+  color: var(--ui-gold);
+  font-size: 10px;
+  white-space: nowrap;
+}
+html body #unitInfo.ui-panel .ui-atk-base {
+  color: var(--ui-muted);
+  font-size: 9px;
+  white-space: nowrap;
+}
+html body #unitInfo.ui-panel .ui-spd {
+  font-size: 11px;
+  margin-bottom: 0;
+}
+html body #unitInfo.ui-panel .ui-spd b { color: var(--ui-text); }
+html body #unitInfo.ui-panel .ui-buff { color: var(--ui-club); font-size: 10px; }
+html body #unitInfo.ui-panel .ui-pri {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 5px 0 0;
+  border-top: 1px solid var(--ui-line);
+}
+html body #unitInfo.ui-panel .ui-pri-label {
+  flex: 0 0 auto;
+  color: var(--ui-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+html body #unitInfo.ui-panel .priBtn {
+  --ui-pri-fill: var(--ui-button);
+  --ui-pri-ink: var(--ui-muted);
+  --ui-pri-edge: var(--ui-button-edge);
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  min-height: 32px;
+  padding: 5px 3px;
+  margin: 0;
+  border: 1px solid var(--ui-button-edge);
+  border-radius: 7px;
+  /* 기존 priorityRow가 인라인으로 넣는 세 가지 색만 한정해서 덮습니다. */
+  border-color: var(--ui-pri-edge) !important;
+  background: var(--ui-pri-fill) !important;
+  color: var(--ui-pri-ink) !important;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 #516083;
+}
+html body #unitInfo.ui-panel .priBtn[aria-pressed="true"] {
+  --ui-pri-fill: var(--ui-gold);
+  --ui-pri-ink: var(--ui-dark-ink);
+  --ui-pri-edge: var(--ui-gold);
+  box-shadow: inset 0 1px 0 #fff2cb, inset 0 -2px 0 #ba9654;
+}
+html body #unitInfo.ui-panel button.ui-skill {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  height: auto;
+  margin: 6px 0 0;
+  padding: 5px 6px;
+  border: 1px solid var(--ui-skill-edge);
+  border-radius: 8px;
+  background: var(--ui-skill);
+  /* skillAll 실시간 갱신의 인라인 style.color보다 상태 토큰을 우선합니다. */
+  color: var(--ui-skill-state-ink, var(--ui-skill-ink)) !important;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-align: center;
+  box-shadow: inset 0 1px 0 #ffffff1a, 0 1px 0 #0e132a;
+}
+html body #unitInfo.ui-panel .ui-skill[data-skill="chrono"] {
+  --ui-skill: #234970;
+  --ui-skill-ink: #f3f7ff;
+  --ui-skill-edge: #97c9fa;
+  --ui-skill-active: #b8deff;
+}
+html body #unitInfo.ui-panel .ui-skill[data-skill="joker"] {
+  --ui-skill: #594183;
+  --ui-skill-edge: #c6a5ee;
+  --ui-skill-active: #decffa;
+  --ui-skill-active-ink: #292044;
+}
+html body #unitInfo.ui-panel .ui-skill[data-skill="slot"] {
+  --ui-skill: #725218;
+  --ui-skill-ink: #fff6dc;
+  --ui-skill-edge: #ebc572;
+  --ui-skill-active: #f2d38a;
+  --ui-skill-active-ink: #30263f;
+}
+/* disabled만으로도 대기 색. active + disabled는 밝은 발동 색을 유지합니다. */
+html body #unitInfo.ui-panel button.ui-skill[data-state="cooldown"],
+html body #unitInfo.ui-panel button.ui-skill:disabled:not([data-state="active"]) {
+  --ui-skill-state-ink: var(--ui-cooldown-ink);
+  background: var(--ui-cooldown);
+  border-color: var(--ui-line);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
+}
+html body #unitInfo.ui-panel button.ui-skill[data-state="active"] {
+  --ui-skill-state-ink: var(--ui-skill-active-ink);
+  background: var(--ui-skill-active);
+  border-color: var(--ui-edge);
+  box-shadow: inset 0 0 0 1px #ffffff66;
+  cursor: default;
+  opacity: 1;
+}
+html body #unitInfo.ui-panel button.shopBtn.ui-copy {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  height: auto;
+  margin: 6px 0 0;
+  padding: 5px 6px;
+  border: 1px solid #e8b88c;
+  border-radius: 8px;
+  background: var(--ui-copper);
+  color: var(--ui-copper-ink);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-align: center;
+  box-shadow: inset 0 1px 0 #d99060;
+}
+html body #unitInfo.ui-panel .ui-rate { color: inherit; white-space: nowrap; }
+html body #unitInfo.ui-panel button.ui-copy:disabled {
+  background: var(--ui-cooldown);
+  color: var(--ui-cooldown-ink);
+  border-color: var(--ui-line);
+  box-shadow: none;
+}
+html body #unitInfo.ui-panel .ui-comp,
+html body #unitInfo.ui-panel .ui-help,
+html body #unitInfo.ui-panel .ui-fuse {
+  margin: 0 0 4px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ui-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+html body #unitInfo.ui-panel .ui-comp { font-size: 12px; }
+html body #unitInfo.ui-panel .ui-help b { color: var(--ui-text); }
+html body #unitInfo.ui-panel .ui-help-touch { display: none; }
+html body #unitInfo.ui-panel .ui-fuse {
+  margin: 7px 0 0;
+  color: var(--ui-gold);
+}
+html body #unitInfo.ui-panel[data-kind="miner"] .ui-help,
+html body #unitInfo.ui-panel[data-kind="item"] .ui-help {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+@media (hover: hover) {
+  html body #unitInfo.ui-panel .priBtn:not([aria-pressed="true"]):hover {
+    --ui-pri-fill: #34416a;
+    --ui-pri-ink: var(--ui-text);
+    --ui-pri-edge: var(--ui-edge);
+  }
+  html body #unitInfo.ui-panel #deselBtn:hover {
+    background: #34416a;
+    color: var(--ui-text);
+    border-color: var(--ui-edge);
+  }
+  html body #unitInfo.ui-panel button.ui-skill[data-state="ready"]:not(:disabled):hover,
+  html body #unitInfo.ui-panel button.ui-copy:not(:disabled):hover {
+    outline: 1px solid var(--ui-text);
+    outline-offset: -3px;
+  }
+}
+/* 게임의 body.mobile 판정 + 작은 가로 뷰포트에 동일한 크기 제한 적용. */
+html body.mobile #unitInfo.ui-panel {
+  width: 44vw;
+  min-width: 0;
+  max-width: 44vw;
+  max-height: 176px;
+  padding: 7px 8px;
+  border-radius: 11px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+html body.mobile #unitInfo.ui-panel .ui-head { min-height: 19px; margin-bottom: 2px; padding-right: 25px; }
+html body.mobile #unitInfo.ui-panel .ui-name { font-size: 12px; }
+html body.mobile #unitInfo.ui-panel .ui-sub { font-size: 10px; }
+html body.mobile #unitInfo.ui-panel .ui-badges { display: inline-flex; width: auto; vertical-align: middle; margin: 0 0 0 2px; gap: 2px; }
+html body.mobile #unitInfo.ui-panel .ui-race { margin-bottom: 2px; font-size: 10.5px; line-height: 1.3; }
+html body.mobile #unitInfo.ui-panel .ui-atk { min-height: 27px; margin-bottom: 2px; }
+html body.mobile #unitInfo.ui-panel .ui-num { font-size: 24px; line-height: 1.1; }
+html body.mobile #unitInfo.ui-panel .ui-spd { font-size: 10.5px; line-height: 1.3; }
+html body.mobile #unitInfo.ui-panel .ui-pri { margin-top: 4px; padding-top: 4px; }
+html body.mobile #unitInfo.ui-panel .priBtn { min-height: 32px; font-size: 11px; }
+html body.mobile #unitInfo.ui-panel button.shopBtn.ui-skill,
+html body.mobile #unitInfo.ui-panel #skillAllBtn.ui-skill,
+html body.mobile #unitInfo.ui-panel button.shopBtn.ui-copy { min-height: 32px; margin-top: 4px; padding: 4px 5px; font-size: 10.5px; }
+html body.mobile #unitInfo.ui-panel .ui-comp { margin-bottom: 2px; font-size: 10.5px; line-height: 1.3; }
+html body.mobile #unitInfo.ui-panel .ui-help { margin-bottom: 2px; font-size: 10px; line-height: 1.3; }
+html body.mobile #unitInfo.ui-panel .ui-fuse { margin-top: 4px; font-size: 10px; line-height: 1.3; }
+html body.mobile #unitInfo.ui-panel .ui-help-pc { display: none; }
+html body.mobile #unitInfo.ui-panel .ui-help-touch { display: inline; }
+html body.mobile #unitInfo.ui-panel[data-kind="miner"] .ui-help,
+html body.mobile #unitInfo.ui-panel[data-kind="item"] .ui-help { font-size: 11px; }
+
+@media (max-width: 900px) and (max-height: 500px) {
+html body #unitInfo.ui-panel {
+  width: 44vw;
+  min-width: 0;
+  max-width: 44vw;
+  max-height: 176px;
+  padding: 7px 8px;
+  border-radius: 11px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+html body #unitInfo.ui-panel .ui-head { min-height: 19px; margin-bottom: 2px; padding-right: 25px; }
+html body #unitInfo.ui-panel .ui-name { font-size: 12px; }
+html body #unitInfo.ui-panel .ui-sub { font-size: 10px; }
+html body #unitInfo.ui-panel .ui-badges { display: inline-flex; width: auto; vertical-align: middle; margin: 0 0 0 2px; gap: 2px; }
+html body #unitInfo.ui-panel .ui-race { margin-bottom: 2px; font-size: 10.5px; line-height: 1.3; }
+html body #unitInfo.ui-panel .ui-atk { min-height: 27px; margin-bottom: 2px; }
+html body #unitInfo.ui-panel .ui-num { font-size: 24px; line-height: 1.1; }
+html body #unitInfo.ui-panel .ui-spd { font-size: 10.5px; line-height: 1.3; }
+html body #unitInfo.ui-panel .ui-pri { margin-top: 4px; padding-top: 4px; }
+html body #unitInfo.ui-panel .priBtn { min-height: 32px; font-size: 11px; }
+html body #unitInfo.ui-panel button.shopBtn.ui-skill,
+html body #unitInfo.ui-panel #skillAllBtn.ui-skill,
+html body #unitInfo.ui-panel button.shopBtn.ui-copy { min-height: 32px; margin-top: 4px; padding: 4px 5px; font-size: 10.5px; }
+html body #unitInfo.ui-panel .ui-comp { margin-bottom: 2px; font-size: 10.5px; line-height: 1.3; }
+html body #unitInfo.ui-panel .ui-help { margin-bottom: 2px; font-size: 10px; line-height: 1.3; }
+html body #unitInfo.ui-panel .ui-fuse { margin-top: 4px; font-size: 10px; line-height: 1.3; }
+html body #unitInfo.ui-panel .ui-help-pc { display: none; }
+html body #unitInfo.ui-panel .ui-help-touch { display: inline; }
+html body #unitInfo.ui-panel[data-kind="miner"] .ui-help,
+html body #unitInfo.ui-panel[data-kind="item"] .ui-help { font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 다른 선행 규칙이 움직임을 넣더라도 이 패널 안에서만 중지합니다. */
+  html body #unitInfo.ui-panel,
+  html body #unitInfo.ui-panel *,
+  html body #unitInfo.ui-panel *::before,
+  html body #unitInfo.ui-panel *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+</style>
+<style id="dpd-unitinfo-host">
+/* 10-04 GPT 인디고 상태창 게임 쪽 보정 — 위 GPT 원문 블록(unitinfo.css)은 손대지 않고 여기서만 덮는다 (블록 교체 용이)
+   :has·무한 애니·backdrop-filter 금지 (10-02 교훈) */
+/* ① 원문 root의 transition:none이 포커 패널이 올라올 때의 bottom 슬라이드(#unitInfo bottom calc(--panelH) 규칙)를 끊는다 → bottom만 복구 (움직임 줄이기는 원문 !important가 계속 끈다) */
+html body #unitInfo.ui-panel { transition: bottom 0.34s cubic-bezier(0.22, 0.9, 0.3, 1); }
+/* ② 원문 팔레트에 없는 히든 영웅 6종 — HIDDEN_META 원래 색 계열을 밝혀 그라디언트 최밝은 지점(#34416a) 대비 4.5:1 이상
+   갬블러 6.37 · 고물상 5.31 · 콰르텟 5.07 · 길로틴 5.11 · 쇼군 5.37 · 투석기 5.83 (WCAG 상대휘도 계산) */
+html body #unitInfo.ui-panel .ui-race[data-hidden="gamble"] { --ui-race-color: #f5c96a; }
+html body #unitInfo.ui-panel .ui-race[data-hidden="junk"] { --ui-race-color: #dcb69a; }
+html body #unitInfo.ui-panel .ui-race[data-hidden="quartet"] { --ui-race-color: #b8b0ff; }
+html body #unitInfo.ui-panel .ui-race[data-hidden="execute"] { --ui-race-color: #ffa0a0; }
+html body #unitInfo.ui-panel .ui-race[data-hidden="shogun"] { --ui-race-color: #ffab73; }
+html body #unitInfo.ui-panel .ui-race[data-hidden="catapult"] { --ui-race-color: #b9c8d6; }
+/* ③ 리뷰 F1·VIS-1: 모바일 폭 고정(44vw) 해제 → HEAD처럼 내용 기준 폭(.mobile #unitInfo의 min 145px·max 44vw)
+   고정폭이면 placeInfoPanel의 cardW가 캔버스 절반을 넘어 좌/우 어느 쪽이든 가운데 유닛을 가리고, 🃏 포커장 이동 버튼(z8)을 덮었다
+   상한 47%-6px = 포함 블록 #cvWrap(=캔버스 폭) 기준 — placeInfoPanel 전환(cardW+40)이 가림 없이 성립하는 폭(캔버스 450단위-여백) 안으로. 슈퍼에이스+🎯집중처럼 제목 줄이 긴 상태가 44vw까지 넓어지면 가렸다 */
+html body.mobile #unitInfo.ui-panel { width: auto; min-width: 145px; max-width: min(44vw, calc(47% - 6px)); }
+/* 내용 폭이면 둘째 줄(종족·광부 안내)이 오른쪽 끝까지 닿아 ✕(32px, 위 3~35px)에 가린다 → 28px 비움 (✕ 왼쪽 끝 35px - 본문 여백 10px + 여유 3px · 모바일은 둘째 줄이 28px부터 시작) */
+html body.mobile #unitInfo.ui-panel .ui-head + * { padding-right: 28px; }
+/* 내용 폭이면 원문 flex:1 1 0 버튼이 글자 폭까지 줄어 '가까운'이 테두리에 붙었다(여백 0.3px) → 버튼 최소 폭 = 가장 긴 글자 + 좌우 7px */
+html body.mobile #unitInfo.ui-panel .priBtn { flex: 1 0 auto; min-width: 49px; padding-left: 7px; padding-right: 7px; }
+@media (max-width: 900px) and (max-height: 500px) {
+html body #unitInfo.ui-panel { width: auto; min-width: 145px; max-width: min(44vw, calc(47% - 6px)); }
+html body #unitInfo.ui-panel .ui-head + * { padding-right: 28px; }
+html body #unitInfo.ui-panel .priBtn { flex: 1 0 auto; min-width: 49px; padding-left: 7px; padding-right: 7px; }
+}
+/* ④ 리뷰 F2: PC도 배지를 제목 줄에 (10-01 컴팩트 결정 — 원문은 모바일만 inline-flex) */
+html body #unitInfo.ui-panel .ui-badges { display: inline-flex; width: auto; vertical-align: middle; margin: 0 0 0 2px; gap: 2px; }
+/* ⑤ HEAD에서 색으로만 전하던 정보 2개 복원 (문구 불변): 📯 버프 중 공속 숫자 파랑 · 복사 성공률 등급색(일반 초록 / 영웅 연빨강 / 슈퍼 빨강)
+   구리색 복사기 버튼 위에선 글자색만으론 4.5:1이 안 나와 작은 칩 배경으로 */
+html body #unitInfo.ui-panel .ui-spd b.ui-spd-up { color: #97d1ff; }
+html body #unitInfo.ui-panel .ui-rate[data-tier] { display: inline-block; padding: 0 5px; border-radius: 6px; font-size: 10.5px; }
+html body #unitInfo.ui-panel .ui-rate[data-tier="unit"] { background: #1d5b38; color: #e3ffec; }
+html body #unitInfo.ui-panel .ui-rate[data-tier="hero"] { background: #8a2f3a; color: #ffe6e9; }
+html body #unitInfo.ui-panel .ui-rate[data-tier="super"] { background: #5c0d1c; color: #ffd9df; }
+</style>
 </head>
 <body class="at-title">
 <div id="page">
@@ -2530,7 +3051,7 @@ html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-recipe>b {
     <canvas id="cv" width="940" height="500"></canvas>
     <div id="clock" title="남은 시간"><div id="clockHub"></div></div>
     <span id="tIntWrap" title="📈 투자 — 클릭하면 투자 현황. 장이 열려 있을 때만 예치할 수 있습니다 (만기 전 인출 불가)"><b id="tInterest" style="color:#7ec8ff">📈 0</b> <b id="tMkt" class="mktClock">--:--</b></span>
-    <div id="unitInfo"></div>
+    <div id="unitInfo" class="ui-panel"></div>
     <div id="objInfo"></div>
     <div id="duelToast"></div>
     <div id="mktToast"></div>
@@ -10223,7 +10744,11 @@ function updateInfoPanel() {
   const sel = S.units.filter(u => u.selected);
   if (sel.length === 0) { el.style.display = 'none'; return; }
   el.style.display = 'block';
+  // 🎨 10-04 GPT 인디고 상태창(dpd_unitinfo_1003): 구조·class·data-*만 요청서 7장 계약으로 — 문구·이모지·숫자·조건은 그대로, 색은 CSS가 담당
+  // data-kind: 2기 이상=multi · u.miner=miner · u.item=item · isHiddenCombo=hidden(히든 영웅 9종) · u.hero&&u.super=super(에이스 슈퍼영웅 포함) · u.hero=hero(에이스 영웅 포함) · u.hidden=ace(에이스·슈퍼에이스) · 그 외=unit
+  // ✕(deselBtn)는 예전처럼 맨 끝에 둔다 — 위치는 CSS absolute라 같고, 탭 순서·innerText 순서가 HEAD와 같다
   if (sel.length > 1) {
+    el.dataset.kind = 'multi';
     // 부대 구성 요약 + 강화 가능 여부
     const comp = {};
     sel.forEach(u => comp[u.weapon] = (comp[u.weapon] || 0) + 1);
@@ -10236,11 +10761,11 @@ function updateInfoPanel() {
     const skUnits = sel.filter(u => u.tier === 6 && !u.clone && !u.miner);
     const st6 = skillAllLabel(skUnits);
     const skHTML = skUnits.length === 0 ? '' :
-      `<br><button id="skillAllBtn" class="shopBtn" ${st6.allReady ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:${st6.allReady ? '#c0392b' : '#999'};font-weight:bold">${st6.label}</button>`;
-    el.innerHTML = `<b>부대 선택: ${sel.length}기</b><br><span style="font-size:11px;color:#888">${compStr}</span><br>${IS_MOBILE ? '유닛을 끌어 옮기기 · 빈 땅 탭 = 선택 해제 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}` +
+      `<button type="button" id="skillAllBtn" class="shopBtn ui-skill" data-skill="fullhouse" ${skillAttrs(st6.state, !st6.allReady)}>${st6.label}</button>`;
+    el.innerHTML = `<div class="ui-head"><b class="ui-name">부대 선택: ${sel.length}기</b></div><div class="ui-comp">${compStr}</div><div class="ui-help">${IS_MOBILE ? '유닛을 끌어 옮기기 · 빈 땅 탭 = 선택 해제 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}</div>` +
       (sel.some(u => !u.miner) ? priorityRow(commonPri) : '') +
       skHTML +
-      (canFuse ? `<br><span style="color:#8c5bff;font-weight:bold">🌀 같은 유닛 5기! 좌측 포털로 이동시키면 강화!</span>` : '') +
+      (canFuse ? `<div class="ui-fuse">🌀 같은 유닛 5기! 좌측 포털로 이동시키면 강화!</div>` : '') +
       deselBtnHTML();
     wirePriorityButtons(el);
     wireDesel(el);
@@ -10254,51 +10779,54 @@ function updateInfoPanel() {
   const u = sel[0];
   if (u.miner) { // 광부: 종족 없음, 전투 불가 — 간단 정보만
     const kind = u.sminer ? '✨ 슈퍼 광부' : u.hminer ? '✨ 히든 광부' : '광부';
-    el.innerHTML = `<b>⛏️ ${kind}</b><br>` +
-      `역할: 광산에서 캐서 <b>성</b>에 배달 (전투 불가)<br>` +
-      `이동속도: ${Math.round(u.speed)} · 💀 배달로 골드 획득` +
+    el.dataset.kind = 'miner';
+    el.innerHTML = `<div class="ui-head"><b class="ui-name">⛏️ ${kind}</b></div>` +
+      `<div class="ui-help">역할: 광산에서 캐서 <b>성</b>에 배달 (전투 불가)</div>` +
+      `<div class="ui-help">이동속도: ${Math.round(u.speed)} · 💀 배달로 골드 획득</div>` +
       deselBtnHTML();
     wireDesel(el);
     return;
   }
   if (u.item) { // 🎁 아이템 유닛: 전투 없음, 제물대로 옮기라는 안내만
-    el.innerHTML = `<b>${ITEM_META[u.item].icon} ${ITEM_META[u.item].name}</b><br>` +
-      `제물대로 옮기면 발동됩니다 (전투 불가)<br>` +
-      `이동속도: ${Math.round(u.speed)}` +
+    el.dataset.kind = 'item';
+    el.innerHTML = `<div class="ui-head"><b class="ui-name">${ITEM_META[u.item].icon} ${ITEM_META[u.item].name}</b></div>` +
+      `<div class="ui-help">제물대로 옮기면 발동됩니다 (전투 불가)</div>` +
+      `<div class="ui-help">이동속도: ${Math.round(u.speed)}</div>` +
       deselBtnHTML();
     wireDesel(el);
     return;
   }
   // 10-01 저녁 유저: 상태창 컴팩트 — 특성 설명·사거리·공격 지정 버튼 삭제. 설명이 아닌 '상태'만 제목 줄 작은 배지로 남긴다
   const badges = [];
-  if (u.ascend) badges.push(`<b style="color:#ff6b9d">🩸Lv.${u.ascend}</b>`);
-  if (u.heroUpLv) badges.push(`<b style="color:#c9971a">⭐Lv.${u.heroUpLv}</b>`);
-  if (u.stone === 'lava') badges.push('<span title="용암 묻은 돌">🌋</span>'); // 🥚 획득 후에만 표시 (발견 전 힌트 없음)
-  else if (u.stone === 'wet') badges.push('<span title="물먹은 돌">💧</span>');
-  if (u.forceTarget) badges.push('<b style="color:#e53935">🎯 집중</b>');
+  if (u.ascend) badges.push(`<b class="ui-badge" data-badge="ascend">🩸Lv.${u.ascend}</b>`);
+  if (u.heroUpLv) badges.push(`<b class="ui-badge" data-badge="train">⭐Lv.${u.heroUpLv}</b>`);
+  if (u.stone === 'lava') badges.push('<span class="ui-badge" data-badge="stone" title="용암 묻은 돌">🌋</span>'); // 🥚 획득 후에만 표시 (발견 전 힌트 없음)
+  else if (u.stone === 'wet') badges.push('<span class="ui-badge" data-badge="stone" title="물먹은 돌">💧</span>');
+  if (u.forceTarget) badges.push('<b class="ui-badge" data-badge="focus">🎯 집중</b>');
   const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
   const sub = u.miner ? '광부' : isHiddenCombo(u) ? '히든 영웅' : keyTag + HAND_NAMES[u.tier] + (u.hero ? ' 영웅' : '');
   const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = upgEff(top2[0]) + upgEff(top2[1]);
   const upFlat = isHiddenCombo(u) ? 0 : +(((u.hidden || u.ace) ? aceUp : upgEff(S.upg[u.race])) * upgPer(u) * fuseCount(u)).toFixed(1); // 히든 영웅은 종족 업글 미적용 (⭐ 단련으로 성장)
   const hmI = hiddenMeta(u);
+  const hmK = hmI ? Object.keys(HIDDEN_META).find(k => u[k]) : ''; // hiddenMeta와 같은 순서로 찾은 키 → data-hidden (색은 CSS 토큰)
   const raceLine = hmI // 투석기도 히든 영웅 — 08-14부터 다이아 업글 미적용(단련만)이라 예전 '다이아 업그레이드 적용' 문구는 틀린 안내였다
-    ? `<span style="color:${hmI[2]}">${hmI[0]} ${hmI[1]}</span> · ⭐ 단련·🩸 승급은 🏰 성에서` // 히든: 종족 없음 — 예전 별도 안내 줄을 여기로 합침
+    ? `<div class="ui-race" data-race="hidden" data-hidden="${hmK}"><span class="ui-suit">${hmI[0]} ${hmI[1]}</span> · <span class="ui-race-note">⭐ 단련·🩸 승급은 🏰 성에서</span></div>` // 히든: 종족 없음 — 예전 별도 안내 줄을 여기로 합침
     : (u.hidden || u.ace)
-    ? `<span style="color:#e91e8c">♠ 에이스</span> · 상위 2종족 강화 +${upFlat}`
-    : `<span style="color:${RACES[u.race].color}">${RACES[u.race].suit} ${RACES[u.race].name}</span> · 강화 Lv.${S.upg[u.race]}`;
+    ? `<div class="ui-race" data-race="ace" data-hidden=""><span class="ui-suit">♠ 에이스</span> · <span class="ui-race-note">상위 2종족 강화 +${upFlat}</span></div>`
+    : `<div class="ui-race" data-race="${['dia', 'heart', 'club'][u.race]}" data-hidden=""><span class="ui-suit">${RACES[u.race].suit} ${RACES[u.race].name}</span> · <span class="ui-race-note">강화 Lv.${S.upg[u.race]}</span></div>`;
+  el.dataset.kind = isHiddenCombo(u) ? 'hidden' : u.hero ? (u.super ? 'super' : 'hero') : u.hidden ? 'ace' : 'unit';
   el.innerHTML =
-    `<b>${u.hidden ? '♠ ' + u.weapon : u.weapon}</b> (${sub})${badges.length ? ' ' + badges.join(' ') : ''}<br>` +
-    raceLine + '<br>' +
-    `공격력 <b>${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? ` 👑×${CROWN_RACE_MUL[S.crownRace].toFixed(2)}` : ''}${isHiddenCombo(u) ? '' : ` (기본 ${(+u.dmg).toFixed(1)} +${upFlat})`}<br>` +
-    `공속 ${(u.spdBuff || 1) < 1
-      ? `<b style="color:#00a3ff">${(1/effCd(u)).toFixed(1)}/초</b> <span style="color:#00a3ff;font-size:10px">📯 +20%</span>`
-      : `${(1/effCd(u)).toFixed(1)}/초`} · 💀 <b id="ipKills">${u.kills || 0}</b>킬` + // 콰르텟 버프·히든 페널티 반영된 실제 값
+    `<div class="ui-head"><b class="ui-name">${u.hidden ? '♠ ' + u.weapon : u.weapon}</b> <span class="ui-sub">(${sub})</span>${badges.length ? ' <span class="ui-badges">' + badges.join('') + '</span>' : ''}</div>` +
+    raceLine +
+    `<div class="ui-stat ui-atk">공격력 <b class="ui-num">${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? ` <span class="ui-crown">👑×${CROWN_RACE_MUL[S.crownRace].toFixed(2)}</span>` : ''}${isHiddenCombo(u) ? '' : ` <small class="ui-atk-base">(기본 ${(+u.dmg).toFixed(1)} +${upFlat})</small>`}</div>` +
+    // 공속: 콰르텟 버프·히든 페널티 반영된 실제 값
+    `<div class="ui-stat ui-spd">공속 <b${(u.spdBuff || 1) < 1 ? ' class="ui-spd-up"' : ''}>${(1/effCd(u)).toFixed(1)}/초</b>${(u.spdBuff || 1) < 1 ? ' <span class="ui-buff">📯 +20%</span>' : ''} · 💀 <b id="ipKills">${u.kills || 0}</b>킬</div>` +
     (u.miner ? '' : priorityRow(u.priority || 'near')) +
     (u.tier === 6 ? skillRow(u) : '') +
     (u.chrono ? chronoRow(u) : '') +
     (u.joker ? jokerRow(u) : '') +
     (u.slot ? slotRow(u) : '') +
-    ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<br><button id="copyBtn" class="shopBtn" style="margin-top:6px;text-align:center;color:#5b48d0;font-weight:bold">📑 유닛 복사기 사용 (${S.items.copier}) <span style="color:${u.super?'#c62828':u.hero?'#e57373':'#66bb6a'};font-size:11px">성공률 ${Math.round(copyRate(u)*100)}%</span></button>` : '') +
+    ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<button type="button" id="copyBtn" class="shopBtn ui-copy">📑 유닛 복사기 사용 (${S.items.copier}) <span class="ui-rate" data-tier="${u.super ? 'super' : u.hero ? 'hero' : 'unit'}">성공률 ${Math.round(copyRate(u)*100)}%</span></button>` : '') +
     deselBtnHTML();
   wirePriorityButtons(el);
   wireDesel(el);
@@ -10311,7 +10839,7 @@ function updateInfoPanel() {
 }
 // 📱 모바일 ⚔️ 공격 지정 버튼(09-08)은 10-01 저녁 유저 요청으로 삭제 — 모바일 공격은 롱프레스
 // 선택 해제 ✕ 버튼 (unitInfo 우상단, 데스크톱/모바일 공용)
-function deselBtnHTML() { return `<button id="deselBtn" title="선택 해제">✕</button>`; }
+function deselBtnHTML() { return `<button type="button" id="deselBtn" title="선택 해제" aria-label="선택 해제">✕</button>`; }
 function wireDesel(el) {
   const b = el.querySelector('#deselBtn');
   if (b) b.onclick = () => { S.units.forEach(u => u.selected = false); updateInfoPanel(); };
@@ -10367,18 +10895,27 @@ function skillState(u) { // 스킬 버튼 라벨·활성 상태 (렌더 + 실시
   return {
     label: active ? `${ico} ${name} 중… ${u.skillT.toFixed(0)}초` : (cd > 0 ? `${ico} ${name} (재사용 ${cd.toFixed(0)}초)` : idle),
     dis: active || cd > 0,
+    state: active ? 'active' : cd > 0 ? 'cooldown' : 'ready',
   };
 }
+// 🎨 스킬 버튼 상태 계약 (GPT 상태창 10-04): data-state = ready|cooldown|active, 발동 중엔 aria-busy. disabled는 각 Row의 원래 조건 그대로
+function skillAttrs(state, dis) { return `data-state="${state}"${dis ? ' disabled' : ''}${state === 'active' ? ' aria-busy="true"' : ''}`; }
+function setSkillState(b, state) { // 실시간 갱신용 — 바뀔 때만 쓴다 (쿨이 끝났는데 회색으로 남는 것 방지)
+  if (b.dataset.state === state) return;
+  b.dataset.state = state;
+  if (state === 'active') b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy');
+}
 function skillRow(u) {
-  const st = skillState(u), color = u.hero ? '#7e57c2' : '#c0392b';
-  return `<br><button id="skillBtn" class="shopBtn" ${st.dis ? 'disabled' : ''} style="margin-top:6px;text-align:center;color:${color};font-weight:bold">${st.label}</button>`;
+  const st = skillState(u);
+  return `<button type="button" id="skillBtn" class="shopBtn ui-skill" data-skill="fullhouse" ${skillAttrs(st.state, st.dis)}>${st.label}</button>`;
 }
 function skillAllLabel(sk) { // 부대 일괄 스킬 라벨 (렌더·실시간 공용) — 단검/영웅 혼성 아이콘 반영
   const ready = sk.filter(u => (u.skillCd || 0) <= 0 && (u.skillT || 0) <= 0).length;
   const allReady = sk.length > 0 && ready === sk.length;
   const hasH = sk.some(u => u.hero), hasD = sk.some(u => !u.hero);
   const ico = hasH && hasD ? '🗡️🌀' : hasH ? '🌀' : '🗡️';
-  return { allReady, label: allReady ? `${ico} 스킬 일제 발동! (${sk.length}기)` : `${ico} 스킬 준비 중… (${ready}/${sk.length}기)` };
+  return { allReady, label: allReady ? `${ico} 스킬 일제 발동! (${sk.length}기)` : `${ico} 스킬 준비 중… (${ready}/${sk.length}기)`,
+    state: allReady ? 'ready' : sk.some(u => (u.skillT || 0) > 0) ? 'active' : 'cooldown' }; // 1기라도 발동 중이면 active, 아니면 쿨 대기
 }
 // 선택 유닛 정보의 실시간 값(킬 수·스킬 쿨) 갱신 — 전체 리렌더 없이 매 프레임 (유저: 킬수가 실시간으로 안 오름)
 function refreshInfoPanelLive() {
@@ -10392,13 +10929,14 @@ function refreshInfoPanelLive() {
     const st = skillState(sel[0]);
     if (sb.textContent !== st.label) sb.textContent = st.label;
     if (sb.disabled !== st.dis) sb.disabled = st.dis;
+    setSkillState(sb, st.state);
   }
   const gb = document.getElementById('skillAllBtn');
   if (gb && sel.length > 1) {
     const st6 = skillAllLabel(sel.filter(u => u.tier === 6 && !u.clone && !u.miner));
     if (gb.textContent !== st6.label) gb.textContent = st6.label;
     if (gb.disabled !== !st6.allReady) gb.disabled = !st6.allReady;
-    gb.style.color = st6.allReady ? '#c0392b' : '#999';
+    setSkillState(gb, st6.state); // 글자색은 CSS가 data-state로 (예전 매 프레임 style.color 인라인 쓰기 제거)
   }
 }
 // ⏳ 시간술사: 시간 정지 (4초간 몬스터 스폰·타이머·이동 정지, 아군은 그대로 행동)
@@ -10413,8 +10951,9 @@ function activateChrono(u) {
 function chronoRow(u) {
   const active = S.freezeT > 0, cd = u.chronoCd || 0;
   const label = active ? `⏳ 시간 정지 중… ${S.freezeT.toFixed(0)}초` : (cd > 0 ? `⏳ 시간 정지 (재사용 ${cd.toFixed(0)}초)` : '⏳ 시간 정지 스킬 (쿨 150초)');
-  const dis = cd > 0 ? 'disabled' : '';
-  return `<br><button id="chronoBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:#1976d2;font-weight:bold">${label}</button>`;
+  // 실시간 갱신은 refreshInfoOnBuffChange(쿨·freezeT 초 단위 시그니처 → 전체 재렌더)가 담당
+  // data-state는 disabled와 맞춘다 (리뷰 REG-1): 모래시계 등 남의 정지로 freezeT>0이어도 쿨 0이면 눌리는 버튼이므로 ready
+  return `<button type="button" id="chronoBtn" class="shopBtn ui-skill" data-skill="chrono" ${skillAttrs(active && cd > 0 ? 'active' : cd > 0 ? 'cooldown' : 'ready', cd > 0)}>${label}</button>`;
 }
 // 🃏 조커 견인: 액티브 스킬 (2026-08-08 유저 — 상시 패시브는 사기여서 전환. 쿨 60초 · 지속 15초)
 function activateJoker(u) {
@@ -10427,8 +10966,7 @@ function activateJoker(u) {
 function jokerRow(u) {
   const t = u.jokerT || 0, cd = u.jokerCd || 0;
   const label = t > 0 ? `🃏 견인 중… ${t.toFixed(0)}초` : (cd > 0 ? `🃏 견인 (재사용 ${cd.toFixed(0)}초)` : '🃏 견인 스킬 (지속 15초 · 쿨 60초)');
-  const dis = (t > 0 || cd > 0) ? 'disabled' : '';
-  return `<br><button id="jokerBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:#8c5bff;font-weight:bold">${label}</button>`;
+  return `<button type="button" id="jokerBtn" class="shopBtn ui-skill" data-skill="joker" ${skillAttrs(t > 0 ? 'active' : cd > 0 ? 'cooldown' : 'ready', t > 0 || cd > 0)}>${label}</button>`;
 }
 // 🎰 슬롯머신: 잭팟 폭격 (소환장 안 무작위 지점에 14~22개 폭탄이 순차 낙하)
 function activateSlot(u) {
@@ -10447,13 +10985,12 @@ function activateSlot(u) {
 function slotRow(u) {
   const cd = u.slotCd || 0;
   const label = cd > 0 ? `🎰 대박 폭격 (재사용 ${cd.toFixed(0)}초)` : '🎰 대박 폭격 스킬 (쿨 75초)';
-  const dis = cd > 0 ? 'disabled' : '';
-  return `<br><button id="slotSkillBtn" class="shopBtn" ${dis} style="margin-top:6px;text-align:center;color:#b8860b;font-weight:bold">${label}</button>`;
+  return `<button type="button" id="slotSkillBtn" class="shopBtn ui-skill" data-skill="slot" ${skillAttrs(cd > 0 ? 'cooldown' : 'ready', cd > 0)}>${label}</button>`; // 슬롯은 발동 중 개념 없음 (쿨만)
 }
-// 공격 우선순위 버튼 UI
+// 공격 우선순위 버튼 UI — 선택 1개만 aria-pressed="true" (부대에 공통값이 없으면 cur='' → 전부 false)
 function priorityRow(cur) {
-  const b = (v, label) => `<button class="priBtn" data-pri="${v}" style="display:inline-block;width:auto;padding:2px 7px;margin:2px 2px 0;border-radius:6px;border:1px solid #d0d0da;font-size:11px;cursor:pointer;${cur === v ? 'background:#5b48d0;color:#fff;border-color:#5b48d0;' : 'background:#f6f6fa;'}">${label}</button>`;
-  return `<br><span style="font-size:11px;color:#888">공격 우선:</span> ${b('near','가까운')}${b('strong','강한')}${b('far','멀리')}`;
+  const b = (v, label) => `<button type="button" class="priBtn" data-pri="${v}" aria-pressed="${cur === v}">${label}</button>`;
+  return `<div class="ui-pri"><span class="ui-pri-label">공격 우선:</span> ${b('near','가까운')}${b('strong','강한')}${b('far','멀리')}</div>`;
 }
 function wirePriorityButtons(el) {
   el.querySelectorAll('.priBtn').forEach(btn => btn.onclick = () => {
