@@ -3620,6 +3620,7 @@ function reset() {
     lifeLog: [], maxCombo: 0, bestHand: 0, aceN: 0, superAceN: 0, castleOpened: castleSeen(), // 📋 09-08: 게임오버 정산용(목숨 타임라인·최고 콤보·최고 족보·에이스 수) / 🏰 성 강화창 안내 라벨 — 브라우저당 1회(dpd_castle_seen)
     tutStep: 0, tutHold: false, tutHoldT: 0, r1High: false, // 🧭 첫 판 안내: 포커 배너 단계(1 = T1, 2 = T2) / 포커 시계 정지 / 정지 상한(게임 시간) / R1을 하이카드로 소환
     reviveUsed: false, revived: false, reviveWave: false, // ❤️‍🩹 부활: 이번 판 제안 소진(수락·포기) / 수락함 / 지금 전투가 부활 연장전 (스피드 보너스 없음)
+    crownForced: false, // 👑 기한 뒤 강제 대관식 창(취소 불가)이 열려 있음
     crownRace: -1, crownDropped: false, // 👑 왕관: 선택한 종족 (-1 = 미선택 — ⚠️ null 금지: 광부 race가 null이라 일치해 버린다) / 석탄 보상 왕관 지급 여부 (잭팟 2배 중복 방지)
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
     stimT: 0, acidPools: [],  // 💉 스팀팩 남은시간 / 🧪 염산 장판
@@ -3648,10 +3649,11 @@ function reset() {
 const MINE_HP_MUL = 3; // ⛰️ 09-30 유저: 겹 파괴 3배 느리게 — 칩 전부 광부+업글 시 특정 순간부터 골드가 폭증(스노우볼 과열). 같은 시점 겹 ≈ 4.2개 얕아짐(log1.3 3) → 후반 겹 보너스 ≈ 1/4. 기본 배달 60G·특별 발굴 확률 무영향
 function mineHP(layer) { return Math.floor(MINE_HP_MUL * 2500 * Math.pow(1.3, layer - 1)); } // 겹 성장 1.4→1.3: 광부가 귀해진 만큼 겹이 좀 더 빨리 깊어지게 (복리 체감)
 // 광석 체력: 1단계 유지, 2~5단계 = ×2·3·4·5, 6단계부터 직전의 ×3 (기존 ×5는 후반 도달 불가 벽이라 완화)
+// 10-04 유저(초반 광물이 너무 빨리 나옴): 1단계(석탄) 그대로, 2단계(철광석)부터 전 단계 ×1.3
 function huntHP(stage) {
   const base = 63000; // 광물 체력 ×1.4 (45000→63000)
-  if (stage <= 5) return base * stage;
-  return Math.floor(base * 5 * Math.pow(3, stage - 5));
+  const hp = stage <= 5 ? base * stage : base * 5 * Math.pow(3, stage - 5);
+  return stage >= 2 ? Math.round(hp * 1.3) : Math.floor(hp);
 }
 const HUNT_MAX_STAGE = 10;
 function stageInfo(n) {
@@ -3799,8 +3801,10 @@ function duelLockFloat(u) {
   addFloat(u.x, u.y - 30, '🔒 결투 중!', '#ff6b6b', 0.9);
 }
 // 👑 왕관 종족 선택 (08-22 족보 → 10-01 유저: 종족을 정하는 것으로) — 카지노·결투 팝업 관례: 모달 중 S.paused (고민 시간 보장)
-function openCrownModal() {
+function openCrownModal(forced) {
   if (S.phase === 'gameover') return; // 게임오버 오버레이(z10) 뒤에서 안 보이는 모달이 열려 배경만 멈추는 것 방지 (크로스체크 P2)
+  S.crownForced = !!forced; // 👑 기한 뒤 강제 대관식: 회수 버튼 숨김 + ESC 무시 (crownCancel 가드) — 매번 다시 정해 다음 창에 안 새게
+  document.querySelector('#crownModal .dcBtns').style.display = S.crownForced ? 'none' : '';
   const g = document.getElementById('crGrid');
   g.innerHTML = '';
   RACES.forEach((rc, r) => {
@@ -3819,6 +3823,7 @@ function closeCrownModal() {
 }
 function crownChoose(r) {
   closeCrownModal();
+  S.crownForced = false;
   S.crownRace = r;
   const rc = RACES[r];
   sfx('jackpot'); sfx('hero'); S.goldFlash = 0.7;
@@ -3827,9 +3832,27 @@ function crownChoose(r) {
   updateInfoPanel();
 }
 function crownCancel() { // 회수: 왕관을 다시 소환 — 선택 강요 방지 ("언제 확정하나"도 전략)
+  if (S.crownForced) return; // 👑 기한 뒤 강제 대관식은 회수 불가 (버튼은 숨겨져 있고 ESC도 여기서 막힌다)
   closeCrownModal();
   spawnItemUnit('crown');
   logMsg('👑 왕관을 회수했습니다 — 결심이 서면 다시 제물대로.');
+}
+// 👑 기한 소멸 (10-04 유저): CROWN_DEADLINE 전투가 끝나 다음 라운드로 넘어갈 때까지 대관식을 안 했으면
+//    필드의 왕관과 아직 안 깐 석탄 보상 광석(왕관이 들어 있다)을 거둔다. 집힌 채여도 손에서 빼고, 상태창은 S.units 기준이라 갱신만.
+function crownExpire() {
+  if (S.round <= CROWN_DEADLINE || S.crownRace >= 0) return;
+  if (document.getElementById('crownModal').style.display === 'block' && !S.crownForced) { // 기한 마지막 틱에 제물대에 올린 왕관 — 창은 그대로, 회수만 막는다 (회수하면 기한 뒤 왕관이 되살아남)
+    S.crownForced = true;
+    document.querySelector('#crownModal .dcBtns').style.display = 'none';
+  }
+  const gone = S.units.filter(u => u.item === 'crown' || (u.item === 'oreGift' && (u.oreStage || 1) === 1));
+  if (!gone.length) return;
+  S.units = S.units.filter(u => !gone.includes(u));
+  if (drag && drag.grab) drag.grab = drag.grab.filter(u => !gone.includes(u));
+  if (mutter && gone.includes(mutter.u)) mutter = null;
+  logMsg('👑 왕관이 빛을 잃고 사라졌습니다');
+  addFloat(gone[0].x, gone[0].y - 26, '👑 왕관이 빛을 잃고 사라졌습니다', '#9e9e9e', 2.4);
+  updateInfoPanel();
 }
 // fromWave = 전투가 끝나서 온 포커 (10-01 유저): 화면을 자동으로 넘기지 않고 소환장 위 🃏 '포커장으로 이동' 버튼만 띄운다.
 //   포커 시계는 그대로 흐른다 — 광부가 포커 중에도 캐므로 시계를 멈추면 무한 채굴이 된다. 버튼에 남은 초 표시 (updateGoPoker)
@@ -3853,6 +3876,9 @@ function startPoker(fromWave) {
   renderPoker();
   if (IS_MOBILE && !fromWave) setMobTab('poker');
   updateGoPoker();
+  // 🃏 셔플+딜 소리 (10-04 유저) — 0.4초 뒤: endWave의 clear/leak과 안 겹치게. 실행 시점에 다시 확인 (타이틀 더미 판·맵 미리보기·정지 중·이미 다음 페이즈면 무음)
+  const dealRound = S.round;
+  casTimeout(() => { if (S.phase === 'poker' && S.round === dealRound && !S.paused && !S.mapTest && !document.body.classList.contains('at-title')) sfx('deal'); }, 400);
 }
 // 🃏 포커 UI가 가려진 포커 페이즈(데스크톱 판 내림 · 모바일 전투 탭)면 버튼 표시 + 남은 포커 시간
 function updateGoPoker() {
@@ -4163,6 +4189,7 @@ function upgEff(lv) { return lv <= 12 ? lv : lv + (lv - 12) * (lv - 12) * 0.10; 
 // 10-01 유저: 족보 → 종족 선택으로 변경, 종족별 차등 배수. 실측 종족 화력 비중(위 라인 비중을 RACE_OF_RANK로 합산) ♥55% · ♦24% · ♣20.5%
 //   → 기대 화력이 셋 다 ≈+5% (♥ +5.5 · ♦ +4.9 · ♣ +5.1) = 구 원페어 EV +5.05%와 같아 CROWN_HP_COMP 1.08 그대로 유효. 내 빌드를 보고 고르는 선택.
 const CROWN_RACE_MUL = [1.20, 1.10, 1.25]; // 인덱스 = race (RACES 순서: ♦ 다이아 · ♥ 하트 · ♣ 클로버)
+const CROWN_DEADLINE = 20; // 👑 10-04 유저: 이 라운드 전투가 끝날 때까지 안 쓴 왕관(·안 깐 석탄 보상 광석)은 소멸, 이후 석탄 완채 = 얻는 즉시 강제 대관식
 // 왕관 판정용 종족: 에이스 계열은 스폰 경로마다 u.race가 제각각(두 패 일치·에이스 뽑기권·포털 합성 = 0 고정, 뽑기권 영웅 = 족보 종족)이라
 // 자기 족보(u.tier)의 종족으로 본다 (10-01 크로스체크 P1 — u.race 자체는 fuseKey·색이 참조하므로 건드리지 않음)
 function crownRaceOf(u) { return (u.hidden || u.ace) ? RACE_OF_RANK[u.tier] : u.race; }
@@ -4497,6 +4524,7 @@ function endWave() {
     if (DIFF_MUL >= 2) markAchv('hell80'); else if (DIFF_MUL >= 1.4) markAchv('hard80'); // 공식 목표 달성 = R80 '클리어' 시점 (r80 '도달'과 구분)
   }
   S.round++;
+  crownExpire(); // 👑 기한(CROWN_DEADLINE) 전투가 끝났는데 대관식 전이면 왕관 소멸 — 부활·게임오버 분기 뒤
   S.reviveWave = false; // ❤️‍🩹 부활 연장전 종료 — 다음 전투부터 스피드 보너스 정상
   S.duelEnded = false; // 🏛️ 새 라운드 — 다음 결투 창을 위해 리셋
   settleInvests(); // 📈 만기 도래한 예치금 지급 (라운드가 올라간 직후 = "N라운드 뒤")
@@ -5484,9 +5512,9 @@ function update(dt) {
         logMsg('🌋🌋🌋 아포칼립스 태양 격파!! 헬모드 클리어!!! 🌋🌋🌋');
       }
       if (m.boss) {
-        S.chips++; // 보스 처치 → 카지노 칩 지급
-        logMsg(`👹 보스 처치! +${g}G · 🪙 칩 +1 (좌측 자금 운영에서 사용!)`);
-        addFloat(m.x, m.y - 20, `+${g}G · 🪙 칩+1!`, '#ffd54f', 2.6);
+        S.chips += 0.5; // 보스 처치 → 카지노 칩 ½개 (10-04 유저: 1 → ½ 너프 — 10R·헬 보스 공통, 결투 ½·¼은 그대로)
+        logMsg(`👹 보스 처치! +${g}G · 🪙 칩 +½ (좌측 자금 운영에서 사용!)`);
+        addFloat(m.x, m.y - 20, `+${g}G · 🪙 칩+½!`, '#ffd54f', 2.6);
         for (let i = 0; i < 3; i++) S.parts.push({ x: m.x, y: m.y, vx: (Math.random()-0.5)*120, vy: -80 - Math.random()*80, coin: true, chipFx: true, t: 1.6, r: 3.4, c: '#ffd54f' });
       }
       // 💥 보스 분열 (R80+): 처치 시 5조각 — 각 30% HP, 잡을만하게
@@ -5921,6 +5949,41 @@ const OREPOS = { x: ROOM.cx + ROOM.w/2 - 22, y: ROOM.cy }; // 광석을 방 최�
 const ORE_LINE = OREPOS.x - 34; // 유닛 접근 한계선 — 이 선을 넘으면 광석이 가려지므로 통행 금지
 function isInRoom(u) { return Math.abs(u.x - ROOM.cx) <= ROOM.w/2 && Math.abs(u.y - ROOM.cy) <= ROOM.h/2; }
 const ROOM_GATE = 40; // 🧱 입구 반높이 (왼쪽 벽 가운데) — 담장 통과는 여기로만
+// 🧱 광석방 경계 스냅 (10-04 유저: "울타리에 애매하게 걸쳐 보이는데 판정상 밖이라 안 캐는 경우 — 경계만 확실하게")
+//    '안' = isInRoom(유닛 중심이 안뜰 사각형 안) — assignOreSlots의 유일한 공간 조건(정원·사거리 규칙은 그대로). 돌담 아트는 사각형 바깥으로 돌출(WALLART 실측 좌23·위21·우27·아래27).
+//    착지·이동 목표 칸 중 하나라도 애매한 띠(안쪽 = 몸 절반 / 바깥 = 돌담 + 몸 절반, 위·아래는 머리 장식까지 · 결투장 링 안은 제외)에 걸리면, 부대 중심이 놓인 쪽으로 부대째 최소 평행이동 (한 번 결정 — 부대가 갈라지지 않게).
+//    위쪽 바깥은 맵 끝(설 땅 없음), 아래쪽 바깥 오른편은 결투장 링이 돌담에 붙어 있어 → 그 경우는 '안'으로. 광석 쪽으로 당기지는 않는다(사거리 규칙 그대로).
+const ROOM_ART = { l: 23, t: 21, r: 27, b: 27 };
+function roomSnap(pts, units, c, pad = 0) { // pts = [{x,y}] 격자 칸 (제자리 수정), units = 같은 순서의 유닛, c = 부대 중심, pad = 걸어가는 목표의 도착 오차 여유
+  const x0 = ROOM.cx - ROOM.w / 2, x1 = ROOM.cx + ROOM.w / 2, y0 = ROOM.cy - ROOM.h / 2, y1 = ROOM.cy + ROOM.h / 2;
+  const half = pts.map((p, i) => { const u = units[i], B = bodyShape(u); return { w: B.w * 0.75 + 2 + pad, h: B.h * 0.75 + 2 + pad, hat: u.item || (u.tier <= 1 && !u.hero && !u.hidden && !u.joker && !u.superAce && !u.miner) ? 0 : 24 }; }); // 본체 1.5배 그림의 반폭·반높이 + 2 (+ 도착 오차) · hat = 머리 장식(drawHeadgear, 1.5배 ≈ 24) — 하이카드·원페어·아이템은 없음
+  const inZ = pts.map((p, i) => ({ xa: x0 + half[i].w, xb: ORE_LINE, ya: y0 + half[i].h + half[i].hat, yb: y1 - half[i].h - 6 })); // 확실히 안 (위는 머리 장식까지, 아래는 발 6px 더)
+  const outL = i => x0 - ROOM_ART.l - half[i].w, outR = i => x1 + ROOM_ART.r + half[i].w, outB = i => y1 + ROOM_ART.b + half[i].h + half[i].hat; // 확실히 밖 (아래는 몸 반높이 + 머리 장식까지 — 모자·왕관이 돌담에 안 얹히게)
+  const inArena = p => Math.hypot(p.x - ARENA.x, p.y - ARENA.y) < ARENA.r; // 결투장 링 안은 광석방 기준 확실히 밖 — 스냅 안 함 (링 윗부분이 아래 돌담 그림과 겹친다)
+  const band = (p, i) => !inArena(p) && p.x > outL(i) && p.x < outR(i) && p.y < outB(i) && !(p.x >= inZ[i].xa && p.x <= inZ[i].xb && p.y >= inZ[i].ya && p.y <= inZ[i].yb);
+  if (!pts.some(band)) return pts;
+  const fit = (lo, hi) => lo <= hi ? Math.min(Math.max(0, lo), hi) : (lo + hi) / 2; // 0에 가장 가까운 이동 (안 맞으면 가운데)
+  const shift = (dx, dy) => pts.forEach(p => { p.x += dx; p.y += dy; });
+  const goIn = () => {
+    shift(fit(Math.max(...pts.map((p, i) => inZ[i].xa - p.x)), Math.min(...pts.map((p, i) => inZ[i].xb - p.x))),
+          fit(Math.max(...pts.map((p, i) => inZ[i].ya - p.y)), Math.min(...pts.map((p, i) => inZ[i].yb - p.y))));
+    pts.forEach((p, i) => { p.x = Math.min(inZ[i].xb, Math.max(inZ[i].xa, p.x)); p.y = Math.min(inZ[i].yb, Math.max(inZ[i].ya, p.y)); }); // 방보다 큰 부대만 칸별로
+  };
+  const inside = (Math.abs(c.x - ROOM.cx) <= ROOM.w / 2 && Math.abs(c.y - ROOM.cy) <= ROOM.h / 2) || (c.y < y0 && c.x >= x0 && c.x <= x1);
+  if (inside) { goIn(); return pts; }
+  const cand = [];
+  const onWall = c.x >= x0 - ROOM_ART.l && c.x <= x1 + ROOM_ART.r && c.y <= y1 + ROOM_ART.b; // 중심이 돌담 그림 위 — 막힌 쪽이면 '안'으로. 중심이 이미 담 너머면 막혀도 밖 유지
+  if (c.x < x0) cand.push({ dx: Math.min(0, ...pts.map((p, i) => outL(i) - p.x)), dy: 0 });
+  if (c.x > x1) { const dx = Math.max(0, ...pts.map((p, i) => outR(i) - p.x)); if (!onWall || pts.every(p => p.x + dx <= VW - 12)) cand.push({ dx, dy: 0 }); } // 오른쪽은 맵 끝까지 좁다 — 담 위에서 진형이 안 들어가면 탈락
+  if (c.y > y1) { // 아래: 담 위에서 결투장 링(ARENA.r + 14)에 닿으면 탈락
+    const dy = Math.max(0, ...pts.map((p, i) => outB(i) - p.y));
+    if (!onWall || !pts.some(p => Math.hypot(p.x - ARENA.x, p.y + dy - ARENA.y) < ARENA.r + 14)) cand.push({ dx: 0, dy });
+  }
+  if (!cand.length) { goIn(); return pts; }
+  cand.sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - Math.abs(b.dx) - Math.abs(b.dy));
+  shift(cand[0].dx, cand[0].dy);
+  return pts;
+}
 // 🏷️ 캔버스 건물 라벨: 흰 글씨 + 어두운 외곽선. 배경(잔디·돌담·아트 타일)이 뭐든 읽힌다.
 // 예전엔 labelCol()로 난이도가 어두울 때만 흰색으로 바꿨는데, 쉬움/보통에서도 돌담 위 라벨이
 // #7a6f5c vs 배경(113,106,91) = 명암비 1.09로 사실상 안 보였다 (유저: "아무런 텍스트가 없어").
@@ -6197,7 +6260,8 @@ function huntRewardDef(stage) {
   return [
     null,
     // 👑 석탄(1단계) = 왕관 (08-22 유저 — 구 골드+500 대체. 잭팟 2배로 두 번 불려도 왕관은 1개 — 두 번째는 옛 보상 골드로)
-    ['👑', '왕관!', () => { if (S.crownDropped) S.gold += 500; else { S.crownDropped = true; spawnItemUnit('crown'); } }, '#e6a817'],
+    // 기한(CROWN_DEADLINE) 뒤에 열리면 아이템 대신 곧바로 강제 대관식 (판정은 개봉 시점의 라운드 — R20에 깬 광석이 R21에 열려도 기한 밖 왕관이 남지 않게)
+    ['👑', '왕관!', () => { if (S.crownDropped) S.gold += 500; else { S.crownDropped = true; if (S.round > CROWN_DEADLINE) casTimeout(() => openCrownModal(true), 1900); else spawnItemUnit('crown'); } }, '#e6a817'],
     ['⛏️', '광부 +1명', () => spawnMiner(), '#8a6d1f'],
     ['✨', '슈퍼 광부!', () => spawnSuperMiner(), '#ff9800'],
     ['📑', '복사권 +1', () => S.items.copier++, '#5b48d0'],
@@ -6213,6 +6277,7 @@ function huntRewardDef(stage) {
 // 💎 완채 보상은 즉시 지급하지 않는다 — 해당 광물 모양 오브젝트가 나와서 제물대에 넣으면 툭툭툭 깨지며 개봉 (08-16 유저)
 function giveHuntReward(stage) {
   sfx('reward');
+  if (stage === 1 && S.round > CROWN_DEADLINE && S.crownRace < 0) { openOreGift(1); return; } // 👑 기한 뒤 석탄 완채 = 얻는 즉시 사용 (광석 아이템을 띄우지 않고 바로 개봉 → 강제 대관식)
   const ore = ORES[Math.min(9, stage - 1)] || ORES[0];
   spawnItemUnit('oreGift');
   const it = S.units[S.units.length - 1];
@@ -7295,7 +7360,7 @@ function drawCornerBolt(seed, phase) {
 // 🔥 어려움: 폭풍 전야 — 회보라 하늘 + 흐르는 먹구름 + 눕는 풀·낙엽 + 멀리 번개 + 까마귀
 function drawStormscape() {
   const T = S.time, k = Math.min(1, S.round / 80); // 진행도: 갈수록 세계가 무너진다
-  const period = 8 - 5 * k;                         // 번개 간격 8초 → 3초
+  const period = (8 - 5 * k) * 5;                   // 번개 간격 40초 → 15초 (10-04 유저: 빈도 1/5 — 섬광·볼트 연출 길이는 그대로)
   const lightning = ((T * 0.9 + 3) % period) < 0.14;
   const art = sbGround(); // 🎨 아트 지면 + 폭풍 무드 틴트
   if (!art) {
@@ -10597,8 +10662,9 @@ function dropGrab(group, px, py) {
   group = group.filter(u => S.units.includes(u)); // 집힌 사이 사라진 유닛(제물·합성 등)의 유령 참조 제거
   const n = group.length, cols = Math.ceil(Math.sqrt(n));
   const c = clampTargetPos(Math.max(12, Math.min(VW - 12, px)), Math.max(12, Math.min(VH - 12, py))); // 격자 중심을 먼저 보정 — 소환장 안에 놓으면 전원이 같은 경계점으로 뭉치던 것 방지
+  const slots = roomSnap(group.map((u, i) => ({ x: c.x + (i % cols - (cols - 1) / 2) * 28, y: c.y + (Math.floor(i / cols) - (Math.ceil(n / cols) - 1) / 2) * 28 })), group, c); // issueMove와 같은 격자 · 🧱 광석방 울타리에 걸치면 확실히 안/밖으로
   group.forEach((u, i) => {
-    const gx = c.x + (i % cols - (cols - 1) / 2) * 28, gy = c.y + (Math.floor(i / cols) - (Math.ceil(n / cols) - 1) / 2) * 28; // issueMove와 같은 격자
+    const gx = slots[i].x, gy = slots[i].y;
     const t = clampTargetPos(Math.max(12, Math.min(VW - 12, gx)), Math.max(12, Math.min(VH - 12, gy)));
     u.x = t.x; u.y = t.y; u.tx = t.x; u.ty = t.y; u.moving = false; u.grabbed = false; u.dropT = 0.3;
     if (u.item) u.altarIntent = Math.abs(t.x - ALTAR.x) <= ALTAR.w / 2 + 12 && Math.abs(t.y - ALTAR.y) <= ALTAR.h / 2 + 12; // 제물대에 놓으면 발동 자격 (issueMove와 동일 규칙)
@@ -10611,12 +10677,11 @@ function dropGrab(group, px, py) {
 function issueMove(px, py) {
   const p = clampTargetPos(px, py);
   const sel = S.units.filter(u => u.selected && !u.miner && !u.catapult); // 광부/투석기는 이동 명령 무시
+  const cols = Math.ceil(Math.sqrt(sel.length));
+  const slots = roomSnap(sel.map((u, i) => ({ x: p.x + (i % cols - (cols - 1) / 2) * 28, y: p.y + (Math.floor(i / cols) - (Math.ceil(sel.length / cols) - 1) / 2) * 28 })), sel, p, 12); // 🧱 광석방 울타리에 걸친 목표는 확실히 안/밖으로 (진형 통째 · 걸어서 도착하면 최대 ~10px 못 미쳐 서므로 여유 12)
   sel.forEach((u, i) => {
     if (duelLocked(u)) { duelLockFloat(u); return; } // 🔒 결투 락인 중엔 명령 무시
-    const cols = Math.ceil(Math.sqrt(sel.length));
-    const t = clampTargetPos(
-      p.x + (i % cols - (cols - 1) / 2) * 28,
-      p.y + (Math.floor(i / cols) - (Math.ceil(sel.length / cols) - 1) / 2) * 28);
+    const t = clampTargetPos(slots[i].x, slots[i].y);
     u.tx = t.x;
     u.ty = t.y;
     u.forceTarget = null; u.attackMine = false; u.amove = false; // 이동 명령은 기존 명령 해제
@@ -12185,14 +12250,22 @@ function tone(freq, dur, type, node, vol, when) {
   o.connect(g); g.connect(node); o.start(t); o.stop(t + dur + 0.02);
 }
 let noiseBuf = null; // 🔋 2초 백색잡음 1회 생성 — 전엔 효과음마다 새 버퍼+난수 채우기(전투 중 초당 ~20개, GC 쓰레기)
-function noiseBurst(dur, vol, freq, type) {
+function noiseBurst(dur, vol, freq, type, when) { // when = 예약 시각 (생략 시 지금 — 기존 호출 무변화)
   if (!AC) return;
   if (!noiseBuf) { noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const t = when || AC.currentTime;
   const n = AC.createBufferSource(); n.buffer = noiseBuf;
   const f = AC.createBiquadFilter(); f.type = type || 'lowpass'; f.frequency.value = freq || 1400;
   if (type === 'bandpass') f.Q.value = 1.2;
-  const g = AC.createGain(); g.gain.setValueAtTime(vol, AC.currentTime); g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
-  n.connect(f); f.connect(g); g.connect(sfxGain); n.start(AC.currentTime, Math.random() * Math.max(0, 2 - dur), Math.min(dur, 2)); // 무작위 구간 = 매번 다른 잡음
+  const g = AC.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  n.connect(f); f.connect(g); g.connect(sfxGain); n.start(t, Math.random() * Math.max(0, 2 - dur), Math.min(dur, 2)); // 무작위 구간 = 매번 다른 잡음
+}
+// 🃏 포커 시작: 카드 셔플(촤라락) + 5장 딜(탁·탁·탁) — 음정 없는 잡음만, 'clear'(0.16)보다 작게 ≈0.75초 (10-04 유저)
+function dealSound() {
+  const t = AC.currentTime;
+  for (let k = 0; k < 12; k++) noiseBurst(0.012, 0.035 + 0.035 * k / 11, 3200 + Math.random() * 1000, 'bandpass', t + k * 0.022); // 셔플 딸깍 12번
+  noiseBurst(0.07, 0.06, 1800, 'bandpass', t + 0.28); // 다발이 맞물리는 촤르륵
+  for (let k = 0; k < 5; k++) noiseBurst(0.03, 0.09, 2200 + Math.random() * 400, 'bandpass', t + 0.40 + k * 0.08); // 펠트 위로 한 장씩 탁
 }
 // 팡! 터지는 소리: 피치가 뚝 떨어지는 사인파(풍선 팡) + 고음 노이즈 크랙
 function popSound(big) {
@@ -12224,7 +12297,7 @@ function sfx(type, arg) {
   if (!AC || !sfxOn || AC.state !== 'running') return;
   const now = performance.now(), gap = { shoot: 45, slash: 90, boom: 55, bigboom: 300, jackpot: 400, combo: 70,
     splash: 70, glass: 70, metal: 65, thud: 80,
-    pick: 200, coin: 220, boss: 1500, clear: 1500, leak: 800, reward: 500, hero: 800, chirp: 300 }[type] || 60;
+    pick: 200, coin: 220, boss: 1500, clear: 1500, leak: 800, reward: 500, hero: 800, chirp: 300, deal: 1500 }[type] || 60;
   const mil = type === 'combo' && arg > 0 && arg % 10 === 0; // 10·20·30… 마디 쿵은 스로틀 면제 — 다중 처치 한 틱에선 첫 킬만 통과해 마디가 거의 안 울렸다 (10-02 크로스체크)
   if (!mil && lastSfx[type] && now - lastSfx[type] < gap) return;
   lastSfx[type] = now;
@@ -12246,6 +12319,7 @@ function sfx(type, arg) {
   else if (type === 'metal') { [520, 780, 1170].forEach((f, i) => tone(f, 0.15, 'square', sfxGain, 0.055, AC.currentTime + i * 0.008)); noiseBurst(0.06, 0.11, 3000, 'bandpass'); } // 챙
   else if (type === 'thud') { tone(88, 0.16, 'sine', sfxGain, 0.28); noiseBurst(0.1, 0.13, 500, 'lowpass'); } // 쿵
   else if (type === 'chirp') { tone(900, 0.05, 'sine', sfxGain, 0.10); tone(1400, 0.05, 'sine', sfxGain, 0.10, AC.currentTime + 0.055); } // 🐦 힌트 새 짹짹
+  else if (type === 'deal') dealSound(); // 🃏 포커 시작 셔플+딜
 }
 // 🏰 중세 트랙 (2026-08-08 유저: "지브리톤 → 중세 느낌, 새소리·바람, 잔잔하지만 중독성 있게")
 // D 도리안, AABA. A = 묻는 프레이즈(D에서 떠올라 F에 걸침 — 해소를 원하게), B = 답(C5에서 D4로 내려와 종지).
@@ -13761,6 +13835,24 @@ document.getElementById('btnSandbox').onclick = () => {
 };
 reset();
 S.paused = true; // 시작 화면 동안 정지 (배경은 계속 그려짐)
+// 🎼 10-04 유저: 켜자마자 BGM — 브라우저가 허락하면(설치형 앱 등) 바로 타이틀 곡, 막히면 AC는 suspended로 대기하다 기존 첫 입력 폴백이 깨운다.
+//    모든 선언이 끝난 뒤(TDZ) 1회. 음악·효과음 둘 다 꺼진 유저는 시도하지 않는다.
+if (musicOn || sfxOn) {
+  initAudio();
+  const d0 = bgm && !bgm.failed && bgm.decks[bgm.cur];
+  // 막힌 채면 bgmSwitch가 걸어 둔 1.2초 페이드는 AC가 깨어나는 순간부터 흘러, 버퍼링이 길면 첫 소리가 이미 최대 음량이다.
+  // → 그 페이드를 세대 토큰으로 무효화(덱 게인 0 유지)하고, 첫 실제 재생('playing') 순간에 0에서 다시 건다. 그 사이 곡이 바뀌면 새 전환의 페이드가 우선.
+  if (d0 && AC.state !== 'running') {
+    const gen0 = ++bgm.gen;
+    d0.g.gain.cancelScheduledValues(0); d0.g.gain.value = 0; // 음악 OFF·숨김 부팅이면 페이드가 이미 동기로 걸려 있다 — 그것도 걷어 낸다
+    d0.a.addEventListener('playing', () => {
+      if (!bgm || bgm.gen !== gen0 || bgm.decks[bgm.cur] !== d0) return;
+      const t0 = AC.currentTime;
+      d0.g.gain.cancelScheduledValues(t0); d0.g.gain.setValueAtTime(0, t0); d0.g.gain.linearRampToValueAtTime(BGM_GAIN * (BGM_TRIM[d0.key] || 1), t0 + 1.2);
+      bgm.xfUntil = t0 + 1.2;
+    }, { once: true });
+  }
+}
 requestAnimationFrame(frame);
 </script>
 <script>
