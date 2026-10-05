@@ -51,7 +51,16 @@
   body.mpMode #btnRestart { display: none !important; } /* 🤖 데모: 다시하기는 싱글 판으로 새므로 숨김 (게임오버 '다시 시작'은 데모 재시작) */
   body.mpMode #goPoker { left: 50%; top: auto; bottom: 14px; transform: translateX(-50%); z-index: 10; } /* 🤖 데모: 카메라가 움직여 소환장 기준 위치가 무의미 → 화면 하단 중앙 · 우측 배치 상태창(.mobile z9)보다 위 */
   body.mpMode #goPoker:active { transform: translate(-50%, 2px); }
-  body.mpMode.mobile #mpGold { bottom: 58px !important; } /* 🎫 골드티켓 카드: 모바일 전투 탭 '포커장으로 이동'(하단 중앙) 위로 */
+  /* 🎫 골드티켓 = 캔버스 우측 위 모퉁이 칩 → 누르면 5택이 아래로 펼쳐진다 (10-06 리뷰 V1: 하단 카드가 수로·다리·딜 순위를 가렸다 — 칩은 수로 띠·딜 순위·하단 버튼·상단 토스트(47px~) 밖, 데스크톱 포커 패널보다 위, 펼침도 수로 띠 위에서 끝난다)
+     z 7 = 캔버스 안 모달(결투 확인·대관식 z8) 아래 · .off = 게임 정지 중(상점·승리 창 등) 숨김 (GAPS-3) */
+  #mpGold { position: absolute; right: 8px; top: 8px; z-index: 7; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; pointer-events: none; font: bold 12px sans-serif; white-space: nowrap; }
+  #mpGold button, #mpGold .gtChip { pointer-events: auto; font: inherit; border-radius: 9px; }
+  #mpGold .gtChip { padding: 5px 9px; border: 2px solid #e6b84a; background: rgba(20,14,34,0.9); color: #ffe9a8; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.4); user-select: none; }
+  #mpGold .gtList { display: none; flex-direction: column; align-items: stretch; gap: 3px; }
+  #mpGold.open .gtList { display: flex; }
+  #mpGold .gtList button { padding: 4px 8px; text-align: left; border: 1px solid #e6b84a; background: rgba(58,42,18,0.95); color: #ffe9a8; cursor: pointer; }
+  #mpGold .gtList button:disabled { border-color: #4a4458; background: rgba(38,34,46,0.95); color: #7d758c; cursor: default; }
+  #mpGold.off { visibility: hidden; }
   body.mpMode.mobile[data-tab="poker"] #mpGold { display: none; } /* 🎫 모바일 포커 탭에선 패·'유닛 소환!'을 가리지 않게 숨김 (전투 탭에서 다시 보인다) */
   @media (max-width: 1339px) { .adRail { display: none; } }  /* 160×600도 안 들어가면 숨김 */
   h1 { font-size: 17px; margin-bottom: 6px; color: #5b48d0; }
@@ -3485,7 +3494,7 @@ function duelHP(n) {
 }
 // 🏛️ 결투 라운드 판정: 7의 배수·보스 주 휴장·태양 강림(R190+ 미클리어) 휴장 — startWave가 태양에서 조기 return해
 // 도전자를 안 만들므로, 예고(startPoker)·결투창(duelWindowActive)도 같은 조건을 공유해야 한다 (한 곳만 어긋나면 빈 링에 팝업·락인이 생긴다)
-function duelRound(r) { return r % DUEL_EVERY === 0 && r % 10 !== 0 && !(r >= SUN_ROUND && !S.hellCleared); }
+function duelRound(r) { return r % DUEL_EVERY === 0 && r % 10 !== 0 && !(r >= SUN_ROUND && !S.hellCleared && !S.multi); } // 🤖 멀티 = 태양전 없음 → R190 이후 휴장도 없음
 // 🏛️ 결투 창(window): 팝업·락인이 활성인 구간 — 도전자가 있거나, 결투 라운드 포커 중 아직 결판나지 않았을 때
 function duelWindowActive() { return !!S.duel || (S.phase === 'poker' && duelRound(S.round) && !S.duelEnded); }
 
@@ -4437,7 +4446,7 @@ function useVBombItem() {
   if (S.phase === 'wave' && S.monsters.some(m => !m.entering && !m.lane)) emergencyBomb(); // 🤖 레인 프록시는 소환장 몹이 아니다
   else { S.pendBomb++; logMsg('💣 긴급 폭격 — 몬스터가 나타나는 즉시 떨어집니다.'); }
 }
-function usePrayItem() { S.life += 3; S.lifeLog.push({ r: S.round, d: -3, why: '❤️ 기도' }); addFloat(HOUSE.x, HOUSE.y - 40, '❤️ +3', '#e53935', 2); sfx('reward'); logMsg('❤️ 생명의 기도 — 목숨 +3!'); }
+function usePrayItem() { if (S.multi) return; S.life += 3; S.lifeLog.push({ r: S.round, d: -3, why: '❤️ 기도' }); addFloat(HOUSE.x, HOUSE.y - 40, '❤️ +3', '#e53935', 2); sfx('reward'); logMsg('❤️ 생명의 기도 — 목숨 +3!'); }
 function useStimpack() { S.stimT = 20; addFloat(CX, CY, '💉 스팀팩! 전군 공속 2배 20초!', '#43a047', 2); sfx('hero'); logMsg('💉 스팀팩 — 20초간 전 아군 공속 2배!'); }
 function useBombard() { // 소환장 전체 즉발 광역
   S.effects.push({ type:'boom', x: PEN.x, y: PEN.y, r: 150, t: 0.6 });
@@ -4460,7 +4469,7 @@ function startWave() {
   // >= 인 이유: === 이면 태양을 못 잡고 부활권으로 살아남는 순간 라운드가 151로 넘어가
   // 태양이 영영 다시 안 나오고 hellOverlay(엔딩)도 도달 불가인 무한 헬모드가 된다.
   // 못 잡으면 다음 라운드에 다시 온다 (라운드가 오를수록 강해지는 게 재도전 대가)
-  if (S.round >= SUN_ROUND && !S.hellCleared) {
+  if (S.round >= SUN_ROUND && !S.hellCleared && !S.multi) { // 🤖 멀티: 태양전 끔 (★★★ 6-7 — R190 이후도 일반 웨이브 + 레인 보스)
     S.spawnQueue = { left: 0, hp: 0, interval: 1, acc: 0, bossLeft: 0 };
     const sun = spawnMonster(Math.floor(monsterHP(S.round) * 35), true); // ⚠️ 극악 튜닝 노브: ×140→×35 (08-11 감사 — 140은 요구 단일DPS가 공급의 12배라 0%였다. 35 = 슈퍼쌍단검 확보가 진짜 관문 = "1000판에 1번")
     sun.sunBoss = true; sun.shape = 28; sun.split = false; sun.mat = 0;
@@ -4494,7 +4503,8 @@ function startWave() {
   }
   renderPoker();
   const info = stageInfo(S.round);
-  logMsg(`🌊 스테이지 ${S.round} [${info.name}] — ${count}마리 (HP ${hp})${boss ? ' + 👹 보스!' : ''}${S.event ? ' · ' + S.event.name : ''}`, true);
+  if (S.multi && !count) logMsg(`🌊 스테이지 ${S.round} — 👹 보스가 수로로! 둑에서 막아라${S.event ? ' · ' + S.event.name : ''}`, true); // 🤖 멀티 보스 라운드 (소환장 0 — 'HP 112' 같은 무관한 수치 대신 한 줄)
+  else logMsg(`🌊 스테이지 ${S.round} [${info.name}] — ${count}마리 (HP ${hp})${boss ? ' + 👹 보스!' : ''}${S.event ? ' · ' + S.event.name : ''}`, true);
 }
 function spawnMonster(hp, isBoss, opt) {
   opt = opt || {};
@@ -4652,7 +4662,8 @@ function endWave() {
     S.reviveArmed = false;
     logMsg('🔄 부활권 소멸 — 무사히 클리어! (다음을 노려야겠네)'); addFloat(CX, CY, '🔄 부활권 소멸…', '#9e9e9e', 1.5);
   }
-  if (S.round === FINAL_ROUND) {
+  if (S.round === FINAL_ROUND && S.multi) mpFinalRound(); // 🤖 멀티: 멈추지 않는 배너 + 로그 (★★★ 6-7 — 헬모드·태양 문구 없음)
+  else if (S.round === FINAL_ROUND) {
     S.paused = true;
     document.getElementById('winMsg').textContent = DIFF_MUL >= 2 ? '💀 지옥에서 80라운드 — 2%의 문을 열었습니다.' : DIFF_MUL >= 1.4 ? '🔥 어려움 80라운드 — 5%의 문을 열었습니다.' : '80라운드 클리어를 축하합니다.'; // 난이도별 문구 (09-08)
     document.getElementById('winOverlay').style.display = 'flex'; syncGamePause();
@@ -5341,6 +5352,7 @@ function update(dt) {
   const q = S.spawnQueue;
   if (S.freezeT > 0) {
     S.freezeT -= dt;
+    if (S.multi) mpLaneFreeze(dt); // 🤖 습격대·보스도 얼어붙는다 (출발 시각을 미룬다)
   } else {
     S.timer -= dt;
     tenseTick(dt / S.speed); // 💓 막판 심장·시계·BGM 먹먹함 (시계가 흐를 때만 — 시간정지 중엔 이 분기를 안 탄다 · 배속은 실시간 박자 유지)
@@ -5435,7 +5447,7 @@ function update(dt) {
       continue;
     }
     if (updateDuelFight(u)) continue; // 🏛️ 결투: 챔피언은 도전자에게만 집중 (웨이브·포커 공용)
-    if (u.forceTarget && (u.forceTarget.dead || u.forceTarget.hp <= 0 || (u.forceTarget.lane && u.forceTarget.lane.occl))) u.forceTarget = null; // 🤖 다리 밑에 가린 레인 표적은 고정 해제
+    if (u.forceTarget && (u.forceTarget.dead || u.forceTarget.hp <= 0 || (u.forceTarget.lane && mpNoAim(u, u.forceTarget)))) u.forceTarget = null; // 🤖 다리 밑에 가린 레인 표적(펜 포탄 유닛은 레인 전부)은 고정 해제
     // A명령: 대상 집중 공격 (보스 저격용)
     if (u.forceTarget) {
       const ft = u.forceTarget;
@@ -5451,7 +5463,7 @@ function update(dt) {
     let best = null, bestScore = Infinity, anyInRange = false;
     const r2 = effRange(u) * effRange(u);
     for (const m of S.monsters) {
-      if (m.entering || m.hp + m.shield - m.inc <= 0 || (m.lane && m.lane.occl)) continue; // 강림 중인 태양은 조준 불가 · 🤖 다리 밑 레인 개체도
+      if (m.entering || m.hp + m.shield - m.inc <= 0 || (m.lane && mpNoAim(u, m))) continue; // 강림 중인 태양은 조준 불가 · 🤖 다리 밑 레인 개체도 (펜 포탄 유닛은 레인 전부)
       const ddx = m.x - u.x, ddy = m.y - u.y, d2 = ddx * ddx + ddy * ddy;
       if (d2 > r2) continue;
       anyInRange = true;
@@ -10648,7 +10660,7 @@ function issueAttack(px, py) {
     if (Math.hypot(m.x - px, m.y - py) < (m.sunBoss ? 95 : m.boss ? (IS_MOBILE ? 48 : 32) : (IS_MOBILE ? 30 : 15))) { hitM = m; break; }
   }
   if (hitM) {
-    sel.forEach(u => { if (u.miner) return; if (duelLocked(u)) { duelLockFloat(u); return; } u.forceTarget = hitM; u.attackMine = false; u.amove = false; });
+    sel.forEach(u => { if (u.miner || (hitM.lane && mpNoAim(u, hitM))) return; if (duelLocked(u)) { duelLockFloat(u); return; } u.forceTarget = hitM; u.attackMine = false; u.amove = false; });
     S.effects.push({ type:'boom', x: hitM.x, y: hitM.y, r: 18, t: 0.25 });
     logMsg(`🎯 집중 공격 명령! (${sel.length}기)`);
     return;
@@ -11799,7 +11811,7 @@ function casMenu() {
     { k: 'sand', it: 'sand',  icon: '⏱️', name: '시간의 모래', desc: '전투 +15초', max: 3 },
     { k: 'bomb', it: 'vbomb', icon: '💣', name: '긴급 폭격', desc: '모든 몹 최대체력 15% 타격', max: 3 },
     { k: 'pray', it: 'pray',  icon: '❤️', name: '생명의 기도', desc: '목숨 +3', max: 3 },
-  ].map(v => Object.assign(v, { cost: valveCost(v.k) }));
+  ].filter(v => !(S.multi && v.k === 'pray')).map(v => Object.assign(v, { cost: valveCost(v.k) })); // 🤖 멀티: 목숨이 없다 → 기도 숨김
   CB.innerHTML =
     `<div style="text-align:center;font-size:12px;color:#c9b8f0;margin-bottom:8px">보유 🪙 <b style="color:#ffd166">${chipTxt(S.chips)}</b>개 · 💰 <b style="color:#ffd166">${Math.floor(S.gold).toLocaleString()}G</b></div>
     <div style="display:flex;flex-direction:column;gap:10px">
@@ -12919,11 +12931,10 @@ function mtEdgeK() { return (MT.W + MT.H) / (1968 + 1088); }
 const MTART = { ready: false, img: null, sp: {} };
 const ART_CELLS = { // art2.png(1536×1024) 근사 셀 [x,y,w,h,keyBg] — 스프라이트는 비배경 bbox로 자동 타이트닝
   grass:  [58, 75, 380, 310, false],
-  road:   [512, 80, 512, 184, false],
   pine1:  [40, 468, 150, 150, true],  pine2: [192, 468, 150, 150, true],  pine3: [345, 468, 150, 150, true],
   rock1:  [510, 468, 165, 150, true], rock2: [712, 468, 170, 150, true],
   bush:   [900, 468, 165, 150, true], flower: [1080, 468, 150, 150, true], pond: [1265, 462, 220, 155, true],
-  fence:  [24, 680, 180, 130, true],  bridge: [255, 672, 200, 155, true],
+  fence:  [24, 680, 180, 130, true],
   castle: [495, 655, 225, 225, true], wall: [745, 700, 160, 110, true],
   mine:   [915, 672, 175, 165, true], coal: [1105, 700, 145, 115, true], arena: [1272, 672, 215, 175, true],
   gate:   [62, 848, 170, 145, true],
@@ -12963,12 +12974,6 @@ function mtExtractArt() {
           for (const n of nb) if (!seen[n] && strict(n)) { seen[n] = 1; comp.push(n); }
         }
         if (comp.length >= 20) for (const i of comp) px[i * 4 + 3] = 0;
-      }
-    }
-    if (key === 'bridge') { // 아치 밑에 그려진 '중성 회색 그림자'를 지워 레인이 비쳐 보이게 (돌은 따뜻한 베이지라 색조로 분리)
-      for (let i = 0; i < cw * ch; i++) {
-        const r = px[i * 4], g2 = px[i * 4 + 1], b2 = px[i * 4 + 2];
-        if (px[i * 4 + 3] > 8 && Math.max(r, g2, b2) - Math.min(r, g2, b2) < 14 && r > 112 && r < 240) px[i * 4 + 3] = 0;
       }
     }
     let x0 = cw, x1 = 0, y0 = ch, y1 = 0; // 타이트 bbox
@@ -13265,9 +13270,15 @@ const BRK_SPD = [55, 40]; // 물결 px/s — 1겹 = 습격대 이동속도와 �
 function brkRgba(c, a) { return `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
 function brkKDist(x, y) { return Math.hypot(x - MT.KING.x, y - MT.KING.y); }
 function brkWaterClip(far) { // 물 연출 전용 클립 = 레인 합집합 − 왕국 광장(r150). 두 번에 나눠 건다 (한 경로 evenodd면 겹친 레인 사각이 상쇄된다) · far = 광장에 닿을 수 없는 개체 → 원 빼기 생략 (매 프레임 비용)
-  ctx.beginPath(); for (const L of MT.LANES) ctx.rect(L.x, L.y, L.w, L.h); ctx.clip();
-  if (far) return;
-  ctx.beginPath(); ctx.rect(-60, -60, MT.W + 120, MT.H + 120); ctx.arc(MT.KING.x, MT.KING.y, 150, 0, 6.283); ctx.clip('evenodd');
+  const C = mtBrookC, P = C ? C.clipP || (C.clipP = brkClipPaths()) : brkClipPaths(); // 경로는 Path2D로 1회 (mtBrookC와 함께 무효화 — 리뷰 perf ④-1)
+  ctx.clip(P[0]);
+  if (!far) ctx.clip(P[1], 'evenodd');
+}
+function brkClipPaths() {
+  const a = new Path2D(), b = new Path2D();
+  for (const L of MT.LANES) a.rect(L.x, L.y, L.w, L.h);
+  b.rect(-60, -60, MT.W + 120, MT.H + 120); b.arc(MT.KING.x, MT.KING.y, 150, 0, 6.283);
+  return [a, b];
 }
 // 흐름 구간 — 세로 레인은 왕국 y에서 갈라 양쪽 다 왕국 쪽, 가로 레인은 세로 레인 구간을 빼고 왕국 x에서 갈라 왕국 쪽.
 // 교차부는 세로 레인 몫. 광장에 통째로 덮이는 구간은 버린다. 결과: { li, L, vert, s, e, dir(+1: u 증가 방향) }
@@ -13759,14 +13770,13 @@ function mtWaterLive(t) { // (매 프레임 · 월드 좌표 카메라 변환 �
   const vx0 = MT.cam.x, vy0 = MT.cam.y, vx1 = vx0 + mtViewW(), vy1 = vy0 + mtViewH(), far = MT.zoom < 0.55; // far = 전체 보기 LOD (물결 1겹 · 반짝임 생략 — 발열)
   const layers = LOW_SPEC || far ? 1 : 2;
   for (const G of B.geos) for (const sg of G.live) {
-    const [ax, ay] = G.P(sg.s, G.A + 6), [bx, by] = G.P(sg.e, G.B - 6);
-    const rx = Math.max(Math.min(ax, bx), vx0), ry = Math.max(Math.min(ay, by), vy0);
-    const rx1 = Math.min(Math.max(ax, bx), vx1), ry1 = Math.min(Math.max(ay, by), vy1);
+    if (!sg.r) { const [ax, ay] = G.P(sg.s, G.A + 6), [bx, by] = G.P(sg.e, G.B - 6); sg.r = [Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by)]; } // 구간 월드 사각 (불변 — mtBrookC와 함께 무효화)
+    const R = sg.r, rx = Math.max(R[0], vx0), ry = Math.max(R[1], vy0), rx1 = Math.min(R[2], vx1), ry1 = Math.min(R[3], vy1);
     if (rx1 <= rx || ry1 <= ry) continue;
     for (let k = 0; k < layers; k++) {
       const TL = B.tilesH[k].width;
-      const off = (((t * BRK_SPD[k] * sg.dir) % TL) + TL) % TL;
-      const [dx, dy] = G.P(G.u0 + off, G.a + (k ? 37 : 0));
+      const off = (((t * BRK_SPD[k] * sg.dir) % TL) + TL) % TL, u = G.u0 + off, v = G.a + (k ? 37 : 0);
+      const dx = G.vert ? v : u, dy = G.vert ? u : v; // = G.P(u, v) (매 프레임 배열 할당 없이)
       ctx.globalAlpha = G.vert ? (k ? 0.34 : 0.5) : (k ? 0.42 : 0.62);
       ctx.fillStyle = B.pats[k][G.vert ? 1 : 0];
       ctx.translate(dx, dy); ctx.fillRect(rx - dx, ry - dy, rx1 - rx, ry1 - ry); ctx.translate(-dx, -dy);
@@ -13783,16 +13793,19 @@ function mtWaterLive(t) { // (매 프레임 · 월드 좌표 카메라 변환 �
     ctx.fillRect(s.x - z, s.y - 0.6, z * 2, 1.2); ctx.fillRect(s.x - 0.6, s.y - z, 1.2, z * 2);
   }
   ctx.globalAlpha = 1;
-  for (const [gx, gy] of MT.GATES) { // 수문 포말 알갱이 (흐름 따라 풀려 나간다)
+  const GF = B.gateF || (B.gateF = MT.GATES.map(g => mtBrookFlowAt(g[0], g[1]))); // 수문별 흐름 방향 (불변 — 캐시)
+  ctx.fillStyle = '#f4feff';
+  for (let gi = 0; gi < MT.GATES.length; gi++) { // 수문 포말 알갱이 (흐름 따라 풀려 나간다) — 색 문자열 대신 globalAlpha (GC — 리뷰 PERF-2)
+    const gx = MT.GATES[gi][0], gy = MT.GATES[gi][1], fx = GF[gi][0], fy = GF[gi][1];
     if (gx < vx0 - 160 || gx > vx1 + 160 || gy < vy0 - 160 || gy > vy1 + 160) continue;
-    const [fx, fy] = mtBrookFlowAt(gx, gy);
     for (let i = 0; i < 9; i++) {
       const p = (t * 0.45 + i / 9) % 1, al = 48 + p * 80, cr = Math.sin(i * 2.3) * 26 * (1 - p * 0.5);
       const x = gx + fx * al - fy * cr, y = gy + fy * al + fx * cr;
-      ctx.fillStyle = `rgba(244,254,255,${((1 - p) * 0.75).toFixed(3)})`;
+      ctx.globalAlpha = (1 - p) * 0.75;
       ctx.beginPath(); ctx.arc(x, y, 1.4 + (i % 3) * 0.6, 0, 6.283); ctx.fill();
     }
   }
+  ctx.globalAlpha = 1;
 }
 // ── 물 위에 뜬 레인 개체 (미리보기 습격대·보스 + 멀티 데모 레인 개체 공용)
 function mtFloatFx(x, wl, rx, dirX, dirY, t, hid) { // wl = 흘수선 y. hid = 다리 상판 밑
@@ -13805,7 +13818,7 @@ function mtFloatFx(x, wl, rx, dirX, dirY, t, hid) { // wl = 흘수선 y. hid = �
   if (dirX || dirY) { // 물살 꼬리 (상류 쪽으로 벌어지는 V)
     const bx = -dirX, by = -dirY, px = -by, py = bx;
     ctx.strokeStyle = 'rgba(244,254,255,0.5)'; ctx.lineWidth = 1.6; ctx.globalAlpha = 0.9;
-    for (const s of [-1, 1]) {
+    for (let s = -1; s <= 1; s += 2) {
       ctx.beginPath();
       for (let k = 0; k <= 8; k++) { const d = k / 8, along = rx * 0.6 + d * rx * 1.6, side = s * (rx * 0.75 + d * rx * 0.75) + Math.sin(d * 9 - t * 6) * 1.2;
         const X = x + bx * along + px * side, Y = wl + by * along * 0.8 + py * side * 0.55; k ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }
@@ -13815,21 +13828,23 @@ function mtFloatFx(x, wl, rx, dirX, dirY, t, hid) { // wl = 흘수선 y. hid = �
   }
   ctx.lineWidth = 1.8;
   const nr = hid ? 3 : 2;
+  ctx.strokeStyle = '#f4feff'; // 파문·거품 = 고정 색 + globalAlpha (매 프레임 색 문자열 없이 — 리뷰 PERF-2)
   for (let i = 0; i < nr; i++) { // 퍼지는 파문 — 다리 밑이면 3겹·더 넓게·최소 밝기 (상판 양옆으로 보이게)
     const p = (t * 0.55 + i / nr) % 1, rr = rx * ((hid ? 1.45 : 1.0) + p * 0.85);
-    ctx.strokeStyle = `rgba(244,254,255,${Math.max(hid ? 0.32 : 0, (1 - p) * 0.7).toFixed(3)})`;
+    ctx.globalAlpha = Math.max(hid ? 0.32 : 0, (1 - p) * 0.7);
     ctx.beginPath(); ctx.ellipse(x, wl, rr, rr * 0.38, 0, 0, 6.283); ctx.stroke();
   }
   if (hid) { // 움직이는 거품 알갱이: 몹 쪽에서 하류로 흘러가며 옅어진다 (말뚝 물살은 고정 → 구분된다)
-    const [fx, fy] = mtBrookFlowAt(x, wl);
+    const fd = mtBrookFlowAt(x, wl), fx = fd[0], fy = fd[1];
+    ctx.fillStyle = '#faffff';
     for (let i = 0; i < 14; i++) {
       const p = (t * 0.42 + i / 14) % 1, al = 10 + p * 104, cr = Math.sin(i * 2.7) * 22 * (0.55 + p * 0.5);
       const X = x + fx * al - fy * cr, Y = wl - 4 + fy * al + fx * cr * 0.8;
-      ctx.fillStyle = `rgba(250,255,255,${(0.95 * (1 - Math.pow(p, 1.6))).toFixed(3)})`;
+      ctx.globalAlpha = 0.95 * (1 - Math.pow(p, 1.6));
       ctx.beginPath(); ctx.arc(X, Y, 1.5 + (i % 3) * 0.75, 0, 6.283); ctx.fill();
     }
   }
-  ctx.lineWidth = 1; ctx.lineCap = 'butt';
+  ctx.globalAlpha = 1; ctx.lineWidth = 1; ctx.lineCap = 'butt';
 }
 function mtSubmerge(x, wl, rx, ry, t) { // 흘수선 아래를 물빛으로 덮어 '잠겨 있다' + 흘수선 포말
   ctx.fillStyle = 'rgba(56,148,176,0.6)'; ctx.beginPath(); ctx.ellipse(x, wl, rx + 2, ry, 0, 0, Math.PI); ctx.fill(); // 흘수선 아래 반타원 (초안의 사각 클립 + 온타원과 같은 그림 — 클립 없이)
@@ -13840,7 +13855,7 @@ function mtSubmerge(x, wl, rx, ry, t) { // 흘수선 아래를 물빛으로 덮�
 // o = { wl(흘수선 오프셋), rx, ry(잠김 반경), dx, dy(진행 방향 — 0이면 꼬리 없음), bob(까딱) } · body() = 개체 본그림. 광장 돌바닥 위(kr<160)는 물 연출 없이 본그림만
 function mtFloatDraw(x, y, o, t, body) {
   const kd = brkKDist(x, y);
-  if (kd < 160) { body(); return; }
+  if (kd < 160 || !MTART.ready) { body(); return; } // 아트 로드 실패 폴백(흙 수로)엔 물 연출 없이 본그림만 (리뷰 S2)
   const hid = mtOccluded(x, y), bob = o.bob ? Math.sin(t * 2.1) * 1.6 : 0, wl = y + o.wl, far = kd > 280 + o.rx * 2.6; // far = 연출 최대 반경(다리 밑 거품 114 · 파문 rx×2.3)이 광장 원에 못 닿는다
   ctx.save(); brkWaterClip(far); mtFloatFx(x, wl, o.rx, o.dx, o.dy, t, hid); ctx.restore(); // 물 연출은 물 위에만
   ctx.save();
@@ -14166,11 +14181,13 @@ function mtBridgeShadow(b) { // (몹 아래) 다리 주변 물 그늘 + 물속 �
 function mtBridge(b) { // (몹 위) 상판 그림자(레인 사각으로 자름 — 밑을 지나는 몹 위에도 드리운다) → 판자 데크 스프라이트. 다리 밑 글자 표시 없음 (10-05 유저)
   const sp = brkBridgeSprite(b, MT.BRIDGES.indexOf(b)), deckVert = !b.vert;
   const hw = deckVert ? 28 : 88, hh = deckVert ? 88 : 28, L = b.lane;
-  ctx.save(); ctx.beginPath(); ctx.rect(L.x, L.y, L.w, L.h); ctx.clip(); // 그림자는 물 위에만 — 둑·잔디에는 상판이 얹혀 있다
-  ctx.fillStyle = 'rgba(10,44,58,0.30)'; ctx.fillRect(b.x - hw + 6, b.y - hh + 7, hw * 2, hh * 2);
-  ctx.fillStyle = 'rgba(10,44,58,0.16)'; ctx.fillRect(b.x - hw + 2, b.y - hh + 2.5, hw * 2 + 8, hh * 2 + 8);
-  ctx.restore();
+  ctx.fillStyle = 'rgba(10,44,58,0.30)'; brkRectIn(L, b.x - hw + 6, b.y - hh + 7, hw * 2, hh * 2); // 그림자는 물 위에만 — 둑·잔디에는 상판이 얹혀 있다 (사각 ∩ 레인 사각 = 사각 → 클립 없이)
+  ctx.fillStyle = 'rgba(10,44,58,0.16)'; brkRectIn(L, b.x - hw + 2, b.y - hh + 2.5, hw * 2 + 8, hh * 2 + 8);
   ctx.drawImage(sp.c, b.x - sp.w / 2, b.y - sp.h / 2, sp.w, sp.h);
+}
+function brkRectIn(L, x, y, w, h) { // 사각 (x,y,w,h) ∩ 레인 사각 L 을 칠한다
+  const x0 = Math.max(x, L.x), y0 = Math.max(y, L.y), x1 = Math.min(x + w, L.x + L.w), y1 = Math.min(y + h, L.y + L.h);
+  if (x1 > x0 && y1 > y0) ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
 }
 function mtRaiderDraw(r) { // 미리보기 습격대 = 물 위에 뜬 본그림 (흐르는 쪽 물살 꼬리 · 까딱)
   mtFloatDraw(r.x, r.y, { wl: 9, rx: 30, ry: 24, dx: r.vert ? 0 : r.dir, dy: r.vert ? r.dir : 0, bob: true }, MT.time, () => mtRaiderBody(r));
@@ -14793,6 +14810,7 @@ function mpHomeView() { // 기본 = 내 진영 보기: 내 기지 + 맞닿은 �
 }
 function mpCamTick(dt) { // frame에서 매 처리 프레임 (rawDt = 실시간) — 방향키 + 가장자리 스크롤
   try { mpLaneTick(); } catch (e) { reportLoopError('mplane', e); } // 🦠 C1 레인 개체: 딜 장부·봇 사격·처치·도착 (update 전 — 프록시 HP를 장부와 맞춘다)
+  mpGoldSync(); // 🎫 정지 중 칩 숨김
   try { mpBotTick(); } catch (e) { reportLoopError('mpbot', e); } // 🤖 봇 동기도 여기서 (정지·모바일 포커 탭에서도 불리는 유일한 멀티 훅 — 엔진 무수정). 시간은 S.time 델타라 rawDt와 무관. frame의 try 밖이라 직접 격리 (봇 예외가 루프를 끊지 않게)
   const spd = 640 * dt / MT.zoom, k = MP.keys; // 줌과 무관하게 화면상 스크롤 속도 일정
   let dx = 0, dy = 0;
@@ -14879,7 +14897,7 @@ function mpBakeWorld() {
     mtBakeBody();
     if (MTART.ready) mtKingdomArt();
     else { for (const [gx2, gy2, ga] of MT.GATES) mtGate(gx2, gy2, ga); mtKingdom(mtPatterns()); }
-    MP.heartY = MTART.ready ? 128 : 100; // 🏰 실값 하트 자리 = 베이크가 고정 하트를 그리던 곳 (아트 / 프로시저럴)
+    MP.heartY = MTART.ready ? 150 : 100; // 🏰 실값 하트 윗변 = 왕국 중심 아래 '왕국 — 같이 지킨다' 줄 바로 밑 (아트 / 프로시저럴) — 위쪽(예전 고정 하트 자리)은 카메라 클램프로 좌상단 미니맵에 가렸다 (리뷰 V4)
     for (const b of MT.BRIDGES) mtBridgeShadow(b); // 🌊 물 그늘·말뚝 물살만 굽는다 — 판자 상판은 mpLaneDrawAll이 매 프레임 레인 개체 위에 (굽고 다시 덧그리면 그림자가 두 겹으로 진해진다)
     for (const q of MT.QUAD) {
       if (q.i === S.multi.me) continue;
@@ -14950,6 +14968,7 @@ function mpDraw() {
     }
     mpLaneDrawAll(vx0, vy0, vx1, vy1); // 🦠 레인 개체(물 위) → 판자 다리 상판(가림) → 왕국 하트 (내 진영 필드보다 아래 — 둑의 유닛·이펙트가 위)
     ctx.drawImage(MP.fc, q.ox - p.l, q.oy - p.t, FW, FH); // 내 진영 (라이브 엔진 그림)
+    mpLaneBars(vx0, vy0, vx1, vy1); // 🦠 레인 개체 체력바는 둑 위 유닛보다 위
   } finally { ctx.restore(); }
   drawTension(); // 화면 공간 1회 (setTransform(RS) — 카메라와 무관)
   drawScreenFx(); // FEVER·대박 섬광도 화면 공간 (필드 사각에 갇히지 않게)
@@ -15511,12 +15530,13 @@ function mpDrawNameTag(q, crown, n) { // 상대 진영 이름표 (월드 공간 
 // · 딜 장부 e.dl[seat]: 프록시 HP 감소분 = 내 딜(매 프레임 정산), 봇 = 모델 DPS × 몫 (가림 중 0)
 const RAID_HP_MUL = 1.0, BOSS_K = 0.8, MINI_K = 0.3; // 습격대 HP = 남은 HP 합 × 1.0 · 보스 HP = 두 진영 원래 웨이브 HP 합 × 0.8 · R5 미니보스 = 보스 HP × 0.3
 const LANE_GAP = 3, BOSS_T = 80, KINGDOM_HP = 5;     // 출발 간격 · 보스 이동 시간 (게임초) · 왕국 HP (팀 공유)
+const LANE_GATE = 36;                                 // 엉김 맨 뒤 = 게이트 중심에서 경로로 36 + 반지름 (게이트 아치 안쪽 면 ≈ 30 · 월드 끝에 걸리지 않게)
 const SCOUT_N = 3, SCOUT_HP = 700;                   // R3 정찰 습격대: 알 3개 · 고정 HP — 10-05 mpC_probe(자동 소환만, 조작 없음): 39.5초 행진 중 36.6초에 처치 (나 373 · 봇 327) = 손 놓으면 아슬아슬, 둑으로 옮기면 여유
 const BOT_LANE_K = [0.1, 0.35];                      // 봇 레인 사격 몫: 자기 소환장 처리 중 / 클리어 뒤(둑으로) — 10-05 탐침: 0.25/0.6이면 R3 정찰 딜의 94%를 봇이 가져가 '내가 쏘는 학습'이 사라졌다
 function mpLaneReset() {
   MP.lane = []; MP.laneSeq = 0; MP.laneT = null; MP.kh = KINGDOM_HP; MP.over = false; MP.clr = 0;
   MP.dlTot = {}; MP.kingN = {}; MP.bossDl = null; MP.warn = null; MP.khHit = null; MP.banC = {}; MP.heartC = null;
-  MP.gt = 0; MP.atkR = 0; // 🎫 남은 골드티켓 · ④ 공격력 +20% 웨이브
+  MP.gt = 0; MP.atkR = 0; MP.gtOpen = false; // 🎫 남은 골드티켓 · ④ 공격력 +20% 웨이브 · 칩 펼침
   const g = document.getElementById('mpGold');
   if (g) g.remove();
 }
@@ -15527,6 +15547,9 @@ function mpPathSetup() { // 2인: 게이트(동쪽) → 왕국 성곽 링(r140) 
   let L = 0;
   for (let i = 1; i < P.length; i++) L += Math.hypot(P[i].x - P[i - 1].x, P[i].y - P[i - 1].y);
   MP.pathL = L;
+  let w = 0;
+  while (w < L) { const p = mpPathAt(w); if (mtOccluded(p.x, p.y)) break; w += 2; }
+  MP.waitL = w; // 게이트에서 첫 다리 밑까지 = 엉김 줄 최대 길이 (mpLaneNew)
 }
 function mpPathAt(s) {
   const P = MT.PATHS[0];
@@ -15537,12 +15560,15 @@ function mpPathAt(s) {
   }
   return { x: P[0].x, y: P[0].y };
 }
+function mpLaneFreeze(dt) { for (const e of MP.lane) if (e.t0 != null) e.t0 += dt; } // ⏳ 시간정지(update의 freezeT 분기 — 서브스텝마다): 출발한 개체의 출발 시각을 dt만큼 미룬다 → 결정론 위치 식 그대로 그 자리에 멈춘다 (리뷰 RULES-3 · 봇 사격은 사람 유닛처럼 계속)
 function mpLaneProg(e) { return e.t0 == null ? 0 : Math.max(0, Math.min(1, (S.time - e.t0) / e.T)); }
+function mpLaneGone(e) { return e.t0 != null && S.time >= e.t0; } // 출발했나 (엉김·출발 간격 대기 = 아님) — 봇 사격·마감 도착·체력바 공용
 function mpLaneAt(e) { return mpPathAt(e.sw + (MP.pathL - e.sw) * mpLaneProg(e)); } // 결정론 위치 (월드)
 function mpLanePos(p) { // 프록시 위치 = 월드 경로 → 내 로컬 (update 몹 루프가 매 서브스텝) + 다리 밑 판정
   const e = p.lane, w = mpLaneAt(e), l = mtToLocal(mpQ(), w.x, w.y);
   p.x = l.x; p.y = l.y; e.x = w.x; e.y = w.y; e.occl = mtOccluded(w.x, w.y);
 }
+function mpNoAim(u, m) { return m.lane.occl || u.atk === 'pen'; } // 이 유닛이 레인 프록시 m을 조준할 수 없나 (자동 조준·고정 표적·A지정 공용): 다리 밑 가림 · 펜 포탄은 소환장 전용 (봇 mpBotLaneDps도 pen 제외)
 function mpLaneZero(m) { return !m.dead; } // 사망 필터의 레인 분기: HP 0 이하 = 확인 대기(조준 제외는 hp 조건이 한다 · 보상 없음) — 처치는 mpLaneTick이 1회
 function mpBigKind(e) { return e.kind === 'boss' || e.kind === 'mini'; }
 function mpBossShape(r) { return r > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(r / 10)); } // spawnMonster 보스 사다리와 같은 식
@@ -15559,10 +15585,13 @@ function mpLaneNew(kind, from, n, hp, mats, T, shape) { // 출발 순서 = 보�
   const rank = x => (x.kind === 'raid' ? 1 : 0) * 10 + (x.from + 1);
   MP.lane.push(e);
   MP.lane.sort((a, b) => rank(a) - rank(b) || a.id - b.id);
-  const wait = MP.lane.filter(x => x.t0 == null);
-  wait.forEach((x, i) => { x.sw = (wait.length - 1 - i) * 56; }); // 먼저 출발하는 쪽이 앞(왕국 쪽)에서 엉긴다
+  const wait = MP.lane.filter(x => x.t0 == null), rs = wait.map(mpLaneR); // 먼저 출발하는 쪽이 앞(왕국 쪽)에서 엉긴다 — 맨 뒤 개체도 게이트 아치 앞 물 위, 서로는 반지름 합만큼 떨어져 따로 보인다 (리뷰 V3)
+  const k = Math.min(1, (MP.waitL - LANE_GATE) / Math.max(1, rs.reduce((a, r) => a + 2 * r, 0))); // 줄이 첫 다리 밑까지 닿으면 간격을 줄여 서로 조금 겹친다 (엉김)
+  let s = LANE_GATE;
+  for (let i = wait.length - 1; i >= 0; i--) { s += rs[i] * k; wait[i].sw = s; s += rs[i] * k; }
   return e;
 }
+function mpLaneR(e) { return mpBigKind(e) ? (e.kind === 'mini' ? 0.72 : 1) * 56 : mpRaidR(e); } // 엉김 간격용 반지름 (보스 몸 52 + 성장 · 습격대 점액)
 function mpRaidNew(seat, n, hpSum, mats) { // 웨이브 끝 누수 → 진영별 습격대 1개 (이동 35~60게임초)
   return mpLaneNew('raid', seat, n, Math.max(1, Math.round(hpSum * RAID_HP_MUL)), mats, 35 + 25 * Math.max(0, Math.min(1, (n - 1) / 11)));
 }
@@ -15584,7 +15613,6 @@ function mpWaveStart() { // startWave 훅: 엉겨 있던 레인 개체 출발(�
     e.t0 = S.time + LANE_GAP * i++;
     S.monsters.push(mpProxy(e));
   }
-  if (r % 10 === 0) logMsg('👹 보스가 수로로 진격 — 둑에서 막아라!', true);
 }
 function mpProxy(e) { // S.monsters 안 레인 프록시 (보스면 boss 플래그 → 보석 브레이커 ×2·'strong' 우선순위가 그대로)
   const big = mpBigKind(e), si = stageInfo(S.round);
@@ -15615,8 +15643,12 @@ function mpWaveCheck(q) { // update 조기 종료의 멀티 분기 → true = en
   }
   return S.timer <= 0 || (mine && mpBotDone() && !MP.lane.length);
 }
-function mpEndWave() { // endWave의 멀티 분기 (목숨 대신): 살아 있는 레인 개체 = 도착 → 내 남은 소환장 = 습격대 → 봇 누수 = 습격대 → 다음 라운드 고정 개체
-  for (const e of MP.lane.slice()) mpLaneArrive(e);
+function mpEndWave() { // endWave의 멀티 분기 (목숨 대신): 레인 개체 정산(처치 / 출발한 개체 = 도착 / 미출발 = 다음 전투로) → 내 남은 소환장 = 습격대 → 봇 누수 = 습격대 → 다음 라운드 고정 개체
+  for (const e of MP.lane.slice()) { // 마지막 서브스텝 딜도 장부에 → 처치면 도착 아님 · 아직 출발 전(엉김·출발 간격 대기)이면 게이트 앞에 남아 다음 전투에 출발
+    if (mpLaneSettle(e, 0, 0)) continue;
+    if (mpLaneGone(e)) mpLaneArrive(e);
+    else { e.t0 = null; e.px = null; } // 프록시는 endWave의 S.monsters 비우기와 함께 버려진다
+  }
   const r = S.round, left = S.monsters.filter(m => !m.lane);
   if (MP.kh <= 0) return;
   if (left.length) {
@@ -15645,27 +15677,34 @@ function mpLaneHit(e, seat, d) {
 function mpBotLaneDps(b) { // 봇 레인 화력 = 모델 단일 대상 DPS × 효율 × 숙련 × 몫 (클리어 뒤 = 둑으로 나와 더 쏜다)
   const w = b.wave, clear = !w || !!w.clearT || w.t >= WAVE_TIME, ue = upgEff(mpBotLv(b, S.round));
   let s = 0;
-  for (const u of b.units) s += mpBotUnitDps(u, ue);
+  for (const u of b.units) if (u.atk !== 'pen') s += mpBotUnitDps(u, ue); // 펜 포탄(탱크·핵폭탄)은 소환장 전용 — 사람 쪽도 레인을 조준하지 않는다 (mpNoAim)
   return s * BOT_EFF * b.skill * BOT_LANE_K[clear ? 1 : 0] * (b.atkR === S.round ? 1.2 : 1); // 🎫 ④ 팀 공격력 +20%
+}
+function mpLaneSettle(e, seat, d) { // 정산 (mpLaneTick 매 프레임 · mpEndWave 마감 첫머리 공용): 내 딜 = 프록시 HP 감소분 → 봇 딜 d → 프록시 HP 맞춤 → true = 처치(1회)
+  const p = e.px;
+  if (p && !p.dead && e.syn - p.hp > 0) mpLaneHit(e, S.multi.me, e.syn - p.hp);
+  if (d > 0) mpLaneHit(e, seat, d); // 내 딜로 이미 0이면 mpLaneHit이 0으로 자른다
+  if (p) { p.hp = e.hp; e.syn = e.hp; }
+  if (e.hp > 0) return false;
+  mpLaneKill(e);
+  return true;
 }
 function mpLaneTick() { // 매 프레임 (update 전): 딜 장부 정산 · 봇 사격 · 처치 1회 · 도착
   if (!S || !S.multi || MP.over || !MP.lane.length) { MP.laneT = S ? S.time : null; return; }
-  const t = S.time, dt = MP.laneT == null ? 0 : Math.max(0, Math.min(0.5, t - MP.laneT)), me = S.multi.me, b = MP.bot, wave = S.phase === 'wave';
+  const t = S.time, dt = MP.laneT == null ? 0 : Math.max(0, Math.min(0.5, t - MP.laneT)), b = MP.bot, wave = S.phase === 'wave';
   MP.laneT = t;
   let bd = -1;
   for (const e of MP.lane.slice()) {
-    const p = e.px;
-    if (p && !p.dead && e.syn - p.hp > 0) mpLaneHit(e, me, e.syn - p.hp); // 내 딜 = 프록시 HP 감소분
-    if (wave && b && dt > 0 && e.t0 != null && t >= e.t0 && !e.occl && e.hp > 0) {
-      const q = MT.QUAD[b.seat];
-      if (e.x >= q.ox && e.x <= q.ox + q.w) { // 봇 둑이 닿는 구간
+    let d = 0;
+    if (wave && b && dt > 0 && mpLaneGone(e) && !e.occl && e.hp > 0) {
+      const q = MT.QUAD[b.seat], ex = mpLaneAt(e).x; // 지금 시각의 결정론 위치 (실플레이에선 직전 서브스텝의 e.x와 같다)
+      if (ex >= q.ox && ex <= q.ox + q.w) { // 봇 둑이 닿는 구간
         if (bd < 0) bd = mpBotLaneDps(b);
-        mpLaneHit(e, b.seat, bd * dt);
+        d = bd * dt;
       }
     }
-    if (p) { p.hp = e.hp; e.syn = e.hp; }
-    if (e.hp <= 0) mpLaneKill(e);
-    else if (wave && e.t0 != null && mpLaneProg(e) >= 1) {
+    if (mpLaneSettle(e, b ? b.seat : 0, d)) continue;
+    if (wave && e.t0 != null && mpLaneProg(e) >= 1) {
       mpLaneArrive(e);
       if (MP.kh <= 0) { mpGameOver(); return; }
     }
@@ -15728,6 +15767,11 @@ function mpGameOver() { // 🏰 팀 게임오버 (부활 없음 · 기록 저장
   document.getElementById('overlay').style.display = 'flex'; syncGamePause();
   logMsg('🏰 왕국 함락 — 팀 게임 오버');
 }
+function mpFinalRound() { // endWave R80 블록의 멀티 분기: 정지·승리 창 없이 결산 토스트(포커로 넘어가도 보이는 DOM 띠 — 캔버스 y140 배너는 데스크톱 포커 패널에 잘린다) + 로그 · 업적·기록 없음
+  rewardToast('🎉', '80라운드 돌파!', '#c9971a', '왕국은 계속 버틴다');
+  logMsg('🎉 80라운드 돌파! 왕국은 계속 버틴다', true);
+  sfx('jackpot');
+}
 function mpPokerWarn() { // 포커 배너 한 줄 (renderPoker) — 게이트 앞에 엉긴 개체
   const w = MP.lane.filter(e => e.t0 == null);
   if (!w.length) return '';
@@ -15782,44 +15826,68 @@ function mpRaidDraw(e, x, y, t) { // mtRaiderDraw 계열: 점액 덩어리 + 재
   ctx.beginPath(); ctx.ellipse(x - 6 * kk, y + 4 * kk, 23 * kk, 13 * kk, 0.3, 0, 6.283); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.28)';
   ctx.beginPath(); ctx.ellipse(x - 9 * kk, y - 12 * kk, 9 * kk, 4.5 * kk, 0.5, 0, 6.283); ctx.fill();
-  if (!wait) drawBar(x - 24 * kk, y - 30 * kk - 6, 48 * kk, e.hp / e.max, '#e05a2b');
 }
-function mpBossDraw(e, x, y, t) { // drawMonster 보스 재사용 (체력바 포함) — 미니보스는 72% 크기
-  const wait = e.t0 == null || t < e.t0, sc = (e.kind === 'mini' ? 0.72 : 1) * (wait ? 1 + 0.08 * Math.min(1, (t - e.born) / 10) : 1);
-  const f = e.fake || (e.fake = { boss: true, born: 1, phase: 0, mat: 0, esc: 0, golden: false, pullT: 0, burnT: 0, split: false, shield: 0, shieldMax: 0, sunBoss: false, small: false, entering: false });
-  Object.assign(f, { x, y, shape: e.shape, hitT: t - e.hitAt < 0.09 ? 0.09 : 0, hell: S.round > FINAL_ROUND, rot: t * 0.8, colorIdx: stageInfo(Math.max(1, S.round)).ci, hp: Math.max(0, e.hp), max: e.max });
+function mpBossSc(e, t) { return (e.kind === 'mini' ? 0.72 : 1) * (e.t0 == null || t < e.t0 ? 1 + 0.08 * Math.min(1, (t - e.born) / 10) : 1); } // 미니보스 72% · 게이트 앞 엉김 = 살짝 부푼다
+function mpBossDraw(e, x, y, t) { // drawMonster 보스 재사용 — 체력바는 mpLaneBars가 필드 블릿 뒤에 (entering = drawMonster 보스 바 생략 플래그)
+  const sc = mpBossSc(e, t);
+  const f = e.fake || (e.fake = { boss: true, born: 1, phase: 0, mat: 0, esc: 0, golden: false, pullT: 0, burnT: 0, split: false, shield: 0, shieldMax: 0, sunBoss: false, small: false, entering: true });
+  f.x = x; f.y = y; f.shape = e.shape; f.hitT = t - e.hitAt < 0.09 ? 0.09 : 0; f.hell = S.round > FINAL_ROUND; f.rot = t * 0.8; // 매 프레임 객체 리터럴 없이 (GC — 리뷰 PERF-2)
+  f.colorIdx = stageInfo(Math.max(1, S.round)).ci; f.hp = Math.max(0, e.hp); f.max = e.max;
   ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.translate(-x, -y);
   try { drawMonster(f); } finally { ctx.restore(); }
 }
+const MP_FO = [{ wl: 0, rx: 0, ry: 0, dx: 0, dy: 0, bob: false }, { wl: 0, rx: 0, ry: 0, dx: 0, dy: 0, bob: true }]; // mtFloatDraw 옵션 재사용 (보스 · 습격대)
+const MP_BODY = { e: null, x: 0, y: 0, t: 0 }; // mtFloatDraw가 부를 본그림 대상 (개체마다 클로저를 만들지 않는다 — 루프 뒤 e = null)
+function mpLaneBody() { const B = MP_BODY; if (mpBigKind(B.e)) mpBossDraw(B.e, B.x, B.y, B.t); else mpRaidDraw(B.e, B.x, B.y, B.t); }
 function mpLaneDrawAll(vx0, vy0, vx1, vy1) {
-  const t = S.time, water = MP.worldArt && MT.zoom >= 0.55; // 🌊 물 연출 LOD: 전체 보기(z<0.55 — 개체가 화면 15px 안팎)·폴백 흙 수로는 본그림만 (모바일 발열)
+  const t = S.time, water = MP.worldArt && MT.zoom >= 0.55, B = MP_BODY; // 🌊 물 연출 LOD: 전체 보기(z<0.55 — 개체가 화면 15px 안팎)·폴백 흙 수로는 본그림만 (모바일 발열)
   for (const e of MP.lane) {
     const w = mpLaneAt(e);
     if (w.x < vx0 - 90 || w.x > vx1 + 90 || w.y < vy0 - 90 || w.y > vy1 + 90) continue;
-    const big = mpBigKind(e), body = () => { if (big) mpBossDraw(e, w.x, w.y, t); else mpRaidDraw(e, w.x, w.y, t); };
-    if (!water) { body(); continue; }
-    const k = big ? (e.kind === 'mini' ? 0.72 : 1) : mpRaidR(e) / 26, go = e.t0 != null && t >= e.t0 && mpLaneProg(e) < 1;
-    const [fx, fy] = go ? mtBrookFlowAt(w.x, w.y) : [0, 0]; // 물 위에 떠서 파문 · 흘러가는 동안만 물살 꼬리 (게이트 앞 엉김 = 꼬리 없음)
-    mtFloatDraw(w.x, w.y, big ? { wl: 13 * k, rx: 30 * k, ry: 22 * k, dx: fx, dy: fy, bob: false } : { wl: 9 * k, rx: 30 * k, ry: 24 * k, dx: fx, dy: fy, bob: true }, t, body);
+    B.e = e; B.x = w.x; B.y = w.y; B.t = t;
+    if (!water) { mpLaneBody(); continue; }
+    const big = mpBigKind(e), k = big ? (e.kind === 'mini' ? 0.72 : 1) : mpRaidR(e) / 26, go = mpLaneGone(e) && mpLaneProg(e) < 1;
+    const fd = go ? e.fd || (e.fd = mtBrookFlowAt(w.x, w.y)) : null; // 물 위에 떠서 파문 · 흘러가는 동안만 물살 꼬리 (게이트 앞 엉김 = 꼬리 없음) — 경로가 한 흐름 구간이라 방향은 개체당 1회
+    const o = MP_FO[big ? 0 : 1];
+    o.wl = (big ? 13 : 9) * k; o.rx = 30 * k; o.ry = (big ? 22 : 24) * k; o.dx = fd ? fd[0] : 0; o.dy = fd ? fd[1] : 0;
+    mtFloatDraw(w.x, w.y, o, t, mpLaneBody);
   }
+  B.e = null;
   for (const b of MT.BRIDGES) if (b.x + 100 > vx0 && b.x - 100 < vx1 && b.y + 100 > vy0 && b.y - 100 < vy1) mtBridge(b); // 🪵 판자 상판 = 레인 개체 위 (mapTest 순서 — 다리 밑 가림) · 매 프레임 drawImage 1회 + 그림자 2장
   let H = MP.heartC; // 🏰 왕국 하트 = 실값 (값·RS가 바뀔 때만 굽는다 — 이모지 fillText 매 프레임 금지)
   if (!H || H.kh !== MP.kh || H.rs !== RS) {
     const text = '❤️'.repeat(Math.max(0, MP.kh)) + '🖤'.repeat(Math.max(0, KINGDOM_HP - MP.kh)), w = 22 * Math.max(KINGDOM_HP, MP.kh) + 8, h = 24;
     H = MP.heartC = { kh: MP.kh, rs: RS, w, h, c: mpHudBake(w, h, g => { g.font = '15px sans-serif'; g.textAlign = 'center'; g.fillText(text, w / 2, 18); }) };
   }
-  ctx.drawImage(H.c, MT.KING.x - H.w / 2, MT.KING.y - (MP.heartY || 128) - 18, H.w, H.h);
+  ctx.drawImage(H.c, MT.KING.x - H.w / 2, MT.KING.y + (MP.heartY || 150), H.w, H.h);
   const kh = MP.khHit, a = kh ? (performance.now() - kh.t0) / 1200 : 1;
   if (a < 1 && a >= 0) { // 왕국 피격: 붉은 링이 퍼진다
     ctx.strokeStyle = `rgba(229,57,53,${(1 - a).toFixed(2)})`; ctx.lineWidth = 6 * (1 - a) + 1;
     ctx.beginPath(); ctx.arc(MT.KING.x, MT.KING.y, 60 + a * 90, 0, 6.283); ctx.stroke(); ctx.lineWidth = 1;
   }
 }
+function mpLaneBars(vx0, vy0, vx1, vy1) { // 레인 개체 체력바 = 내 진영 필드 블릿 뒤 (둑에 세운 유닛 밑에 깔리지 않게 — 리뷰 V5) · 다리 밑(가림)은 생략 · 습격대는 출발 뒤에만
+  const t = S.time;
+  for (const e of MP.lane) {
+    const w = mpLaneAt(e);
+    if (w.x < vx0 - 90 || w.x > vx1 + 90 || w.y < vy0 - 90 || w.y > vy1 + 90 || mtOccluded(w.x, w.y)) continue;
+    if (mpBigKind(e)) {
+      const f = e.fake, sc = mpBossSc(e, t);
+      if (!f) continue;
+      ctx.save(); ctx.translate(w.x, w.y); ctx.scale(sc, sc); // drawMonster 보스 바와 같은 자리·크기 (몸 52 기준 위 18)
+      drawBar(-38, -monSize(f) - 18, 76, f.hp / f.max, monColor(f));
+      ctx.restore();
+    } else if (mpLaneGone(e)) {
+      const kk = mpRaidR(e) / 26 * 1.12;
+      drawBar(w.x - 24 * kk, w.y - 30 * kk - 6, 48 * kk, e.hp / e.max, '#e05a2b');
+    }
+  }
+}
 function mpDrawBanners() { // 화면 공간 가운데 한 줄 (콤보 y88·FEVER 112·대박 CY−66 사이 y140): 왕국 피격 > 보스 예고 > 개인 클리어 대기
-  const now = performance.now(), kh = MP.khHit, w = MP.warn;
+  const now = performance.now(), kh = MP.khHit, w = MP.warn, pk = !IS_MOBILE && pokerPanelUp; // pk = 데스크톱 포커 패널이 캔버스 아래를 덮고 있다 (리뷰 V6)
   let text = null, bg = 'rgba(14,10,26,0.82)', a = 1;
   if (kh && now - kh.t0 < 3000) { text = `🏰 왕국 −${kh.d}`; bg = 'rgba(150,28,24,0.9)'; a = Math.min(1, (3000 - (now - kh.t0)) / 500); }
-  else if (w && now - w.t0 < 4000) { text = w.text; bg = 'rgba(122,40,14,0.9)'; a = Math.min(1, (4000 - (now - w.t0)) / 600); }
+  else if (w && !pk && now - w.t0 < 4000) { text = w.text; bg = 'rgba(122,40,14,0.9)'; a = Math.min(1, (4000 - (now - w.t0)) / 600); } // 패널이 올라와 있으면 예고는 패널 안 줄(mpPokerWarn)이 대신한다
   else if (S.phase === 'wave' && MP.clr === S.round && S.round % 10 !== 0) text = mpBotDone() ? '✅ 클리어! 수로를 막아라' : '✅ 클리어! 동료 대기 중';
   if (!text) return;
   const key = text + '|' + bg + '|' + RS;
@@ -15832,8 +15900,10 @@ function mpDrawBanners() { // 화면 공간 가운데 한 줄 (콤보 y88·FEVER
       g.font = `bold ${F}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillStyle = bg; mpRRect(g, 0, 0, bw, bh, 8); g.fill(); g.fillStyle = '#fff3c4'; g.fillText(text, bw / 2, bh / 2 + 1); }) };
   }
+  let y = 140;
+  if (pk) { const ch = cv.clientHeight; if (ch) y = Math.max(70, Math.min(140, (ch - pokerSlidePx) * 500 / ch - B.bh / 2 - 6)); } // 왕국 피격 배너는 패널 윗변 위로
   ctx.globalAlpha = Math.max(0, a);
-  ctx.drawImage(B.c, 470 - B.bw / 2, 140 - B.bh / 2, B.bw, B.bh);
+  ctx.drawImage(B.c, 470 - B.bw / 2, y - B.bh / 2, B.bw, B.bh);
   ctx.globalAlpha = 1;
 }
 function mpLaneHitAt(lp) { const m = monsterAt(lp.x, lp.y); return !!(m && m.lane); } // 기지 밖 누르기 관문: 보이는 레인 개체는 클릭(정보·A 지정)을 통과시킨다
@@ -15853,22 +15923,31 @@ function mpGtRoll(table, rng) { let r = rng() * 100; for (const [k, w] of table)
 function mpGoldOk(k) { return k === 3 ? MP.kh < KINGDOM_MAX : k >= 1 && k <= 4; }
 function mpAtkMul() { return S.phase === 'wave' && MP.atkR === S.round ? 1.2 : 1; } // effDmg 멀티 분기 (지정 웨이브 동안만)
 function mpGoldGrant() { MP.gt++; mpGoldCard(); sfx('jackpot'); }
-function mpGoldCard() { // 카드 DOM 동기: 남은 티켓이 있으면 만들거나 갱신, 없거나 판이 끝났으면 내린다
+function mpGoldCard() { // 칩 DOM 동기: 남은 티켓이 있으면 만들거나 갱신(펼침 상태 MP.gtOpen 유지), 없거나 판이 끝났으면 내린다
   let el = document.getElementById('mpGold');
-  if (!MP.gt || MP.over || !S || !S.multi) { if (el) el.remove(); return; }
+  if (!MP.gt || MP.over || !S || !S.multi) { if (el) el.remove(); MP.gtOpen = false; return; }
   if (!el) {
     el = document.createElement('div'); el.id = 'mpGold';
-    el.style.cssText = 'position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:30;background:rgba(20,14,34,0.92);border:2px solid #e6b84a;border-radius:12px;padding:6px 8px 8px;color:#fff3c4;font:bold 13px sans-serif;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,0.45);white-space:nowrap';
-    el.addEventListener('click', e => { const bt = e.target.closest('button[data-k]'); if (bt && !bt.disabled) mpGoldPick(+bt.dataset.k); });
+    el.addEventListener('click', e => {
+      const bt = e.target.closest('button[data-k]');
+      if (bt) { if (!bt.disabled) mpGoldPick(+bt.dataset.k); return; }
+      if (e.target.closest('.gtChip')) { MP.gtOpen = !MP.gtOpen; mpGoldCard(); } // 칩 = 펼치기/접기
+    });
     document.getElementById('cvWrap').appendChild(el);
   }
-  const btn = k => { const ok = mpGoldOk(k), o = GT_OPT[k];
-    return `<button data-k="${k}"${ok ? '' : ' disabled'} title="${o[2]}" style="margin:0 2px;padding:5px 7px;border-radius:8px;border:1px solid ${ok ? '#e6b84a' : '#4a4458'};background:${ok ? '#3a2a12' : '#26222e'};color:${ok ? '#ffe9a8' : '#7d758c'};font:bold 12px sans-serif;cursor:${ok ? 'pointer' : 'default'}">${o[0]} ${o[1]}</button>`; };
-  el.innerHTML = `<div style="margin-bottom:5px">🎫 골드티켓${MP.gt > 1 ? ' ×' + MP.gt : ''}</div>` + [1, 2, 3, 4, 5].map(btn).join('');
+  el.classList.toggle('open', !!MP.gtOpen);
+  el.classList.toggle('off', !!S.paused);
+  const btn = k => `<button data-k="${k}"${mpGoldOk(k) ? '' : ' disabled'} title="${GT_OPT[k][2]}">${GT_OPT[k][0]} ${GT_OPT[k][1]}</button>`;
+  el.innerHTML = `<div class="gtChip" role="button">🎫 골드티켓${MP.gt > 1 ? ' ×' + MP.gt : ''}</div><div class="gtList">` + [1, 2, 3, 4, 5].map(btn).join('') + '</div>';
 }
-function mpGoldPick(k, rng) { // 내 선택 (카드 클릭) — rng = 테스트 고정 난수 (기본 Math.random)
-  if (!MP.gt || MP.over || !mpGoldOk(k)) return false;
+function mpGoldSync() { // 매 처리 프레임(mpCamTick — 정지 중에도 불린다): 게임이 멈춘 동안(상점·승리 창 등) 칩을 숨기고 클릭을 막는다 (GAPS-3)
+  const el = MP.gt ? document.getElementById('mpGold') : null;
+  if (el && el.classList.contains('off') !== !!S.paused) el.classList.toggle('off', !!S.paused);
+}
+function mpGoldPick(k, rng) { // 내 선택 (칩 펼침의 버튼) — rng = 테스트 고정 난수 (기본 Math.random)
+  if (!MP.gt || MP.over || S.paused || !mpGoldOk(k)) return false; // 정지 중(모달 뒤)엔 효과 없음
   MP.gt--;
+  if (!MP.gt) MP.gtOpen = false;
   logMsg('🎫 골드티켓 — ' + mpGoldApply(k, S.multi.me, rng || Math.random));
   mpGoldCard();
   updateHUD();
@@ -16494,7 +16573,7 @@ if (WORLD_MOTION_V2) (() => {
     const gacha = [
       ['ace','에이스',1,.70,'blue'],['hero','영웅',4,.60,'gold'],['aceHero','에이스 영웅',7,.40,'coral'],['super','슈퍼에이스 영웅',20,1,'violet']
     ];
-    const supplies = [ ['sand','time','시간의 모래','전투 시간 +15초'],['bomb','shield','긴급 폭격','모든 몬스터 최대체력 15% 타격'],['pray','heart','생명의 기도','목숨 +3'] ];
+    const supplies = [ ['sand','time','시간의 모래','전투 시간 +15초'],['bomb','shield','긴급 폭격','모든 몬스터 최대체력 15% 타격'],['pray','heart','생명의 기도','목숨 +3'] ].filter(s => !(S.multi && s[0] === 'pray')); // 🤖 멀티: 목숨이 없다 → 기도 숨김
     financeView('finance','자금 운영');
     CB.innerHTML = wallet()+`<div class="v2-hub-grid">
       <button class="v2-hub-card v2-hub-invest" data-go="invest">${badge('chart','blue')}<span class="v2-hub-main"><small>내일을 준비해요</small><b>골드 투자</b><span>${investTotal()?`예치 중 ${gold(investTotal())}G`:'기간을 정하고 골드를 불려요'}</span></span>${icon('arrow')}<span class="v2-hub-foot">${S.mktOpen?'지금 개장 중':'투자 현황 보기'}<b>만기 전 인출 불가</b></span></button>
