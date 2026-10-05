@@ -3065,6 +3065,58 @@ html body #objInfo .oi-hp-track { height: 8px; border-radius: 5px; }
 /* 광석 재질색은 그대로 쓰되 1단계 석탄(#3f3f3f)만 어두운 트랙 위에서 1.7:1이라 같은 회색 계열로 밝힘 (인라인 background를 덮으려면 !important) */
 html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !important; }
 </style>
+<style id="dpd-1005">
+/* 10-05 유저 요청 배치 — ⑥ 투자 개장 알림 · ⑦ 족보 도감 섹션 · ⑧ 도전 전체 화면 창 */
+/* ⑥ 📈 개장 알림: 금빛 테 + 1회 등장(팝·광택 한 번 — 무한 애니 없음). wd-completion의 animation:none!important를 ID 특이도로 개별 복구 */
+#mktToast.mktOpen { background: linear-gradient(100deg, #fff6d2, #f7dc86 55%, #efc65c); border: 2px solid #c9971a; border-left-width: 2px; border-radius: 14px; color: #4a3008;
+  box-shadow: 0 0 0 2px #fff3cf, 0 6px 18px #6b4a0a59; padding: 8px 12px; overflow: hidden; }
+#mktToast.mktOpen.on { cursor: pointer; }
+#mktToast.mktOpen .mkoBox { display: flex; align-items: center; gap: 10px; text-align: left; animation: mkoPop .5s cubic-bezier(.2,.9,.3,1.25) both !important; }
+#mktToast.mktOpen .mkoIc { flex: 0 0 auto; font-size: 24px; line-height: 1; }
+#mktToast.mktOpen .mkoTx { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 800; }
+#mktToast.mktOpen .dtSub { color: #6b4a14; }
+#mktToast.mktOpen .mkoGo { flex: 0 0 auto; padding: 5px 10px; border-radius: 10px; background: #9a532e; color: #fff7e8; font-size: 12px; font-weight: 800; box-shadow: 0 2px 0 #6e3a1f; white-space: nowrap; }
+#mktToast.mktOpen.on::before { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, #fffbe6d9, transparent); transform: skewX(-18deg); opacity: 0; animation: mkoShine .9s ease-out .35s 1 both !important; }
+@keyframes mkoPop { 0% { transform: scale(.84); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes mkoShine { 0% { left: -40%; opacity: 0; } 15% { opacity: 1; } 100% { left: 120%; opacity: 0; } }
+.mobile #mktToast.mktOpen { padding: 5px 8px; }
+.mobile #mktToast.mktOpen .mkoBox { gap: 7px; }
+.mobile #mktToast.mktOpen .mkoIc { font-size: 17px; }
+.mobile #mktToast.mktOpen .mkoTx { font-size: 12px; }
+.mobile #mktToast.mktOpen .mkoGo { padding: 3px 7px; font-size: 10.5px; }
+@media (prefers-reduced-motion: reduce) { #mktToast.mktOpen .mkoBox, #mktToast.mktOpen.on::before { animation: none !important; } }
+/* ⑦ 📖 족보 도감 섹션: 소제목 + 구분선 (나무·양피지 톤) */
+#shopBody .dexSec + .dexSec { margin-top: 16px; padding-top: 12px; border-top: 2px dashed #b88b4f; }
+#shopBody .dexSecH { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 15px; font-weight: 900; color: #5c3a14; letter-spacing: -.2px; }
+#shopBody .dexSecH small { font-size: 11.5px; font-weight: 700; color: #8a6a3a; }
+#shopBody .dexSecH::after { content: ''; flex: 1 1 auto; height: 2px; border-radius: 2px; background: linear-gradient(90deg, #b88b4f, #b88b4f00); }
+.mobile #shopBody .dexSecH { font-size: 13.5px; }
+/* ⑧ 🎯 도전 전체 화면 창 — 성 강화 창(z60)·자금 운영(z62) 위, 보상 토스트(z70) 아래. 불투명이라 뒤 캔버스 그리기를 쉬어도 티가 안 난다 */
+#gmgOverlay { position: fixed; inset: 0; z-index: 66; display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: radial-gradient(ellipse at 50% 45%, #f7e7bf 0%, #ecd09a 62%, #d6b072 100%); color: #4a3008;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; cursor: pointer; contain: layout paint; }
+#gmgBox { width: min(780px, 100%); text-align: center; }
+#gmgTitle { margin: 0 0 14px; font-size: 22px; font-weight: 900; color: #5c3a14; }
+#gmgOverlay #gmgHost, #gmgOverlay #gmgHost.v2-gamble-stage { margin: 0; padding: 22px 26px; border-radius: 20px; background: #fff4d6; border: 2px solid #b88b4f; box-shadow: inset 0 1px 0 #fffbe9, 0 5px 0 #a2743b55; }
+#gmgOverlay #gmgHost > div { margin: 0 !important; }
+#gmgOverlay #gmgHost > div > div:nth-child(1) { font-size: 15px !important; color: #6b4a14 !important; margin-bottom: 14px !important; }
+#gmgOverlay #gmgHost > div > div:nth-child(2):not(#gmgTrack) { font-size: 30px !important; margin-top: 6px !important; }
+#gmgOverlay #gmgHost > div > div:nth-child(3) { font-size: 16px !important; margin-top: 6px !important; }
+#gmgOverlay #gmgTrack { height: 66px !important; border-radius: 18px !important; border: 3px solid #8a5a2b !important; background: #3a2a18 !important; }
+#gmgOverlay :is(#gmgStop, #gmgOk) { min-width: 180px; min-height: 56px; margin-top: 18px !important; padding: 12px 36px !important; border-radius: 14px; font-size: 20px !important; font-weight: 900;
+  background: #9a532e !important; color: #fff7e8 !important; border: 1px solid #754429; box-shadow: 0 3px 0 #6e3a1f; }
+#gmgCancel { position: absolute; top: max(10px, env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); width: 44px; height: 44px; border-radius: 50%;
+  border: 2px solid #8a5a2b; background: #fff4d6; color: #5c3a14; font-size: 19px; font-weight: 900; line-height: 1; cursor: pointer; }
+.mobile #gmgTitle { margin-bottom: 8px; font-size: 16px; }
+.mobile #gmgOverlay #gmgHost, .mobile #gmgOverlay #gmgHost.v2-gamble-stage { padding: 12px 16px; }
+.mobile #gmgOverlay #gmgHost > div > div:nth-child(1) { font-size: 13px !important; margin-bottom: 8px !important; }
+.mobile #gmgOverlay #gmgHost > div > div:nth-child(2):not(#gmgTrack) { font-size: 22px !important; }
+.mobile #gmgOverlay #gmgTrack { height: 50px !important; }
+.mobile #gmgOverlay :is(#gmgStop, #gmgOk) { min-height: 46px; margin-top: 10px !important; padding: 8px 28px !important; font-size: 16px !important; }
+.mobile #gmgCancel { top: calc(40px + env(safe-area-inset-top, 0px)); width: 38px; height: 38px; font-size: 16px; } /* 모바일 상단 보상 띠(#rewardToast, 높이 ~32)에 가리지 않게 */
+</style>
 </head>
 <body class="at-title">
 <div id="page">
@@ -3594,6 +3646,7 @@ function syncGamePause() {
 // 다만 그 사이 재시작하면 '다음 판'에 골드·영웅이 꽂히므로, 판마다 세대 번호를 올려 무효화한다.
 let gameGen = 0, casTimers = [];
 let duelToastTimer = null, mktToastTimer = null; // 🏛️ 결투 예고 / 📈 개장 토스트 (resetTransientUI가 먼저 참조하므로 여기서 선언 — TDZ 방지)
+let mktToastPend = null; // 📈 개장 알림이 떠 있는 동안 미뤄 둔 일반 토스트 [제목, 줄] (마지막 1건)
 let duelAskU = null, duelLockFloatT = -10; // 🏛️ 결투 입장 확인 팝업 대상 유닛 / 🔒 락인 경고 플로트 스로틀
 function casTimeout(fn, ms) {
   const gen = gameGen;
@@ -3605,6 +3658,7 @@ function casTimeout(fn, ms) {
 // (예: A키 어택 모드를 켠 채 '다시하기' → 새 판 첫 클릭이 선택이 아니라 공격 지정이 된다)
 function resetTransientUI() {
   document.body.classList.remove('mtMode'); // 미리보기에서 다시하기로 빠져나와도 실게임 HUD가 되살아나게
+  gambleOverlayClose(true);                 // 🎯 도전 창 — 재시작이면 멈춘 뒤 미정산 시도도 버린다 (closeShop보다 먼저: closeShop은 정산하며 닫는다)
   if (typeof openShop !== 'undefined' && openShop && S) closeShop(); // 상점이 열린 채 재시작되면 토글 상태가 뒤집힌다
   setAttackMode(false);                     // 어택 모드 + 커서 원복
   drag = null;                              // 드래그 잔재 (다음 mouseup이 엉뚱한 부대지정을 하지 않게)
@@ -3619,7 +3673,7 @@ function resetTransientUI() {
   const rt = document.getElementById('rewardToast'); if (rt) rt.style.display = 'none';
   clearTimeout(duelToastTimer);             // 🏛️ 결투 예고가 새 판까지 걸려 있지 않게
   const dt = document.getElementById('duelToast'); if (dt) dt.classList.remove('on');
-  clearTimeout(mktToastTimer);              // 📈 개장 예고도 동일
+  clearTimeout(mktToastTimer); mktToastPend = null; // 📈 개장 예고도 동일 (미뤄 둔 토스트 포함)
   const mt = document.getElementById('mktToast'); if (mt) mt.classList.remove('on');
   const dc = document.getElementById('duelConfirm'); if (dc) dc.style.display = 'none'; // 🏛️ 결투 입장 팝업이 새 판까지 남지 않게 (참조·pause 잔류 방지)
   const cm = document.getElementById('crownModal'); if (cm) cm.style.display = 'none'; // 👑 왕관 모달도 동일 (새 S가 paused/crown 상태를 리셋)
@@ -3661,6 +3715,7 @@ function reset() {
     reviveArmed: false, // 🔄 부활권 봉인 여부
     feverT: 0, feverUsed: false, // 🔥 피버 타임 남은시간 / 이번 웨이브 발동 여부
     goldFlash: 0, // 🎲 갬블러 6 잭팟 골드 화면 플래시 타이머
+    goldWhy: '', goldWhyT: 0, // ✨ 대박 배너 밑 '왜 대박인지' 한 줄 + 표시 시간 (10-05 유저: 모바일에서 이유가 안 보임)
     stats: {}, // 🏆 무기별 딜/킬 통계 (게임오버 화면용)
     tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 20기 → 완성, 라운드 재시작 시 리셋)
     bird: null, birdTimer: 250 + Math.random() * 200, // 🐦 힌트 새 / 다음 스폰까지 남은 초
@@ -3748,13 +3803,20 @@ function newDeck(salt) {
 // 개장 10초 전에 토스트로 예고("10초 뒤 장이 시작됩니다"). S.paused 동안엔 S.time이 멈추므로 시계도 같이 멈춘다
 // (카지노를 열면 게임이 멈추니, 개장 중에 창을 열고 고민하는 시간은 창구가 닫히지 않는다 — 의도).
 const MKT_PERIOD = 780, MKT_OPEN_DUR = 30; // 08-15 유저: 600→780(13분) — 재예치 체인 추가 감속
-function showMktToast(head, line) {
+function showMktToast(head, line, open) { // open = 📈 개장 알림 전용 모양(금빛 테 + 1회 등장 연출) + 누르면 바로 투자 화면 (10-05 유저)
   const el = document.getElementById('mktToast');
   if (!el) return;
-  el.innerHTML = `${head}<span class="dtSub">${line}</span>`;
+  if (!open && el.classList.contains('mktOpen') && el.classList.contains('on')) { mktToastPend = [head, line]; return; } // 개장 알림(7초)을 티커·다른 토스트가 덮어 '투자하기'가 사라지지 않게 — 마지막 1건만 끝난 뒤 표시
+  mktToastPend = null;
+  el.innerHTML = open ? `<span class="mkoBox"><span class="mkoIc">📈</span><span class="mkoTx">${head}<span class="dtSub">${line}</span></span><span class="mkoGo">투자하기 ›</span></span>`
+    : `${head}<span class="dtSub">${line}</span>`;
+  el.classList.toggle('mktOpen', !!open); // 다른 토스트(예고·재변경권·광석 대박)는 늘 일반 모양으로 되돌린다
   el.classList.add('on');
   clearTimeout(mktToastTimer);
-  mktToastTimer = casTimeout(() => el.classList.remove('on'), 5000); // 세대 토큰 경유 — 재시작 이월 방지
+  mktToastTimer = casTimeout(() => {
+    el.classList.remove('on');
+    if (open && mktToastPend) { const [h, l] = mktToastPend; showMktToast(h, l); }
+  }, open ? 7000 : 5000); // 세대 토큰 경유 — 재시작 이월 방지
 }
 // 🏛️ 결투 예고 토스트 — 다음 전투가 결투장 라운드면 포커(준비) 시간에 도전자가 우리를 부른다.
 // 주기·체력 같은 수치는 노출하지 않는다 (UI 설명 미니멀 원칙) — 부르는 목소리만.
@@ -3777,7 +3839,19 @@ function showDuelToast() {
 }
 // 💬 10-01 유저: 이벤트 토스트는 누르면 바로 사라진다 (보일 때만 입력을 받는다 — CSS #duelToast.on/#mktToast.on)
 [['duelToast', () => clearTimeout(duelToastTimer)], ['mktToast', () => clearTimeout(mktToastTimer)]].forEach(([id, stop]) =>
-  document.getElementById(id).addEventListener('pointerdown', e => { e.stopPropagation(); stop(); e.currentTarget.classList.remove('on'); }));
+  document.getElementById(id).addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    if (e.currentTarget.classList.contains('mktOpen')) return; // 📈 개장 알림은 click에서 처리 — pointerdown에 창을 열면 손을 뗄 때의 click(모바일 호환 click)이 새로 열린 창의 버튼·배경을 누른다
+    stop(); e.currentTarget.classList.remove('on');
+  }));
+document.getElementById('mktToast').addEventListener('click', e => { // 📈 개장 알림 → 자금 운영의 투자 화면으로 바로 (장이 열려 있을 때만 — 닫혔으면 그냥 닫힘)
+  const el = e.currentTarget;
+  if (!el.classList.contains('mktOpen') || !el.classList.contains('on')) return;
+  e.stopPropagation();
+  clearTimeout(mktToastTimer); el.classList.remove('on'); mktToastPend = null;
+  const busy = ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal'].some(gameDialogVisible) || gbOv || document.querySelector('#cvWrap .gbxStage.ovl'); // 다른 창·뽑기 상자 연출 중엔 그 위에 겹쳐 열지 않고 토스트만 닫는다
+  if (!busy && S && S.mktOpen && S.phase !== 'gameover' && !document.body.classList.contains('at-title')) { initAudio(); openChip('📈 투자'); casInvest(); }
+});
 // 🏛️ 결투 창이 열리는 순간: 링 안에 서 있던 전투 유닛을 가장자리 밖으로 밀어내고 목표 해제 (지나가다 갇히는 참사 방지)
 function evacuateArena() {
   let moved = 0;
@@ -3860,7 +3934,7 @@ function crownChoose(r) {
   S.crownForced = false;
   S.crownRace = r;
   const rc = RACES[r];
-  sfx('jackpot'); sfx('hero'); S.goldFlash = 0.7;
+  sfx('jackpot'); sfx('hero'); goldBurst(0.7, `👑 ${rc.suit} ${rc.name} 대관식`);
   rewardToast('👑', `${rc.suit} ${rc.name} ×${CROWN_RACE_MUL[r].toFixed(2)}`, '#e6a817', '👑 대 관 식');
   logMsg(`👑 <b>${rc.suit} ${rc.name}</b> 종족에 왕관을 씌웠다 — 공격력 <b>×${CROWN_RACE_MUL[r].toFixed(2)}</b> (영웅·에이스 포함, 히든 제외)`);
   updateInfoPanel();
@@ -4165,7 +4239,7 @@ function updateMiner(u, dt) {
       if (special) minerSpecial(special, u);
       else if (roll < MINER_TICKET_P) { // 🎟️ 재변경권 발굴 — 머리에 이고 가서 배달 시 지급
         u.carryTicket = true;
-        mutter = { u, txt: ['럭키~', '대박~', '심봤다~'][(Math.random() * 3) | 0], t: 4 }; // 혼잣말 말풍선 재사용 (히든 혼잣말과 겹치면 덮어씀 — 희귀)
+        mutter = { u, txt: ['럭키~', '대박~', '심봤다~'][(Math.random() * 3) | 0] + ' 재변경권!', t: 4 }; // 혼잣말 말풍선 재사용 · 10-05: 왜 대박인지 한마디 더 (배달 전엔 이유가 안 보였다) (히든 혼잣말과 겹치면 덮어씀 — 희귀)
       }
     }
   } else { // toHouse (하단 갓길을 따라 배달 — 부대와 동선 분리)
@@ -4298,7 +4372,7 @@ function minerSpecial(kind, u) {
   logMsg(`⛏️✨ 광부가 광산에서 <b>${M[1]}</b>을(를) 캐냈습니다!`);
   if (u) mutter = { u, txt: '심봤다~!!', t: 4 };
   sfx('jackpot'); sfx('hero');
-  S.goldFlash = 0.7;
+  goldBurst(0.7, `⛏️ 광산 특별 발굴 — ${M[1]}`);
   S.slowT = 2;
 }
 // 👑 뽑기권 개봉: 족보 티어 룰렛 (원페어40 투페어30 트리플20 스트9 5 플러쉬2 풀하2 포카0.5 SF0.3 로얄0.2 — %)
@@ -4314,7 +4388,7 @@ function gachaReveal(t, label, mkUnit) {
       mkUnit(t);
       logMsg(`👑 뽑기권 개봉 — <b>${HAND_NAMES[t]} ${label}</b>!`);
       sfx(hot ? 'jackpot' : 'reward'); sfx('hero');
-      if (hot) S.goldFlash = 0.55;
+      if (hot) goldBurst(0.55, `👑 ${HAND_NAMES[t]} ${label}!`);
     },
   });
 }
@@ -4959,7 +5033,7 @@ function updateStoneDip() {
       mutter = { u, txt: '물먹은 바위 맛좀 봐라', t: 4 };
     }
     sfx('jackpot'); sfx('hero');
-    S.goldFlash = 0.55;
+    goldBurst(0.55, want === 'lava' ? '🥚 용암 묻은 돌!' : '🥚 물먹은 돌!');
     for (let i = 0; i < 18; i++) { const ang = Math.random() * 6.28, v = 60 + Math.random() * 120; S.parts.push({ x: u.x, y: u.y - 8, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 40, g: true, t: 0.5, r: 1.5 + Math.random() * 2.5, c: want === 'lava' ? '#ff8a3d' : '#7ec8ff' }); }
   }
 }
@@ -4977,7 +5051,7 @@ function update(dt) {
       }
       if (S.time >= S.mktNext) {
         S.mktOpen = true; S.mktClose = S.time + MKT_OPEN_DUR; S.mktWarn = false;
-        showMktToast('📈 개장! 30초 동안만 받습니다', '“기회는 기다려주지 않는다.”');
+        showMktToast('개장! 30초 동안만 받습니다', '“기회는 기다려주지 않는다.”', true);
         sfx('coin'); logMsg('📈 투자 시장 개장 — 30초 동안 예치할 수 있습니다!');
       }
     } else if (S.time >= S.mktClose) {
@@ -5192,8 +5266,9 @@ function update(dt) {
     S.slotBombs = S.slotBombs.filter(b => {
       b.delay -= dt;
       if (b.delay > 0) return true;
+      const bt = weaponTip(b.owner); // 🎯 슬롯머신 폭격도 손(무기)에서
       S.projs.push({ kind: 'bombthrow', deliver: 'area', owner: b.owner,
-        sx: b.owner.x, sy: b.owner.y, x: b.owner.x, y: b.owner.y, ex: b.ex, ey: b.ey,
+        sx: bt.x, sy: bt.y, x: bt.x, y: bt.y, ex: b.ex, ey: b.ey,
         t: 0, dur: 0.5, dmg: b.dmg, splash: 60, spin: 0, ang: 0 });
       return false;
     });
@@ -5452,7 +5527,7 @@ function update(dt) {
       p.spin += dt * 26;
       const o = p.owner;
       if (!o || !S.units.includes(o)) return false;
-      const hx = o.x + 8, hy = o.y - 3;
+      const ht = weaponTip(o), hx = ht.x, hy = ht.y; // 🎯 그려진 손(무기 자리)으로 돌아온다
       const rdx = hx - p.x, rdy = hy - p.y, rd = Math.hypot(rdx, rdy);
       const rstep = p.speed * dt;
       if (rd <= rstep + 5) return false; // 착 — 손 렌더는 공중 부메랑 실시간 조회라 자동으로 다시 쥔다
@@ -5636,7 +5711,7 @@ function fireAt(u, target) {
   u.aimX = target.x; u.aimY = target.y;   // 바라보는 방향 = 대상
   u.atkAnim = 1;              // 공격 모션 (스윙/반동)
   sfx(u.vis === 'sword' ? 'slash' : 'shoot');
-  const m = muzzle(u);        // 모든 공격은 무기 총구에서 발사
+  const m = weaponTip(u);     // 모든 공격은 그려진 무기 끝에서 발사 (10-05 — 예전 muzzle()은 몸통 위였다)
   if (u.super) { // 🌈 슈퍼영웅 시그니처: 공격마다 총구에서 무지개 스파크가 튄다
     const rc = ['#ff5252','#ffb74d','#ffee58','#66bb6a','#42a5f5','#ab47bc'];
     for (let i = 0; i < 4; i++) { const aa = Math.random()*6.28, v = 60 + Math.random()*110; S.parts.push({ x: m.x, y: m.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.3, r: 1.4 + Math.random()*1.8, c: rc[(Math.random()*6)|0] }); }
@@ -5683,9 +5758,10 @@ function fireAt(u, target) {
       break;
     }
     case 'pierce': { // 석궁: 직선 관통
-      const a = Math.atan2(target.y - m.y, target.x - m.x);
+      const a = Math.atan2(target.y - m.y, target.x - m.x), mz0 = muzzle(u);
+      const d0 = Math.max(0, (m.x - mz0.x) * Math.cos(a) + (m.y - mz0.y) * Math.sin(a)); // 무기 끝이 옛 발사점보다 앞선 만큼 비행 거리를 미리 센다 — 관통 사거리 끝점 불변
       S.projs.push({ x: m.x, y: m.y, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, owner: u,
-        dmg, kind: 'pierce', left: u.pierce, hitList: [], dist: 0, maxDist: u.range + 50, ang: a });
+        dmg, kind: 'pierce', left: u.pierce, hitList: [], dist: d0, maxDist: u.range + 50, ang: a });
       break;
     }
     case 'shards': { // 대왕새총: 명중 시 파편이 주변으로 튄다
@@ -5768,9 +5844,10 @@ function areaHit(u, x, y, dmg) {
     const wide = u.hero; // 영웅은 두껍게, 일반은 얇은 불줄기
     const n = wide ? 28 : 18, reach0 = u.range; // 스트림 길이 = 사거리 (불꽃 개수↑)
     const spread = Math.atan2(u.splash * 0.8, reach0); // 불길 퍼짐각 ≈ 판정 반폭 (splash 2배라 더 뚱뚱)
+    const wt = weaponTip(u), lead = Math.max(0, (wt.x - mz.x) * Math.cos(a) + (wt.y - mz.y) * Math.sin(a)); // 🎯 불꽃은 노즐 끝에서 — 앞선 만큼 짧게 (판정 띠 끝 = 불길 끝 유지)
     for (let i = 0; i < n; i++) {
-      const reach = reach0 * (0.5 + Math.random() * 0.55), sp = reach / 0.42, aa = a + (Math.random() - 0.5) * 2 * spread;
-      S.parts.push({ x: mz.x, y: mz.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp,
+      const reach = Math.max(8, reach0 * (0.5 + Math.random() * 0.55) - lead), sp = reach / 0.42, aa = a + (Math.random() - 0.5) * 2 * spread;
+      S.parts.push({ x: wt.x, y: wt.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp,
         t: 0.52 + Math.random() * 0.36, r: (wide ? 8 : 5.5) + Math.random() * (wide ? 9 : 6), fire: true, spin: Math.random()*6.28 }); // 크게 + 오래(안 금방 꺼짐)
     }
   } else { // rocket / bomb: 폭발
@@ -6096,7 +6173,7 @@ function fireAtDuel(u) {
   d.hp -= dmg; d.hitT = 0.09;
   sfx(u.vis === 'sword' ? 'slash' : 'shoot'); // 🔊 결투도 타격음 (2026-08-08 유저 — 일반 전투의 fireAt과 동일 규칙, 스로틀은 sfx가 처리)
   if (crack && Math.random() < 0.12) addFloat(d.x, d.y - 34, '💎 CRACK! ×2', '#7ab8ff', 0.6); // 보스 판정 표기 (가끔만 — 도배 방지)
-  const m = muzzle(u);
+  const m = weaponTip(u); // 🎯 연출 시작점 = 무기 끝 (판정은 단일 대상이라 무관)
   const col = MATERIALS[d.mat].col;
   const ang = Math.atan2(d.y - m.y, d.x - m.x);
   if (u.vis === 'twin') {
@@ -6228,7 +6305,7 @@ function fireAtOre(u) {
   const dmg = effDmg(u) * (u.atk === 'sniper' ? 2 : 1); // 🎯 저격총: 광물 약점도 정확히 노린다 (×2)
   u.aimX = OREPOS.x; u.aimY = OREPOS.y; u.atkAnim = 1;
   S.hunt.hp -= dmg; S.hunt.lastHitBy = u;
-  const m = muzzle(u);
+  const m = weaponTip(u); // 🎯 roomshot 광선·총구 섬광도 무기 끝에서
   const col = ORES[Math.min(9, S.hunt.stage - 1)].col;
   // 무기별 고유 모션 유지 — 근접 무기는 광선(roomshot)이 아니라 자기 참격/톱날/화염으로 광석을 때린다
   const ang = Math.atan2(OREPOS.y - m.y, OREPOS.x - m.x);
@@ -6297,12 +6374,12 @@ function huntRewardDef(stage) {
     // 기한(CROWN_DEADLINE) 뒤에 열리면 아이템 대신 곧바로 강제 대관식 (판정은 개봉 시점의 라운드 — R20에 깬 광석이 R21에 열려도 기한 밖 왕관이 남지 않게)
     ['👑', '왕관!', () => { if (S.crownDropped) S.gold += 500; else { S.crownDropped = true; if (S.round > CROWN_DEADLINE) casTimeout(() => openCrownModal(true), 1900); else spawnItemUnit('crown'); } }, '#e6a817'],
     ['⛏️', '광부 +1명', () => spawnMiner(), '#8a6d1f'],
-    ['✨', '슈퍼 광부!', () => spawnSuperMiner(), '#ff9800'],
+    ['✨', '굴착기!', () => spawnSuperMiner(), '#ff9800'], // 10-05 유저: 슈퍼광부 → 굴착기 (표기만 — 그림은 GPT 통일 아트 때)
     ['📑', '복사권 +1', () => S.items.copier++, '#5b48d0'],
     ['🎟️', '재변경권 +1', () => S.items.reroll++, '#c0392b'],
     ['🏹', '원페어 영웅 유닛!', () => spawnHero(1, RACE_OF_RANK[1], CX-40, CY+155, 1), '#43a047'],
     ['⚔️', '전 종족 +3Lv', () => S.upg = S.upg.map(v => v + 3), '#43a047'],
-    ['📑✨', '복사권×2 + 슈퍼광부', () => { S.items.copier += 2; spawnSuperMiner(); }, '#5b48d0'],
+    ['📑✨', '복사권×2 + 굴착기', () => { S.items.copier += 2; spawnSuperMiner(); }, '#5b48d0'],
     // 💎 다이아(9단계): 상위 족보 에이스 직접 지급 → 뽑기권 2장으로 교체 (08-16 유저 — 제물대 개봉 재미 + 뽑기권 시스템 일원화)
     ['👑', '에이스 뽑기권 + 영웅 뽑기권!', () => { spawnItemUnit('gachaAce'); spawnItemUnit('gachaHero'); }, '#e91e8c'],
     ['🌟', '슈퍼영웅 강림!!', () => { const t = Math.floor(Math.random()*10); spawnHero(t, RACE_OF_RANK[t], CX-40, CY+155, 1.5, true); }, '#ff6b9d'],
@@ -6328,7 +6405,7 @@ function openOreGift(stage) {
     revealIcon: R[0], revealText: R[1] + (jackpot ? ' ×2!!' : ''), color: jackpot ? '#ffd166' : R[3],
     onReveal: () => {
       R[2]();
-      if (jackpot) { R[2](); showMktToast('✨ 대박!!', `${ore.name} 보상이 2배로 쏟아졌다!`); S.goldFlash = 0.7; sfx('jackpot'); }
+      if (jackpot) { R[2](); showMktToast('✨ 대박!!', `${ore.name} 보상이 2배로 쏟아졌다!`); goldBurst(0.7, `💎 ${ore.name} 보상 2배!`); sfx('jackpot'); }
       rewardToast(R[0], R[1] + (jackpot ? ' ×2!!' : ''), R[3], `⛏️ ${ore.name} 채굴 보상${jackpot ? ' — ✨ 대박!' : ''}`);
       logMsg(`💎 ${ore.name} 보상 개봉: ${R[1]}${jackpot ? ' — ✨ 대박 2배!!' : ''}`);
       if (stage >= 9) { sfx('jackpot'); sfx('hero'); }
@@ -6345,7 +6422,7 @@ function spawnSuperMiner() {
   spawnMiner();
   const m = S.units[S.units.length - 1];
   m.sminer = true; m._us = null; // 이동·배달 3배 (색이 바뀌므로 스프라이트 참조 캐시 무효화)
-  addFloat(m.x, m.y - 26, '✨ 슈퍼 광부!', '#ff9800', 2);
+  addFloat(m.x, m.y - 26, '✨ 굴착기!', '#ff9800', 2);
 }
 // ==================== 🩸 히든 영웅 제물 승급 (자기 레시피 계열 유닛을 바쳐 강화, 최대 2단계) ====================
 const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단련 담당) — needs: 제단 위 제물 [{tier, hero?, n}]
@@ -6524,6 +6601,59 @@ function muzzle(u) {
   const B = bodyShape(u), d = faceDir(u), len = B.w / 2 + 12;
   const n = (d.dx && d.dy) ? 0.7071 : 1; // 대각선은 거리 정규화
   return { x: u.x + d.dx * len * n, y: (u.y - 3) + d.dy * len * n };
+}
+// 🎯 무기 끝 (10-05 유저: "공격이 무기에서 나가도록 — 지금은 유닛에서 나감"). muzzle()은 1.5배 본체 확대·조준 회전·좌우 반전을 몰라
+//    그려진 총구보다 20~30px 안쪽(몸통 위)에서 쐈다. 발사 '연출'만 이 점에서 시작한다 — 판정(화염 띠·석궁 사거리)은 muzzle() 기준 그대로.
+//    기하 = drawUnit(1.5배) → drawUnitArm(조준 4방향 회전·왼쪽이면 상하 반전·반동) → drawWeapon(무기별 끝 오프셋, 판정 순서 동일)
+function weaponTipLocal(u) { // drawWeapon(u, wx, wy)의 (wx, wy) 기준 무기 끝 — 무기 그림이 바뀌면 여기도 같이
+  const nm = u.weapon || '', has = s => nm.includes(s);
+  if (u.miner) return [2, 0];
+  if (has('갬블러')) return [1, 0];
+  if (has('고물상') || has('콰르텟') || has('길로틴') || has('시간술사') || has('슬롯머신')) return [1, -0.5]; // 이모지 무기 중심
+  if (has('쇼군')) return [22, -12];
+  if (has('조커')) return [18.5, -5.5];
+  if (has('투석기')) { // 팔 끝 돌 자리 (drawWeapon 투석기 분기와 같은 각)
+    const cyc = effCd(u) || 1, wind = Math.min(1, Math.max(0, 1 - u.cool / cyc) / 0.9);
+    const ang = u.atkAnim ? -0.15 - 0.75 * u.atkAnim : -0.15 + 1.05 * wind, c = Math.cos(ang), s = Math.sin(ang);
+    return [1 + 6 * c + 8 * s, 6 * s - 8 * c];
+  }
+  if (has('쌍단검')) return [11, -6];
+  if (has('단검')) return [10, -6.5];
+  if (has('전기톱')) return [21, 0];
+  if (has('탱크')) return [15, -1.5];
+  if (has('핵')) return [4, 0];
+  if (has('바주카')) return [20, -9];
+  if (has('미사일')) return [5.5, 1.5];
+  if (has('폭탄')) return [4, 0];
+  if (has('표창')) return u.atk === 'boomerang' ? [5, 0] : [3, 0];
+  if (has('저격')) return [16, 0];
+  if (has('석궁')) return [9, 0];
+  if (has('새총')) return [2, -5];
+  if (has('활')) return [7, 0];
+  if (has('부메랑')) return [5.5, 0];
+  if (has('소총')) return [17, -1.6];
+  if (has('기관총')) return [17, 0];
+  if (has('화염')) return [13, 0];
+  if (has('총')) return [8, -0.5];
+  return [0, 0];
+}
+function weaponTip(u) {
+  const B = bodyShape(u), fd = faceDir(u), ang = Math.atan2(fd.dy, fd.dx), fl = fd.dx < 0 ? -1 : 1;
+  const [tx, ty] = weaponTipLocal(u), melee = /단검|전기톱|쇼군/.test(u.weapon || '');
+  let lx = B.w / 2 + 6 + tx, ly = -3 + ty;
+  if (!melee) { const an = u.atkAnim || 0; lx -= an * 3; ly += an; } // 반동 (drawUnitArm '반동' 분기)
+  ly *= fl;
+  const c = Math.cos(ang), s = Math.sin(ang);
+  let x = u.x + 1.5 * (lx * c - ly * s), y = u.y + 1.5 * (lx * s + ly * c);
+  const sq = u.dropT > 0 ? Math.sin(u.dropT / 0.3 * Math.PI) * 0.22 : 0; // 🖐️ 착지 스쿼시 (drawUnit — 발 기준)
+  if (sq) { const fy = u.y + B.h / 2 * 1.5; x = u.x + (x - u.x) * (1 + sq); y = fy + (y - fy) * (1 - sq); }
+  const rec = /바주카/.test(u.weapon || '') ? (u.atkAnim || 0) : 0; // 🚀 바주카 몸 반동 (draw 유닛 루프 — 밀림 뒤 기울기)
+  if (rec > 0.05) {
+    x += -fd.dx * rec * 4; y += -fd.dy * rec * 4 + rec * 1.2;
+    const r = -fd.dx * rec * 0.1, rc = Math.cos(r), rs = Math.sin(r), dx = x - u.x, dy = y - u.y;
+    x = u.x + dx * rc - dy * rs; y = u.y + dx * rs + dy * rc;
+  }
+  return { x, y };
 }
 function logMsg(msg, ticker) { // ticker = 📱 모바일 전투 탭에서 #log가 숨겨지므로(CSS) 중요 메시지만 상단 토스트로도 (09-08)
   if (ticker && IS_MOBILE && document.body.dataset.tab === 'battle') showMktToast(msg, '');
@@ -8219,10 +8349,19 @@ function draw() {
     g.addColorStop(0, `rgba(255,215,79,${(0.32 * k).toFixed(2)})`); g.addColorStop(1, 'rgba(255,180,0,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, 940, 500);
     ctx.save(); ctx.textAlign = 'center'; ctx.font = `bold ${Math.round(34 + (1 - k) * 16)}px sans-serif`;
-    ctx.strokeStyle = `rgba(90,50,5,${k.toFixed(2)})`; ctx.lineWidth = 7; ctx.strokeText('✨ 대박!! ✨', CX, CY - 40); // 두꺼운 진갈색 외곽선 — 골드 섬광 위에서도 또렷
-    ctx.fillStyle = `rgba(255,255,255,${k.toFixed(2)})`; ctx.fillText('✨ 대박!! ✨', CX, CY - 40); ctx.restore(); ctx.textAlign = 'left';
+    ctx.strokeStyle = `rgba(90,50,5,${k.toFixed(2)})`; ctx.lineWidth = 7; ctx.strokeText('✨ 대박!! ✨', CX, GOLD_BANNER_Y); // 두꺼운 진갈색 외곽선 — 골드 섬광 위에서도 또렷
+    ctx.fillStyle = `rgba(255,255,255,${k.toFixed(2)})`; ctx.fillText('✨ 대박!! ✨', CX, GOLD_BANNER_Y); ctx.restore(); ctx.textAlign = 'left';
+  }
+  if (S.goldWhyT > 0 && S.goldWhy) { // ✨ 왜 대박인지 한 줄 — 배너보다 오래 남는다 (마지막 0.4초 페이드)
+    const a = Math.min(1, S.goldWhyT / 0.4).toFixed(2);
+    ctx.save(); ctx.textAlign = 'center'; ctx.font = `bold ${GOLD_WHY_PX}px sans-serif`; ctx.lineJoin = 'round';
+    ctx.strokeStyle = `rgba(60,34,4,${a})`; ctx.lineWidth = 5; ctx.strokeText(S.goldWhy, CX, GOLD_WHY_Y);
+    ctx.fillStyle = `rgba(255,236,170,${a})`; ctx.fillText(S.goldWhy, CX, GOLD_WHY_Y); ctx.restore(); ctx.textAlign = 'left';
   }
 }
+// ✨ 대박 배너 자리 (10-05): 소환장 위 '🃏 포커장으로 이동'(#goPoker, 화면 중앙 = 논리 y≈226~274)에 이유 줄이 가리지 않게 배너째 위로
+const GOLD_BANNER_Y = CY - 66, GOLD_WHY_Y = CY - 34, GOLD_WHY_PX = 18, GOLD_WHY_SEC = 2.4; // 이유 줄 표시 = 실시간 2.4초 (정지 중엔 멈춤)
+function goldBurst(t, why) { S.goldFlash = t; S.goldWhy = why || ''; S.goldWhyT = why ? GOLD_WHY_SEC : 0; } // 대박 섬광 + 이유 (모든 대박 경로 공용)
 // ⏳ 제한시간 긴장감 (09-30 유저: "반 지났을 때부터 점점 고조, 화면 전체적으로") — 시계와 같은 경과율(1 - S.timer/WAVE_TIME)로
 //    절반 0 → 끝 1. 주 = 화면 전체가 서서히 어두워짐, 보조 = 가장자리 조임, 막판(경과 80%~) = 화면 전체 붉은 기운 + 점점 빨라지는 느린 맥동
 const TENSE_DIM = 0.24, TENSE_EDGE = 0.30, TENSE_RED = 0.20; // 강도 레버: 전체 어둠 · 가장자리 · 붉은 기운 최대 알파 (체감 과하면 여기만)
@@ -10877,7 +11016,7 @@ function updateInfoPanel() {
   }
   const u = sel[0];
   if (u.miner) { // 광부: 종족 없음, 전투 불가 — 간단 정보만
-    const kind = u.sminer ? '✨ 슈퍼 광부' : u.hminer ? '✨ 히든 광부' : '광부';
+    const kind = u.sminer ? '✨ 굴착기' : u.hminer ? '✨ 히든 광부' : '광부';
     el.dataset.kind = 'miner';
     el.innerHTML = `<div class="ui-head"><b class="ui-name">⛏️ ${kind}</b></div>` +
       `<div class="ui-help">역할: 광산에서 캐서 <b>성</b>에 배달 (전투 불가)</div>` +
@@ -10969,7 +11108,7 @@ function heroTrain(u, gamble, perfect, skipRefresh) {
     if (Math.random() < p) {
       u.heroUpLv = Math.min(HERO_UP_MAX, lv + 3);
       logMsg(`🎯✨ <b>도전 단련 대성공!!</b> ${u.weapon} Lv.${u.heroUpLv} (총 공격력 +${u.heroUpLv * 15}%)`);
-      addFloat(u.x, u.y - 28, '🎯 단련 ×3!!', '#ffd54f', 2.2); S.goldFlash = 0.55; sfx('jackpot');
+      addFloat(u.x, u.y - 28, '🎯 단련 ×3!!', '#ffd54f', 2.2); goldBurst(0.55, '🎯 도전 단련 대성공'); sfx('jackpot');
     } else {
       logMsg(`💨 도전 단련 실패… ${cost}G가 사라졌습니다`);
       addFloat(u.x, u.y - 28, '💨 실패…', '#8d8d8d', 1.2); sfx('leak');
@@ -11219,8 +11358,7 @@ function wireHeroSection(el) {
   el.querySelectorAll('[data-htg]').forEach(b => b.onclick = () => { // 🎰 도박 단련: 타이밍바
     const h = heroes[+b.dataset.htg];
     if (S.gold < heroUpCost(h)) return;
-    const host = document.createElement('div');
-    b.closest('.rpgItem').after(host);
+    const host = gambleOverlayOpen(`🎯 ${h.weapon} · 도전 단련`); // 10-05: 목록 안 작은 바 → 화면 전체 도전 창
     el.querySelectorAll('button').forEach(x => x.disabled = true);
     runGambleBar(host, perfect => {
       const before = h.heroUpLv || 0;
@@ -11254,6 +11392,7 @@ const ACHV = [
   ...HIDDEN_DEX.map(h => ({ id: 'h_' + h.id, icon: h.icon, name: '히든: ' + h.name, desc: h.recipe })),
 ];
 function closeShop() {
+  gambleOverlayClose(); // 🎯 도전 창도 함께 (Esc·재시작 — 멈추기 전이면 골드 차감 없이 취소)
   openShop = null;
   document.querySelectorAll('.shopIcon').forEach(b => b.classList.remove('open'));
   renderShop();
@@ -11283,8 +11422,7 @@ function wireUpg(el) {
   el.querySelectorAll('[data-gupg]').forEach(b => b.onclick = () => { // 🎰 도박 업그레이드: 타이밍바 → 중앙 명중 시 50%, 아니면 25% (+갬블러 10%p)
     const i = +b.dataset.gupg;
     if (S.gold < S.upgCost[i]) return;
-    const host = document.createElement('div');
-    b.closest('.rpgItem').after(host);
+    const host = gambleOverlayOpen(`🎯 ${RACES[i].suit} ${RACES[i].name} 공격력 · 도전 강화`); // 10-05: 목록 안 작은 바 → 화면 전체 도전 창
     el.querySelectorAll('button').forEach(x => x.disabled = true); // 진행 중 다른 버튼 잠금
     runGambleBar(host, perfect => {
       if (S.gold < S.upgCost[i]) { renderShop(); return; }
@@ -11295,7 +11433,7 @@ function wireUpg(el) {
         S.upg[i] += 3;
         S.upgCost[i] = Math.floor(S.upgCost[i] * 1.45 * 1.45 * 1.45); // 3레벨 분량만큼 가격도 전진
         logMsg(`🎯✨ <b>도전 대성공!!</b> ${RACES[i].name} 공격력 +3 → Lv.${S.upg[i]}`);
-        S.goldFlash = 0.55; sfx('jackpot');
+        goldBurst(0.55, `🎯 ${RACES[i].name} 도전 강화 대성공`); sfx('jackpot');
       } else { logMsg(`💨 도전 실패… (${Math.round(p * 100)}%의 벽)`); sfx('leak'); }
       showGambleResult(host, perfect, win, win ? `${RACES[i].name} 공격력 +3 → Lv.${S.upg[i]}` : '');
       updateInfoPanel();
@@ -11312,19 +11450,21 @@ function runGambleBar(host, onStop) {
     </div>
     <button class="chipBtn" id="gmgStop" style="margin-top:8px;padding:8px 22px">🎯 멈춰!! <span style="font-size:10px;opacity:.75">(스페이스바)</span></button></div>`;
   const mk = host.querySelector('#gmgMk'), track = host.querySelector('#gmgTrack'), t0 = performance.now();
-  let pos = 0, raf = 0, done = false;
+  let pos = 0, raf = 0, done = false, w = track.clientWidth || 300; // 🔋 10-05: 폭은 열 때·창 크기 바뀔 때만 잰다 — 매 프레임 clientWidth는 transform 쓰기 직후라 스타일·레이아웃 강제 계산
+  const posAt = now => (Math.sin((now - t0) / 1000 * Math.PI * 2 / 0.85 - Math.PI / 2) + 1) / 2 * 100; // 0.85초에 한 왕복 — 속도는 그대로
+  const place = p => { mk.style.transform = `translateX(${(p / 100 * (w - 7)).toFixed(2)}px)`; }; // transform = GPU 합성 (left는 레이아웃 재계산)
+  const onResize = () => { w = track.clientWidth || w; };
+  const ov = host.closest('#gmgOverlay') || host; // 🎯 전체 화면 창이면 어디를 눌러도 멈춘다 (✕ 제외)
+  const cleanup = () => { window.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', onResize); ov.removeEventListener('pointerdown', onDown); };
   (function tick(now) {
-    if (!mk.isConnected) { window.removeEventListener('keydown', onKey, true); return; } // 창이 닫히면 루프·핸들러 정리
-    const t = ((now || t0) - t0) / 1000;
-    pos = (Math.sin(t * Math.PI * 2 / 0.85 - Math.PI / 2) + 1) / 2 * 100; // 0.85초에 한 왕복 — 속도는 그대로
-    // left(레이아웃 재계산 → 끊김) 대신 transform으로 이동 = GPU 합성이라 매끄럽다
-    const w = track.clientWidth || 300;
-    mk.style.transform = `translateX(${(pos / 100 * (w - 7)).toFixed(2)}px)`;
+    if (!mk.isConnected) { cleanup(); return; } // 창이 닫히면 루프·핸들러 정리
+    pos = posAt(now || t0); place(pos);
     raf = requestAnimationFrame(tick);
   })();
-  const stop = () => {
+  const stop = tEv => {
     if (done) return; done = true;
-    cancelAnimationFrame(raf); window.removeEventListener('keydown', onKey, true);
+    cancelAnimationFrame(raf); cleanup();
+    if (tEv) { pos = posAt(tEv); place(pos); } // 10-05: 누른 '순간'(이벤트 시각)의 자리로 판정·표시 — 손을 뗄 때(click)·다음 프레임까지 밀리던 지연 제거
     const perfect = Math.abs(pos - 50) <= 2.7; // 노란존 1/3 축소에 맞춘 판정
     // 멈춘 자리를 그대로 얼려서 보여준다 — 어디에 섰는지 확인할 시간
     mk.style.background = perfect ? '#ffd54f' : '#ff7043';
@@ -11332,11 +11472,18 @@ function runGambleBar(host, onStop) {
     const sb = host.querySelector('#gmgStop');
     if (sb) { sb.disabled = true; sb.textContent = perfect ? '🎯 퍼펙트!!' : '😬 빗나감…'; }
     sfx(perfect ? 'reward' : 'leak');
-    setTimeout(() => { if (mk.isConnected) onStop(perfect); }, 650);
+    let settled = false; // 멈춘 뒤엔 판정이 화면에 보이므로, 그 뒤 ✕·Esc로 닫아도 정산은 반드시 (gambleOverlayClose가 즉시 실행)
+    const settle = () => { if (settled) return; settled = true; ov._settle = null; onStop(perfect); };
+    ov._settle = settle;
+    setTimeout(() => { if (mk.isConnected) settle(); }, 650);
   };
-  function onKey(e) { if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); stop(); } }
+  function onKey(e) { if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) stop(e.timeStamp); } }
+  function onDown(e) { if (e.button > 0 || e.target.closest('#gmgCancel')) return; e.preventDefault(); stop(e.timeStamp); }
   window.addEventListener('keydown', onKey, true); // 스페이스바로도 멈춘다
-  host.querySelector('#gmgStop').onclick = stop;
+  window.addEventListener('resize', onResize);
+  ov.addEventListener('pointerdown', onDown);
+  host.querySelector('#gmgStop').onclick = e => stop(e.detail === 0 ? e.timeStamp : 0); // 키보드(Enter) 클릭 — 포인터는 pointerdown이 먼저 멈춘다
+  if (ov !== host && !IS_MOBILE) host.querySelector('#gmgStop').focus({ preventScroll: true }); // 도전 창: 키보드 포커스를 창 안으로 (뒤 성 강화 창은 inert) — 모바일은 키보드가 없고 포커스 테만 남아 생략
   // (판정도 존과 함께 축소: ±8 → ±2.7)
 }
 function showGambleResult(host, perfect, win, detail, refresh) {
@@ -11345,8 +11492,39 @@ function showGambleResult(host, perfect, win, detail, refresh) {
     <div style="font-size:17px;color:${win ? '#c9971a' : '#e57373'};margin-top:4px">${win ? '🎯✨ 대성공!! ×3 강화!!' : '💨 꽝… 골드만 사라졌다'}</div>
     ${detail ? `<div style="font-size:12px;color:#7a6a52;margin-top:2px">${detail}</div>` : ''}
     <button class="chipBtn" id="gmgOk" style="margin-top:8px">확인</button></div>`;
-  host.querySelector('#gmgOk').onclick = () => (refresh || renderShop)();
+  const shownAt = performance.now();
+  host.querySelector('#gmgOk').onclick = e => {
+    if (e.detail && gbOv && gbOv._downT < shownAt) return; // 멈춤을 누른 손가락을 늦게 떼서 생긴 click이 결과를 보기도 전에 확인을 누르지 않게 (키보드 클릭은 통과)
+    gambleOverlayClose(); (refresh || renderShop)(); // 도전 창 닫고 성 강화 창으로 복귀
+  };
+  if (gbOv && gbOv.contains(host) && !IS_MOBILE) host.querySelector('#gmgOk').focus({ preventScroll: true });
   if (win) sfx('reward');
+}
+// 🎯 도전 전체 화면 창 (10-05 유저: "도전강화 시 타이밍 맞추는 거 좀 끊김, 그리고 도전 시 추가창으로 해서 화면 전체 꽉 차게")
+//    성 강화 창 위에 덮는 별도 창 — 큰 타이밍 바·결과를 여기서, 확인/✕/Esc로 닫으면 원래 창으로. 창이 덮는 동안 캔버스·HUD 정지 그리기는 frame()이 건너뛴다.
+//    #shopOverlay 밖(body)에 둔다: wd-completion의 animation:none 범위 밖 + 뒤 창은 inert로 포커스 차단
+let gbOv = null; // 열린 도전 창 (closeShop·resetTransientUI 경로가 닫는다)
+function gambleOverlayOpen(title) {
+  gambleOverlayClose();
+  const ov = document.createElement('div');
+  ov.id = 'gmgOverlay'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-labelledby', 'gmgTitle');
+  ov.innerHTML = `<button id="gmgCancel" title="닫기" aria-label="닫기">✕</button><div id="gmgBox"><div id="gmgTitle"></div><div id="gmgHost"></div></div>`; // id 접두 gmg (gbHost는 뽑기 상자가 쓴다)
+  ov.querySelector('#gmgTitle').textContent = title;
+  ov._downT = -1;
+  ov.addEventListener('pointerdown', e => { ov._downT = e.timeStamp; }, true);
+  ov.querySelector('#gmgCancel').onclick = () => { gambleOverlayClose(); renderShop(); };
+  document.body.appendChild(ov);
+  gbOv = ov;
+  const so = document.getElementById('shopOverlay'); if (so) so.inert = true;
+  return ov.querySelector('#gmgHost');
+}
+function gambleOverlayClose(discard) { // discard = 재시작 — 이전 판 정산 버림
+  if (!gbOv) return;
+  const settle = gbOv._settle; gbOv._settle = null;
+  gbOv.remove(); gbOv = null;
+  const so = document.getElementById('shopOverlay'); if (so) so.inert = false;
+  needRedraw = true; // 덮여 있는 동안 건너뛴 캔버스를 바로 한 번
+  if (settle && !discard) settle(); // 멈춘 뒤 닫기 = 차감·판정 확정 (멈추기 전 닫기만 무료 취소)
 }
 // 광부 업그레이드 항목 HTML + 배선
 function minerItemsHTML() {
@@ -11407,7 +11585,10 @@ function renderShop() {
     title.textContent = '📖 포커 족보 도감';
     const mcard = ([r, s, hl]) =>
       `<span class="mcard ${(s === '♥' || s === '♦') ? 'red' : 'black'}${hl ? ' hl' : ''}"><i>${r}</i>${s}</span>`;
+    // 📑 섹션 구분 (10-05 유저: "족보도감 섹션 구분해줘") — 실제 내용 4덩어리: 포커 족보(+더블 포커 안내) / 히든 조합 / 업적 / 몬스터.
+    //    각 덩어리의 기존 제목 줄(rpgGuide)을 소제목으로 올리고 구분선으로 나눈다. 문구·정보량 그대로 (첫 덩어리만 소제목 새로)
     el.innerHTML =
+      '<section class="dexSec"><h3 class="dexSecH">🃏 포커 족보</h3>' +
       '<div style="font-size:11.5px;color:#9a8a60;text-align:center;margin-bottom:8px">아래로 갈수록 강한 족보 · <span style="color:#b8860b">금테 카드</span>가 족보를 만드는 카드입니다</div>' +
       HAND_GUIDE.map(([name, cards, desc], i) =>
         `<div class="handRowG">
@@ -11418,7 +11599,7 @@ function renderShop() {
       `<div class="rpgGuide">어떤 유닛/무기가 나오는지는 직접 뽑아보며 알아가세요 😏<br>
        같은 족보라도 <b>핵심 카드 숫자가 높을수록</b> 강함 (AA 원페어 &gt; 22 원페어)<br>
        5라운드마다 <b>더블 포커</b> — 두 족보가 일치하면 <b style="color:#e91e8c">♠ 에이스</b>,
-       족보에 <b>숫자까지</b> 일치하면 <b style="color:#ff2d95">♠♠ 슈퍼에이스</b>!</div>` +
+       족보에 <b>숫자까지</b> 일치하면 <b style="color:#ff2d95">♠♠ 슈퍼에이스</b>!</div></section>` +
       hiddenDexHTML() + achvDexHTML() + monDexHTML();
   } else if (openShop === 'sandbox') {
     title.textContent = '🧪 샌드박스 소환';
@@ -11431,7 +11612,7 @@ function renderShop() {
     const superAces = HAND_NAMES.map((n, t) => btn('sa' + t, `${n} 슈퍼에이스`)).join('');
     const hiddenKeys = Object.keys(HIDDEN_META);
     const hiddens = hiddenKeys.map(k => btn('hid_' + k, `${HIDDEN_META[k][0]} ${HIDDEN_META[k][1]}`)).join('');
-    const miners = btn('miner', '⛏️ 광부') + btn('sminer', '⛏️ 슈퍼광부');
+    const miners = btn('miner', '⛏️ 광부') + btn('sminer', '⛏️ 굴착기');
     const itemKeys = ['timestop', 'stimpack', 'acid', 'bombard', 'revive', 'plank'];
     const items = itemKeys.map(k => btn('it_' + k, `${ITEM_META[k].icon} ${ITEM_META[k].name}`)).join('');
     const misc = btn('gold', '💰 골드 +100k') + btn('chip', '🪙 칩 +10');
@@ -11466,38 +11647,38 @@ function renderShop() {
 // 히든 조합 도감 섹션 HTML (발견한 것만 정체 공개, 나머지는 ❓ + 수수께끼 힌트)
 function hiddenDexHTML() {
   const discovered = HIDDEN_DEX.filter(h => hiddenSeen(h.id)).length;
-  return `<div class="rpgGuide" style="margin-top:10px">🀄 히든 조합 도감 (${discovered}/${HIDDEN_DEX.length} 발견)</div>` +
+  return `<section class="dexSec"><h3 class="dexSecH">🀄 히든 조합 도감 <small>(${discovered}/${HIDDEN_DEX.length} 발견)</small></h3>` +
     HIDDEN_DEX.map(h => {
       const seen = hiddenSeen(h.id);
       return `<div class="handRowG"${seen ? '' : ' style="opacity:.6"'}>
         <span class="hname">${seen ? h.icon : '❓'} ${seen ? h.name : '???'}</span>
         <span class="hdesc">${seen ? `${h.recipe} — ${h.desc}` : (hintSeen(h.id) ? `🐦 ${h.hint}` : '<span style="color:#a08c7a">🐦 새를 잡아 소문을 들어보세요</span>')}</span>
       </div>`;
-    }).join('');
+    }).join('') + '</section>';
 }
 // 📖 업적 도감 섹션 HTML (달성=컬러+이름+desc, 미달성=회색 그대로 desc 노출)
 function achvDexHTML() {
   const discovered = ACHV.filter(a => achvSeen(a.id)).length;
-  return `<div class="rpgGuide" style="margin-top:10px">📖 업적 도감 (${discovered}/${ACHV.length})</div>` +
+  return `<section class="dexSec"><h3 class="dexSecH">📖 업적 도감 <small>(${discovered}/${ACHV.length})</small></h3>` +
     ACHV.map(a => {
       const seen = achvSeen(a.id);
       return `<div class="handRowG"${seen ? '' : ' style="opacity:.6"'}>
         <span class="hname">${a.icon} <span style="${seen ? 'color:#ffd166' : ''}">${a.name}</span></span>
         <span class="hdesc">${a.desc}</span>
       </div>`;
-    }).join('');
+    }).join('') + '</section>';
 }
 // 📚 몬스터 도감 섹션 HTML (발견: 이름+설명+색칩, 미발견: ❓ ???)
 function monDexHTML() {
   const discovered = MATERIALS.filter((_, i) => monSeen(i)).length;
-  return `<div class="rpgGuide" style="margin-top:10px">📚 몬스터 도감 (${discovered}/${MATERIALS.length})</div>` +
+  return `<section class="dexSec"><h3 class="dexSecH">📚 몬스터 도감 <small>(${discovered}/${MATERIALS.length})</small></h3>` +
     MATERIALS.map((mat, i) => {
       const seen = monSeen(i);
       return `<div class="handRowG"${seen ? '' : ' style="opacity:.6"'}>
         <span class="hname"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${seen ? mat.col : '#555'};margin-right:4px"></span>${seen ? mat.name : '❓ ???'}</span>
         <span class="hdesc">${seen ? MAT_DESC[i] : ''}</span>
       </div>`;
-    }).join('');
+    }).join('') + '</section>';
 }
 document.getElementById('shopClose').onclick = closeShop;
 document.getElementById('shopOverlay').onclick = e => { if (e.target.id === 'shopOverlay') closeShop(); };
@@ -11771,7 +11952,7 @@ function slotPull() {
     S.gold += won;
     if (won >= 1000000) markAchv('lotto50');
     updateInfoPanel();
-    if (res.key === '777') { sfx('jackpot'); sfx('hero'); S.goldFlash = 0.9; rewardToast('🌈', '+10,000,000G', '#ff6b9d', '무 지 개  캡 슐'); logMsg('🎁🌈 무지개 캡슐!!! 1000만 골드!!! 🌈🎁'); }
+    if (res.key === '777') { sfx('jackpot'); sfx('hero'); goldBurst(0.9, '🌈 무지개 캡슐!'); rewardToast('🌈', '+10,000,000G', '#ff6b9d', '무 지 개  캡 슐'); logMsg('🎁🌈 무지개 캡슐!!! 1000만 골드!!! 🌈🎁'); }
     if (!live()) { // 창을 닫았거나 다른 회차 화면 — 지급은 끝났고 알림만
       if (won > 0 && res.key !== '777') logMsg(`🎁 캡슐 뽑기: ${nm} 캡슐 <b>+${won.toLocaleString()}G</b> (창을 닫는 사이 지급되었습니다)`);
       return;
@@ -11779,7 +11960,7 @@ function slotPull() {
     const el = document.getElementById('slRes');
     if (won === 0) { el.innerHTML = `<span style="color:#e57373">💨 빈 캡슐… 다음엔 꼭!</span>`; sfx('leak'); }
     else if (res.key === '777') el.innerHTML = `<span style="color:#ff6b9d;font-size:19px;font-weight:900">🌈🌈 무지개 캡슐!!! +1,000만G 🌈🌈</span>`;
-    else if (won >= 100000) { el.innerHTML = `<span style="color:#ff6b9d;font-size:16px">🎆 대박!! ${nm} 캡슐 +${won.toLocaleString()}G 🎆</span>`; sfx('jackpot'); S.goldFlash = 0.55; }
+    else if (won >= 100000) { el.innerHTML = `<span style="color:#ff6b9d;font-size:16px">🎆 대박!! ${nm} 캡슐 +${won.toLocaleString()}G 🎆</span>`; sfx('jackpot'); goldBurst(0.55, `🎁 ${nm} 캡슐 +${won.toLocaleString()}G`); }
     else { el.innerHTML = `<span style="color:#ffd166">🎉 ${nm} 캡슐 +${won.toLocaleString()}G</span>`; sfx(won >= 20000 ? 'reward' : 'coin'); }
     const b = document.getElementById('slotBtn');
     if (b) { b.disabled = S.chips < 1; b.textContent = `한 번 더 · 칩 ${chipTxt(S.chips)}개 보유`; }
@@ -13750,6 +13931,7 @@ function frame(now) {
   const rd = now - rafPrev; rafPrev = now;
   if (rd > 2 && rd < 40) rafAvg += (rd - rafAvg) * 0.05; // 숨김 복귀 같은 긴 공백은 평균에서 뺀다
   const idle = S.paused && !S.mapTest;
+  if (idle && gbOv) { last = now; requestAnimationFrame(frame); return; } // 🎯 도전 창이 화면을 다 덮는 동안: 정지 캔버스(250ms마다 통째 그리기)·HUD 갱신을 건너뛴다 — 타이밍 바가 그 프레임마다 툭툭 끊겼다 (10-05)
   if (now - lastProc < (idle ? IDLE_GAP : IS_MOBILE && rafAvg < CAP_AVG ? PLAY_GAP : 0) && !(idle && needRedraw)) {
     if (idle) { last = now; hudMaybe(now); } // 정지 중엔 시계만 따라간다(재개 첫 dt가 튀지 않게) + 창 안 골드·레버 재장식은 20Hz 유지
     requestAnimationFrame(frame);
@@ -13769,6 +13951,8 @@ function frame(now) {
   const t0 = performance.now();
   if (!S.paused) {
     if (S.slowT > 0) { S.slowT = Math.max(0, S.slowT - rawDt); dt *= 0.3; } // ⛏️✨ 특별 발굴 슬로우모션 — 실시간 2초, 배속·히트스톱과 독립
+    if (S.goldWhyT > 0) S.goldWhyT -= rawDt; // ✨ 대박 이유 줄 = 실시간 (배속·서브스텝과 무관 — update 안에 두면 ⏩2배속에서 1초 만에 사라진다)
+    if (S.goldFlash > 0 && S.phase !== 'wave') S.goldFlash -= rawDt; // ✨ 대박 배너: 웨이브 밖(포커 페이즈)에선 update가 안 돌아 배너만 최대 60초 남고 이유 줄은 먼저 사라졌다
     if (S.hitstop > 0) S.hitstop -= dt; // 보스 킬 히트스톱: 잠깐 세상이 멈춘다
     else {
       // 배속은 큰 스텝 1번이 아니라 작은 스텝 여러 번(서브스텝)으로 → 모션 부드럽고 물리 안정
@@ -14538,6 +14722,16 @@ if (WORLD_MOTION_V2) (() => {
     // Stop game shortcuts while typing in a dialog. Other capture listeners,
     // including the existing space-bar timing game, remain available.
     e.stopPropagation();
+    if (gbOv) { // 🎯 도전 창 (목록 밖 전체 화면 창, 뒤 성 강화 창은 inert): Esc = 도전 창만 닫고 성 강화로 · Tab = 창 안에서 돌기
+      if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); gambleOverlayClose(); renderShop(); return; }
+      if (e.repeat && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); return; } // 멈춤 키를 누른 채면 결과의 확인까지 눌리지 않게
+      if (e.key !== 'Tab') return;
+      const list = [...gbOv.querySelectorAll('button')].filter(visible);
+      if (!list.length) { e.preventDefault(); return; }
+      const i = list.indexOf(document.activeElement);
+      e.preventDefault(); list[(i < 0 ? (e.shiftKey ? list.length - 1 : 0) : i + (e.shiftKey ? -1 : 1) + list.length) % list.length].focus();
+      return;
+    }
     if (e.key === 'Escape') {
       e.preventDefault();
       e.stopImmediatePropagation();
