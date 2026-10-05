@@ -4020,16 +4020,29 @@ function madeCardIdx(cards, rank) {
 // 핵심 카드 값(2~14)에 따른 공격력 배수: 격차를 작게 (2=1.0배, A=1.2배)
 // → 상위 족보를 절대 넘보지 못하는 "미세 우열"만. 예: 22투페어 > AA원페어
 const keyMul = kr => 1 + (kr - 2) / 12 * 0.2;
+// 🃏 패 하나의 판정 (멀티 M0 추출 — confirmHand·🤖 봇·👑 포커왕이 같은 판정을 쓴다). 순수 함수: 난수·S 무접촉
+function handRes(cards) {
+  const rank = evalHand(cards);
+  const back = isBackStraight(cards); // A-2-3-4-5 (같은 무늬면 rank 8) — bs는 전용 배수용(rank 4 한정), bsAny는 A보너스용
+  return { rank, race: RACE_OF_RANK[rank], keyRank: handKeyRank(cards, rank), bs: rank === 4 && back, bsAny: back, mtn: isMountain(cards) };
+}
+// 👑 포커왕 비교값 (MULTIPLAYER_PLAN 6-5): cmp는 앞에서부터 사전식 비교, 클수록 강함
+//   한 패 = [rank, keyRank, keySuit] · 두 패 = [tier, 높은 패 3개, 낮은 패 3개] — tier 2 슈퍼에이스 · 1 에이스 · 0 불일치 (소환 에이스와 같은 판정)
+//   keySuit = keyRank 카드 중 최강 무늬 (♠3 ♥2 ♦1 ♣0) · 빽스트레이트는 keyRank 5 (최하위 스트레이트)
+function handResult(hands) {
+  const res = hands.map(h => handRes(h.cards));
+  const key = hands.map((h, i) => [res[i].rank, res[i].keyRank, 3 - Math.min(...h.cards.filter(c => c.r === res[i].keyRank).map(c => SUITS.indexOf(c.s)))]);
+  if (res.length < 2) return { res, tier: 0, cmp: key[0] };
+  const tier = res[0].rank === res[1].rank && res[0].rank > 0 ? (res[0].keyRank === res[1].keyRank ? 2 : 1) : 0;
+  key.sort((a, b) => b[0] - a[0] || b[1] - a[1] || b[2] - a[2]);
+  return { res, tier, cmp: [tier, ...key[0], ...key[1]] };
+}
 function confirmHand() {
   if (S.phase !== 'poker') return;
   if (S.round === 2 && S.r1High && tutNew('t4') && (IS_MOBILE ? document.body.dataset.tab === 'poker' : !pokerPeek)) tutMark('t4'); // 🧭 포커 화면이 보이는 채 소환했으면 T4 봄
   S.tutStep = 0; S.tutHold = false; // 🧭 T1·T2는 첫 소환으로 끝 (기록은 보여 준 순간에 이미 했다)
   document.getElementById('summonBtn').classList.remove('tutPulse');
-  const res = S.poker.hands.map(hand => {
-    const rank = evalHand(hand.cards);
-    const back = isBackStraight(hand.cards); // A-2-3-4-5 (같은 무늬면 rank 8) — bs는 전용 배수용(rank 4 한정), bsAny는 A보너스용
-    return { rank, race: RACE_OF_RANK[rank], keyRank: handKeyRank(hand.cards, rank), bs: rank === 4 && back, bsAny: back, mtn: isMountain(hand.cards) };
-  });
+  const res = S.poker.hands.map(hand => handRes(hand.cards));
   for (const r of res) if (r.rank > S.bestHand) S.bestHand = r.rank; // 📋 정산: 이번 판 최고 족보
   if (S.round === 1) S.r1High = res.length === 1 && res[0].rank === 0; // 🧭 T4 조건: 첫 소환이 하이카드
   // 에이스 잭팟은 원페어부터 (페어 없는 하이카드 일치는 너무 쉬움)
@@ -13920,6 +13933,8 @@ const MP = {
   keys: {}, mouse: { x: 470, y: 250, in: false },
   mmDrag: false, pinch: null, touchLock: false, wheelBound: false,
   lockMsg: null, // 기지 밖 클릭 안내 {x, y(화면 논리), t0}
+  bot: null, snap: {}, ghost: {}, ghostErr: false, // 🤖 단계 B: 봇 상태 · 진영별 스냅샷(v/{seat} 로컬판) · 고스트 렌더 상태 · 고스트 예외 1회 보고
+  king: null, kingMsg: null, rosterC: null, tagC: null, // 👑 B2: 마지막 포커왕 판정 {rnd, win[], labels{seat}} · 공지 배너 {text, t0, 구운 캔버스} · 로스터 구운 캔버스 · 이름표 구운 캔버스
 };
 const MP_ZMAX = 1; // 필드 캔버스 해상도(RS)가 z=1에서 1:1 — 그 이상 확대는 흐려진다
 function mpQ() { return MT.QUAD[S.multi.me]; }
@@ -13999,6 +14014,7 @@ function mpHomeView() { // 기본 = 내 진영 보기: 내 기지 + 맞닿은 �
   needRedraw = true;
 }
 function mpCamTick(dt) { // frame에서 매 처리 프레임 (rawDt = 실시간) — 방향키 + 가장자리 스크롤
+  try { mpBotTick(); } catch (e) { reportLoopError('mpbot', e); } // 🤖 봇 동기도 여기서 (정지·모바일 포커 탭에서도 불리는 유일한 멀티 훅 — 엔진 무수정). 시간은 S.time 델타라 rawDt와 무관. frame의 try 밖이라 직접 격리 (봇 예외가 루프를 끊지 않게)
   const spd = 640 * dt / MT.zoom, k = MP.keys; // 줌과 무관하게 화면상 스크롤 속도 일정
   let dx = 0, dy = 0;
   if (k.l) dx -= spd;
@@ -14035,6 +14051,18 @@ function mpMinimapCore(tc, mx, my, mw) { // mtMinimapCore와 같은 지도 + 내
   const q = mpQ();
   tc.fillStyle = '#43e0a0';
   for (const u of S.units) tc.fillRect(mx + (q.ox + u.x) * s - 1.5, my + (q.oy + u.y) * s - 1.5, 3, 3);
+  for (const seat in MP.snap) { // 🤖 상대 진영: 스냅샷 유닛(진영색) + 소환장 몹(고스트 공전체 위치) — 색별 path 1개 + fill 1회 (점 150~180개 fillRect 대신)
+    const sn = MP.snap[seat], oq = MT.QUAD[seat], g = MP.ghost[seat];
+    tc.beginPath();
+    for (const u of sn.u) tc.rect(mx + (oq.ox + u.x) * s - 1.5, my + (oq.oy + u.y) * s - 1.5, 3, 3);
+    tc.fillStyle = MT.PCOLS[seat]; tc.fill();
+    if (g && g.orbs.length) { // 몹 점은 최대 ~40개만 (소환장이 미니맵에서 24×16px라 200개를 찍어도 같은 덩어리 — 리뷰 PERF-1 ③)
+      const st = Math.ceil(g.orbs.length / 40);
+      tc.beginPath();
+      for (let i = 0; i < g.orbs.length; i += st) { const o = g.orbs[i]; tc.rect(mx + (oq.ox + o.x) * s - 1, my + (oq.oy + o.y) * s - 1, 2, 2); }
+      tc.fillStyle = '#ff8a65'; tc.fill();
+    }
+  }
   tc.strokeStyle = '#ffd166'; tc.lineWidth = 1.5;
   const rx0 = Math.max(0, MT.cam.x), ry0 = Math.max(0, MT.cam.y);
   const rx1 = Math.min(MT.W, MT.cam.x + mtViewW()), ry1 = Math.min(MT.H, MT.cam.y + mtViewH());
@@ -14115,8 +14143,20 @@ function mpDraw() {
     ctx.strokeStyle = '#241708'; ctx.lineWidth = 14; ctx.strokeRect(-7, -7, MT.W + 14, MT.H + 14); // 흙 단면 테두리 (mapTest와 같은 섬 가장자리)
     ctx.strokeStyle = '#4a3520'; ctx.lineWidth = 7; ctx.strokeRect(-3.5, -3.5, MT.W + 7, MT.H + 7);
     ctx.lineWidth = 1;
-    for (const oq of MT.QUAD) { // 빈 상대 진영 표시
-      if (oq.i === me || oq.ox > vx1 || oq.oy > vy1 || oq.ox + oq.w < vx0 || oq.oy + oq.h < vy0) continue;
+    const lod = z >= 0.8 ? 0 : z >= 0.55 ? 1 : 2; // 3-5 LOD: L0 풀 · L1 링·연출 끔 · L2 점
+    for (const oq of MT.QUAD) { // 상대 진영: 스냅샷이 있으면 고스트, 없으면 빈 진영 표시
+      if (oq.i === me) continue;
+      const vis = oq.ox < vx1 && oq.oy < vy1 && oq.ox + oq.w > vx0 && oq.oy + oq.h > vy0; // 경계에 딱 닿기만 한 진영(기본 시점의 P2 윗변)은 화면 밖
+      if (MP.snap[oq.i]) {
+        try {
+          mpGhostSync(oq.i, vis, lod); // 센서스 수 맞추기는 화면 밖에서도 (패닝 순간 팝 폭주 방지)
+          if (vis) drawGhostQuad(oq.i, lod);
+          if (vis && MP.bot && MP.bot.seat === oq.i) mpDrawNameTag(oq, !!(MP.king && MP.king.win.includes(oq.i)), MP.snap[oq.i].u.length); // 👑 = 직전 포커왕
+        }
+        catch (e) { if (!MP.ghostErr) { MP.ghostErr = true; console.error('mp ghost', e); } } // 고스트가 실패해도 내 진영 블릿은 그대로
+        continue;
+      }
+      if (!vis) continue;
       ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
       ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(20,14,34,0.75)'; ctx.fillStyle = '#e8def8';
       const lx = oq.ox + oq.w / 2, ly = oq.oy + oq.h / 2;
@@ -14128,7 +14168,539 @@ function mpDraw() {
   drawTension(); // 화면 공간 1회 (setTransform(RS) — 카메라와 무관)
   drawScreenFx(); // FEVER·대박 섬광도 화면 공간 (필드 사각에 갇히지 않게)
   mpMinimap();
+  mpDrawHud(); // 👑 로스터 + 포커왕 배너
   mpDrawLockMsg();
+}
+// ==================== 🤖 단계 B1: 봇 진영 (★★★★ 가벼운 페이지 내 모델 — 두 번째 엔진·iframe 아님) ====================
+// · MP.bot = 상대 진영(MT.QUAD[1]) 가상 플레이어. 엔진 S와 완전히 분리 — S.units·S.effects·addFloat·sfx·업적·spawnUnit을 건드리지 않는다.
+// · 라운드 동기 = 내 페이즈 폴링(mpBotTick, 라운드 키 기반 멱등). 시간 = S.time 델타 → 고정 0.1초 스텝
+//   (정지·배속·슬로모·히트스톱을 그대로 따르고, 라이브와 50R 시뮬 mpBotSim이 같은 mpBotStep을 탄다 → BOT_SKILL 보정이 그대로 옮겨진다).
+// · 출력 = MP.snap[seat] (7장 v/{seat}의 로컬 객체판) — drawGhostQuad는 스냅샷만 읽는다 (나중 실플레이어 고스트에 그대로 재사용).
+// · 내 개인 이벤트(eventMods)·⏱️모래(+15초)·부활 연장은 봇에 적용하지 않는다 (봇 웨이브 = 90초 고정). 난이도(DIFF_MUL)는 monsterHP가 공유.
+// · 난수 = b.rng (라이브 Math.random / 시뮬 시드). 봇 코드는 S.multi일 때만 돈다 → 싱글 난수 소비 순서 무변경 (testM0 오라클).
+const BOT_SKILL = 0.85; // 봇 화력 배수 — 조절 손잡이는 이것 하나. 10-05 50R 시뮬(30시드) 누수 라운드 비율: R1~10 0% · R11~25 3.8%(R22부터) · R26~40 8.2% · R41~50 6.3%, 샐 때 평균 ~5마리 (1.0 = 1~2% · 0.75 = 11~13%)
+const BOT_EFF = 0.7;   // 모델 상수: 이동·조준·재타깃·과잉 피해 손실
+const BOT_STEP = 0.1;  // 봇 전투 스텝 (게임 초)
+function mpBotNew(seat, rng) {
+  return { seat, rng: rng || Math.random, skill: BOT_SKILL, rnd: 0, ph: '', t: null, acc: 0, nid: 1, units: [], chips: 0, upgBonus: 0,
+    hand: null, summoned: true, thinkT: 0, wave: null, leak: {}, snapT: -1 };
+}
+// 봇 업글 레벨 (전 종족 공통): 시작 골드 2렙 + R12까지 완만 → R30까지 볼록하게 가속(몹 HP 복리 구간 — 중반 여유를 줄여 R20대부터 가끔 샌다) → 이후 선형
+//   + 누수 반응(샜으면 다음부터 업글을 더 — 사람처럼, 자기 안정화)
+function mpBotLv(b, r) { return Math.floor(r <= 12 ? 2 + 0.4 * r : r <= 30 ? 6.8 + 14.4 * Math.pow((r - 12) / 18, 2.2) : 21.2 + 0.6 * (r - 30)) + b.upgBonus; }
+// ── 유닛 = spawnUnit·spawnHero 식 복제 (S.units·이펙트·업적 없이 객체만)
+function mpUnitObj(rank, race, hidden, keyRank, superAce) {
+  const w = WEAPONS[rank], kr = keyRank || 14;
+  return { tier: rank, race, hidden: !!hidden, superAce: !!superAce, hero: false, super: false, miner: false, keyRank: kr, keyLabel: rankLabel(kr),
+    dmg: w.dmg * (hidden ? (ACE_MUL[rank] || 1.5) * (superAce ? 3 : 1) : keyMul(kr)), cd: w.cd / (superAce ? 1.5 : 1), range: w.range, splash: w.splash, bounce: w.bounce,
+    atk: w.atk, proj: w.proj || null, vis: w.vis || null, pierce: 0, shards: 0, shardFrac: 0,
+    weapon: (superAce ? '♠♠ 슈퍼에이스 ' : hidden ? '에이스 ' : '') + w.name };
+}
+function mpHeroObj(tier, race, kb, sup) {
+  const w = WEAPONS[tier], h = w.hero || {}, pick = (k, d) => (h[k] !== undefined ? h[k] : d);
+  const superDmg = sup ? 4 : 1, superCd = sup ? 0.6 : 1;
+  return { tier, race, hidden: false, superAce: false, hero: true, super: !!sup, miner: false, keyRank: 14, keyLabel: '★',
+    dmg: w.dmg * HERO_DMG * (h.dmgMul || 1) * (kb || 1) * superDmg, cd: (h.cd !== undefined ? h.cd : w.cd * (h.cdMul || 1)) * superCd,
+    range: pick('range', w.range) + (sup ? 25 : 0), splash: pick('splash', w.splash || 0) * (sup ? 1.25 : 1),
+    bounce: sup ? Math.min(12, Math.round(pick('bounce', w.bounce || 0) * 2.5)) : pick('bounce', w.bounce || 0),
+    atk: pick('atk', w.atk), proj: pick('proj', w.proj || null), vis: pick('vis', w.vis || null),
+    pierce: Math.round((h.pierce || 0) * (sup ? 1.5 : 1)), shards: Math.round((h.shards || 0) * (sup ? 2.5 : 1)), shardFrac: h.shardFrac || 0,
+    weapon: (sup ? '슈퍼 ' : '') + '영웅 ' + (h.name || w.name) };
+}
+function mpBotAdd(b, u) { u.nid = b.nid++; b.units.push(u); b.snapT = -1; return u; }
+// ── 포커: 실제 덱 규칙(52장, 패마다 자기 덱 — newDeck과 같은 구조) + 교체 휴리스틱 1회
+function mpBotDeck(rng) {
+  const d = [];
+  for (const s of SUITS) for (let r = 2; r <= 14; r++) d.push({ r, s });
+  for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
+  return d;
+}
+function mpBotSwapIdx(cards) { // 사람 같은 교체: 스트레이트+ 유지 · 4장 플러쉬면 1장 · 족보 카드 유지하고 낮은 나머지 1~2장
+  const rank = evalHand(cards), all = [0, 1, 2, 3, 4];
+  if (rank >= 4) return [];
+  if (rank <= 1) {
+    const bySuit = {};
+    cards.forEach((c, i) => (bySuit[c.s] = bySuit[c.s] || []).push(i));
+    for (const s in bySuit) if (bySuit[s].length === 4) return all.filter(i => !bySuit[s].includes(i));
+  }
+  const keep = new Set(madeCardIdx(cards, rank));
+  const rest = all.filter(i => !keep.has(i)).sort((a, b) => cards[a].r - cards[b].r);
+  return rest.slice(0, rank === 2 ? 1 : 2);
+}
+function mpBotDeal(b, r) { // 내 포커가 열릴 때 봇도 패를 받는다 (더블 포커 라운드 = 패 2개). 소환은 생각 시간 뒤 또는 전투 시작에
+  const hands = [];
+  for (let h = 0; h < (r % 5 === 0 ? 2 : 1); h++) {
+    const deck = mpBotDeck(b.rng), cards = deck.splice(0, 5), dealt = cards.slice();
+    for (const i of mpBotSwapIdx(cards)) cards[i] = deck.pop();
+    hands.push({ dealt, cards });
+  }
+  const hr = handResult(hands); // confirmHand와 같은 판정 (handRes) + 포커왕 비교값
+  b.hand = { rnd: r, hands, hr, res: hr.res, ace: 0 };
+  b.summoned = false; b.thinkT = 4 + b.rng() * 14;
+}
+function mpBotSummon(b) { // confirmHand와 같은 판정: 두 패 족보 일치(하이카드 제외) = 에이스(+핵심 숫자 일치 = 슈퍼에이스) · 빽스트 전용 배수 · A보너스 새총
+  if (b.summoned || !b.hand) return;
+  b.summoned = true;
+  const res = b.hand.res;
+  if (res.length === 2 && res[0].rank === res[1].rank && res[0].rank > 0) {
+    const sa = res[0].keyRank === res[1].keyRank;
+    b.hand.ace = sa ? 2 : 1;
+    mpBotAdd(b, mpUnitObj(res[0].rank, 0, true, 14, sa));
+  } else {
+    for (const r of res) {
+      const u = mpUnitObj(r.rank, r.race, false, r.keyRank);
+      if (r.bs) { u.dmg = WEAPONS[4].dmg * BACK_STRAIGHT_MUL; u.keyLabel = 'B'; u.weapon = '빽 ' + u.weapon; }
+      mpBotAdd(b, u);
+    }
+  }
+  const bonus = res.reduce((n, r) => n + (r.bsAny || r.mtn ? 2 : r.keyRank === 14 && r.rank > 0 ? 1 : 0), 0);
+  for (let i = 0; i < bonus; i++) mpBotAdd(b, mpUnitObj(0, RACE_OF_RANK[0], false, 14));
+  mpBotFuse(b);
+}
+function mpBotFuse(b) { // 포털 5기 합성을 가끔(라운드당 25%): 같은 족보 일반 5기 → 영웅(카드 가중치 평균), 영웅 5기 → 슈퍼영웅 — 에이스 계열은 안 섞는다
+  for (const hero of [false, true]) {
+    const g = {};
+    for (const u of b.units) if (!u.hidden && !u.superAce && !u.super && u.hero === hero) (g[u.tier] = g[u.tier] || []).push(u);
+    for (const t in g) {
+      if (g[t].length < 5 || b.rng() >= 0.25) continue;
+      const grp = g[t].slice(0, 5);
+      b.units = b.units.filter(u => !grp.includes(u));
+      mpBotAdd(b, hero ? mpHeroObj(+t, grp[0].race, 1.5, true) : mpHeroObj(+t, grp[0].race, grp.reduce((a, u) => a + keyMul(u.keyRank), 0) / 5, false));
+    }
+  }
+}
+// ── 전투: 소환장 = 그 라운드 몹 수·HP(mobCount·monsterHP — 난이도 공유) + 보스 라운드 보스 1마리(5초 뒤 등장, startWave·update와 같은 계수)
+function mpBotWaveNew(b, r) {
+  const n = mobCount(r), mi = matInfo(r), nextChance = mi.p > 0.6 ? (mi.p - 0.6) / 0.4 * 0.3 : 0;
+  const mats = new Uint8Array(n), gold = new Uint8Array(n);
+  for (let i = 0; i < n; i++) { mats[i] = b.rng() < nextChance ? mi.next : mi.idx; gold[i] = b.rng() < 0.003 ? 1 : 0; }
+  const base = Math.max(1, Math.floor(monsterHP(r))), bhp = r % 10 === 0 ? base * (r >= FINAL_ROUND ? 2.8 : 9.4 / splitComp(r)) : 0;
+  return { r, t: 0, n, hp: base * (r >= 50 ? 1 + 0.16 * 0.6 : 1), mats, gold, shape: stageInfo(r).si, dmg: 0, killed: 0, // R50+ 쉴드(16% × HP 60%)는 평균 HP로 흡수
+    boss: bhp ? { hp: bhp, max: bhp, on: false } : null, clearT: 0 };
+}
+// 봇 화력 = 유닛별 (WEAPONS 기본 + 업글 곡선) / cd × 동시 타격 수 × BOT_EFF × BOT_SKILL. 일반 몹은 앞에서부터 차례로 쓰러진다(누적 피해 / 몹 HP — 스텝 크기 무관)
+function mpBotStep(b, w, dt) {
+  if (w.clearT || w.t >= WAVE_TIME) return;
+  w.t += dt;
+  const sp = Math.min(w.n, Math.floor(w.t * w.n / 2)); // 2초에 걸쳐 쏟아진다
+  if (w.boss && !w.boss.on && w.t >= 5) w.boss.on = true;
+  const alive = sp - w.killed, bOn = !!(w.boss && w.boss.on && w.boss.hp > 0), A = alive + (bOn ? 1 : 0);
+  if (A) {
+    const ue = upgEff(mpBotLv(b, w.r)), k = BOT_EFF * b.skill * dt;
+    let dm = 0, db = 0;
+    for (const u of b.units) {
+      const single = u.vis === 'sword' || u.vis === 'twin';
+      const dps = (u.dmg + upgPer(u) * fuseCount(u) * (u.hidden ? 2 * ue : ue)) / u.cd; // 에이스 = 상위 2종족 합산 (봇은 전 종족 같은 레벨)
+      let h = u.atk === 'pen' ? A : u.atk === 'boomerang' ? 1 + u.bounce * 0.6 : (u.splash > 0 && !single) ? 1 + u.splash / 26 : 1 + u.pierce * 0.5 + u.shards * u.shardFrac * 2;
+      h = Math.min(h, A) * (u.vis === 'flame' ? 0.7 : 1); // 화염 사거리 96은 소환장 한가운데에 못 닿는다
+      const d = dps * h * k;
+      if (!bOn) { dm += d; continue; }
+      const s = !alive ? 1 : u.atk === 'pen' ? 1 / A : single ? 0.5 : Math.max(1 / A, 0.2); // 보스 몫 (단검 계열 = 보석 브레이커 ×2)
+      db += d * s * (single ? 2 : 1); dm += d * (1 - s);
+    }
+    if (dm) { w.dmg = Math.min(w.dmg + dm, sp * w.hp); w.killed = Math.min(sp, Math.floor(w.dmg / w.hp + 1e-9)); }
+    if (db) w.boss.hp = Math.max(0, w.boss.hp - db);
+  }
+  if (sp === w.n && w.killed === w.n && (!w.boss || (w.boss.on && w.boss.hp <= 0))) w.clearT = w.t;
+}
+function mpBotWaveEnd(b) { // 내 웨이브가 끝났다 = 봇 결과 확정. 내가 먼저 깼으면 봇의 남은 시계(90초까지)를 빨리감기 (방 시계 대기 연출은 단계 C)
+  const w = b.wave;
+  if (!w) return;
+  while (!w.clearT && w.t < WAVE_TIME) mpBotStep(b, w, BOT_STEP);
+  const boss = !!(w.boss && w.boss.hp > 0), n = w.n - w.killed + (boss ? 1 : 0);
+  b.leak[w.r] = { n, boss, clearT: w.clearT ? Math.round(w.clearT * 10) / 10 : 0 }; // 단계 C 습격대 입력 (지금은 기록·표시만)
+  if (n) b.upgBonus++;
+  if (n && b === MP.bot) logMsg(`🤖 P${b.seat + 1} R${w.r} — ${boss ? '보스' + (n > 1 ? ` + ${n - 1}마리` : '') : n + '마리'} 놓침`); // 누수 표시 = 로그 1줄 (시뮬 mpBotSim의 봇은 제외 · 습격대는 단계 C)
+  b.wave = null; b.snapT = -1;
+}
+function mpBotTick() { // 내 페이즈를 따른다: poker 진입 = 딜 · wave 진입 = (미소환이면 소환) + 소환장 배정 · wave 이탈 = 누수 확정
+  const b = MP.bot;
+  if (!b || !S || !S.multi) return;
+  const dt = b.t == null ? 0 : Math.max(0, Math.min(0.5, S.time - b.t));
+  b.t = S.time;
+  const ph = S.phase === 'wave' ? 'wave' : S.phase === 'poker' ? 'poker' : 'over', r = S.round;
+  if (b.ph === 'wave' && (ph !== 'wave' || r !== b.rnd)) mpBotWaveEnd(b);
+  if (ph === 'poker' && (b.ph !== 'poker' || r !== b.rnd)) mpBotDeal(b, r);
+  if (ph === 'wave' && (b.ph !== 'wave' || r !== b.rnd)) {
+    if (!b.hand || b.hand.rnd !== r) mpBotDeal(b, r);
+    mpBotSummon(b);
+    mpKingJudge(b, r); // 👑 포커 → 전투 전환 = 판정 시점 (두 패 모두 확정)
+    b.wave = mpBotWaveNew(b, r); b.acc = 0;
+  }
+  if (ph !== b.ph || r !== b.rnd) b.snapT = -1;
+  b.ph = ph; b.rnd = r;
+  if (ph === 'poker' && !b.summoned && (b.thinkT -= dt) <= 0) mpBotSummon(b);
+  if (ph === 'wave' && b.wave) for (b.acc += dt; b.acc >= BOT_STEP; b.acc -= BOT_STEP) mpBotStep(b, b.wave, BOT_STEP);
+  if (b.snapT < 0 || S.time - b.snapT >= 0.25) mpBotSnap(b); // 4Hz (실플레이어 v/{seat} 주기와 같게)
+}
+function mpBotSim(rounds, seed, skill) { // 봇 단독 빠른 시뮬 (보정·하네스용 — S·MP 무접촉): 라운드마다 딜 → 즉시 소환 → 90초 웨이브 → 누수
+  const b = mpBotNew(1, mulberry32(seed | 0)), out = [];
+  if (skill != null) b.skill = skill;
+  for (let r = 1; r <= rounds; r++) {
+    mpBotDeal(b, r); mpBotSummon(b);
+    b.wave = mpBotWaveNew(b, r);
+    mpBotWaveEnd(b);
+    const L = b.leak[r];
+    out.push({ r, leak: L.n, boss: L.boss, clearT: L.clearT, units: b.units.length, lv: mpBotLv(b, r) });
+  }
+  return out;
+}
+// ── 스냅샷 MP.snap[seat] = 7장 v/{seat}의 로컬 객체판:
+//   { v, seat, rnd, ph, t, b:{건물 최소}, cen:[{mat, shape, golden, boss, n, hp(분율 버킷 0~15)}],
+//     u:[{nid, x, y, tier, race, flag(1 = 공격 중), pose(8방향 0~7 = 오른쪽부터 시계방향)}], sig:{nid: {tier, race, hero, super, hiddenId, ace(0/1 에이스/2 슈퍼에이스), miner, keyLabel}} }
+const MP_DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+function mpDirIdx(ax, ay) { // faceDir와 같은 8분할 (tan22.5° = 0.414)
+  const adx = Math.abs(ax), ady = Math.abs(ay);
+  let dx = adx > ady * 0.414 ? (ax >= 0 ? 1 : -1) : 0, dy = ady > adx * 0.414 ? (ay >= 0 ? 1 : -1) : 0;
+  if (!dx && !dy) dx = ax >= 0 ? 1 : -1;
+  return MP_DIRS.findIndex(d => d[0] === dx && d[1] === dy);
+}
+function mpBotSlot(i, n, fight) { // 봇 기지 안 진형: 소환장 울타리(아트 포함 y 152~343) 아래 3줄 × 14 — 전투 중엔 소환장 쪽으로 약간 전진
+  // 43기+ = 아래 3줄을 18기로 넓히고 오른쪽으로 68 민다(왼쪽 성 x≤253 · 오른쪽 광산 x≥832 사이) → 54기까지 아래에 · 그 이상만 위 3줄 (리뷰 B-VIS-4: 위 넘침 줄이 이름표와 겹쳤다)
+  const wide = n > 42, per = wide ? 18 : 14, low = per * 3;
+  if (i < low) {
+    const row = Math.floor(i / per), cnt = Math.min(per, n - row * per);
+    return { x: (wide ? CX + 68 : CX) + (i % per - (cnt - 1) / 2) * 28, y: 392 + row * 28 - (fight ? 10 : 0) };
+  }
+  const j = i - low, row = Math.floor(j / 14), cnt = Math.min(14, n - low - row * 14);
+  return { x: CX + (j % 14 - (cnt - 1) / 2) * 28, y: 112 - Math.min(2, row) * 28 + (fight ? 6 : 0) };
+}
+function mpTagY(n) { // 이름표 글자 바닥(로컬 y): 기본 = 소환장 울타리 바로 위 · 위 넘침 줄(55기+)이 있으면 맨 위 넘침 줄 머리 위로
+  const over = Math.min(3, Math.ceil((n - (n > 42 ? 54 : 42)) / 14));
+  return over > 0 ? Math.max(24, 112 - (over - 1) * 28 - 60) : 122;
+}
+function mpBotCensus(w) {
+  if (!w) return [];
+  const sp = Math.min(w.n, Math.floor(w.t * w.n / 2)), out = [], idx = {};
+  const front = w.killed < sp ? 1 - (w.dmg - w.killed * w.hp) / w.hp : 1; // 처치 진행 중인 맨 앞 몹의 남은 HP 분율
+  for (let i = w.killed; i < sp; i++) {
+    const key = w.mats[i] * 2 + w.gold[i];
+    let g = idx[key];
+    if (!g) { g = idx[key] = { mat: w.mats[i], shape: w.shape, golden: w.gold[i], boss: 0, n: 0, hp: 0 }; out.push(g); }
+    g.n++; g.hp += i === w.killed ? front : 1;
+  }
+  for (const g of out) g.hp = Math.round(g.hp / g.n * 15);
+  if (w.boss && w.boss.on && w.boss.hp > 0) out.push({ mat: 0, shape: w.r > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(w.r / 10)), golden: 0, boss: 1, n: 1, hp: Math.max(1, Math.round(w.boss.hp / w.boss.max * 15)) });
+  return out;
+}
+function mpBotSnap(b) {
+  const fight = b.ph === 'wave' && !!b.wave && !b.wave.clearT && b.wave.t < WAVE_TIME, n = b.units.length, u = [], sig = {};
+  b.units.forEach((x, i) => {
+    const p = mpBotSlot(i, n, fight);
+    u.push({ nid: x.nid, x: p.x, y: p.y, tier: x.tier, race: x.race, flag: fight ? 1 : 0, pose: mpDirIdx(CX - p.x, CY - p.y) });
+    sig[x.nid] = { tier: x.tier, race: x.race, hero: x.hero ? 1 : 0, super: x.super ? 1 : 0, hiddenId: '', ace: x.superAce ? 2 : x.hidden ? 1 : 0, miner: 0, keyLabel: x.keyLabel };
+  });
+  MP.snap[b.seat] = { v: 1, seat: b.seat, rnd: b.rnd, ph: b.ph, t: S.time, b: { mineLayer: 1, minePct: 100, hunt: 1, anyIn: 0, tribute: 0, portalA: 0, duel: 0, graves: 0 },
+    cen: mpBotCensus(b.wave), u, sig };
+  b.snapT = S.time;
+}
+// ==================== 👻 고스트 렌더러 drawGhostQuad(seat, lod) (3-4·3-5) — 스냅샷만 읽는다 ====================
+// 유닛 = 전신 정지 포즈 스프라이트(bakeGhostSprite에서 회백색화를 뺀 것 — 다리 포함, unitSprites와 분리된 LRU) + 진영색 링
+// 몹 = 센서스 재생: (mat, shape, golden, boss)별 수만큼 시드 고정 공전체 — 수가 줄면 팝 링, 늘면 자라며 등장. 렌더 경로에 Math.random 없음
+// 앵커(CX·CY)는 방향별로 민다 (OX·OY) — 오른쪽·아래를 볼 때 무기가 캔버스 밖으로 잘리지 않게 (리뷰 B-VIS-5: 10-05 실측 최대 범위 = 좌우 62 · 위 65 · 아래 62, 전 등급·영웅·슈퍼영웅·에이스 × 8방향 × 공격 포즈)
+const MP_GS = { W: 112, H: 130, CX: 56, CY: 70, MAX: 64, BUDGET: 4, OX: [-7, -4, 0, 4, 7, 0, 0, 0], OY: [0, 0, -3, 0, 0, 0, 0, 0] }; // 논리 px (본체 1.5배 + 무기 여유) · 캐시 상한 · 프레임당 베이크 상한 (리뷰 PERF-2)
+const mpGsCache = new Map();
+function mpSigFake(sg, dir, atk) {
+  const f = sg.hero ? mpHeroObj(sg.tier, sg.race, 1, !!sg.super) : mpUnitObj(sg.tier, sg.race, sg.ace > 0, 14, sg.ace === 2);
+  const d = MP_DIRS[dir] || MP_DIRS[6];
+  f.keyLabel = sg.keyLabel;
+  if (sg.keyLabel === 'B') f.weapon = '빽 ' + f.weapon;
+  f.x = MP_GS.CX + (MP_GS.OX[dir] || 0); f.y = MP_GS.CY + (MP_GS.OY[dir] || 0); f.aimX = f.x + d[0] * 100; f.aimY = f.y + d[1] * 100;
+  f.walk = 0; f.moving = false; f.cool = 0; f.atkAnim = atk ? 0.5 : 0; f.jx = 0; f.jy = 0; f.selected = false; // 공격 포즈 = 반동·스윙 중간값 (리뷰 B-VIS-3)
+  return f;
+}
+function mpGsKey(sg, dir, atk) { return [sg.tier, sg.race, sg.hero, sg.super, sg.ace, sg.hiddenId, sg.keyLabel, dir, atk ? 1 : 0, RS > 1 ? 2 : 1].join('|'); }
+function mpGhostSprite(sg, dir, atk) { // → { c, foot, cx, cy } (cx·cy = 캔버스 안 발 중심 앵커)
+  const k = RS > 1 ? 2 : 1, key = mpGsKey(sg, dir, atk);
+  let e = mpGsCache.get(key);
+  if (e) { mpGsCache.delete(key); mpGsCache.set(key, e); return e; } // LRU: 최근 사용을 뒤로
+  const f = mpSigFake(sg, dir, atk), c = document.createElement('canvas');
+  c.width = MP_GS.W * k; c.height = MP_GS.H * k;
+  const old = ctx;
+  ctx = c.getContext('2d');
+  try {
+    ctx.scale(k, k);
+    ctx.translate(f.x, f.y); ctx.scale(1.5, 1.5); ctx.translate(-f.x, -f.y); // drawUnit과 같은 1.5배 본체
+    const B = bodyShape(f);
+    ctx.fillStyle = 'rgba(0,0,0,0.13)'; ctx.beginPath(); ctx.ellipse(f.x, f.y + B.h / 2 + 6, B.w * 0.55, 4, 0, 0, Math.PI * 2); ctx.fill();
+    drawUnitCore(f, 0, f.aimX >= f.x ? 1 : -1);
+    drawHeadgear(f, f.y - B.h / 2 - 1);
+    drawUnitArm(f);
+    e = { c, foot: (B.h / 2 + 6) * 1.5, cx: f.x, cy: f.y };
+  } finally { ctx = old; }
+  if (mpGsCache.size >= MP_GS.MAX) mpGsCache.delete(mpGsCache.keys().next().value);
+  mpGsCache.set(key, e);
+  return e;
+}
+function mpGhostState(seat) {
+  return MP.ghost[seat] || (MP.ghost[seat] = { rnd: -1, seq: 0, orbs: [], pos: new Map(), pops: [], fx: [], fxT: 0, fxK: 0, t: null, snap: null, order: null,
+    syncSnap: null, byMat: null, keys: null, sps: null, last: new Map(), k: 0 }); // syncSnap = 수 맞추기를 한 스냅샷 · byMat = L2 재질별 묶음 · keys/sps = 스냅샷당 스프라이트 키·참조 · last = nid별 직전 스프라이트 (베이크 상한으로 밀린 유닛의 대역)
+}
+function mpOrb(seat, rnd, i, c, gk, t) {
+  const rng = mulberry32((seat * 7919 + rnd * 131 + i * 17) | 0);
+  return { gk, mat: c.mat, golden: c.golden, boss: c.boss, shape: c.shape, hp: c.hp, t0: t, x: CX, y: CY, born: 0,
+    ang: rng() * 6.283, baseR: c.boss ? rng() * 16 : 12 + rng() * 57, phase: rng() * 6.283, spin: (rng() < 0.5 ? -1 : 1) * (0.15 + rng() * 0.35) };
+}
+function mpGhostSync(seat, vis, lod) { // 센서스 ↔ 공전체 수 맞추기(스냅샷이 바뀔 때만) + 위치 (L0·L1로 보일 때 매 프레임 · L2(전체 보기) 10Hz · 화면 밖이면 스냅샷 주기 4Hz — 미니맵 점도 이 위치, 리뷰 PERF-1·3)
+  const sn = MP.snap[seat], g = mpGhostState(seat), t = S.time;
+  if (g.rnd !== sn.rnd) { g.rnd = sn.rnd; g.seq = 0; g.orbs = []; g.pops = []; g.fx = []; g.syncSnap = null; g.byMat = null; }
+  if (g.syncSnap === sn) { if (vis && (lod < 2 || !(t - g.posT >= 0 && t - g.posT < 0.1))) mpOrbPos(g, t); return; }
+  g.syncSnap = sn; g.byMat = null;
+  const want = {}, have = {};
+  for (const c of sn.cen) want[c.mat + '|' + c.shape + '|' + c.golden + '|' + c.boss] = c;
+  for (const o of g.orbs) have[o.gk] = (have[o.gk] || 0) + 1;
+  let pops = 0;
+  for (let i = g.orbs.length - 1; i >= 0; i--) {
+    const o = g.orbs[i], c = want[o.gk];
+    if (have[o.gk] <= (c ? c.n : 0)) { o.hp = c.hp; continue; }
+    have[o.gk]--; g.orbs.splice(i, 1);
+    if (sn.ph === 'wave' && vis && pops < 6 && g.pops.length < 24) { pops++; g.pops.push({ x: o.x, y: o.y, t0: t, c: o.boss ? '#ffd166' : MATERIALS[o.mat].col, r: o.boss ? 34 : 11 }); } // 처치 = 팝 (웨이브 끝 정리는 조용히)
+  }
+  for (const gk in want) for (let n = have[gk] || 0; n < want[gk].n; n++) g.orbs.push(mpOrb(seat, sn.rnd, g.seq++, want[gk], gk, t));
+  mpOrbPos(g, t);
+}
+function mpOrbPos(g, t) {
+  g.posT = t; g.posV = (g.posV || 0) + 1; // L2 공전체 레이어가 위치 판(posV)이 바뀔 때만 다시 그린다
+  const hw = PEN.w / 2 - 12, hh = PEN.h / 2 - 12;
+  for (const o of g.orbs) { // 소환장 공전 (update의 오빗과 같은 꼴 — 위치는 연출)
+    o.born = Math.min(1, Math.max(0, (t - o.t0) * 2.5));
+    const r = (20 + o.baseR * 0.85) * o.born, a = o.ang + o.spin * (t - o.t0);
+    o.x = Math.max(CX - hw, Math.min(CX + hw, CX + r * Math.cos(a) + 5 * Math.sin(t * 2.3 + o.phase)));
+    o.y = Math.max(CY - hh, Math.min(CY + hh, CY + r * Math.sin(a) + 5 * Math.cos(t * 2.1 + o.phase * 1.3)));
+  }
+}
+function drawGhostQuad(seat, lod) {
+  const sn = MP.snap[seat], g = mpGhostState(seat), q = MT.QUAD[seat], t = S.time, col = MT.PCOLS[seat];
+  const dt = g.t == null ? 0 : Math.max(0, Math.min(0.1, t - g.t));
+  g.t = t;
+  if (g.snap !== sn) { g.snap = sn; g.order = sn.u.slice().sort((a, b) => a.y - b.y); g.keys = null; } // 그리기 순서 = y 오름차순 (스냅샷당 1회)
+  ctx.save();
+  try {
+    mtQuadCtx(q);
+    // ① 소환장 몹
+    if (lod < 2) {
+      const mi = matInfo(Math.max(1, sn.rnd));
+      if (sn.rnd > FINAL_ROUND && g.orbs.length) { // 🔥 헬모드: 라이브 drawMonster의 몹별 붉은 기운 대신 소환장 전체에 같은 글로우 1장 (리뷰 B-VIS-2 — 몹 수와 무관한 drawImage 1회)
+        ctx.globalAlpha = Math.min(1, 0.35 + g.orbs.length / 30);
+        ctx.drawImage(glowSprite('hell', 'rgba(255,45,0,0.5)', 'rgba(255,45,0,0)'), CX - PEN.w * 0.7, CY - PEN.h * 0.75, PEN.w * 1.4, PEN.h * 1.5);
+        ctx.globalAlpha = 1;
+      }
+      for (const o of g.orbs) {
+        if (o.boss) {
+          drawMonster({ x: o.x, y: o.y, boss: true, shape: o.shape, born: 1, hitT: 0, hell: sn.rnd > FINAL_ROUND, rot: t * 0.8, phase: o.phase, mat: 0, esc: 0,
+            colorIdx: stageInfo(Math.max(1, sn.rnd)).ci, hp: o.hp, max: 15, golden: false, pullT: 0, burnT: 0, split: false, shield: 0, shieldMax: 0, sunBoss: false, small: false, entering: false });
+          continue;
+        }
+        const sp = matSprite(o.mat, o.mat === mi.idx ? Math.min(7, Math.floor(mi.p * 8)) : 0, !!o.golden, 0), s = o.born;
+        if (s > 0.05) sprBlit(sp, o.x - SPR_C * s, o.y - SPR_C * s, SPR * s);
+      }
+      for (let i = g.pops.length - 1; i >= 0; i--) { // 처치 팝: 재질색 링이 퍼지며 사라진다
+        const p = g.pops[i], a = (t - p.t0) / 0.3;
+        if (a >= 1 || a < 0) { g.pops.splice(i, 1); continue; }
+        ctx.globalAlpha = 1 - a; ctx.strokeStyle = p.c; ctx.lineWidth = 3 * (1 - a) + 0.5;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.6 + a), 0, 6.283); ctx.stroke();
+      }
+      ctx.globalAlpha = 1; ctx.lineWidth = 1;
+    } else {
+      g.pops.length = 0;
+      if (g.orbs.length) {
+        // 공전체 원(최대 ~200개)은 소환장 크기 오프스크린 레이어에 위치 판(10Hz)이 바뀔 때만 다시 그리고, 매 프레임은 drawImage 1회 (리뷰 PERF-1 — RS2 전체 보기에서 원 경로가 가장 컸다)
+        const M = 30, lx = CX - PEN.w / 2 - M, ly = CY - PEN.h / 2 - M, lw = PEN.w + M * 2, lh = PEN.h + M * 2, k = RS * MT.zoom;
+        const W = Math.ceil(lw * k), H = Math.ceil(lh * k);
+        let L = g.l2;
+        if (!L) L = g.l2 = { c: document.createElement('canvas'), v: -1 };
+        if (L.v !== g.posV || L.c.width !== W || L.c.height !== H || !g.byMat) {
+          if (!g.byMat) { // 재질별 묶음은 수 맞추기(스냅샷)가 바뀔 때만 다시 (리뷰 PERF-3)
+            g.byMat = {};
+            for (const o of g.orbs) (g.byMat[o.boss ? -1 : o.mat] = g.byMat[o.boss ? -1 : o.mat] || []).push(o);
+          }
+          if (L.c.width !== W || L.c.height !== H) { L.c.width = W; L.c.height = H; }
+          const lc = L.c.getContext('2d'), byMat = g.byMat, st = Math.max(1, Math.ceil(g.orbs.length / 90)); // 원은 최대 ~90개 (재질별로 같은 비율 표본 — 전체 보기에서 소환장은 화면 90×60px 덩어리라 200개와 구분이 안 되고, 겹친 원 경로가 비쌌다)
+          lc.setTransform(1, 0, 0, 1, 0, 0); lc.clearRect(0, 0, W, H); lc.setTransform(k, 0, 0, k, -lx * k, -ly * k);
+          for (const m in byMat) { // 재질색별 path fill 1회
+            const r0 = m < 0 ? 26 : matSpriteSz(+m) * 0.8, os = byMat[m];
+            lc.fillStyle = m < 0 ? '#ffd166' : MATERIALS[m].col; lc.beginPath();
+            for (let i = 0; i < os.length; i += m < 0 ? 1 : st) { const o = os[i], r = r0 * Math.max(0.2, o.born); lc.moveTo(o.x + r, o.y); lc.arc(o.x, o.y, r, 0, 6.283); }
+            lc.fill();
+          }
+          L.v = g.posV;
+        }
+        ctx.drawImage(L.c, lx, ly, lw, lh);
+      }
+    }
+    // ② 유닛 — 진영색 링(L0)은 경로 하나로 모아 스트로크 1회, 그 위에 스프라이트
+    for (const su of g.order) {
+      let p = g.pos.get(su.nid);
+      if (!p) { p = { x: su.x, y: su.y }; g.pos.set(su.nid, p); }
+      else { const e = Math.min(1, dt * 5); p.x += (su.x - p.x) * e; p.y += (su.y - p.y) * e; } // 진형 이동은 부드럽게 (4Hz 스냅샷 사이 보간 대신)
+    }
+    if (lod === 2) {
+      ctx.beginPath();
+      for (const su of g.order) { const p = g.pos.get(su.nid); ctx.moveTo(p.x + 8, p.y); ctx.arc(p.x, p.y, 8, 0, 6.283); }
+      ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2; ctx.stroke(); // 흰 테두리 — P2 파랑이 물풍선 파랑에 묻히지 않게
+    } else {
+      // 스프라이트 키·참조는 스냅샷(4Hz)·RS 배율이 바뀔 때만 다시 푼다 (리뷰 PERF-3) · 화면 밖 유닛은 굽지도 그리지도 않는다 ·
+      // 새로 구울 키는 프레임당 MP_GS.BUDGET장까지 (리뷰 PERF-2 — 첫 보기·재배치 때 전 유닛 동기 베이크 46~153ms 히치), 밀린 유닛은 직전 스프라이트, 그것도 없으면 진영색 점
+      const kk = RS > 1 ? 2 : 1;
+      if (!g.keys || g.k !== kk) { g.k = kk; g.keys = g.order.map(su => mpGsKey(sn.sig[su.nid], su.pose, su.flag & 1)); g.sps = new Array(g.order.length).fill(null); }
+      const cam = MT.cam, va = mtToLocal(q, cam.x, cam.y), vb = mtToLocal(q, cam.x + mtViewW(), cam.y + mtViewH()), MG = 70;
+      const lx0 = Math.min(va.x, vb.x) - MG, lx1 = Math.max(va.x, vb.x) + MG, ly0 = Math.min(va.y, vb.y) - MG, ly1 = Math.max(va.y, vb.y) + MG;
+      let budget = MP_GS.BUDGET, dots = 0;
+      const dl = g.dl || (g.dl = []);
+      dl.length = 0;
+      g.order.forEach((su, i) => {
+        const p = g.pos.get(su.nid);
+        if (p.x < lx0 || p.x > lx1 || p.y < ly0 || p.y > ly1) return;
+        let e = g.sps[i];
+        if (!e) {
+          const hit = mpGsCache.has(g.keys[i]);
+          if (hit || budget > 0) { if (!hit) budget--; e = g.sps[i] = mpGhostSprite(sn.sig[su.nid], su.pose, su.flag & 1); g.last.set(su.nid, e); }
+          else e = g.last.get(su.nid);
+        }
+        if (e) dl.push(i); else dots++;
+        if (!e) return;
+        if (lod === 0) { if (dl.length === 1) ctx.beginPath(); const fy = p.y + e.foot - 3; ctx.moveTo(p.x + 14, fy); ctx.ellipse(p.x, fy, 14, 5.5, 0, 0, 6.283); }
+      });
+      if (lod === 0 && dl.length) { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); }
+      for (const i of dl) {
+        const su = g.order[i], p = g.pos.get(su.nid), e = g.sps[i] || g.last.get(su.nid);
+        ctx.drawImage(e.c, p.x - e.cx, p.y - e.cy, MP_GS.W, MP_GS.H);
+      }
+      if (dots) { // 아직 못 구운 유닛 (첫 보기 몇 프레임) = L2와 같은 진영색 점
+        ctx.beginPath();
+        g.order.forEach((su, i) => { const p = g.pos.get(su.nid); if (!g.sps[i] && !g.last.get(su.nid) && p.x >= lx0 && p.x <= lx1 && p.y >= ly0 && p.y <= ly1) { ctx.moveTo(p.x + 8, p.y); ctx.arc(p.x, p.y, 8, 0, 6.283); } });
+        ctx.fillStyle = col; ctx.fill();
+      }
+    }
+    ctx.lineWidth = 1;
+    if (g.pos.size > sn.u.length + 16) { const live = new Set(sn.u.map(u => u.nid)); for (const k of [...g.pos.keys()]) if (!live.has(k)) { g.pos.delete(k); g.last.delete(k); } }
+    // ③ 싸우는 느낌 (L0 전투 중만 — 0.12초마다 탄 1발, 동시 6발 상한): 유닛 → 공전체로 날아가 작은 섬광
+    if (lod === 0 && sn.ph === 'wave' && g.orbs.length && sn.u.length) {
+      for (g.fxT += dt; g.fxT >= 0.12; g.fxT -= 0.12) {
+        g.fxK++;
+        const su = sn.u[(g.fxK * 7) % sn.u.length], o = g.orbs[(g.fxK * 13) % g.orbs.length], p = g.pos.get(su.nid) || su;
+        if (su.flag & 1 && g.fx.length < 6) g.fx.push({ x0: p.x, y0: p.y - 10, o, t0: t });
+      }
+      for (let i = g.fx.length - 1; i >= 0; i--) {
+        const f = g.fx[i], a = (t - f.t0) / 0.22;
+        if (a >= 1 || a < 0) { g.fx.splice(i, 1); continue; }
+        const x = f.x0 + (f.o.x - f.x0) * Math.min(1, a / 0.7), y = f.y0 + (f.o.y - f.y0) * Math.min(1, a / 0.7);
+        if (a < 0.7) { ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 6.283); ctx.fill(); }
+        else { ctx.globalAlpha = (1 - a) / 0.3; ctx.fillStyle = '#ffe082'; ctx.beginPath(); ctx.arc(x, y, 4 + (a - 0.7) * 20, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
+      }
+    } else { g.fx.length = 0; g.fxT = 0; }
+  } finally { ctx.restore(); }
+}
+// ==================== 👑 단계 B2: 포커왕 (★★ v3 · 6-5) + 로스터 HUD ====================
+// · 판정 = 포커 → 전투 전환: mpBotTick의 전투 진입 분기(내 confirmHand 다음 첫 폴링 — 봇 패도 그때 확정).
+//   S.poker는 startPoker만 새로 만들므로 그 순간 S.poker.hands = 이번 라운드 내 패. 오프라인이라 away 없음 → 자동 소환도 자격.
+// · 라운드 키 멱등(MP.king.rnd) → 배속·자동 소환·부활 창·정지에도 라운드당 정확히 1회.
+// · 1등 = 칩 ¼ (나 = S.chips, 봇 = MP.bot.chips) · 완전 동점 = 공동 1등 모두 ¼.
+// · 공지 = 로그 1줄 + 로스터 아래 캔버스 배너 — 같은 순간 뜨는 DOM 토스트(에이스 rewardToast · A보너스 showMktToast)를 덮지 않게.
+function mpCmp(a, b) { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] - b[i]; return 0; }
+function mpKingWinners(cmps) { // 최고 cmp와 완전히 같은 자리 전부 (인덱스)
+  let best = cmps[0];
+  for (const c of cmps) if (mpCmp(c, best) > 0) best = c;
+  return cmps.map((c, i) => (mpCmp(c, best) === 0 ? i : -1)).filter(i => i >= 0);
+}
+function mpHandLabel(hr) { // 'Q 풀하우스' · 'B 빽스트레이트' · 더블 포커: '♠♠ 7 원페어'(슈퍼에이스) · '♠ Q 원페어'(에이스) · 'K 트리플 + 5 원페어'(불일치)
+  const one = r => (r.bs ? 'B 빽스트레이트' : r.rank === 9 ? HAND_NAMES[9] : rankLabel(r.keyRank) + ' ' + HAND_NAMES[r.rank]);
+  const res = hr.res.slice().sort((a, b) => b.rank - a.rank || b.keyRank - a.keyRank);
+  if (res.length < 2) return one(res[0]);
+  return hr.tier ? (hr.tier === 2 ? '♠♠ ' : '♠ ') + one(res[0]) : one(res[0]) + ' + ' + one(res[1]);
+}
+function mpKingJudge(b, r) {
+  if (!S.poker || !S.poker.hands.length || (MP.king && MP.king.rnd === r)) return;
+  const me = S.multi.me, seats = [me, b.seat], hrs = [handResult(S.poker.hands), b.hand.hr];
+  const win = mpKingWinners(hrs.map(h => h.cmp)).map(i => seats[i]), labels = {};
+  seats.forEach((s, i) => { labels[s] = mpHandLabel(hrs[i]); });
+  MP.king = { rnd: r, win, labels }; MP.rosterC = null;
+  // TODO(단계 C): 더블 포커 라운드(r % 5 === 0)의 1등은 칩 ¼ 대신 골드티켓 (★★ v3 10-04) — 지금은 같은 ¼
+  if (win.includes(me)) S.chips += 0.25;
+  if (win.includes(b.seat)) b.chips += 0.25;
+  const head = `👑 R${r} ${win.length > 1 ? '공동 ' : ''}포커왕 — ${win.map(s => (s === me ? '나' : 'P' + (s + 1))).join(' · ')} · ${labels[win[0]]}`, tail = ' (+¼🪙)', text = head + tail;
+  MP.kingMsg = { text, head, tail, t0: performance.now(), mine: win.includes(me), fit: null, w: 0, rs: 0, c: null };
+  logMsg(text);
+  needRedraw = true;
+}
+function mpFitText(s, w) { // 폭 w를 넘으면 말줄임 (현재 ctx.font 기준 — 판정이 바뀔 때만 부른다)
+  if (ctx.measureText(s).width <= w) return s;
+  let t = s;
+  while (t.length > 1 && ctx.measureText(t + '…').width > w) t = t.slice(0, -1);
+  return t + '…';
+}
+function mpDrawHud() { // 화면 공간: 로스터(진영색 점 · P1 나 / P2 🤖 · 직전 판정 족보 · 👑) + 포커왕 배너. 미니맵(좌상단) 오른쪽 — 레일 미니맵이면 좌상단
+  const F = IS_MOBILE ? 15 : 13, LH = F + 6, M = mpMM(), x0 = mmDomActive() ? 10 : M.x + M.w + 14, y0 = 10, k = MP.king;
+  ctx.save();
+  ctx.font = `bold ${F}px sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  let C = MP.rosterC;
+  if (!C || C.rs !== RS) { // 글자 측정·그리기는 판정·진입·RS 변경 때만 — 오프스크린에 1회 굽고 매 프레임 drawImage 1회 (리뷰 PERF-1 ① — 이모지 fillText가 프레임당 0.24~0.48ms였다)
+    const rows = [S.multi.me].concat(MP.bot ? [MP.bot.seat] : []).map(s => {
+      const name = 'P' + (s + 1) + (s === S.multi.me ? ' 나' : ' 🤖'), crown = !!(k && k.win.includes(s)), nw = ctx.measureText(name).width;
+      const lbl = k && k.labels[s] ? mpFitText(k.labels[s], 230 - nw - (crown ? 22 : 0)) : '';
+      return { s, name, nw, lbl, lw: lbl ? ctx.measureText(lbl).width : 0, crown };
+    });
+    C = MP.rosterC = { rows, w: Math.max(...rows.map(r => 16 + r.nw + (r.lbl ? 8 + r.lw : 0) + (r.crown ? 22 : 0))), rs: RS };
+    C.bw = C.w + 10; C.bh = rows.length * LH + 6;
+    C.c = mpHudBake(C.bw, C.bh, g => { // 원점 = 판 왼쪽 위 (x0 - 4, y0 - 3)
+      g.font = `bold ${F}px sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
+      g.fillStyle = 'rgba(14,10,26,0.78)'; mpRRect(g, 0, 0, C.bw, C.bh, 6); g.fill();
+      rows.forEach((r, i) => {
+        const y = 3 + i * LH + LH / 2;
+        g.fillStyle = MT.PCOLS[r.s]; g.beginPath(); g.arc(10, y, 4.5, 0, 6.283); g.fill();
+        g.fillStyle = '#fff'; g.fillText(r.name, 20, y);
+        if (r.lbl) { g.fillStyle = '#ffe9a8'; g.fillText(r.lbl, 28 + r.nw, y); }
+        if (r.crown) g.fillText('👑', 24 + r.nw + (r.lbl ? 8 + r.lw : 0), y);
+      });
+    });
+  }
+  ctx.drawImage(C.c, x0 - 4, y0 - 3, C.bw, C.bh);
+  const m = MP.kingMsg;
+  if (m) { // 포커왕 배너: 4초(실시간), 끝 0.8초 페이드 — 로스터 바로 아래 (모바일 = 미니맵 아래: 전투 시작 티커 토스트가 상단 가운데를 덮는다)
+    const a = (performance.now() - m.t0) / 4000, BF = IS_MOBILE ? 14 : 13;
+    if (a >= 1 || a < 0) MP.kingMsg = null;
+    else {
+      if (!m.fit || m.rs !== RS) { // 보상 꼬리 ' (+¼🪙)'는 항상 붙이고 앞부분(족보)만 말줄임 (리뷰 B-VIS-1 — 데스크톱 300px에서 더블 라운드 20%가 보상 표기째 잘렸다)
+        ctx.font = `bold ${BF}px sans-serif`;
+        const tail = m.tail || '', tw = tail ? ctx.measureText(tail).width : 0;
+        m.fit = mpFitText(m.head != null ? m.head : m.text, 380 - tw) + tail; m.w = ctx.measureText(m.fit).width; m.rs = RS;
+        m.bw = m.w + 14; m.bh = BF + 10;
+        m.c = mpHudBake(m.bw, m.bh, g => {
+          g.font = `bold ${BF}px sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
+          g.fillStyle = m.mine ? 'rgba(122,78,8,0.92)' : 'rgba(14,10,26,0.86)'; mpRRect(g, 0, 0, m.bw, m.bh, 6); g.fill();
+          g.fillStyle = '#ffd166'; g.fillText(m.fit, 7, m.bh / 2);
+        });
+      }
+      const mob = IS_MOBILE && !mmDomActive(), bx = mob ? M.x + 4 : x0, by = mob ? M.y + M.h + 10 : y0 + C.rows.length * LH + 8;
+      ctx.globalAlpha = Math.min(1, a * 16, (1 - a) * 5);
+      ctx.drawImage(m.c, bx - 4, by, m.bw, m.bh);
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.restore();
+}
+function mpHudBake(w, h, paint) { // 화면 공간 HUD 조각을 RS배 오프스크린에 굽는다 (논리 px 좌표로 paint)
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  c.width = Math.ceil(w * RS); c.height = Math.ceil(h * RS);
+  g.scale(RS, RS); paint(g);
+  return c;
+}
+function mpRRect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function mpDrawNameTag(q, crown, n) { // 상대 진영 이름표 (월드 공간 — 소환장 울타리 바로 위, 화면 글자 크기 일정. 기지 윗변은 화면 위 시계·토스트에 가린다)
+  // 화면 15px 글자를 (문구, RS)별로 오프스크린에 1회 굽고 매 프레임 drawImage 1회 (리뷰 PERF-1 ② — 이모지 strokeText·fillText가 프레임당 0.2~0.3ms였다). 줌은 그리는 크기로만
+  let T = MP.tagC;
+  if (!T || T.crown !== crown || T.seat !== q.i || T.rs !== RS) {
+    const text = (crown ? '👑 ' : '') + '🤖 P' + (q.i + 1), F = 15, LW = 4.2, c = document.createElement('canvas'), g = c.getContext('2d');
+    g.font = `bold ${F}px sans-serif`;
+    const w = Math.ceil(g.measureText(text).width + LW * 2 + 4), h = F + Math.ceil(LW * 2) + 6;
+    c.width = Math.ceil(w * RS); c.height = Math.ceil(h * RS);
+    g.scale(RS, RS); g.font = `bold ${F}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = LW; g.lineJoin = 'round'; g.strokeStyle = 'rgba(20,14,34,0.8)'; g.strokeText(text, w / 2, h / 2);
+    g.fillStyle = '#fff'; g.fillText(text, w / 2, h / 2);
+    T = MP.tagC = { crown, seat: q.i, rs: RS, c, w, h };
+  }
+  const s = 1 / Math.max(0.4, MT.zoom), w = T.w * s, h = T.h * s;
+  ctx.drawImage(T.c, q.ox + CX - w / 2, q.oy + mpTagY(n) - 7.5 * s - h / 2, w, h); // 글자 바닥 = mpTagY (넘침 줄이 있으면 그 위)
 }
 // ── 진입·나가기
 function mpStart(n, opts) {
@@ -14146,10 +14718,12 @@ function mpStart(n, opts) {
   document.body.classList.add('mpMode');
   MP.pad = mpPads(mpQ());
   MP.keys = {}; MP.pinch = null; MP.touchLock = false; MP.mmDrag = false; MP.world = null;
+  MP.king = null; MP.kingMsg = null; MP.rosterC = null; MP.tagC = null; // 👑 판정·배너·로스터·이름표 캐시 (재시작 이월 방지)
+  MP.bot = mpBotNew(1); MP.snap = {}; MP.ghost = {}; MP.ghostErr = false; // 🤖 P2 봇 — 첫 mpBotTick이 R1 패를 받는다 (reset()의 startPoker는 S.multi 전이라 훅 대신 폴링)
   mpHomeView();
   if (!MP.wheelBound) { cv.addEventListener('wheel', mpWheel, { passive: false }); MP.wheelBound = true; } // 상시 passive:false 휠은 싱글 스크롤 히트테스트 비용 — 데모 중에만
   try { mpBakeWorld(); } catch (e) { console.error('mp world bake', e); } // 첫 프레임 히치 대신 진입 클릭 시점에
-  logMsg('🤖 2인 데모 — 상대 진영은 아직 비어 있어요');
+  logMsg('🤖 2인 데모 — 아래 진영은 P2 봇이에요');
 }
 function mpLeave() { // reset()의 resetTransientUI가 'dpd:resetui'로 부른다 — 🚪 나가기·다시하기·게임오버 경로 공통
   MP.on = false;
@@ -14157,6 +14731,8 @@ function mpLeave() { // reset()의 resetTransientUI가 'dpd:resetui'로 부른�
   if (MP.wheelBound) { cv.removeEventListener('wheel', mpWheel); MP.wheelBound = false; }
   MP.fc = null; MP.fctx = null; MP.fieldM = null; MP.world = null; // 캔버스 메모리 반환
   MP.keys = {}; MP.pinch = null; MP.touchLock = false; MP.mmDrag = false; MP.mouse.in = false; MP.lockMsg = null;
+  MP.bot = null; MP.snap = {}; MP.ghost = {}; mpGsCache.clear(); // 🤖 봇·스냅샷·고스트 스프라이트 메모리 반환
+  MP.king = null; MP.kingMsg = null; MP.rosterC = null; MP.tagC = null;
   MT.zoom = 1;
 }
 window.addEventListener('dpd:resetui', () => { if (MP.on) mpLeave(); });
