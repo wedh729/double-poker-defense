@@ -8487,7 +8487,7 @@ function m3Rect(m, x0, y0, w, h, padTop) { // 안뜰 매핑 그림의 베이크 
   return [l - 2, t - padTop, m.w * kx + 4, m.h * ky + padTop + 2];
 }
 if (MAPART_V3) {
-  const kick = () => { const go = () => { for (const id of ['camp_castle', 'upgrade_portal', 'enemy_portal', 'altar', 'arena', 'pen_plank', 'mine', 'miner_road', ...M3_ORES]) m3Load(id); };
+  const kick = () => { const go = () => { for (const id of ['camp_castle', 'upgrade_portal', 'enemy_portal', 'altar', 'arena', 'pen_plank', 'mine', 'miner_road', ...M3_ORES]) m3Load(id, id === 'miner_road' ? im => { if (im) { sbWorldBake = null; mtWorldBake = null; } } : null); }; // 흙길이 오면 지면 베이크 무효화 — 풀맵 배경 전 대체 베이크에 구워진 이전 흙길 테두리가 새 흙길 밑으로 비치지 않게
     if (window.requestIdleCallback) requestIdleCallback(go, { timeout: 1500 }); else setTimeout(go, 200); };
   if (document.readyState === 'complete') kick(); else addEventListener('load', kick);
 }
