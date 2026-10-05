@@ -10738,9 +10738,11 @@ function issueAttack(px, py) {
     if (Math.hypot(m.x - px, m.y - py) < (m.sunBoss ? 95 : m.boss ? (IS_MOBILE ? 48 : 32) : (IS_MOBILE ? 30 : 15))) { hitM = m; break; }
   }
   if (hitM) {
-    sel.forEach(u => { if (u.miner || (hitM.lane && mpNoAim(u, hitM))) return; if (duelLocked(u)) { duelLockFloat(u); return; } u.forceTarget = hitM; u.attackMine = false; u.amove = false; });
+    let nCmd = 0; // 🤖 실제로 명령을 받은 유닛 수 (레인 개체 로그용)
+    sel.forEach(u => { if (u.miner || (hitM.lane && mpNoAim(u, hitM))) return; if (duelLocked(u)) { duelLockFloat(u); return; } u.forceTarget = hitM; u.attackMine = false; u.amove = false; nCmd++; });
+    if (hitM.lane && !nCmd) return; // 🤖 레인 개체인데 받은 유닛이 없으면(탱크·핵폭탄만 선택 등) 이펙트·로그 생략 — 싱글(레인 없음)은 그대로
     S.effects.push({ type:'boom', x: hitM.x, y: hitM.y, r: 18, t: 0.25 });
-    logMsg(`🎯 집중 공격 명령! (${sel.length}기)`);
+    logMsg(`🎯 집중 공격 명령! (${hitM.lane ? nCmd : sel.length}기)`);
     return;
   }
   // 빈 땅 클릭 → 어택땅 (이동하다 적 만나면 교전)
@@ -11114,7 +11116,7 @@ function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 
 // 10-06 유저: 상태창 이름 = 족보 + 등급 ('원페어 (K)') — 무기 이름은 그림으로 보이니 뺀다. 등급은 u.weapon 문자열이 아니라 플래그로 판정 (이름 붙이는 경로가 6곳)
 // 히든 영웅·아이템은 이름이 정체성이라 u.weapon 그대로 · 빽스트레이트는 keyLabel 'B'(confirmHand에서만 붙는다)
 function unitShortName(u) {
-  if (u.miner) return { name: u.exc ? '굴착기' : u.sminer ? '슈퍼 광부' : u.hminer ? '히든 광부' : '광부', grade: '' };
+  if (u.miner) return { name: u.exc ? '굴착기' : u.xminer ? '히어로 광부' : u.sminer ? '슈퍼 광부' : u.hminer ? '히든 광부' : '광부', grade: '' };
   if (u.item || isHiddenCombo(u)) return { name: u.weapon, grade: '' };
   const grade = u.hero ? (u.ace ? '에이스 ' : '') + (u.super ? '슈퍼영웅' : '영웅') : u.superAce ? '슈퍼에이스' : u.hidden ? '에이스' : '';
   return { name: (!grade && u.keyLabel === 'B' ? '빽' : '') + HAND_NAMES[u.tier], grade };
