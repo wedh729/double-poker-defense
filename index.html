@@ -3019,6 +3019,10 @@ html body #unitInfo.ui-panel .ui-rate[data-tier] { display: inline-block; paddin
 html body #unitInfo.ui-panel .ui-rate[data-tier="unit"] { background: #1d5b38; color: #e3ffec; }
 html body #unitInfo.ui-panel .ui-rate[data-tier="hero"] { background: #8a2f3a; color: #ffe6e9; }
 html body #unitInfo.ui-panel .ui-rate[data-tier="super"] { background: #5c0d1c; color: #ffd9df; }
+/* ⑥ 10-06 유저: 특성 칩 (관통×2 · 팅김×3 · 광역…) — 공속·킬 줄(.ui-spd) 끝에 이어 붙임, 자리가 모자라면 칩 묶음째 다음 줄. 테두리 대신 inset 그림자(높이 불변)
+   칩 높이 12px < 공속 줄 줄높이(PC 15.4 · 모바일 13.65) — 같은 줄에 들어가면 패널 높이 증가 0 */
+html body #unitInfo.ui-panel .ui-traits { display: inline-flex; flex-wrap: wrap; gap: 2px 3px; margin-left: 5px; vertical-align: middle; }
+html body #unitInfo.ui-panel .ui-trait { padding: 0 4px; border-radius: 5px; background: var(--ui-mid); box-shadow: inset 0 0 0 1px var(--ui-line); color: var(--ui-text); font-size: 9.5px; line-height: 12px; font-weight: 600; white-space: nowrap; }
 </style>
 <style id="dpd-objinfo-host">
 /* 10-05 유저 요청: 건물·몬스터 정보창(#objInfo)도 유닛 상태창(GPT 인디고 ② 진한 인디고 유리)과 같은 계열로 — 토큰 값은 unitinfo.css와 동일
@@ -3419,6 +3423,10 @@ const MINER_LOAD = 60;           // 배달 1회 기본 골드. 채굴량 성장�
 //    겹 파괴마다 배달액 영구 상승 → 수급 증가. 인과가 '투자→단계→수급' 하나로 통일된다.
 const DIG_RATE = 30;             // 광부가 캐는 동안 광산 체력 감소/초
 const MINER_MAX_LV = 5;          // 광부 업그레이드 최대 레벨
+// 🚜 굴착기 (10-06 유저: 슈퍼 광부는 그대로, 그 다음 단계 새 유닛) — 배수는 일반 광부 대비. 채굴·배달 ×6은 유저 결정 대기 (여기 한 곳만 바꾸면 된다)
+const EXC_MOVE = 3, EXC_DIG = 6, EXC_DELIVER = 6;
+const EXC_CYCLE = 1.1;           // 파기(팔 들기) → 내려찍기 한 주기(초)
+const EXC_FOOT = 14;             // 궤도 바닥선 = u.y + 14 (광부 발끝 u.y+15와 같은 줄 — 갓길 위에 선다)
 const PEN = { x: CX, y: CY, w: 198, h: 132 }; // 몬스터 소환장 울타리 (2026-08-09 유저: 화면 부족+몹 30% 축소에 맞춰 25% 축소. 264×176 → 198×132 — 밀집도 ↑79%라 광역 유닛 실효 상승 주의)
 const ALTAR = { x: CX - PEN.w/2 - 58, y: CY, w: 64, h: 78 }; // 🪨 제물대: 소환장 왼쪽. 하이카드를 바쳐 투석기 완성
 const PLANK_W = 48, PLANK_DEPTH = 12; // 🪵 나무판자: 소환장 중앙 하단 발판. 폭 48(2기 낑김), 깊이 12(짧게) — 유닛이 올라가 소환장 안을 직접 타격
@@ -4209,7 +4217,7 @@ function spawnMiner() {
 }
 // 광부 채굴 사이클: 광산에서 5초 캐고 → 광물을 들고 집으로 → 배달 시 골드
 function updateMiner(u, dt) {
-  const spdMul = u.sminer ? 3 : (u.hminer ? 1.6 : 1);
+  const spdMul = u.exc ? EXC_MOVE : u.sminer ? 3 : (u.hminer ? 1.6 : 1);
   u.speed = MINER_SPEED * (1 + 0.25 * S.minerMoveLv) * spdMul;
   if (u.mjob === 'toMine') {
     u.tx = MINE_POS.x - 36 + u.jx * 0.35; u.ty = MINE_POS.y + 26 + u.jy * 0.2; // 광산 서쪽 갓길에 선다 (y≈474 도로 위)
@@ -4221,6 +4229,7 @@ function updateMiner(u, dt) {
     }
   } else if (u.mjob === 'mine') {
     u.tx = u.x; u.ty = u.y;
+    if (u.exc) excDig(u, dt); // 🚜 굴착기: 파기↔내려찍기 + 채굴 추가분 (아래 공용 곡괭이 줄은 ×1로 그대로 돈다)
     u.swing = 0.3; // 곡괭이질 유지
     u.pkT = (u.pkT || 0) + dt;
     if (u.pkT >= 0.55) { u.pkT = 0; sfx('pick'); } // 곡괭이 타격음 (전역 스로틀로 여러 광부여도 과하지 않음)
@@ -4249,10 +4258,10 @@ function updateMiner(u, dt) {
     // (60이던 시절 오프셋 큰 광부는 목표에 서고도 배달을 못 하고 광물을 든 채 영영 멈춰 있었다 — toMine 74와 같은 병)
     if (Math.hypot(HOUSE.x - u.x, HOUSE.y - u.y) < 76) {
       // 배달액 = 기본 60 + 광산 겹 보너스 — 레벨·라운드 배수 없음. 성장 축은 오직 광산 단계 (스노우볼 구조)
-      const dep = Math.round((MINER_LOAD + S.mineBonus) * (u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1));
+      const dep = Math.round((MINER_LOAD + S.mineBonus) * (u.exc ? EXC_DELIVER : u.sminer ? 3 : u.hminer ? 3 : 1) * ((S.eventMods && S.eventMods.deliverMul) || 1));
       S.gold += dep;
       S.minerGold = (S.minerGold || 0) + dep; // ⛏️ 누적 광부 수입 (통계 표시용 — 2026-08-11 유저)
-      addFloat(HOUSE.x, HOUSE.y - 34, `+${dep}G`, (u.sminer || u.hminer) ? '#c9a227' : '#b8860b', 1.1);
+      addFloat(HOUSE.x, HOUSE.y - 34, `+${dep}G`, (u.sminer || u.hminer || u.exc) ? '#c9a227' : '#b8860b', 1.1);
       sfx('coin');
       if (u.carryTicket) { // 🎟️ 광산에서 발굴해 이고 온 재변경권 지급 — 수급이 광부 수·이속·슈퍼에 비례하는 스노우볼 축
         u.carryTicket = false;
@@ -4265,6 +4274,22 @@ function updateMiner(u, dt) {
       u.carry = false; u.mjob = 'toMine';
     }
   }
+}
+// 🚜 굴착기 채굴 한 틱 — 포즈는 시뮬 상태(⏩배속 서브스텝·일시정지와 같이 간다). 그림은 drawExcavator가 u.excPose만 읽는다
+function excDig(u, dt) {
+  S.mineHp -= DIG_RATE * (1 + 0.4 * S.minerMineLv) * (EXC_DIG - 1) * dt; // + 공용 곡괭이 줄의 ×1 = ×EXC_DIG
+  u.pkT = 0; // 곡괭이 '톡톡'은 생략 (공용 줄이 0.55초를 못 채움) — 대신 내려찍을 때 '쿵'
+  u.excT = (u.excT || 0) + dt;
+  const slam = u.excT % EXC_CYCLE >= EXC_CYCLE * 0.55;
+  if (slam && u.excPose !== 'slam') { // 내려찍는 순간 1회: 흙먼지 + 묵직한 타격음 (sfx 전역 스로틀 80ms)
+    sfx('thud');
+    const bx = u.x + (MINE_POS.x >= u.x ? 1 : -1) * 32, by = u.y + EXC_FOOT - 2;
+    for (let i = 0; i < 7; i++) {
+      const a = -Math.PI * (0.15 + Math.random() * 0.7), v = 30 + Math.random() * 50;
+      S.parts.push({ x: bx + (Math.random() * 10 - 5), y: by, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0.45, r: 2 + Math.random() * 2.2, c: i % 2 ? '#a1887f' : '#8d6e63' });
+    }
+  }
+  u.excPose = slam ? 'slam' : 'dig';
 }
 // 업그레이드 레벨당 공격력 보너스 — 다수 타격 유닛은 대폭 축소(밸런스)
 // 단일 +3 / 스플래쉬 +0.6 / 소환장 전체타격(탱크·핵) +0.3
@@ -6375,12 +6400,12 @@ function huntRewardDef(stage) {
     // 기한(CROWN_DEADLINE) 뒤에 열리면 아이템 대신 곧바로 강제 대관식 (판정은 개봉 시점의 라운드 — R20에 깬 광석이 R21에 열려도 기한 밖 왕관이 남지 않게)
     ['👑', '왕관!', () => { if (S.crownDropped) S.gold += 500; else { S.crownDropped = true; if (S.round > CROWN_DEADLINE) casTimeout(() => openCrownModal(true), 1900); else spawnItemUnit('crown'); } }, '#e6a817'],
     ['⛏️', '광부 +1명', () => spawnMiner(), '#8a6d1f'],
-    ['✨', '굴착기!', () => spawnSuperMiner(), '#ff9800'], // 10-05 유저: 슈퍼광부 → 굴착기 (표기만 — 그림은 GPT 통일 아트 때)
+    ['✨', '슈퍼 광부!', () => spawnSuperMiner(), '#ff9800'],
     ['📑', '복사권 +1', () => S.items.copier++, '#5b48d0'],
     ['🎟️', '재변경권 +1', () => S.items.reroll++, '#c0392b'],
     ['🏹', '원페어 영웅 유닛!', () => spawnHero(1, RACE_OF_RANK[1], CX-40, CY+155, 1), '#43a047'],
     ['⚔️', '전 종족 +3Lv', () => S.upg = S.upg.map(v => v + 3), '#43a047'],
-    ['📑✨', '복사권×2 + 굴착기', () => { S.items.copier += 2; spawnSuperMiner(); }, '#5b48d0'],
+    ['📑✨', '복사권×2 + 슈퍼광부', () => { S.items.copier += 2; spawnSuperMiner(); }, '#5b48d0'],
     // 💎 다이아(9단계): 상위 족보 에이스 직접 지급 → 뽑기권 2장으로 교체 (08-16 유저 — 제물대 개봉 재미 + 뽑기권 시스템 일원화)
     ['👑', '에이스 뽑기권 + 영웅 뽑기권!', () => { spawnItemUnit('gachaAce'); spawnItemUnit('gachaHero'); }, '#e91e8c'],
     ['🌟', '슈퍼영웅 강림!!', () => { const t = Math.floor(Math.random()*10); spawnHero(t, RACE_OF_RANK[t], CX-40, CY+155, 1.5, true); }, '#ff6b9d'],
@@ -6423,7 +6448,16 @@ function spawnSuperMiner() {
   spawnMiner();
   const m = S.units[S.units.length - 1];
   m.sminer = true; m._us = null; // 이동·배달 3배 (색이 바뀌므로 스프라이트 참조 캐시 무효화)
-  addFloat(m.x, m.y - 26, '✨ 굴착기!', '#ff9800', 2);
+  addFloat(m.x, m.y - 26, '✨ 슈퍼 광부!', '#ff9800', 2);
+}
+// 🚜 굴착기 (10-06) — 획득 경로는 광물 보상 개편 때 유저가 정한다. 지금은 샌드박스 버튼만
+const EXCART = { img: null, req: false }; // 시트 1장(336×98 = 이동·파기·내려찍기 112×98씩, 게임 크기 56×49) — 첫 등장 때만 받는다 (첫 로드 0바이트)
+function spawnExcavator() {
+  if (!EXCART.req) { EXCART.req = true; const im = new Image(); im.onload = () => { EXCART.img = im; }; im.src = 'assets/excavator.webp?v=1'; }
+  spawnMiner();
+  const m = S.units[S.units.length - 1];
+  m.exc = true; m.excPose = 'move';
+  addFloat(m.x, m.y - 40, '🚜 굴착기!', '#ff9800', 2);
 }
 // ==================== 🩸 히든 영웅 제물 승급 (자기 레시피 계열 유닛을 바쳐 강화, 최대 2단계) ====================
 const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단련 담당) — needs: 제단 위 제물 [{tier, hero?, n}]
@@ -6536,7 +6570,7 @@ function drawMutter() {
   ctx.save(); ctx.globalAlpha = Math.max(0, a);
   ctx.font = '10.5px sans-serif';
   const w = ctx.measureText(txt).width + 14, h = 18;
-  let bx = u.x - w / 2, by = u.y - 52; // 머리 위
+  let bx = u.x - w / 2, by = u.y - (u.exc ? 66 : 52); // 머리 위 (🚜 굴착기는 몸이 커서 더 위 — 이고 가는 재변경권도 안 가리게)
   bx = Math.max(4, Math.min(936 - w, bx)); by = Math.max(4, by);
   ctx.fillStyle = 'rgba(255,255,255,0.96)';
   roundRect(bx, by, w, h, 8); ctx.fill();
@@ -7947,9 +7981,9 @@ function draw() {
     ctx.fillText('⏸', PEN.x, PEN.y - PEN.h/2 - 8); ctx.textAlign = 'left';
   }
   if (S.stimT > 0) { ctx.fillStyle = '#43a047'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign='center'; ctx.fillText(`💉 스팀팩 ${Math.ceil(S.stimT)}초`, CX, 20); ctx.textAlign='left'; }
-  // 유닛
-  for (const u of S.units) { // 🌀 분신은 반투명 + 보라 잔광으로 본체와 구분
-    if (u.grabbed) continue; // 🖐️ 집힌 유닛은 맨 위에 (루프 뒤에서)
+  // 유닛 — 2번 돈다: 🚜 굴착기(몸 56px)를 먼저 깔고 나머지를 위에 (리뷰 EXC-1: 늦게 생긴 굴착기가 광산 앞 광부를 덮던 것). 굴착기가 없으면 그리는 순서는 예전과 같다
+  for (let pass = 0; pass < 2; pass++) for (const u of S.units) { // 🌀 분신은 반투명 + 보라 잔광으로 본체와 구분
+    if (u.grabbed || !!u.exc !== (pass === 0)) continue; // 🖐️ 집힌 유닛은 맨 위에 (루프 뒤에서)
     const rec = /바주카/.test(u.weapon || '') ? (u.atkAnim || 0) : 0; // 🚀 바주카 반동: 발사 순간 몸이 뒤로 뒤뚱
     const sq = u.dropT > 0 ? Math.sin(u.dropT / 0.3 * Math.PI) * 0.22 : 0; // 🖐️ 툭 착지: 발을 기준으로 납작해졌다 튀어오르는 스쿼시 — drawUnit이 몸통에만 적용 (사거리·선택 링은 그대로)
     if (rec > 0.05) {
@@ -9642,7 +9676,7 @@ function drawUnit(u, sq) { // sq: 🖐️ 착지 스쿼시(0~0.22) — 몸통 �
     ctx.beginPath(); ctx.arc(u.x, u.y, rr, 0, Math.PI*2); ctx.stroke();
     ctx.setLineDash([]);
     ctx.strokeStyle = '#8effa8'; ctx.lineWidth = 2.4;                     // 발밑 선택 링도 밝게
-    ctx.beginPath(); ctx.ellipse(u.x, u.y + 15, 13, 5, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(u.x, u.y + 15, u.exc ? 27 : 13, u.exc ? 7 : 5, 0, 0, Math.PI*2); ctx.stroke(); // 🚜 굴착기는 궤도 길이(37)만큼
     ctx.lineWidth = 1;
     // 이동 목적지
     if (u.moving) {
@@ -9651,6 +9685,7 @@ function drawUnit(u, sq) { // sq: 🖐️ 착지 스쿼시(0~0.22) — 몸통 �
       ctx.setLineDash([]);
     }
   }
+  if (u.exc) { drawExcavator(u); return; } // 🚜 몸 전체가 그림 1장 — 1.5배 확대·몸통 베이크·안전모·팔·곡괭이를 타지 않는다
   // 유닛 본체는 1.5배 확대 (사거리/선택 표시는 원본 크기 유지)
   ctx.save();
   if (sq) { const fy = u.y + bodyShape(u).h / 2 * 1.5; ctx.translate(u.x, fy); ctx.scale(1 + sq, 1 - sq); ctx.translate(-u.x, -fy); } // 발을 기준으로 납작→튐
@@ -9713,6 +9748,41 @@ function drawUnit(u, sq) { // sq: 🖐️ 착지 스쿼시(0~0.22) — 몸통 �
   drawUnitArm(u);
   ctx.restore();
   ctx.textAlign = 'left';
+}
+// 🚜 굴착기: 시트 프레임 0 이동 · 1 파기(팔 들기) · 2 내려찍기 — 세 장이 같은 캔버스·같은 궤도 바닥선이라 프레임만 바꿔 찍으면 맞물린다
+//    기준점 = 궤도 가운데(그림 x 18) — 좌우 반전해도 몸이 튀지 않는다. 목적지 크기 56×49 명시 (소스 112×98 → RS2 1:1, RS1 ½)
+function drawExcavator(u) {
+  const mining = u.mjob === 'mine';
+  const fx = mining ? (MINE_POS.x >= u.x ? 1 : -1) : u.moving ? (u.tx >= u.x ? 1 : -1) : (u.excFace || 1); // 캘 땐 광산 쪽 (광부는 소환장 쪽을 본다)
+  u.excFace = fx;
+  const fr = mining ? (u.excPose === 'slam' ? 2 : 1) : 0;
+  const bob = u.moving ? -Math.round(Math.abs(Math.sin(u.walk * 0.9))) * 0.8 : 0; // 궤도 덜컹 (2단)
+  ctx.fillStyle = 'rgba(0,0,0,0.16)';
+  ctx.beginPath(); ctx.ellipse(u.x + fx * 4, u.y + EXC_FOOT, 26, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.save(); ctx.translate(u.x, u.y + EXC_FOOT + bob); if (fx < 0) ctx.scale(-1, 1);
+  if (EXCART.img) ctx.drawImage(EXCART.img, fr * 112, 0, 112, 98, -18, -47, 56, 49);
+  else { // 그림 받기 전·실패: 노란 차체 + 궤도 + 팔 (에러 없이)
+    ctx.fillStyle = '#3a3a40'; roundRect(-18, -11, 37, 11, 5); ctx.fill();
+    ctx.fillStyle = '#f2b51c'; roundRect(-15, -30, 28, 19, 4); ctx.fill();
+    ctx.strokeStyle = '#f2b51c'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(10, -24); ctx.lineTo(26, -16); ctx.lineTo(30, -4); ctx.stroke(); ctx.lineWidth = 1;
+  }
+  if (u.carry && !u.carryTicket && !mining) { // 배달 중: 버킷 입구(≈ x24~36, y-17)에 흙 + 광석 두 알
+    ctx.fillStyle = '#6d4c41'; ctx.beginPath(); ctx.ellipse(30, -15.5, 6.5, 3, 0, Math.PI, 0); ctx.fill();
+    for (const [gx, gy] of [[27.5, -17.5], [32, -18.5]]) {
+      ctx.fillStyle = '#3fd0e0'; ctx.beginPath();
+      ctx.moveTo(gx, gy - 3); ctx.lineTo(gx + 2.2, gy); ctx.lineTo(gx, gy + 2); ctx.lineTo(gx - 2.2, gy); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#1a9aa8'; ctx.stroke();
+    }
+  }
+  ctx.restore();
+  if (u.carryTicket) { // 🎟️ 재변경권: 안전모 위에 이고 간다 (광부 티켓과 같은 그림)
+    ctx.save(); ctx.translate(u.x + fx * 6, u.y + EXC_FOOT - 45);
+    ctx.fillStyle = '#e0525e'; roundRect(-7, -5, 14, 10, 2); ctx.fill();
+    ctx.strokeStyle = '#a83240'; ctx.lineWidth = 1; roundRect(-7, -5, 14, 10, 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.setLineDash([1.5, 1.5]);
+    ctx.beginPath(); ctx.moveTo(0, -4.5); ctx.lineTo(0, 4.5); ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  }
 }
 // ==================== 유닛 코어 (망토·다리·몸통·라벨·모자) — 스프라이트 베이크 대상 ====================
 // 🚀 2026-08-08 최적화: 이 블록이 draw 시간의 ~65%였다 (유닛 수 × 그라데이션 생성 × fillText, 매 프레임).
@@ -10595,6 +10665,13 @@ window.addEventListener('keydown', e => {
 });
 // 모바일은 손가락이 부정확 → 히트박스 확대 (데스크톱 값은 그대로 유지)
 const HIT_R = IS_MOBILE ? 40 : 22;
+function hitR(u) { return u.exc ? Math.max(HIT_R, 32) : HIT_R; } // 🚜 굴착기는 몸(56×49)이 커서 버킷·궤도 끝을 눌러도 잡히게 — PC만 22→32 (모바일 40은 이미 덮음, 더 키우면 광산 클릭을 가로챔)
+// 클릭·더블클릭 공용 유닛 판정 — 전투 유닛 우선, 없으면 광부 (유령 통과로 겹쳤을 때 광부·굴착기가 클릭을 가로채지 않게)
+function unitAt(x, y) {
+  for (const u of S.units) if (!u.miner && Math.hypot(u.x - x, u.y - y) < HIT_R) return u;
+  for (const u of S.units) if (u.miner && Math.hypot(u.x - x, u.y - y) < hitR(u)) return u;
+  return null;
+}
 function issueAttack(px, py) {
   const sel = S.units.filter(u => u.selected);
   if (!sel.length) return;
@@ -10792,9 +10869,7 @@ function pressEnd() {
     S.units.forEach(u => u.selected = (u.x >= x0 && u.x <= x1 && u.y >= y0 && u.y <= y1));
     hideObjInfo();
   } else {
-    let hit = null; // 전투 유닛 우선, 없으면 광부 — 유령 통과로 겹쳤을 때 광부가 클릭을 가로채지 않게
-    for (const u of S.units) if (!u.miner && Math.hypot(u.x - drag.x0, u.y - drag.y0) < HIT_R) { hit = u; break; }
-    if (!hit) for (const u of S.units) if (u.miner && Math.hypot(u.x - drag.x0, u.y - drag.y0) < HIT_R) { hit = u; break; }
+    const hit = unitAt(drag.x0, drag.y0); // 전투 유닛 우선, 없으면 광부 — 유령 통과로 겹쳤을 때 광부가 클릭을 가로채지 않게
     S.units.forEach(u => u.selected = false);
     if (hit) { hit.selected = true; hideObjInfo(); }
     else {
@@ -10873,13 +10948,10 @@ cv.addEventListener('contextmenu', e => {
 });
 // 같은 종류 유닛 전체 부대지정 (스타크래프트식 더블클릭 / 모바일 더블탭 공용)
 function selectSameType(x, y) {
-  let hit = null;
-  for (const u of S.units) {
-    if (Math.hypot(u.x - x, u.y - y) < HIT_R) { hit = u; break; }
-  }
+  const hit = unitAt(x, y);
   if (!hit) return;
-  // 같은 종류 판정: 히든 유닛(조커 등)·아이템·에이스·슈퍼까지 구분 (기존엔 조커가 원페어 영웅과 같이 잡히던 버그)
-  const typeKey = v => v.item ? 'I' + v.item : (hiddenMeta(v) ? 'H' + hiddenMeta(v)[1] : [v.tier, !!v.hero, !!v.miner, !!v.hidden, !!v.ace, !!v.super].join('_'));
+  // 같은 종류 판정: 히든 유닛(조커 등)·아이템·에이스·슈퍼·🚜 굴착기까지 구분 (기존엔 조커가 원페어 영웅과 같이 잡히던 버그)
+  const typeKey = v => v.item ? 'I' + v.item : (hiddenMeta(v) ? 'H' + hiddenMeta(v)[1] : [v.tier, !!v.hero, !!v.miner, !!v.hidden, !!v.ace, !!v.super, !!v.exc].join('_'));
   const hk = typeKey(hit);
   S.units.forEach(u => u.selected = (typeKey(u) === hk));
   updateInfoPanel();
@@ -10978,6 +11050,36 @@ function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 
   if (wantRight) { el.style.left = 'auto'; el.style.right = '10px'; }
   else { el.style.right = 'auto'; el.style.left = '10px'; }
 }
+// 10-06 유저: 상태창 이름 = 족보 + 등급 ('원페어 (K)') — 무기 이름은 그림으로 보이니 뺀다. 등급은 u.weapon 문자열이 아니라 플래그로 판정 (이름 붙이는 경로가 6곳)
+// 히든 영웅·아이템은 이름이 정체성이라 u.weapon 그대로 · 빽스트레이트는 keyLabel 'B'(confirmHand에서만 붙는다)
+function unitShortName(u) {
+  if (u.miner) return { name: u.exc ? '굴착기' : u.sminer ? '슈퍼 광부' : u.hminer ? '히든 광부' : '광부', grade: '' };
+  if (u.item || isHiddenCombo(u)) return { name: u.weapon, grade: '' };
+  const grade = u.hero ? (u.ace ? '에이스 ' : '') + (u.super ? '슈퍼영웅' : '영웅') : u.superAce ? '슈퍼에이스' : u.hidden ? '에이스' : '';
+  return { name: (!grade && u.keyLabel === 'B' ? '빽' : '') + HAND_NAMES[u.tier], grade };
+}
+// 10-06 유저: 특성 줄 부활 (10-01 fc592b9에서 삭제됐던 목록) — 개수 ×N만 표기, 반경·%·쿨 초는 생략 (UI 미니멀)
+// 값은 유닛 필드 그대로 = 슈퍼·에이스·승급이 반영된 실효값 · 스킬 버튼이 따로 있는 시간정지·대박 폭격·견인·풀하우스 스킬은 칩 없음
+function unitTraits(u) {
+  const t = [];
+  if (u.atk === 'pen') t.push('소환장 전체 타격');
+  else if (u.vis === 'flame') t.push('화염');
+  else if ((u.vis === 'sword' || u.vis === 'twin') && !u.shogun) t.push('단일');
+  else if (u.splash) t.push('광역');
+  if (u.gamble) t.push((u.ascend || 0) >= 1 ? '🎲 2~6 팅김' : '🎲 1~6 팅김'); // 갬블러는 bounce 6 필드가 있어 팅김보다 먼저 본다 · 🩸승급1부터 주사위 최소 2 (리뷰 UI-P2-1)
+  else if (u.bounce) t.push(`팅김×${u.bounce}`);
+  if (u.pierce) t.push(`관통×${u.pierce}`);
+  if (u.shards) t.push(`파편×${u.shards}`);
+  if (u.atk === 'sniper') t.push('보스·광물 ×2');
+  if (u.junk) t.push('💰 주변 킬 골드↑');
+  if (u.quartet) t.push('📯 주변 공속↑');
+  if (u.execute) t.push('⚔️ 빈사 처형');
+  if (u.shogun) t.push('🔥 불타는 참격');
+  if (u.slot) t.push('🌈 캡슐↑'); // 리뷰 UI-P1-1: '무지개 캡슐↑'은 📯 버프 문구와 겹치면 칩이 둘째 줄로 내려가 PC 상한 220을 넘었다 (상한을 올리면 💰 자금운영 버튼과 겹침)
+  if (u.catapult) t.push('🪨 이동 불가');
+  if (!t.length) t.push('단일');
+  return t;
+}
 function updateInfoPanel() {
   const el = document.getElementById('unitInfo');
   const sel = S.units.filter(u => u.selected);
@@ -10990,7 +11092,7 @@ function updateInfoPanel() {
     el.dataset.kind = 'multi';
     // 부대 구성 요약 + 강화 가능 여부
     const comp = {};
-    sel.forEach(u => comp[u.weapon] = (comp[u.weapon] || 0) + 1);
+    sel.forEach(u => { const n = unitShortName(u), k = n.grade ? n.name + ' ' + n.grade : n.name; comp[k] = (comp[k] || 0) + 1; }); // 10-06: 짧은 이름 (키 카드는 빼서 K·Q가 한 묶음 — 예전 무기 이름 묶음과 같은 단위)
     const compStr = Object.entries(comp).map(([w, n]) => `${w} ×${n}`).join(', ');
     const byTier = {};
     sel.filter(u => !u.hidden && !u.hero && !u.miner).forEach(u => byTier[u.tier] = (byTier[u.tier] || 0) + 1);
@@ -11017,9 +11119,9 @@ function updateInfoPanel() {
   }
   const u = sel[0];
   if (u.miner) { // 광부: 종족 없음, 전투 불가 — 간단 정보만
-    const kind = u.sminer ? '✨ 굴착기' : u.hminer ? '✨ 히든 광부' : '광부';
+    const kind = u.exc ? '굴착기' : u.sminer ? '✨ 슈퍼 광부' : u.hminer ? '✨ 히든 광부' : '광부';
     el.dataset.kind = 'miner';
-    el.innerHTML = `<div class="ui-head"><b class="ui-name">⛏️ ${kind}</b></div>` +
+    el.innerHTML = `<div class="ui-head"><b class="ui-name">${u.exc ? '🚜' : '⛏️'} ${kind}</b></div>` +
       `<div class="ui-help">역할: 광산에서 캐서 <b>성</b>에 배달 (전투 불가)</div>` +
       `<div class="ui-help">이동속도: ${Math.round(u.speed)} · 💀 배달로 골드 획득</div>` +
       deselBtnHTML();
@@ -11035,15 +11137,15 @@ function updateInfoPanel() {
     wireDesel(el);
     return;
   }
-  // 10-01 저녁 유저: 상태창 컴팩트 — 특성 설명·사거리·공격 지정 버튼 삭제. 설명이 아닌 '상태'만 제목 줄 작은 배지로 남긴다
+  // 10-01 저녁 유저: 상태창 컴팩트 — 특성 설명·사거리·공격 지정 버튼 삭제. 설명이 아닌 '상태'만 제목 줄 작은 배지로 남긴다 (특성은 10-06 유저 지시로 칩으로 부활 — 공속·킬 줄 끝, 아래 trH)
   const badges = [];
   if (u.ascend) badges.push(`<b class="ui-badge" data-badge="ascend">🩸Lv.${u.ascend}</b>`);
   if (u.heroUpLv) badges.push(`<b class="ui-badge" data-badge="train">⭐Lv.${u.heroUpLv}</b>`);
   if (u.stone === 'lava') badges.push('<span class="ui-badge" data-badge="stone" title="용암 묻은 돌">🌋</span>'); // 🥚 획득 후에만 표시 (발견 전 힌트 없음)
   else if (u.stone === 'wet') badges.push('<span class="ui-badge" data-badge="stone" title="물먹은 돌">💧</span>');
   if (u.forceTarget) badges.push('<b class="ui-badge" data-badge="focus">🎯 집중</b>');
-  const keyTag = (u.miner || u.hero) ? '' : u.keyLabel + ' ';
-  const sub = u.miner ? '광부' : isHiddenCombo(u) ? '히든 영웅' : keyTag + HAND_NAMES[u.tier] + (u.hero ? ' 영웅' : '');
+  const nm = unitShortName(u);
+  const sub = isHiddenCombo(u) ? '히든 영웅' : nm.grade || u.keyLabel; // 10-06: 일반 = 키 카드 'K' · 그 밖 = 등급 (광부는 위에서 따로 return)
   const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = upgEff(top2[0]) + upgEff(top2[1]);
   const upFlat = isHiddenCombo(u) ? 0 : +(((u.hidden || u.ace) ? aceUp : upgEff(S.upg[u.race])) * upgPer(u) * fuseCount(u)).toFixed(1); // 히든 영웅은 종족 업글 미적용 (⭐ 단련으로 성장)
   const hmI = hiddenMeta(u);
@@ -11053,13 +11155,16 @@ function updateInfoPanel() {
     : (u.hidden || u.ace)
     ? `<div class="ui-race" data-race="ace" data-hidden=""><span class="ui-suit">♠ 에이스</span> · <span class="ui-race-note">상위 2종족 강화 +${upFlat}</span></div>`
     : `<div class="ui-race" data-race="${['dia', 'heart', 'club'][u.race]}" data-hidden=""><span class="ui-suit">${RACES[u.race].suit} ${RACES[u.race].name}</span> · <span class="ui-race-note">강화 Lv.${S.upg[u.race]}</span></div>`;
+  // 10-06 특성 칩은 가장 짧은 줄(공속·킬) 끝에 붙인다 — 따로 한 줄을 두면 모바일 풀하우스·스킬 버튼 유닛이 높이 상한(176)을 넘어 스크롤이 새로 생겼고,
+  //   종족 줄 끝은 히든 영웅 안내 문구가 길어 칩이 다음 줄로 밀렸다. 좁으면 칩 묶음째 다음 줄로
+  const trH = `<span class="ui-traits">${unitTraits(u).map(t => `<span class="ui-trait">${t}</span>`).join('')}</span>`;
   el.dataset.kind = isHiddenCombo(u) ? 'hidden' : u.hero ? (u.super ? 'super' : 'hero') : u.hidden ? 'ace' : 'unit';
   el.innerHTML =
-    `<div class="ui-head"><b class="ui-name">${u.hidden ? '♠ ' + u.weapon : u.weapon}</b> <span class="ui-sub">(${sub})</span>${badges.length ? ' <span class="ui-badges">' + badges.join('') + '</span>' : ''}</div>` +
+    `<div class="ui-head"><b class="ui-name">${nm.name}</b> <span class="ui-sub">(${sub})</span>${badges.length ? ' <span class="ui-badges">' + badges.join('') + '</span>' : ''}</div>` +
     raceLine +
     `<div class="ui-stat ui-atk">공격력 <b class="ui-num">${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? ` <span class="ui-crown">👑×${CROWN_RACE_MUL[S.crownRace].toFixed(2)}</span>` : ''}${isHiddenCombo(u) ? '' : ` <small class="ui-atk-base">(기본 ${(+u.dmg).toFixed(1)} +${upFlat})</small>`}</div>` +
     // 공속: 콰르텟 버프·히든 페널티 반영된 실제 값
-    `<div class="ui-stat ui-spd">공속 <b${(u.spdBuff || 1) < 1 ? ' class="ui-spd-up"' : ''}>${(1/effCd(u)).toFixed(1)}/초</b>${(u.spdBuff || 1) < 1 ? ' <span class="ui-buff">📯 +20%</span>' : ''} · 💀 <b id="ipKills">${u.kills || 0}</b>킬</div>` +
+    `<div class="ui-stat ui-spd">공속 <b${(u.spdBuff || 1) < 1 ? ' class="ui-spd-up"' : ''}>${(1/effCd(u)).toFixed(1)}/초</b>${(u.spdBuff || 1) < 1 ? ' <span class="ui-buff">📯 +20%</span>' : ''} · 💀 <b id="ipKills">${u.kills || 0}</b>킬${trH}</div>` +
     (u.miner ? '' : priorityRow(u.priority || 'near')) +
     (u.tier === 6 ? skillRow(u) : '') +
     (u.chrono ? chronoRow(u) : '') +
@@ -11614,7 +11719,7 @@ function renderShop() {
     const superAces = HAND_NAMES.map((n, t) => btn('sa' + t, `${n} 슈퍼에이스`)).join('');
     const hiddenKeys = Object.keys(HIDDEN_META);
     const hiddens = hiddenKeys.map(k => btn('hid_' + k, `${HIDDEN_META[k][0]} ${HIDDEN_META[k][1]}`)).join('');
-    const miners = btn('miner', '⛏️ 광부') + btn('sminer', '⛏️ 굴착기');
+    const miners = btn('miner', '⛏️ 광부') + btn('sminer', '⛏️ 슈퍼광부') + btn('exc', '🚜 굴착기');
     const itemKeys = ['timestop', 'stimpack', 'acid', 'bombard', 'revive', 'plank'];
     const items = itemKeys.map(k => btn('it_' + k, `${ITEM_META[k].icon} ${ITEM_META[k].name}`)).join('');
     const misc = btn('gold', '💰 골드 +100k') + btn('chip', '🪙 칩 +10');
@@ -11639,6 +11744,7 @@ function renderShop() {
       else if (v.startsWith('u')) spawnUnit(+v.slice(1), RACE_OF_RANK[+v.slice(1)], false, 14);
       else if (v === 'miner') spawnMiner();
       else if (v === 'sminer') spawnSuperMiner();
+      else if (v === 'exc') spawnExcavator();
       else if (v.startsWith('it_')) spawnItemUnit(v.slice(3));
       else if (v === 'gold') S.gold += 100000;
       else if (v === 'chip') S.chips += 10;
