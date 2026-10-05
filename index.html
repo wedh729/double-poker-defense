@@ -11092,7 +11092,7 @@ function heroUpRow(u) {
   if (lv >= HERO_UP_MAX) return `<br><span style="color:#c9971a;font-weight:bold">⭐ 단련 완료 (Lv.${HERO_UP_MAX} · 총 공격력 ×${(1 + 0.15 * HERO_UP_MAX).toFixed(1)})</span>`;
   const cost = heroUpCost(u), ok = S.gold >= cost;
   return `<br><button id="heroUpBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:6px;text-align:center;color:#c9971a;font-weight:bold">⭐ 영웅 단련 Lv.${lv}→${lv + 1} (총 공격력 +15%) — 💰${cost.toLocaleString()}G</button>` +
-    `<button id="heroUpGBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:4px;text-align:center;color:#8e44ad;font-weight:bold" title="같은 값 — 25% 확률로 3레벨, 실패 시 골드 소멸">🎯 도전 단련 (25% 확률 +3Lv) — 💰${cost}G</button>`;
+    `<button id="heroUpGBtn" class="shopBtn" ${ok ? '' : 'disabled'} style="margin-top:4px;text-align:center;color:#8e44ad;font-weight:bold" title="같은 값 — 성공하면 3레벨, 실패 시 골드 소멸">🎯 도전 단련 (+3Lv) — 💰${cost}G</button>`;
 }
 function heroTrain(u, gamble, perfect, skipRefresh) {
   const lv = u.heroUpLv || 0;
@@ -11407,9 +11407,9 @@ function upgItemsHTML() {
       <div class="rpgInfo"><b>${r.name}</b> 공격력 <span class="lv">Lv.${S.upg[i]}</span><br>
         <span class="desc">단일 +${(upgEff(S.upg[i])*2.5).toFixed(1)} · 스플래시 초당 +${(upgEff(S.upg[i])*0.55).toFixed(1)}/마리 · 전체 초당 +${(upgEff(S.upg[i])*0.15).toFixed(1)}/마리${S.upg[i] > 12 ? ' <b style="color:#c9971a">⚡가속!</b>' : ''}</span></div>
       <button class="rpgBuy" data-upg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''}>💰 ${S.upgCost[i]}G</button>
-      <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값으로 3레벨 도전 — 타이밍바 중앙에 맞추면 35%">🎯 ×3</button>
+      <button class="rpgBuy" data-gupg="${i}" ${S.gold < S.upgCost[i] ? 'disabled' : ''} style="background:linear-gradient(180deg,#e53935,#9b1c1c);color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.5)" title="같은 값으로 3레벨 도전 — 타이밍바 중앙을 노려요">🎯 ×3</button>
     </div>`).join('') +
-    '<div class="rpgGuide">🎯 <b>도전 강화</b>: 같은 값으로 <b>3레벨</b> 업그레이드 도전 — 타이밍바 중앙에 맞추면 확률 <b>35%</b></div>';
+    '<div class="rpgGuide">🎯 <b>도전 강화</b>: 같은 값으로 <b>3레벨</b> 업그레이드 도전 — 타이밍바 중앙을 노려요</div>';
 }
 function wireUpg(el) {
   el.querySelectorAll('[data-upg]').forEach(b => b.onclick = () => {
@@ -14397,16 +14397,16 @@ if (WORLD_MOTION_V2) (() => {
 
   // Keep wireUpg intact: its exact data attributes and .rpgItem anchor are retained.
   upgItemsHTML = function () {
-    const boosted = S.units.some(u => u.gamble), basic = boosted ? 30 : 20, perfect = boosted ? 45 : 35;
+    const boosted = S.units.some(u => u.gamble); // 10-05 유저: 성공률 숫자 표기 삭제 — 갬블러 가호 여부만
     return `<p class="v2-intro">같은 문양의 모든 유닛이 함께 강해져요.</p><div class="v2-upgrade-list">` + RACES.map((r, i) => {
       const lv = S.upg[i], cost = S.upgCost[i], can = S.gold >= cost;
       const current = upgEff(lv), next = upgEff(lv + 1);
       return `<article class="rpgItem v2-upgrade" style="--race:${r.color}">
         <div class="v2-upgrade-top"><span class="v2-suit" aria-hidden="true">${r.suit}</span><div class="v2-upgrade-name"><h3>${esc(r.name)} 공격력</h3><span>종족 전체 적용${lv > 12 ? ' · 가속 성장' : ''}</span></div><span class="v2-level">Lv.${lv}<span>→</span><b>${lv + 1}</b></span></div>
         <div class="v2-stat-grid"><div><span>단일 공격</span><b>+${(current*2.5).toFixed(1)}<i>→</i><strong>+${(next*2.5).toFixed(1)}</strong></b></div><div><span>스플래시 / 초·마리</span><b>+${(current*.55).toFixed(1)}<i>→</i><strong>+${(next*.55).toFixed(1)}</strong></b></div><div><span>전체 공격 / 초·마리</span><b>+${(current*.15).toFixed(1)}<i>→</i><strong>+${(next*.15).toFixed(1)}</strong></b></div></div>
-        <div class="v2-upgrade-actions"><span class="v2-cost-label">강화 비용<b>${gold(cost)}<small> G</small></b></span><button class="rpgBuy v2-upgrade-buy" data-upg="${i}" ${can ? '' : 'disabled'}><span>+1 강화</span><small>${can ? '확정 성장' : shortage(cost)}</small></button><button class="rpgBuy v2-gamble" data-gupg="${i}" ${can ? '' : 'disabled'} title="같은 비용으로 +3레벨 도전. 기본 ${basic}%, 중앙 명중 ${perfect}%. 실패 시 골드 소모."><span>+3 도전</span><small>${can ? '타이밍 도전' : shortage(cost)}</small></button></div>
+        <div class="v2-upgrade-actions"><span class="v2-cost-label">강화 비용<b>${gold(cost)}<small> G</small></b></span><button class="rpgBuy v2-upgrade-buy" data-upg="${i}" ${can ? '' : 'disabled'}><span>+1 강화</span><small>${can ? '확정 성장' : shortage(cost)}</small></button><button class="rpgBuy v2-gamble" data-gupg="${i}" ${can ? '' : 'disabled'} title="같은 비용으로 +3레벨 도전. 실패 시 골드 소모."><span>+3 도전</span><small>${can ? '타이밍 도전' : shortage(cost)}</small></button></div>
       </article>`;
-    }).join('') + `</div><div class="v2-note">${icon('shield')}<span><b>확정 강화 또는 +3레벨 도전</b>도전 성공률 ${basic}% · 타이밍 중앙 명중 시 ${perfect}%${boosted ? ' (갬블러 가호 포함)' : ''}. 실패해도 골드는 소모돼요.</span></div>`;
+    }).join('') + `</div><div class="v2-note">${icon('shield')}<span><b>확정 강화 또는 +3레벨 도전</b>타이밍 중앙을 노려요${boosted ? ' · 갬블러의 가호가 함께한다' : ''}. 실패해도 골드는 소모돼요.</span></div>`;
   };
   minerItemsHTML = function () {
     const n = S.units.filter(u => u.miner).length;
@@ -14624,8 +14624,8 @@ if (WORLD_MOTION_V2) (() => {
   }
   heroSectionHTML = function () {
     const heroes=shopHeroes(), seen=HIDDEN_DEX.filter(hd=>hiddenSeen(hd.id)).length;
-    const boosted=S.units.some(u=>u.gamble), basic=boosted?30:20, perfect=boosted?45:35;
-    return `<section class="roster-heroes"><div class="roster-hero-banner">${tile('crown','is-hero')}<div><span class="roster-kicker">조합으로 만나는 특별한 동료</span><h3>히든 영웅의 전당</h3><p>발견의 설렘, 함께하는 성장.</p></div><span class="roster-discovered"><b>${seen}<small>/${HIDDEN_DEX.length}</small></b>발견</span></div><div class="roster-section-head"><h3>우리 영웅 단련</h3><span>보유 ${heroes.length}기</span></div>${heroes.length?heroes.map(training).join(''):`<div class="roster-empty">${tile('star','is-empty')}<h4>아직 빈 영웅의 자리</h4><p>아래 도감의 이야기를 따라 조합을 발견해봐.<br>영웅을 만나면 이곳에서 단련할 수 있어.</p></div>`}${heroes.some(h=>(h.heroUpLv||0)<HERO_UP_MAX)?`<div class="roster-chance">${icon('star')}<span><b>+3 도전</b> 성공률 ${basic}% · 중앙 명중 ${perfect}%${boosted?' (갬블러 가호 포함)':''}<br>같은 단련 비용을 사용해요. 실패해도 골드는 소모돼요.</span></div>`:''}<div class="roster-section-head roster-dex-heading"><h3>${icon('book')}발견 도감</h3><span>아홉 영웅의 이야기</span></div><div class="roster-dex-grid">${HIDDEN_DEX.map((hd,index)=>{
+    const boosted=S.units.some(u=>u.gamble);
+    return `<section class="roster-heroes"><div class="roster-hero-banner">${tile('crown','is-hero')}<div><span class="roster-kicker">조합으로 만나는 특별한 동료</span><h3>히든 영웅의 전당</h3><p>발견의 설렘, 함께하는 성장.</p></div><span class="roster-discovered"><b>${seen}<small>/${HIDDEN_DEX.length}</small></b>발견</span></div><div class="roster-section-head"><h3>우리 영웅 단련</h3><span>보유 ${heroes.length}기</span></div>${heroes.length?heroes.map(training).join(''):`<div class="roster-empty">${tile('star','is-empty')}<h4>아직 빈 영웅의 자리</h4><p>아래 도감의 이야기를 따라 조합을 발견해봐.<br>영웅을 만나면 이곳에서 단련할 수 있어.</p></div>`}${heroes.some(h=>(h.heroUpLv||0)<HERO_UP_MAX)?`<div class="roster-chance">${icon('star')}<span><b>+3 도전</b> 타이밍 중앙을 노려요${boosted?' · 갬블러의 가호가 함께한다':''}<br>같은 단련 비용을 사용해요. 실패해도 골드는 소모돼요.</span></div>`:''}<div class="roster-section-head roster-dex-heading"><h3>${icon('book')}발견 도감</h3><span>아홉 영웅의 이야기</span></div><div class="roster-dex-grid">${HIDDEN_DEX.map((hd,index)=>{
       if(!hiddenSeen(hd.id)) return `<article class="roster-dex-card is-locked"><div class="roster-dex-top">${tile('lock')}<span class="roster-dex-no">${String(index+1).padStart(2,'0')}</span></div><h4>아직 만나지 못한 영웅</h4><span class="roster-dex-state">미발견</span><p class="roster-riddle">“${esc(hd.voice)}”</p></article>`;
       const owned=S.units.some(u=>u[HIDDEN_FLAG[hd.id]]);
       return `<article class="roster-dex-card ${owned?'is-owned':'is-found'}"><div class="roster-dex-top">${tile(hd.id,'is-hero')}<span class="roster-dex-no">${String(index+1).padStart(2,'0')}</span></div><h4>${esc(hd.name)}</h4><span class="roster-dex-state">${owned?'함께하는 중':'발견 완료 · 현재 미보유'}</span><p class="roster-ability">${esc(hd.desc)}</p><div class="roster-recipe"><span>조합법</span><b>${esc(hd.recipe)}</b></div></article>`;
