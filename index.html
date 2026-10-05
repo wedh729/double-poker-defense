@@ -29,6 +29,7 @@
 <!-- 자동 번역 끄기: 크롬 번역이 카드 알파벳(J/Q/K/A)을 "제이/큐/케이/에이"로 음역하는 문제 방지 -->
 <meta name="google" content="notranslate">
 <title>DPD</title>
+<link rel="preload" as="image" href="assets/title_logo.webp" type="image/webp" fetchpriority="high"><!-- 타이틀 로고 배지: 3천 줄 아래 img보다 먼저 받기 시작 (빈칸 깜빡임 방지) -->
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #f4f5f7; color: #333; font-family: 'Segoe UI', 'Malgun Gothic', sans-serif; display: flex; justify-content: center; padding: 10px; }
@@ -1077,19 +1078,11 @@ body.at-title #mobTabs { visibility: hidden; }
   padding: clamp(10px, 3vh, 32px) 0 0;
 }
 .title-brand { position: relative; }
-.title-kicker { font-size: 12px; letter-spacing: 4px; font-weight: 800; color: #244966; margin-bottom: 10px; }
-#startOverlay h2.title-logo {
-  font-size: clamp(40px, 6vw, 78px);
-  line-height: 1.01;
-  font-weight: 1000;
-  letter-spacing: -4px;
-  text-shadow: 0 4px 0 #16477c, 0 7px 0 rgba(28,77,114,.24);
-  color: #fffdf1;
-  -webkit-text-stroke: 1px #2164a0;
-  paint-order: stroke fill;
-}
-.title-logo span { display: block; color: #ffda5b; font-size: .88em; margin-top: 8px; letter-spacing: 8px; padding-left: 8px; }
-.title-tagline { display: inline-block; margin-top: 16px; font-size: 13px; font-weight: 700; color: #194066; background: rgba(248,253,255,.82); padding: 7px 16px; border-radius: 30px; }
+/* 10-05 로고 배지 이미지(assets/title_logo.webp 492×334) — 영문명은 배지 나무 배너 장식으로 대신하고(짧은 가로 모바일에선 작아 안 읽혀도 한글 제목은 읽힘) kicker는 스크린리더용으로만 */
+.title-kicker { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.title-logo img { display: block; margin: 0 auto; width: auto; aspect-ratio: 492 / 334; pointer-events: none;
+  height: min(27vh, 300px, calc((100vw - 40px) / 1.4731)); height: min(27dvh, 300px, calc((100vw - 40px) / 1.4731)); }
+.title-tagline { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 700; color: #194066; background: rgba(248,253,255,.82); padding: 7px 16px; border-radius: 30px; }
 .title-actions { display: flex; align-items: center; flex-direction: column; gap: 16px; width: min(100%, 520px); }
 .title-primary {
   min-height: 58px;
@@ -1193,8 +1186,7 @@ body.at-title #mobTabs { visibility: hidden; }
   #startOverlay { padding: max(16px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom)); }
   #startOverlay::before { background-position: 48% center; }
   #modeRow { padding-top: 24px; }
-  #startOverlay h2.title-logo { font-size: 52px; letter-spacing: -3px; }
-  .title-tagline { font-size: 11px; margin-top: 14px; }
+  .title-tagline { font-size: 11px; }
   .title-secondary { gap: 5px; }
   .title-link { padding: 9px 11px; font-size: 12px; }
   .title-link small { display: block; margin: 0; font-size: 10px; }
@@ -1219,10 +1211,7 @@ body.at-title #mobTabs { visibility: hidden; }
 @media (max-height: 560px) and (min-width: 651px) {
   #startOverlay { padding: 12px 20px; }
   #modeRow { padding: 0; }
-  .title-kicker { font-size: 10px; margin-bottom: 4px; }
-  #startOverlay h2.title-logo { font-size: 43px; }
-  .title-logo span { margin-top: 4px; }
-  .title-tagline { margin-top: 9px; padding: 4px 12px; font-size: 11px; }
+  .title-tagline { margin-top: 6px; padding: 4px 12px; font-size: 11px; }
   .title-actions { gap: 8px; }
   .title-primary { min-height: 46px; padding: 8px 28px; font-size: 17px; border-radius: 16px; }
   .title-secondary { gap: 8px; }
@@ -3173,7 +3162,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
   <div id="modeRow" style="display:flex">
     <header class="title-brand">
       <div class="title-kicker">DOUBLE POKER DEFENSE</div>
-      <h2 class="title-logo">더블 포커<span>디펜스</span></h2>
+      <h2 class="title-logo"><img src="assets/title_logo.webp" alt="더블 포커 디펜스" width="492" height="334" fetchpriority="high"></h2>
       <p class="title-tagline">한 장의 행운, 나만의 작은 군단.</p>
     </header>
     <div class="title-actions">
