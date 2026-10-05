@@ -7747,7 +7747,7 @@ function drawBackdrop() {
 // 🏛️ 결투장: 로마 콜로세움 (¾ 원근) — 회색 석재, 뒤쪽 관중석 2단 아케이드, 일부 붕괴, 앞은 관전용 개방
 function drawArena() {
   const { x, y, r } = ARENA;
-  const as = artSp('arena');
+  const as = M3.img.arena || artSp('arena'); // 🎨 V3 결투장이 있으면 같은 자리·같은 폭(r×2.25)
   if (as) { // 🎨 원형 결투장 에셋 (계단 없음 — 어디로든 들어간다)
     ctx.fillStyle = 'rgba(40,50,30,0.22)';
     ctx.beginPath(); ctx.ellipse(x + 4, y + r * 0.5, r * 1.02, r * 0.34, 0, 0, 6.28); ctx.fill();
@@ -8465,14 +8465,40 @@ function bakedLayer(key, x0, y0, w, h, drawFn) {
 }
 function drawBarrack() { // 울타리·라벨 전부 정적 — 통째로 베이크 (키 = 아트 로드 여부)
   const b = PEN;
+  if (FENCEART.v3) { const r = m3Rect(FENCEART.meta, b.x - b.w / 2, b.y - b.h / 2, b.w, b.h, 22); bakedLayer('barrack|g', r[0], r[1], r[2], r[3], drawBarrackRaw); return; } // 🎨 V3 울타리: 그림 크기에서 베이크 사각 계산 (위 22 = 라벨 글리프)
   bakedLayer('barrack|' + (FENCEART.img ? 'f' : artSp('fence') ? 'a' : 'v'), b.x - b.w / 2 - 30, b.y - b.h / 2 - 58, b.w + 60, b.h + 94, drawBarrackRaw); // 위 여백 58 — 통짜 울타리 라벨(y0-40)의 글리프 상단이 44를 넘어 잘렸었다
+}
+// 🎨 10-06 GPT 맵 통일 아트(방향 A, S01~S08 솔로) — 유저 확인 전 시안. false 한 줄이면 이전 그림 그대로 (새 이미지도 안 받는다)
+//    그림만 바뀐다: 판정 상수·로직 무변경. 파일 = assets/mapart/*.webp (게임 2배 px → 그릴 땐 ½, 목적지 크기 명시)
+//    울타리·돌담은 이전처럼 파싱 때 받고(penTopEx가 울타리 로드 여부를 읽는다), 나머지는 첫 로드 뒤 유휴 시간에 받는다. 실패하면 그 오브젝트만 이전 그림.
+const MAPART_V3 = true;
+const M3_ROOM = false; // 광석방 돌담만 따로: false = 이전 돌담 (새 그림은 벽이 두껍고 입구가 문짝에 막혀 판정과 어긋남 — 재요청 대기). true면 ore_room.webp
+const M3_PEN = false; // 소환장 울타리만 따로: false = 이전 울타리 (새 그림은 난간이 높아 북쪽 차단선(penTopEx 52)에 선 유닛 다리를 가림 — 08-10 결정 위반, 유저 결정 대기). true면 pen_fence.webp
+const M3 = { img: {}, want: 0, done: 0 }; // img[id] = 로드된 Image (없으면 이전 그림으로 그린다)
+const M3_ORES = ['ore_01_coal', 'ore_02_iron', 'ore_03_amethyst', 'ore_04_topaz', 'ore_05_emerald', 'ore_06_sapphire', 'ore_07_ruby', 'ore_08_opal', 'ore_09_diamond', 'ore_10_mithril']; // ORES 순서 그대로
+function m3Load(id, cb) {
+  const im = new Image(); M3.want++;
+  im.onload = () => { M3.img[id] = im; M3.done++; if (cb) cb(im); };
+  im.onerror = () => { M3.done++; if (cb) cb(null); };
+  im.src = 'assets/mapart/' + id + '.webp?v=1';
+}
+function m3Rect(m, x0, y0, w, h, padTop) { // 안뜰 매핑 그림의 베이크 사각 [x, y, w, h] (여백 2, 위는 padTop)
+  const kx = w / m.hw, ky = h / m.hh, l = x0 - m.hx * kx, t = y0 - m.hy * ky;
+  return [l - 2, t - padTop, m.w * kx + 4, m.h * ky + padTop + 2];
+}
+if (MAPART_V3) {
+  const kick = () => { const go = () => { for (const id of ['camp_castle', 'upgrade_portal', 'enemy_portal', 'altar', 'arena', 'pen_plank', 'mine', 'miner_road', ...M3_ORES]) m3Load(id); };
+    if (window.requestIdleCallback) requestIdleCallback(go, { timeout: 1500 }); else setTimeout(go, 200); };
+  if (document.readyState === 'complete') kick(); else addEventListener('load', kick);
 }
 // 🪵 통짜 입체 울타리 아트 (2026-08-10 유저 GPT 제작 — FENCE_WALL_ART_REQUEST 패턴):
 //    안뜰(내부 구멍) 사각을 PEN 사각에 매핑. meta = 추출 시 실측 (트림 906×614, 안뜰 x78 y102 748×408).
 //    스케일 kx 0.265 / ky 0.324 (안뜰비 1.83 vs PEN 1.5 — 세로 22% 스트레치, 원근 그림이라 허용. 어색하면 재요청)
 const FENCE_PEN_ON = true;
 const FENCEART = { img: null, meta: { w: 906, h: 614, hx: 78, hy: 102, hw: 748, hh: 408 } };
-if (FENCE_PEN_ON) { const fim = new Image(); fim.onload = () => { FENCEART.img = fim; }; fim.src = 'assets/fence_pen.webp?v=1'; }
+const fenceOld = () => { const fim = new Image(); fim.onload = () => { FENCEART.img = fim; }; fim.src = 'assets/fence_pen.webp?v=1'; };
+if (FENCE_PEN_ON && MAPART_V3 && M3_PEN) m3Load('pen_fence', im => { if (im) { FENCEART.meta = { w: 479, h: 430, hx: 41.37, hy: 84.4, hw: 396, hh: 264 }; FENCEART.v3 = true; FENCEART.img = im; } else fenceOld(); }); // 🎨 V3 meta = manifest game_meta (안뜰 = PEN 198×132), 실패 시 이전 울타리
+else if (FENCE_PEN_ON) fenceOld();
 function drawBarrackRaw() {
   // 몬스터 소환장 울타리 (몹들이 이 안에서 뒤엉킨다)
   const b = PEN, x0 = b.x - b.w / 2, y0 = b.y - b.h / 2;
@@ -8504,7 +8530,7 @@ function drawBarrackRaw() {
     }
   }
   ctx.textAlign = 'center';
-  drawLabel('👹 소환장', b.x, y0 - (fp ? 40 : fc ? 26 : 9), 10); // 통짜 울타리는 윗변이 33px까지 솟아 라벨을 더 위로
+  drawLabel('👹 소환장', b.x, y0 - (FENCEART.v3 ? FENCEART.meta.hy * b.h / FENCEART.meta.hh + 6 : fp ? 40 : fc ? 26 : 9), 10); // 통짜 울타리는 윗변이 33px까지 솟아 라벨을 더 위로 (V3 울타리는 42 — 그 위 6)
   ctx.textAlign = 'left';
 }
 // 🪵 울타리 상단 오클루전 캡: 윗변 슬라이스(안뜰 직전까지)를 유닛·몹 위에 한 번 더 그린다 —
@@ -8520,11 +8546,12 @@ function drawBarrackCap() {
 }
 function drawPortal() {
   const p = PORTAL;
-  const gs = artSp('gate');
+  const g3 = M3.img.upgrade_portal, gs = g3 ? null : artSp('gate'), pr = g3 ? 26 : p.r; // 🎨 V3 틀: 원판(반지름 24) 중심 = PORTAL 중심, 나선팔은 원판 안으로
+  if (g3) ctx.drawImage(g3, p.x - 0.16 - 49.25, p.y + 36.43 - 81, 98.5, 81); // manifest: 98.5×81, 원판 중심 = 발치 + (0.16, -36.43)
   if (gs) artDraw(gs, p.x, p.y + 4, p.r * 2.9); // 🎨 게이트 포털 에셋 (석문 + 소용돌이) — 위에 회오리 오버레이로 생동감
   ctx.save();
   ctx.translate(p.x, p.y);
-  if (!gs) {
+  if (!gs && !g3) {
     const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, p.r);
     grad.addColorStop(0, 'rgba(140,91,255,0.45)');
     grad.addColorStop(1, 'rgba(140,91,255,0.04)');
@@ -8538,7 +8565,7 @@ function drawPortal() {
     ctx.beginPath();
     const off = S.time * 2.2 + arm * Math.PI * 2 / 3;
     for (let i = 0; i <= 18; i++) {
-      const t = i / 18, a = off + t * 3.6, r = 4 + t * (p.r - 7);
+      const t = i / 18, a = off + t * 3.6, r = 4 + t * (pr - 7);
       const x = Math.cos(a) * r, y = Math.sin(a) * r;
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
@@ -8555,8 +8582,9 @@ function drawAltar() {
   ctx.save();
   // 그림자
   ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(a.x, a.y + a.h/2 - 4, a.w*0.5, 7, 0, 0, 6.28); ctx.fill();
-  const ws2 = artSp('wall'), rk = artSp('rock2');
-  if (ws2) { // 🎨 돌담 블록을 2단으로 쌓은 제단 + 바위 장식
+  const g3 = M3.img.altar, ws2 = g3 ? null : artSp('wall'), rk = artSp('rock2');
+  if (g3) artDrawBase(g3, a.x, a.y + a.h / 2 - 2, 68); // 🎨 V3 제단 (manifest 68×48.5, 발치 = 이전 돌담 받침과 같은 줄)
+  else if (ws2) { // 🎨 돌담 블록을 2단으로 쌓은 제단 + 바위 장식
     artDrawBase(ws2, a.x, a.y + a.h / 2 - 2, a.w + 4);
     artDrawBase(ws2, a.x, a.y + a.h / 2 - 16, a.w - 12);
     if (rk) artDrawBase(rk, a.x, a.y + a.h / 2 - 27, 30);
@@ -8582,6 +8610,8 @@ function drawPlank() {
   const x = CX, yTop = CY + PEN.h/2 - PLANK_DEPTH, h = PLANK_DEPTH + 8, w = PLANK_W;
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(x, yTop + h, w*0.6, 5, 0, 0, 6.28); ctx.fill();
+  const g3 = M3.img.pen_plank;
+  if (g3) { const ph = w * g3.height / g3.width; ctx.drawImage(g3, x - w / 2, yTop + h / 2 - ph / 2, w, ph); ctx.restore(); return; } // 🎨 V3 발판 (폭 48 그대로, 높이는 그림 비율 28.5 — 판정 사각 가운데 정렬)
   const g = ctx.createLinearGradient(x - w/2, 0, x + w/2, 0);
   g.addColorStop(0, '#a9794a'); g.addColorStop(0.5, '#c69a63'); g.addColorStop(1, '#8a5f38');
   ctx.fillStyle = g; ctx.strokeStyle = '#5c3d22'; ctx.lineWidth = 2;
@@ -8593,11 +8623,12 @@ function drawPlank() {
   ctx.restore();
 }
 function drawCastle() { // 성도 완전 정적 (깃발 포함 고정 그림) — 통째로 베이크
+  if (M3.img.camp_castle) { bakedLayer('castle|g', HOUSE.x - 62, HOUSE.y - 98, 124, 144, drawCastleRaw); return; } // 🎨 V3 성 116×131 (깃발 꼭대기 y-93)
   bakedLayer('castle|' + (artSp('castle') ? 'a' : 'v'), HOUSE.x - 66, HOUSE.y - 84, 132, 132, drawCastleRaw);
 }
 function drawCastleRaw() {
   const p = HOUSE, x = p.x, y = p.y;
-  const cs = artSp('castle');
+  const cs = M3.img.camp_castle || artSp('castle'); // 🎨 V3 진영 성이 있으면 같은 자리·같은 폭(116)으로
   if (cs) { // 🎨 성 에셋 (원형 성곽+킵) — 골드 저장고
     ctx.fillStyle = 'rgba(0,0,0,0.16)';
     ctx.beginPath(); ctx.ellipse(x + 3, y + 32, 48, 9, 0, 0, 6.28); ctx.fill();
@@ -8673,8 +8704,9 @@ function drawEnemyPortal() {
   const active = (S.phase === 'wave' && q && q.left > 0);
   S.portalA = Math.max(0, Math.min(1, (S.portalA || 0) + (active ? 0.08 : -0.05)));
   if (S.portalA <= 0.01) return;
-  const a = S.portalA, R = 30;
+  const g3 = M3.img.enemy_portal, a = S.portalA, R = g3 ? 17 : 30; // 🎨 V3: 틀(60×52.5) 원판(가로 반지름 18) 안에 소용돌이
   ctx.save(); ctx.globalAlpha = a; ctx.translate(CX, CY);
+  if (g3) { ctx.drawImage(g3, 3.37 - 30, 24.77 - 52.5, 60, 52.5); ctx.scale(1, 0.82); } // 원판 중심 = 소환장 중심 (manifest: 발치 + (-3.37, -24.77)), 원판이 납작해 소용돌이도 세로 0.82
   const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, R);
   grad.addColorStop(0, '#1a0206'); grad.addColorStop(0.55, '#7a1520'); grad.addColorStop(1, 'rgba(122,21,32,0)');
   ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI*2); ctx.fill();
@@ -8691,7 +8723,8 @@ function drawOreRoom() {
   const R = ROOM, x0 = R.cx - R.w / 2, y0 = R.cy - R.h / 2;
   const anyIn = S.units.some(u => !u.miner && isInRoom(u));
   // 담장은 (입장 여부 × 아트 여부)로만 변하는 정적 그림 — 베이크. 광석·게이지·라벨은 아래에서 라이브
-  bakedLayer('oreWall|' + (anyIn ? 1 : 0) + (WALLART.img ? 'w' : artSp('wall') ? 'a' : 'v'), x0 - 26, y0 - 34, R.w + 56, R.h + 64, () => drawOreWalls(anyIn)); // 여백 26/34/30/30 — 통짜 돌담 돌출분 실측 커버
+  if (WALLART.v3) { const r = m3Rect(WALLART.meta, x0, y0, R.w, R.h, 2); bakedLayer('oreWall|' + (anyIn ? 1 : 0) + 'g', r[0], r[1], r[2], r[3], () => drawOreWalls(anyIn)); } // 🎨 V3 돌담: 그림 크기에서 베이크 사각 계산
+  else bakedLayer('oreWall|' + (anyIn ? 1 : 0) + (WALLART.img ? 'w' : artSp('wall') ? 'a' : 'v'), x0 - 26, y0 - 34, R.w + 56, R.h + 64, () => drawOreWalls(anyIn)); // 여백 26/34/30/30 — 통짜 돌담 돌출분 실측 커버
   const ore = ORES[Math.min(9, S.hunt.stage - 1)];
   const ox = OREPOS.x, oy = OREPOS.y;
   if (S.hunt.done) {
@@ -8701,7 +8734,9 @@ function drawOreRoom() {
     // 보석: 캘수록 조금씩 작아진다 (닳음)
     const ratio = Math.max(0, S.hunt.hp / S.hunt.max);
     const gr = 13 + 15 * ratio;
-    drawGem(ox, oy, gr, ore.col, ore.cut);
+    const og = M3.img[M3_ORES[Math.min(9, S.hunt.stage - 1)]];
+    if (og) { const ow = 57.5 * gr / 28, oh = 63 * gr / 28; ctx.drawImage(og, ox - ow / 2, oy + 31.5 - oh, ow, oh); } // 🎨 V3 광석: 같은 크기 규칙(반지름 28→13), 바닥 고정으로 줄어든다
+    else drawGem(ox, oy, gr, ore.col, ore.cut);
     // 테두리 있는 체력바 (얼마나 깎았는지 한눈에)
     const bw = 64, bx = ox - bw/2, by = oy + 34;
     ctx.fillStyle = '#e6ded0'; roundRect(bx, by, bw, 8, 3); ctx.fill();          // 배경
@@ -8719,7 +8754,9 @@ function drawOreRoom() {
 // 🧱 통짜 입체 돌담 아트 (2026-08-10 유저 GPT 제작): 안뜰 사각 매핑, 입구(좌벽 y60~141)가 ROOM_GATE(60~140)와 실측 일치
 const WALL_ORE_ON = true;
 const WALLART = { img: null, meta: { w: 847, h: 658, hx: 79, hy: 71, hw: 675, hh: 497 } };
-if (WALL_ORE_ON) { const wim = new Image(); wim.onload = () => { WALLART.img = wim; }; wim.src = 'assets/wall_ore.webp?v=1'; }
+const wallOld = () => { const wim = new Image(); wim.onload = () => { WALLART.img = wim; }; wim.src = 'assets/wall_ore.webp?v=1'; };
+if (WALL_ORE_ON && MAPART_V3 && M3_ROOM) m3Load('ore_room', im => { if (im) { WALLART.meta = { w: 538, h: 568, hx: 77.91, hy: 137.39, hw: 392, hh: 300 }; WALLART.v3 = true; WALLART.img = im; } else wallOld(); }); // 🎨 V3 meta = manifest game_meta (안뜰 = ROOM 196×150), 실패 시 이전 돌담
+else if (WALL_ORE_ON) wallOld();
 function drawOreWalls(anyIn) {
   const R = ROOM, x0 = R.cx - R.w / 2, y0 = R.cy - R.h / 2;
   // 🧱 벽돌 담장 (내부는 배경이 그대로 비친다 — 지옥·폭풍 배경과도 자연스럽게 어울림). 왼쪽 벽 가운데가 입구
@@ -8778,6 +8815,8 @@ const MINE_TIERS = [
 // ⛏️ 광부 갓길: 성 ↔ 광산 하단 전용 흙길 (부대 주둔지 아래로 동선 분리 — 시각적으로도 "광부의 길"임을 읽게)
 function drawMinerRoad() {
   const x0 = HOUSE.x + 24, y0 = 468, cx1 = 470, cy1 = 478, x1 = MINE_POS.x - 34, y1 = MINE_POS.y + 26;
+  const rd = M3.img.miner_road;
+  if (rd) { bakedLayer('mroad|g', x0 - 16, Math.min(y0, y1) - 16, x1 - x0 + 32, Math.abs(y1 - y0) + 32, () => drawMinerRoadArt(rd, x0, y0, cx1, cy1, x1, y1)); return; } // 🎨 V3 흙길 (정적 — 1회 베이크)
   ctx.lineCap = 'round';
   ctx.strokeStyle = '#cdb489'; ctx.lineWidth = 20;
   ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx1, cy1, x1, y1); ctx.stroke();
@@ -8791,17 +8830,33 @@ function drawMinerRoad() {
     ctx.beginPath(); ctx.arc(xx + Math.sin(i * 7) * 5, yy + Math.cos(i * 3) * 3.5, 1.5 + (i % 3) * 0.7, 0, 6.28); ctx.fill();
   }
 }
+// 🎨 V3 흙길 타일(게임 52×20, 2배 그림)을 곡선 길이를 따라 2px 세로 띠로 이어 붙인다 — 조각을 통째로 돌려 붙일 때 생기는 꺾임 없이 휘어진다. 양 끝 10px은 서서히 흐리게
+function drawMinerRoadArt(im, x0, y0, cx1, cy1, x1, y1) {
+  const P = t => { const m = 1 - t; return [x0 * m * m + 2 * m * t * cx1 + t * t * x1, y0 * m * m + 2 * m * t * cy1 + t * t * y1]; };
+  const N = 400, L = [0];
+  for (let i = 1, p = P(0); i <= N; i++) { const q = P(i / N); L.push(L[i - 1] + Math.hypot(q[0] - p[0], q[1] - p[1])); p = q; }
+  const total = L[N], tw = im.width / 2, th = im.height / 2;
+  for (let s = 0, j = 0; s < total; s += 2) {
+    while (j < N - 1 && L[j + 1] < s) j++;
+    const t = (j + (s - L[j]) / (L[j + 1] - L[j])) / N, m = 1 - t, c = P(t);
+    const ang = Math.atan2(2 * m * (cy1 - y0) + 2 * t * (y1 - cy1), 2 * m * (cx1 - x0) + 2 * t * (x1 - cx1));
+    ctx.save(); ctx.translate(c[0], c[1]); ctx.rotate(ang); ctx.globalAlpha = Math.min(1, s / 10, (total - s) / 10);
+    ctx.drawImage(im, (s % tw) * 2, 0, 4, im.height, -0.3, -th / 2, 2.6, th);
+    ctx.restore();
+  }
+}
 function drawMine() {
   const p = MINE_POS, x = p.x, y = p.y;
   const T = MINE_TIERS[Math.min(S.mineLayer - 1, MINE_TIERS.length - 1)];
-  const ms = artSp('mine');
+  const ms = M3.img.mine || artSp('mine'); // 🎨 V3 광산이 있으면 같은 자리·같은 폭(124)
   if (ms) { // 🎨 광산 에셋 (갱도 입구 있는 바위산) + 진행 바·단계 라벨은 산 위에
     ctx.fillStyle = 'rgba(0,0,0,0.16)';
     ctx.beginPath(); ctx.ellipse(x + 2, y + 30, 50, 9, 0, 0, 6.28); ctx.fill();
     artDrawBase(ms, x, y + 34, 124);
-    drawBar(x - 30, y - 66, 60, S.mineHp / S.mineMax, T.dark);
+    const up = ms === M3.img.mine ? 22 : 0; // 🎨 V3 광산은 꼭대기가 y-85까지 솟아 바·라벨을 산 위로 올림
+    drawBar(x - 30, y - 66 - up, 60, S.mineHp / S.mineMax, T.dark);
     ctx.textAlign = 'center';
-    drawLabel(`⛏️ ${S.mineLayer}단계`, x, y - 74, 11); ctx.textAlign = 'left';
+    drawLabel(`⛏️ ${S.mineLayer}단계`, x, y - 74 - up, 11); ctx.textAlign = 'left';
     return;
   }
   // 그림자
