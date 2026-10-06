@@ -16244,7 +16244,8 @@ const KINGDOM_MAX = KINGDOM_HP + 2; // ③ 상한 — 5칸이 꽉 차 있어도 
 const GT_MINER = [['', 50], ['miner', 48], ['sminer', 1.5], ['exc', 0.5]]; // ① (%)
 const GT_MINER_NAME = { '': '꽝', miner: '광부 +1', sminer: '슈퍼 광부!', exc: '굴착기!!' };
 const GT_BOX = [['unit', 80], ['gachaAce', 13], ['gachaHero', 5], ['gachaAceHero', 1.5], ['gachaSuper', 0.5]]; // ② 일반 유닛(족보 룰렛) · 뽑기권 4종 (%)
-const GT_OPT = [null, ['⛏️', '광부 상자', '꽝 50 · 광부 48 · 슈퍼 광부 1.5 · 굴착기 0.5%'], // 10-06: 싱글 '광부 뽑기'(칩 1¼)와 이름이 겹쳐 '광부 상자'로 ['🎁', '모두에게 상자', '나·동료 모두 뽑기권 상자 1개'],
+// ① 이름 = '광부 상자' (10-06: 싱글 '광부 뽑기'(칩 1¼)와 이름이 겹쳐서)
+const GT_OPT = [null, ['⛏️', '광부 상자', '꽝 50 · 광부 48 · 슈퍼 광부 1.5 · 굴착기 0.5%'], ['🎁', '모두에게 상자', '나·동료 모두 뽑기권 상자 1개'],
   ['🏰', '왕국 +1', '왕국 HP +1 (최대 ' + KINGDOM_MAX + ')'], ['⚔️', '다음 전투 +20%', '다음 전투 동안 팀 공격력 +20%'], ['⏸️', '일시정지 +1', '같이하기 전용 (방장 일시정지)']];
 function mpGtRoll(table, rng) { let r = rng() * 100; for (const [k, w] of table) { r -= w; if (r < 0) return k; } return table[0][0]; }
 function mpGoldOk(k) { return k === 3 ? MP.kh < KINGDOM_MAX : k >= 1 && k <= 4; }
@@ -16283,7 +16284,7 @@ function mpGoldPick(k, rng) { // 내 선택 (칩 펼침의 버튼) — rng = 테
 function mpGoldBot(b) { const ks = [2, 3, 4].filter(mpGoldOk); return mpGoldApply(ks[Math.floor(b.rng() * ks.length)], b.seat, b.rng); } // 봇 = ①(광부 뽑기) 빼고 가능한 것 중 무작위
 function mpGoldApply(k, seat, rng) { // 효과 (나·봇 공용) → 공지 문구
   const b = MP.bot;
-  if (k === 1) { mpMinerReveal(mpGtRoll(GT_MINER, rng)); return '⛏️ 광부 뽑기'; } // 나만 (봇은 ① 제외) — 결과는 상자가 열릴 때 로그 (미리 알리면 연출이 김빠진다)
+  if (k === 1) { mpMinerReveal(mpGtRoll(GT_MINER, rng)); return '⛏️ 광부 상자'; } // 나만 (봇은 ① 제외) — 결과는 상자가 열릴 때 로그 (미리 알리면 연출이 김빠진다)
   if (k === 2) { spawnItemUnit('gachaBox'); if (b) mpBotBox(b); return '🎁 모두에게 뽑기권 상자!'; }
   if (k === 3) { MP.kh = Math.min(KINGDOM_MAX, MP.kh + 1); return '🏰 왕국 +1'; }
   MP.atkR = S.phase === 'wave' ? S.round + 1 : S.round; // '다음 웨이브' = 다음에 시작하는 전투 (티켓은 전투 시작에 오므로 보통 r+1)
@@ -16297,7 +16298,7 @@ function mpMinerReveal(res) { // ① 결과 상자 연출 → 열리는 순간 �
       if (res === 'miner') spawnMiner();
       else if (res === 'sminer') spawnSuperMiner();
       else if (res === 'exc') spawnExcavator();
-      logMsg('⛏️ 광부 뽑기 — ' + GT_MINER_NAME[res]);
+      logMsg('⛏️ 광부 상자 — ' + GT_MINER_NAME[res]);
       sfx(!res ? 'leak' : res === 'miner' ? 'reward' : 'jackpot');
       if (res === 'sminer' || res === 'exc') goldBurst(0.55, '🎫 골드티켓 — ' + GT_MINER_NAME[res]);
     } });
