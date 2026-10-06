@@ -1907,14 +1907,14 @@ body.mobile .wd-result>p{font-size:12px!important;line-height:1.65!important;}
 :root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-wallet em {font-size:10px;font-style:normal;letter-spacing:0;margin-left:6px;color:var(--muted);font-weight:600}
 :root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) #shopGoldRow .v2-wallet {margin:0}
 :root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-icon-tile {display:inline-grid;place-items:center;width:44px;height:44px;border-radius:12px;color:var(--kind,var(--accent));background:color-mix(in srgb,var(--kind,var(--accent)) 11%,var(--card));flex-shrink:0}
-:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-grid {display:grid;grid-template-columns:1.16fr 1fr 1fr;gap:12px;margin-bottom:20px}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-grid {display:grid;grid-template-columns:1.16fr 1fr 1fr 1fr;gap:12px;margin-bottom:20px}
 :root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card {position:relative;display:grid;grid-template-columns:44px 1fr;align-items:center;gap:12px;text-align:left;min-height:145px;padding:17px 16px 13px;border:1px solid color-mix(in srgb,var(--kind) 24%,var(--line));border-radius:var(--cr);background:var(--card);box-shadow:var(--cardshadow);overflow:hidden}
 :root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card:before {content:'';position:absolute;top:0;bottom:0;left:0;width:3px;background:var(--kind)}
 :root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card[data-go=invest] {--kind:var(--teal)}
-:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card[data-go=miner] {--kind:var(--ochre)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card:is([data-go=miner],[data-go=hire]) {--kind:var(--ochre)}
 :root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card[data-go=slot] {--kind:var(--plum)}
 :root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main {display:flex;flex-direction:column;gap:3px}
-:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main small {font-size:10px;color:var(--muted)}
+:root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main small {font-size:10px;color:var(--muted);word-break:keep-all}
 :root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main b {font-size:20px;letter-spacing:-.5px}
 :root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-main>span {font-size:11px;color:var(--muted)}
 :root body :is(#shopWin[data-view="castle"][data-ctab="upg"],#chipWin[data-view="finance"]:not(:has(.gbxStage))) .v2-hub-card>svg {display:none}
@@ -3155,7 +3155,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
     <span>❤️ <b id="tLife"></b></span>
     <span>💰 <b id="tGold"></b></span>
     <span>⛏️ <b id="tMiner"></b></span>
-    <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 자금 운영에서 뽑기·광부 뽑기에 사용">🪙 <b id="tChips" style="color:#c9a227">0</b></span>
+    <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 자금 운영에서 뽑기·광부 고용에 사용">🪙 <b id="tChips" style="color:#c9a227">0</b></span>
     <span title="재변경권 — 교환을 마친 카드를 한 번 더 교환">🎟️ <b id="tTickets" style="color:#e0525e">0</b></span>
     <span>🏳️ 스테이지 <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
     <div id="bigTimer"><div class="p" id="tPhase"></div></div>
@@ -4334,7 +4334,7 @@ function excDig(u, dt) {
   const slam = u.excT % EXC_CYCLE >= EXC_CYCLE * 0.55;
   if (slam && u.excPose !== 'slam') { // 내려찍는 순간 1회: 흙먼지 + 묵직한 타격음 (sfx 전역 스로틀 80ms)
     sfx('thud');
-    const bx = u.x + (MINE_POS.x >= u.x ? 1 : -1) * 32 * EXC_K, by = u.y + EXC_FOOT - 2;
+    const bx = u.x + (MINE_POS.x >= u.x ? 1 : -1) * 26 * EXC_K, by = u.y + EXC_FOOT - 2; // 26 × EXC_K ≈ 36 = v3 내려찍기의 가장 낮은 이빨 끝 (이빨 줄 27~40)
     for (let i = 0; i < 7; i++) {
       const a = -Math.PI * (0.15 + Math.random() * 0.7), v = 30 + Math.random() * 50;
       S.parts.push({ x: bx + (Math.random() * 10 - 5), y: by, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0.45, r: 2 + Math.random() * 2.2, c: i % 2 ? '#a1887f' : '#8d6e63' });
@@ -6546,17 +6546,19 @@ function spawnSuperMiner() {
   m.sminer = true; m._us = null; // 이동·배달 3배 (색이 바뀌므로 스프라이트 참조 캐시 무효화)
   addFloat(m.x, m.y - 26, '✨ 슈퍼 광부!', '#ff9800', 2);
 }
-// 🚜 굴착기 (10-06) — 획득 = 광부 뽑기 1% · 광부 뽑기권(사파이어 보상) ⅓
-const EXCART = { img: null, req: false }; // 시트 1장(468×136 = 이동·파기·내려찍기 156×136씩, 게임 크기 78×68) — 첫 등장 때만 받는다 (첫 로드 0바이트). 파일 이름을 excavator_v2로 새로 둔 이유: 옛 excavator.webp(336×98)를 112×98로 잘라 그리는 다른 브랜치 코드와 섞여도 서로 깨지지 않게
+// 🚜 굴착기 (10-06) — 획득 = 광부 뽑기 1% · 광부 뽑기권(사파이어 보상) ⅓ (광부 고용은 일반 광부만)
+const EXCART = { img: null, req: false }; // 시트 1장(468×136 = 이동·파기·내려찍기 156×136씩, 게임 크기 78×68) — 첫 등장 때만 받는다 (첫 로드 0바이트). 파일 이름을 excavator_v3로 새로 둔 이유: 10-06 유저 "버킷 거꾸로" → 버킷만 뒤집은 판(등판 바깥·위, 이빨 아래·기계 쪽, 규격 v2와 같음). 에셋은 7일 캐시라 같은 이름으로 덮으면 옛 그림이 남는다 — 옛 excavator.webp(336×98)·excavator_v2.webp는 그 파일을 쓰는 다른 브랜치용으로 남겨 둔다
 function spawnExcavator() {
-  if (!EXCART.req) { EXCART.req = true; const im = new Image(); im.onload = () => { EXCART.img = im; }; im.src = 'assets/excavator_v2.webp'; }
+  if (!EXCART.req) { EXCART.req = true; const im = new Image(); im.onload = () => { EXCART.img = im; }; im.src = 'assets/excavator_v3.webp'; }
   spawnMiner();
   const m = S.units[S.units.length - 1];
   m.exc = true; m.excPose = 'move';
   addFloat(m.x, m.y - 58, '🚜 굴착기!', '#ff9800', 2);
 }
-// ⛏️ 광부 뽑기 (10-06 유저: 자금 운영 '광부 고용' 대체) — 확률표는 여기 한 곳 (가중치, 합으로 나눈다)
-// 갬블러 가호 등 기존 확률 보정은 적용하지 않는다 (뽑기권 상자 성공률에만 걸린다)
+// ⛏️ 광부 고용·뽑기 (10-06 오후 유저: "1개로 구매도 가능하고, 뽑기로도 가능 — 선택이 두 가지") — 고용 = 칩 1개 → 광부 1명 확정 / 뽑기 = 확률표는 여기 한 곳 (가중치, 합으로 나눈다)
+// 갬블러 가호 등 기존 확률 보정은 광부 뽑기에 적용하지 않는다 (뽑기권 상자 성공률에만 걸린다 — 10-06 오후 유저 확정)
+const MINER_HIRE_COST = 1;                                               // 광부 고용 칩 1개 (10-05 이전 그대로)
+function canMinerHire() { return S.chips >= MINER_HIRE_COST; }           // 버튼 2벌(원본·v2)·클릭 공용 판정
 const MINER_DRAW_COST = 1.25;                                            // 칩 1¼개
 const MINER_DRAW_P = [['miner', 95], ['sminer', 4], ['exc', 1]];          // 자금 운영 광부 뽑기 (%)
 const MINER_TICKET_DRAW_P = [['miner', 1], ['sminer', 1], ['exc', 1]];   // 광부 뽑기권 (사파이어 보상) ⅓씩
@@ -9977,10 +9979,10 @@ function drawExcavator(u) {
     const jig = st >= 0 && st < 0.3 ? Math.sin(st * 45) * 1.3 * (1 - st / 0.3) : 0;
     ctx.drawImage(excRiderSprite(), rx - 12 * EXC_RIDER_S + jig * 0.5, ry - 8 * EXC_RIDER_S + Math.abs(jig), 24 * EXC_RIDER_S, 18 * EXC_RIDER_S);
   }
-  if (u.carry && !u.carryTicket && !mining) { // 배달 중: 버킷 입구(≈ x24~36, y-17 — 옛 56px 좌표 × EXC_K)에 흙 + 광석 두 알
+  if (u.carry && !u.carryTicket && !mining) { // 배달 중: v3 버킷 입구(초록 안쪽 56px 좌표 ≈ x 20~28, 윗변 y≈-15.3) 안쪽에 흙 덩이 + 광석 두 알 — 윗변의 노란 이음새 핀(x≈24~28)과 안 겹치게 입구 안으로 (10-06 리뷰: 테두리·핀 위에 얹혀 장식처럼 보임)
     ctx.save(); ctx.scale(EXC_K, EXC_K);
-    ctx.fillStyle = '#6d4c41'; ctx.beginPath(); ctx.ellipse(30, -15.5, 6.5, 3, 0, Math.PI, 0); ctx.fill();
-    for (const [gx, gy] of [[27.5, -17.5], [32, -18.5]]) {
+    ctx.fillStyle = '#6d4c41'; ctx.beginPath(); ctx.ellipse(24.2, -11.6, 3.9, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+    for (const [gx, gy] of [[22.6, -12.2], [25.6, -11.6]]) {
       ctx.fillStyle = '#3fd0e0'; ctx.beginPath();
       ctx.moveTo(gx, gy - 3); ctx.lineTo(gx + 2.2, gy); ctx.lineTo(gx, gy + 2); ctx.lineTo(gx - 2.2, gy); ctx.closePath(); ctx.fill();
       ctx.strokeStyle = '#1a9aa8'; ctx.stroke();
@@ -11920,8 +11922,8 @@ function minerItemsHTML() {
   const digRate = Math.round(DIG_RATE * (1 + 0.4 * S.minerMineLv));
   return `
     <div class="rpgItem"><div class="rpgIcon">⛏️</div>
-      <div class="rpgInfo"><b>광부 뽑기</b> <span class="lv">현재 ${n}명 · 배달 ${MINER_LOAD + S.mineBonus}G · 누적 ${(S.minerGold || 0).toLocaleString()}G</span><br>
-        <span class="desc">💰 자금 운영에서 <b>칩 ${chipTxt(MINER_DRAW_COST)}개</b>로 뽑기. 배달액은 <b>광산 겹을 깰수록</b> 커집니다</span></div></div>
+      <div class="rpgInfo"><b>광부 고용·뽑기</b> <span class="lv">현재 ${n}명 · 배달 ${MINER_LOAD + S.mineBonus}G · 누적 ${(S.minerGold || 0).toLocaleString()}G</span><br>
+        <span class="desc">💰 자금 운영에서 <b>칩 ${chipTxt(MINER_HIRE_COST)}개</b>로 고용 · <b>${chipTxt(MINER_DRAW_COST)}개</b>로 뽑기. 배달액은 <b>광산 겹을 깰수록</b> 커집니다</span></div></div>
     <div class="rpgItem"><div class="rpgIcon">🏃</div>
       <div class="rpgInfo"><b>이동속도</b> <span class="lv">Lv.${S.minerMoveLv}/${MINER_MAX_LV}</span> (${moveSpd})</div>
       ${S.minerMoveLv >= MINER_MAX_LV ? '<span style="margin-left:auto;color:#43a047;font-weight:bold">MAX</span>' : `<button class="rpgBuy" id="mvBtn" ${S.gold < S.minerMoveCost ? 'disabled' : ''}>💰 ${S.minerMoveCost}G</button>`}</div>
@@ -12071,7 +12073,7 @@ function monDexHTML() {
 document.getElementById('shopClose').onclick = closeShop;
 document.getElementById('shopOverlay').onclick = e => { if (e.target.id === 'shopOverlay') closeShop(); };
 
-// ==================== 🎰 칩 카지노 — 칩(보스·결투): 뽑기권 상자·캡슐·광부 뽑기(10-06, 구 광부 고용) / 골드: 비상 물자 ====================
+// ==================== 🎰 칩 카지노 — 칩(보스·결투): 뽑기권 상자·캡슐·광부 고용·광부 뽑기(10-06) / 골드: 비상 물자 ====================
 const CM = document.getElementById('chipModal'), CB = document.getElementById('chipBody'), CT = document.getElementById('chipTitle');
 // 칩 조각 표기 통일: 0.25 → "¼", 0.5 → "½", 1.75 → "1¾", 2 → "2" ("0½"처럼 0이 앞에 붙으면 0으로 오독된다)
 // 10-01: 결투 보상이 ½/¼로 내려가며 ¼ 단위 — 0.25 격자로 반올림해 부동소수 찌꺼기에도 안전
@@ -12143,6 +12145,7 @@ function casMenu() {
     `<div style="text-align:center;font-size:12px;color:#c9b8f0;margin-bottom:8px">보유 🪙 <b style="color:#ffd166">${chipTxt(S.chips)}</b>개 · 💰 <b style="color:#ffd166">${Math.floor(S.gold).toLocaleString()}G</b></div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="chipBtn casItem" data-go="slot" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">🎁</span> <b style="color:#ffd166">캡슐 뽑기</b><br><span style="font-size:11px;color:#c9b8f0">칩 1개 — 무지개 캡슐이 나오면 <b>1000만 골드</b></span></button>
+      <button class="chipBtn casItem" data-go="hire" style="text-align:left;padding:12px" ${canMinerHire() ? '' : 'disabled'}><span style="font-size:26px;vertical-align:middle">⛏️</span> <b style="color:#ffd166">광부 고용</b><br><span style="font-size:11px;color:#c9b8f0">칩 ${chipTxt(MINER_HIRE_COST)}개 — 광부 1명 확정 (현재 ${S.units.filter(u => u.miner).length}명)</span></button>
       <button class="chipBtn casItem" data-go="miner" style="text-align:left;padding:12px" ${canMinerDraw() ? '' : 'disabled'}><span style="font-size:26px;vertical-align:middle">⛏️</span> <b style="color:#ffd166">광부 뽑기</b><br><span style="font-size:11px;color:#c9b8f0">칩 ${chipTxt(MINER_DRAW_COST)}개 — ${minerDrawOdds()} (현재 ${S.units.filter(u => u.miner).length}명)</span></button>
       <button class="chipBtn casItem" data-go="invest" style="text-align:left;padding:12px"><span style="font-size:26px;vertical-align:middle">📈</span> <b style="color:#ffd166">투자</b><br><span style="font-size:11px;color:#c9b8f0">골드를 묶어 불린다. 오래 묶을수록 많이 붙지만 <b>만기 전엔 못 뺀다</b>${investTotal() ? ` · 예치 중 <b style="color:#7ec8ff">${investTotal().toLocaleString()}G</b>` : ''}</span></button>
     </div>
@@ -12164,6 +12167,7 @@ function casMenu() {
     `</div></div>`;
   CB.querySelector('[data-go="invest"]').onclick = () => casInvest();
   CB.querySelector('[data-go="slot"]').onclick = () => casSlot();
+  CB.querySelector('[data-go="hire"]').onclick = () => doMinerHire();
   CB.querySelector('[data-go="miner"]').onclick = () => doMinerDraw();
   // 👑 뽑기권 도박 (08-15 유저: 1칩 70% 에이스 / 4칩 60% 영웅 / 7칩 40% 에이스영웅 / 20칩 확정 슈퍼 — 갬블러 가호 적용)
   const GBETS = { ace: [1, 0.70, 'gachaAce', '에이스 뽑기권'], hero: [4, 0.60, 'gachaHero', '영웅 뽑기권'], aceHero: [7, 0.40, 'gachaAceHero', '에이스 영웅 뽑기권'] };
@@ -12421,6 +12425,13 @@ function doGachaBet(cost, p, kind, label) {
       if (IS_MOBILE) document.getElementById('gbBtns').scrollIntoView({ block: 'nearest' }); // 모바일 760×350: 버튼이 창 아래로 잘렸다
     },
   });
+}
+// ⛏️ 광부 고용 (10-06 오후 복원 — 10-05 이전 동작 그대로): 칩 1개 → 광부 1명 즉시, 연출 없음
+function doMinerHire() {
+  if (!canMinerHire()) return;
+  S.chips -= MINER_HIRE_COST; spawnMiner(); sfx('reward');
+  logMsg(`⛏️ 광부 고용! (칩 ${chipTxt(MINER_HIRE_COST)}개 — 총 ${S.units.filter(u => u.miner).length}명)`);
+  casMenu(); updateHUD();
 }
 // ⛏️ 광부 뽑기 (10-06 유저) — 확률이 걸린 구매라 뽑기권 상자와 같은 연출. 결과는 누르는 순간 확정 → 상자 연출 → 지급(casTimeout)
 function doMinerDraw() {
@@ -12728,7 +12739,7 @@ function tutTick() {
   }
   if (S.round === 1 && S.timer < WAVE_TIME - 10 && S.chips >= 1 && !S.units.some(u => u.miner) && tutNew('fchip')) { // 첫 결정: 시작 칩으로 광부냐, 모았다 뽑기냐 — 이미 정했으면 안 띄운다
     const st = document.getElementById('stCasino').getBoundingClientRect(), cw = document.getElementById('cvWrap').getBoundingClientRect();
-    return tutTip('fchip', canMinerDraw() ? '🪙 칩으로 광부를 뽑을까요, 모아 두었다 다른 뽑기를 할까요?' : '🪙 칩을 모아 광부를 뽑을까요, 지금 다른 뽑기를 할까요?', (st.right - cw.left) / cw.width * 940, (st.top + 6 - cw.top) / cw.height * 500, 'right', 9); // 버튼 윗부분 옆 — 밑의 딜 순위를 안 가리게
+    return tutTip('fchip', '🪙 칩으로 광부를 고용할까요, 모아서 뽑기를 할까요?', (st.right - cw.left) / cw.width * 940, (st.top + 6 - cw.top) / cw.height * 500, 'right', 9); // 버튼 윗부분 옆 — 밑의 딜 순위를 안 가리게
   }
   const sel = S.units.find(u => u.selected && !u.miner && !u.item);
   if (sel && tutNew('fmove')) return tutTip('fmove', IS_MOBILE ? '끌어서 옮기기' : '우클릭으로 이동', sel.x, sel.y - 24, 'above', 5);
@@ -15880,7 +15891,7 @@ function mpDrawNameTag(q, crown, n) { // 상대 진영 이름표 (월드 공간 
 // · 프록시 = 전투 동안만 S.monsters 안 {lane: e} — mpWaveStart가 넣고 처치·도착·endWave가 뺀다 → 포커 분기·S.monsters = [] 에 걸리지 않는다.
 //   엔진 쪽 가드는 m.lane(소환장 의미) · m.lane.occl(다리 밑 = 조준 불가) 두 가지뿐. occl은 mpLanePos가 매 서브스텝 mtOccluded로 갱신
 // · 딜 장부 e.dl[seat]: 프록시 HP 감소분 = 내 딜(매 프레임 정산), 봇 = 모델 DPS × 몫 (가림 중 0)
-const RAID_HP_MUL = 1.0, BOSS_K = 0.8, MINI_HP_K = 2 / 3, MINI_K = 0.3; // 습격대 HP = 남은 HP 합 × 1.0 · 보스 HP = 두 진영 원래 웨이브 HP 합 × 0.8 · R5 미니보스 HP = 같은 라운드 보스 HP × ⅔ (10-06 유저) · 미니보스 골드 풀 = 보스 풀 × 0.3
+const RAID_HP_MUL = 1.0, BOSS_K = 0.8, MINI_HP_K = 2 / 3, MINI_K = 0.3; // 습격대 HP = 남은 HP 합 × 1.0 · 보스 HP = 두 진영 원래 웨이브 HP 합 × 0.8 · 미니보스(R5·R15·R25…) HP = 같은 라운드 보스 HP × ⅔ (10-06 유저) · 미니보스 골드 풀 = 보스 풀 × 0.3
 const LANE_GAP = 3, BOSS_T = 80, KINGDOM_HP = 5;     // 출발 간격 · 보스 이동 시간 (게임초) · 왕국 HP (팀 공유)
 const LANE_GATE = 36;                                 // 엉김 맨 뒤 = 게이트 중심에서 경로로 36 + 반지름 (게이트 아치 안쪽 면 ≈ 30 · 월드 끝에 걸리지 않게)
 const SCOUT_N = 3, SCOUT_HP = 700;                   // R3 정찰 습격대: 알 3개 · 고정 HP — 10-05 mpC_probe(자동 소환만, 조작 없음): 39.5초 행진 중 36.6초에 처치 (나 373 · 봇 327) = 손 놓으면 아슬아슬, 둑으로 옮기면 여유
@@ -15949,7 +15960,7 @@ function mpRaidNew(seat, n, hpSum, mats) { // 웨이브 끝 누수 → 진영별
 }
 function mpLaneSpawnFor(r) { // 다음 라운드 r의 고정 레인 개체 — 포커 시작 직전(endWave)에 만들어 포커 내내 게이트 앞에서 엉긴다
   if (r % 10 === 0) mpLaneNew('boss', -1, 1, mpBossHP(r), [], BOSS_T, mpBossShape(r));
-  else if (r === 5) mpLaneNew('mini', -1, 1, Math.round(mpBossHP(r) * MINI_HP_K), [], BOSS_T, mpBossShape(10)); // 그림 = 다음 보스(달)의 축소판
+  else if (r % 10 === 5) mpLaneNew('mini', -1, 1, Math.round(mpBossHP(r) * MINI_HP_K), [], BOSS_T, mpBossShape(r + 5)); // R5·R15·R25… (10-06 오후 유저: "넣어줘") — 그림 = 다음 보스의 축소판 (R5 = 달)
   else if (r === 3) { const mi = matInfo(3).idx; mpLaneNew('scout', -1, SCOUT_N, SCOUT_HP, [mi, mi, mi], 35 + 25 * (SCOUT_N - 1) / 11); }
   else return;
   if (r === 3) return;
@@ -16862,7 +16873,7 @@ if (WORLD_MOTION_V2) (() => {
       {name:'이동속도',desc:'광산과 성을 더 빠르게 오가요.',ico:'speed',lv:S.minerMoveLv,cost:S.minerMoveCost,id:'mvBtn',val:lv=>Math.round(MINER_SPEED*(1+.25*lv)),unit:''},
       {name:'곡괭이 효율',desc:'초당 광산을 깎는 힘이 커져요.',ico:'pick',lv:S.minerMineLv,cost:S.minerMineCost,id:'mnBtn',val:lv=>Math.round(DIG_RATE*(1+.4*lv)),unit:'/초'}
     ];
-    return `<div class="v2-miner-summary">${badge('pick','mint')}<div><h3>우리 왕국의 광부 <b>${n}명</b></h3><p>한 번 배달 ${gold(MINER_LOAD+S.mineBonus)}G · 누적 채굴 ${gold(S.minerGold||0)}G</p></div></div><p class="v2-intro">광부는 자금 운영에서 칩 ${chipTxt(MINER_DRAW_COST)}개로 뽑아요. 광산 겹을 깰수록 배달액이 커져요.</p>` + rows.map(r => {
+    return `<div class="v2-miner-summary">${badge('pick','mint')}<div><h3>우리 왕국의 광부 <b>${n}명</b></h3><p>한 번 배달 ${gold(MINER_LOAD+S.mineBonus)}G · 누적 채굴 ${gold(S.minerGold||0)}G</p></div></div><p class="v2-intro">광부는 자금 운영에서 칩 ${chipTxt(MINER_HIRE_COST)}개로 고용하거나 ${chipTxt(MINER_DRAW_COST)}개로 뽑아요. 광산 겹을 깰수록 배달액이 커져요.</p>` + rows.map(r => {
       const maxed = r.lv >= MINER_MAX_LV, can = S.gold >= r.cost;
       return `<article class="rpgItem v2-miner-upgrade">${badge(r.ico,'mint')}<div class="rpgInfo"><h3>${r.name}<span class="v2-mini-level">Lv.${r.lv}/${MINER_MAX_LV}</span></h3><p>${r.desc}</p><div class="v2-stat-line">${r.val(r.lv)}${r.unit}${maxed ? '<b>최대 단계</b>' : `${icon('arrow')}<b>${r.val(r.lv+1)}${r.unit}</b>`}</div><div class="v2-level-dots" aria-label="${MINER_MAX_LV}단계 중 ${r.lv}단계">${Array.from({length:MINER_MAX_LV},(_,i)=>`<i class="${i<r.lv?'filled':''}"></i>`).join('')}</div></div>${maxed ? '<span class="v2-max">강화 완료</span>' : `<button class="rpgBuy v2-miner-buy" id="${r.id}" ${can?'':'disabled'}><span>${gold(r.cost)} G</span><small>${can?'강화하기':shortage(r.cost)}</small></button>`}</article>`;
     }).join('');
@@ -16931,7 +16942,8 @@ if (WORLD_MOTION_V2) (() => {
     financeView('finance','자금 운영');
     CB.innerHTML = wallet()+`<div class="v2-hub-grid">
       <button class="v2-hub-card v2-hub-invest" data-go="invest">${badge('chart','blue')}<span class="v2-hub-main"><small>내일을 준비해요</small><b>골드 투자</b><span>${investTotal()?`예치 중 ${gold(investTotal())}G`:'기간을 정하고 골드를 불려요'}</span></span>${icon('arrow')}<span class="v2-hub-foot">${S.mktOpen?'지금 개장 중':'투자 현황 보기'}<b>만기 전 인출 불가</b></span></button>
-      <button class="v2-hub-card" data-go="miner" ${canMinerDraw()?'':'disabled'}>${badge('pick','mint')}<span class="v2-hub-main"><small>${minerDrawOdds()}</small><b>광부 뽑기</b><span>현재 ${miners}명</span></span><span class="v2-hub-foot">칩 ${chipTxt(MINER_DRAW_COST)}개<b>${canMinerDraw()?'뽑기':shortage(MINER_DRAW_COST,'chip')}</b></span></button>
+      <button class="v2-hub-card" data-go="hire" ${canMinerHire()?'':'disabled'}>${badge('pick','mint')}<span class="v2-hub-main"><small>광부 1명 확정</small><b>광부 고용</b><span>현재 ${miners}명</span></span><span class="v2-hub-foot">칩 ${chipTxt(MINER_HIRE_COST)}개<b>${canMinerHire()?'고용하기':shortage(MINER_HIRE_COST,'chip')}</b></span></button>
+      <button class="v2-hub-card" data-go="miner" ${canMinerDraw()?'':'disabled'}>${badge('box','mint')}<span class="v2-hub-main"><small>${minerDrawOdds()}</small><b>광부 뽑기</b><span>현재 ${miners}명</span></span><span class="v2-hub-foot">칩 ${chipTxt(MINER_DRAW_COST)}개<b>${canMinerDraw()?'뽑기':shortage(MINER_DRAW_COST,'chip')}</b></span></button>
       <button class="v2-hub-card" data-go="slot">${badge('capsule','coral')}<span class="v2-hub-main"><small>행운의 캡슐</small><b>캡슐 뽑기</b><span>최고 상품 1,000만 G</span></span><span class="v2-hub-foot">칩 1개<b>입장하기 ${icon('arrow')}</b></span></button>
     </div>`+section('뽑기권','획득한 뽑기권을 제물대로 옮기면 개봉해요.')+
     `<div class="v2-ticket-grid">${gacha.map(([key,label,cost,p,tone])=>{const can=S.chips>=cost, rate=key==='super'?100:Math.round(p*gamblerLuck()*100);return `<button class="v2-ticket v2-${tone}" data-gacha="${key}" ${can?'':'disabled'}><span class="v2-ticket-top">${icon('crown')}<span class="v2-probability">${key==='super'?'확정 획득':`성공 ${rate}%`}</span></span><b>${label}</b><span class="v2-ticket-caption">뽑기권</span><span class="v2-ticket-cost">${icon('chip')} ${cost}개</span>${can?'':`<small class="v2-shortage">${shortage(cost,'chip')}</small>`}</button>`;}).join('')}</div><p class="v2-fineprint">${gamblerLuck()>1?'갬블러 가호가 성공률에 반영돼 있어요. ':''}확률 뽑기 실패 시 칩이 소모돼요.</p>`+
@@ -17053,7 +17065,7 @@ if (WORLD_MOTION_V2) (() => {
       {id:'mvBtn',icon:'speed',name:'가벼운 발걸음',type:'이동속도',desc:'광산과 성을 더 빠르게 오가요.',lv:S.minerMoveLv,cost:S.minerMoveCost,val:lv=>Math.round(MINER_SPEED*(1+.25*lv)),unit:''},
       {id:'mnBtn',icon:'pick',name:'단단한 곡괭이',type:'곡괭이 효율',desc:'광산을 더 빠르게 깎아내요.',lv:S.minerMineLv,cost:S.minerMineCost,val:lv=>Math.round(DIG_RATE*(1+.4*lv)),unit:'/초'}
     ];
-    return `<section class="roster-miners"><div class="roster-banner"><div><span class="roster-kicker">왕국의 작은 일꾼들</span><h3>반짝이는 광산</h3><p>작은 발걸음이 모여 <br>왕국의 금고를 채워요.</p></div>${minerArt}</div><div class="roster-totals" aria-label="광부 현황"><div><span>일하는 광부</span><b>${count}<small>명</small></b></div><div><span>한 번 배달</span><b>${num(MINER_LOAD+S.mineBonus)}<small>G</small></b></div><div><span>누적 수입</span><b>${num(S.minerGold||0)}<small>G</small></b></div></div><div class="roster-hire-note">${icon('coin')}<span>${count ? '광부를 더 뽑으려면' : '첫 광부를 만나려면'} <b>자금 운영 → 광부 뽑기</b><br>칩 ${chipTxt(MINER_DRAW_COST)}개로 뽑기 · 광산 겹을 깰수록 배달액 증가</span></div><div class="roster-section-head"><h3>광부의 도구함</h3><span>모든 광부에게 적용</span></div><div class="roster-miner-cards">${upgrades.map(r=>{
+    return `<section class="roster-miners"><div class="roster-banner"><div><span class="roster-kicker">왕국의 작은 일꾼들</span><h3>반짝이는 광산</h3><p>작은 발걸음이 모여 <br>왕국의 금고를 채워요.</p></div>${minerArt}</div><div class="roster-totals" aria-label="광부 현황"><div><span>일하는 광부</span><b>${count}<small>명</small></b></div><div><span>한 번 배달</span><b>${num(MINER_LOAD+S.mineBonus)}<small>G</small></b></div><div><span>누적 수입</span><b>${num(S.minerGold||0)}<small>G</small></b></div></div><div class="roster-hire-note">${icon('coin')}<span>${count ? '광부를 더 늘리려면' : '첫 광부를 만나려면'} <b>자금 운영 → 광부 고용·뽑기</b><br>고용 칩 ${chipTxt(MINER_HIRE_COST)}개 · 뽑기 칩 ${chipTxt(MINER_DRAW_COST)}개 · 광산 겹을 깰수록 배달액 증가</span></div><div class="roster-section-head"><h3>광부의 도구함</h3><span>모든 광부에게 적용</span></div><div class="roster-miner-cards">${upgrades.map(r=>{
       const maxed=r.lv>=MINER_MAX_LV, can=S.gold>=r.cost;
       return `<article class="rpgItem roster-upgrade ${maxed?'is-complete':''}"><div class="roster-upgrade-head">${tile(r.icon)}<div class="rpgInfo"><span class="roster-kicker">${r.type}</span><h3>${r.name}</h3></div><span class="roster-level">Lv.<b>${r.lv}</b><small>/${MINER_MAX_LV}</small></span></div><p class="roster-description">${r.desc}</p><div class="roster-stat"><div><span>현재</span><b>${r.val(r.lv)}<small>${r.unit}</small></b></div>${maxed?`<span class="roster-complete-label">${icon('check')}최대 단계</span>`:`${icon('arrow')}<div class="is-next"><span>다음 단계</span><b>${r.val(r.lv+1)}<small>${r.unit}</small></b></div>`}</div>${dots(r.lv,MINER_MAX_LV)}<div class="roster-upgrade-foot">${maxed?`<span class="roster-finished">${icon('check')}도구 강화 완료</span>`:`<span class="roster-price">강화 비용<b>${num(r.cost)}<small>G</small></b></span><button id="${r.id}" class="rpgBuy roster-buy" ${can?'':'disabled'} aria-label="${r.type} 강화, ${num(r.cost)} 골드${can?'':', 골드 부족'}"><span>강화하기</span><small>${can?'+1 단계':short(r.cost)}</small></button>`}</div></article>`;
     }).join('')}</div></section>`;
