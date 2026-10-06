@@ -239,13 +239,13 @@
   .chipStation .ci.spin { animation: spin360 3.5s linear infinite; }
   /* 📊 딜 순위 미니 위젯 (자금운영 아래, 접으면 ▶만 남는다)
      — 절대배치로 아래로 뺀다: 흐름에 두면 강화 포털(84,224 부근)과 겹친다 (08-15 유저) */
-  #dpsRank { position: absolute; left: calc(100% + 4px); top: calc(50% + 10px); max-width: 176px; /* 09-30 유저: 성을 가렸다 → 자금운영 오른쪽 = 강화 포털 바로 밑 (자금운영 세로 중심 ≈ 캔버스 250, 포털 밑변 258) */ background: rgba(20,16,34,0.72); border: 1px solid rgba(201,167,90,0.35); border-radius: 10px; padding: 4px 7px; font-size: 10px; color: #e8e2d2; }
+  #dpsRank { position: absolute; left: calc(100% + 4px); top: calc(50% + 10px); max-width: 196px; /* 10-06: 176 → 196 = 가장 긴 '① 에이스 슈퍼영웅 스트레이트 999.9M'이 안 넘치게 (상태창 이름 체계 통일) · 09-30 유저: 성을 가렸다 → 자금운영 오른쪽 = 강화 포털 바로 밑 (자금운영 세로 중심 ≈ 캔버스 250, 포털 밑변 258) */ background: rgba(20,16,34,0.72); border: 1px solid rgba(201,167,90,0.35); border-radius: 10px; padding: 4px 7px; font-size: 10px; color: #e8e2d2; }
   #dpsRank #dpsHead { cursor: pointer; font-weight: bold; color: #ffd166; font-size: 11px; user-select: none; white-space: nowrap; pointer-events: auto; }
   #dpsRank { pointer-events: none; } /* 09-30 크로스체크: 표시 전용 — 밑의 성·유닛 클릭/집기가 통과 (순환 토글은 제목 줄만) */
   #dpsRank.full { pointer-events: auto; } /* '전체 딜량'은 스크롤 목록 — 유저가 연 동안만 입력 받음 (제목 한 번에 닫힘) */
   body:not(.mobile) #cvWrap:has(#pokerPanel.up) #dpsRank { display: none; } /* 크로스체크 P2: 데스크톱 포커 패널이 올라오면 선택 유닛 정보창(우선순위 버튼)과 겹침 — 포커 중엔 딜 값도 안 변한다 */
   #dpsRank .dr { margin-top: 3px; white-space: nowrap; } /* 08-15 유저: "…" 잘림 해소 — 위젯이 내용 폭만큼 자란다 */
-  #dpsRank.full { max-width: 216px; font-size: 11px; max-height: 300px; overflow-y: auto; } /* 전체 딜량 큰 화면 */
+  #dpsRank.full { max-width: 276px; /* 10-06: 216 → 276 = 긴 이름 + '999.9M · 킬 99999' + 세로 스크롤바 */ font-size: 11px; max-height: 300px; overflow-y: auto; } /* 전체 딜량 큰 화면 */
   #dpsRank .db { height: 4px; background: #2a2340; border-radius: 2px; margin-top: 2px; }
   #dpsRank .db div { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #8c5bff, #ff6b9d); }
   @keyframes spin360 { to { transform: rotate(360deg); } }
@@ -2989,6 +2989,8 @@ html body #unitInfo.ui-panel[data-kind="item"] .ui-help { font-size: 11px; }
    :has·무한 애니·backdrop-filter 금지 (10-02 교훈) */
 /* ① 원문 root의 transition:none이 포커 패널이 올라올 때의 bottom 슬라이드(#unitInfo bottom calc(--panelH) 규칙)를 끊는다 → bottom만 복구 (움직임 줄이기는 원문 !important가 계속 끈다) */
 html body #unitInfo.ui-panel { transition: bottom 0.34s cubic-bezier(0.22, 0.9, 0.3, 1); }
+/* 10-06: 포커 판 위에 자리가 없으면 숨김 (placeInfoPanel) — display가 아니라 visibility라 높이 측정이 그대로 된다 (인라인 display:block보다 우선하려고 !important) */
+html body #unitInfo.ui-panel.uiNoRoom { visibility: hidden !important; }
 /* ② 원문 팔레트에 없는 히든 영웅 6종 — HIDDEN_META 원래 색 계열을 밝혀 그라디언트 최밝은 지점(#34416a) 대비 4.5:1 이상
    갬블러 6.37 · 고물상 5.31 · 콰르텟 5.07 · 길로틴 5.11 · 쇼군 5.37 · 투석기 5.83 (WCAG 상대휘도 계산) */
 html body #unitInfo.ui-panel .ui-race[data-hidden="gamble"] { --ui-race-color: #f5c96a; }
@@ -4630,7 +4632,7 @@ function endWave() {
       const best = recordBest(S.round);
       const isNew = S.round >= best;
       const fmt = v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(1)+'k' : Math.round(v);
-      const top = Object.entries(S.stats).sort((a,b) => b[1].dmg - a[1].dmg).slice(0, 6);
+      const top = dpsGroups().slice(0, 6); // 10-06: 딜 순위 위젯과 같은 묶음·이름
       const maxD = top.length ? top[0][1].dmg : 1;
       const statsHTML = (top.length ? `<div style="margin-top:12px;text-align:left;font-size:12px"><b style="color:#ffd166">🏆 이번 판 MVP: ${top[0][0]}</b>` +
         top.map(([nm, st]) => `<div style="margin-top:5px">${nm} — 딜 ${fmt(st.dmg)} · 킬 ${st.kills}<div style="height:6px;background:#2a2340;border-radius:3px;margin-top:2px"><div style="height:100%;border-radius:3px;width:${Math.max(3, 100*st.dmg/maxD).toFixed(0)}%;background:linear-gradient(90deg,#8c5bff,#ff6b9d)"></div></div></div>`).join('') + '</div>' : '') +
@@ -6405,7 +6407,7 @@ function huntRewardDef(stage) {
     ['🎟️', '재변경권 +1', () => S.items.reroll++, '#c0392b'],
     ['🏹', '원페어 영웅 유닛!', () => spawnHero(1, RACE_OF_RANK[1], CX-40, CY+155, 1), '#43a047'],
     ['⚔️', '전 종족 +3Lv', () => S.upg = S.upg.map(v => v + 3), '#43a047'],
-    ['📑✨', '복사권×2 + 슈퍼광부', () => { S.items.copier += 2; spawnSuperMiner(); }, '#5b48d0'],
+    ['📑✨', '복사권×2 + 슈퍼 광부', () => { S.items.copier += 2; spawnSuperMiner(); }, '#5b48d0'],
     // 💎 다이아(9단계): 상위 족보 에이스 직접 지급 → 뽑기권 2장으로 교체 (08-16 유저 — 제물대 개봉 재미 + 뽑기권 시스템 일원화)
     ['👑', '에이스 뽑기권 + 영웅 뽑기권!', () => { spawnItemUnit('gachaAce'); spawnItemUnit('gachaHero'); }, '#e91e8c'],
     ['🌟', '슈퍼영웅 강림!!', () => { const t = Math.floor(Math.random()*10); spawnHero(t, RACE_OF_RANK[t], CX-40, CY+155, 1.5, true); }, '#ff6b9d'],
@@ -10172,7 +10174,7 @@ function drawHeadgear(u, topY) {
     ctx.beginPath(); ctx.arc(cx + 11, topY - 9.5, 1.8, 0, 6.28); ctx.fill();
     return;
   }
-  if (u.miner) { // 안전모 (돔 + 챙 + 세로 줄) — 슈퍼광부는 헤드램프 달린 황금 안전모
+  if (u.miner) { // 안전모 (돔 + 챙 + 세로 줄) — 슈퍼 광부는 헤드램프 달린 황금 안전모
     if (u.sminer) {
       ctx.fillStyle = '#ffc107'; ctx.beginPath(); ctx.arc(cx, topY, 6.5, Math.PI, 0); ctx.fill();
       ctx.fillRect(cx - 9, topY - 0.5, 18, 2.2);
@@ -10361,7 +10363,7 @@ function drawWeapon(u, x, y) {
       ctx.beginPath(); ctx.moveTo(u.x, u.y - 20); ctx.lineTo(u.x + 2, u.y - 14); ctx.lineTo(u.x, u.y - 11); ctx.closePath(); ctx.fill();
       return;
     }
-    // 곡괭이 (캘 때 위아래로 휘두른다) — 슈퍼광부는 황금 곡괭이
+    // 곡괭이 (캘 때 위아래로 휘두른다) — 슈퍼 광부는 황금 곡괭이
     ctx.save();
     ctx.translate(x + 2, y);
     ctx.rotate(u.swing > 0 ? -0.4 - Math.sin(u.swing * 21) * 0.7 : 0);
@@ -11036,27 +11038,54 @@ cv.addEventListener('touchcancel', e => {
   if (drag && drag.grab) dropGrab(drag.grab, grabPos ? grabPos.x : drag.x1, grabPos ? grabPos.y : drag.y1); // 🖐️ 터치가 끊기면 그 자리에 내려놓는다
   drag = null;
 });
+// 10-06 유저(PC 1280×800 포커 판 올라옴): 상태창이 💰 자금운영·📊 딜 순위에 덮이고 위 끝이 잘렸다 →
+//   ① 왼쪽 자리가 자금운영 버튼과 겹치면 버튼 오른쪽으로 비킨다 ② 그래도 딜 순위(표시 전용)와 겹치면 딜 순위를 잠깐 숨긴다
+//   ③ PC: 포커 판 위 남은 높이(1280×800 ≈ 104~141px · 1366×768 ≈ 72~109px · 1000×600 = 0 이하 — 아래 기록 칸(최대 4줄, 긴 문장이 접히면 줄당 ≈19px 더) 줄 수에 따라)보다 상태창이 크면 그 높이로 줄이고 안에서 스크롤
+//      (리뷰 RVM-1: 통째로 숨기면 기준에서 눌리던 스킬·복사기 버튼을 못 눌렀다) — 제목 줄(48px)도 안 들어가면 그때만 숨긴다
+//   세로 위치는 슬라이드(0.34초)의 도착 지점으로 계산 — 판이 오르내리는 도중에 좌우로 흔들리지 않게 (모바일은 슬라이드 없음 = 실제 위치)
 function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 않게 좌/우로 자동 전환
-  const el = document.getElementById('unitInfo');
-  if (!el || el.style.display === 'none') return;
-  const sel = S.units.filter(u => u.selected);
-  if (!sel.length) return;
+  const el = document.getElementById('unitInfo'), dps = document.getElementById('dpsRank');
+  const sel = (el && el.style.display !== 'none') ? S.units.filter(u => u.selected) : [];
+  if (!sel.length) { if (dps.style.visibility) dps.style.visibility = ''; if (el) { el.classList.remove('uiNoRoom'); if (el.style.maxHeight) el.style.maxHeight = ''; } return; }
+  const PC_MAX = 220, MIN_ROOM = 48; // 원문 PC 상한(unitinfo.css max-height) · 제목 줄(위 여백 12 + 21)+아래 여백 12 실측 = 45 → 48
   const cv = document.getElementById('cv');
   const sx = cv.getBoundingClientRect().width / 940;              // 캔버스 좌표 → 화면 배율
   const avg = sel.reduce((a, u) => a + u.x, 0) / sel.length;
-  const cardW = (el.getBoundingClientRect().width || 220) / (sx || 1);
+  const W = el.getBoundingClientRect().width || 220;
+  const cw = document.getElementById('cvWrap'), cb = cw.getBoundingClientRect();
+  const pT = cb.top + cw.clientTop, pL = cb.left + cw.clientLeft;   // 상태창 기준 상자(cvWrap 안쪽)
+  const pH = IS_MOBILE ? 0 : parseFloat(document.documentElement.style.getPropertyValue('--panelH')) || 0;
+  const bot = IS_MOBILE ? el.getBoundingClientRect().bottom : pT + cw.clientHeight - 10 - pH, room = bot - (pT + 4);
+  const nat = el.style.maxHeight ? Math.min(el.scrollHeight + el.offsetHeight - el.clientHeight, PC_MAX) : el.offsetHeight; // 줄여 둔 상태면 원래 높이를 내용으로 다시 잰다
+  const cap = !IS_MOBILE && room < nat, noRoom = room < (IS_MOBILE ? nat : MIN_ROOM), top = bot - (cap ? room : nat);
+  const bR = document.getElementById('chipBar').getBoundingClientRect();
+  const dy = IS_MOBILE ? 0 : pT + (cw.clientHeight - pH) / 2 - (bR.top + bR.height / 2); // 자금운영 칸도 도착 지점으로
+  const hit = (a0, a1, b0, b1) => a0 < b1 && b0 < a1;
+  const sR = document.getElementById('stCasino').getBoundingClientRect(), L0 = pL + 10, dR = dps.getBoundingClientRect(); // 읽기를 먼저 다 하고 아래에서 쓴다 (HUD 틱마다 강제 레이아웃 방지)
+  const shift = (sR.width && hit(L0, L0 + W, sR.left, sR.right) && hit(top, bot, sR.top + dy - 4, sR.bottom + dy + 4)) ? Math.ceil(sR.right - L0 + 6) : 0;
+  const cardW = (W + shift) / (sx || 1);
   const nearLeft = avg < cardW + 40 && !duelFleeActive();         // 카드(좌측)와 겹칠 만큼 왼쪽에 있나 (도망 게이지 중엔 우측 카드가 버튼을 가리므로 금지 — 크로스체크 P1)
   const wantRight = nearLeft;
   if (wantRight) { el.style.left = 'auto'; el.style.right = '10px'; }
-  else { el.style.right = 'auto'; el.style.left = '10px'; }
+  else { el.style.right = 'auto'; el.style.left = (10 + shift) + 'px'; }
+  const mh = (cap && !noRoom) ? Math.floor(room) + 'px' : '';
+  if (el.style.maxHeight !== mh) el.style.maxHeight = mh;
+  el.classList.toggle('uiNoRoom', noRoom);
+  const x0 = wantRight ? pL + cw.clientWidth - 10 - W : L0 + shift;
+  const v = (!noRoom && dR.width && hit(x0, x0 + W, dR.left, dR.right) && hit(top, bot, dR.top + dy, dR.bottom + dy)) ? 'hidden' : '';
+  if (dps.style.visibility !== v) dps.style.visibility = v;
 }
 // 10-06 유저: 상태창 이름 = 족보 + 등급 ('원페어 (K)') — 무기 이름은 그림으로 보이니 뺀다. 등급은 u.weapon 문자열이 아니라 플래그로 판정 (이름 붙이는 경로가 6곳)
-// 히든 영웅·아이템은 이름이 정체성이라 u.weapon 그대로 · 빽스트레이트는 keyLabel 'B'(confirmHand에서만 붙는다)
+// 10-06 오전 유저: 등급을 앞에 — '영웅 원페어'·'에이스 슈퍼영웅 원페어' (괄호 없음) · 일반만 '원페어 (K)' · 딜 순위 라벨도 같은 gradeName
+// 히든 영웅은 이름이 정체성 — u.weapon의 '히든 영웅 ' 접두는 괄호와 겹치니 화면에서만 뗀다 ('조커 (히든 영웅)') · 아이템은 u.weapon 그대로 · 빽스트레이트는 keyLabel 'B'(confirmHand에서만 붙는다)
+function gradeName(grade, hand) { return grade ? grade + ' ' + hand : hand; }
 function unitShortName(u) {
-  if (u.miner) return { name: u.exc ? '굴착기' : u.sminer ? '슈퍼 광부' : u.hminer ? '히든 광부' : '광부', grade: '' };
-  if (u.item || isHiddenCombo(u)) return { name: u.weapon, grade: '' };
+  if (u.miner) return { name: u.exc ? '굴착기' : u.sminer ? '슈퍼 광부' : u.hminer ? '히든 광부' : '광부', sub: '' };
+  if (u.item) return { name: u.weapon, sub: '' };
+  if (isHiddenCombo(u)) return { name: u.weapon.replace(/^히든 영웅 /, ''), sub: '히든 영웅' };
   const grade = u.hero ? (u.ace ? '에이스 ' : '') + (u.super ? '슈퍼영웅' : '영웅') : u.superAce ? '슈퍼에이스' : u.hidden ? '에이스' : '';
-  return { name: (!grade && u.keyLabel === 'B' ? '빽' : '') + HAND_NAMES[u.tier], grade };
+  if (grade) return { name: gradeName(grade, HAND_NAMES[u.tier]), sub: '' };
+  return { name: (u.keyLabel === 'B' ? '빽' : '') + HAND_NAMES[u.tier], sub: u.keyLabel };
 }
 // 10-06 유저: 특성 줄 부활 (10-01 fc592b9에서 삭제됐던 목록) — 개수 ×N만 표기, 반경·%·쿨 초는 생략 (UI 미니멀)
 // 값은 유닛 필드 그대로 = 슈퍼·에이스·승급이 반영된 실효값 · 스킬 버튼이 따로 있는 시간정지·대박 폭격·견인·풀하우스 스킬은 칩 없음
@@ -11092,7 +11121,7 @@ function updateInfoPanel() {
     el.dataset.kind = 'multi';
     // 부대 구성 요약 + 강화 가능 여부
     const comp = {};
-    sel.forEach(u => { const n = unitShortName(u), k = n.grade ? n.name + ' ' + n.grade : n.name; comp[k] = (comp[k] || 0) + 1; }); // 10-06: 짧은 이름 (키 카드는 빼서 K·Q가 한 묶음 — 예전 무기 이름 묶음과 같은 단위)
+    sel.forEach(u => { const k = unitShortName(u).name; comp[k] = (comp[k] || 0) + 1; }); // 10-06: 짧은 이름 (키 카드는 빼서 K·Q가 한 묶음 — 예전 무기 이름 묶음과 같은 단위)
     const compStr = Object.entries(comp).map(([w, n]) => `${w} ×${n}`).join(', ');
     const byTier = {};
     sel.filter(u => !u.hidden && !u.hero && !u.miner).forEach(u => byTier[u.tier] = (byTier[u.tier] || 0) + 1);
@@ -11144,8 +11173,7 @@ function updateInfoPanel() {
   if (u.stone === 'lava') badges.push('<span class="ui-badge" data-badge="stone" title="용암 묻은 돌">🌋</span>'); // 🥚 획득 후에만 표시 (발견 전 힌트 없음)
   else if (u.stone === 'wet') badges.push('<span class="ui-badge" data-badge="stone" title="물먹은 돌">💧</span>');
   if (u.forceTarget) badges.push('<b class="ui-badge" data-badge="focus">🎯 집중</b>');
-  const nm = unitShortName(u);
-  const sub = isHiddenCombo(u) ? '히든 영웅' : nm.grade || u.keyLabel; // 10-06: 일반 = 키 카드 'K' · 그 밖 = 등급 (광부는 위에서 따로 return)
+  const nm = unitShortName(u); // 10-06: 괄호 = 일반은 키 카드 'K' · 히든 영웅은 '히든 영웅' · 등급 유닛은 이름 앞에 등급이 붙어 괄호 없음 (광부는 위에서 따로 return)
   const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = upgEff(top2[0]) + upgEff(top2[1]);
   const upFlat = isHiddenCombo(u) ? 0 : +(((u.hidden || u.ace) ? aceUp : upgEff(S.upg[u.race])) * upgPer(u) * fuseCount(u)).toFixed(1); // 히든 영웅은 종족 업글 미적용 (⭐ 단련으로 성장)
   const hmI = hiddenMeta(u);
@@ -11160,7 +11188,7 @@ function updateInfoPanel() {
   const trH = `<span class="ui-traits">${unitTraits(u).map(t => `<span class="ui-trait">${t}</span>`).join('')}</span>`;
   el.dataset.kind = isHiddenCombo(u) ? 'hidden' : u.hero ? (u.super ? 'super' : 'hero') : u.hidden ? 'ace' : 'unit';
   el.innerHTML =
-    `<div class="ui-head"><b class="ui-name">${nm.name}</b> <span class="ui-sub">(${sub})</span>${badges.length ? ' <span class="ui-badges">' + badges.join('') + '</span>' : ''}</div>` +
+    `<div class="ui-head"><b class="ui-name">${nm.name}</b>${nm.sub ? ` <span class="ui-sub">(${nm.sub})</span>` : ''}${badges.length ? ' <span class="ui-badges">' + badges.join('') + '</span>' : ''}</div>` +
     raceLine +
     `<div class="ui-stat ui-atk">공격력 <b class="ui-num">${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? ` <span class="ui-crown">👑×${CROWN_RACE_MUL[S.crownRace].toFixed(2)}</span>` : ''}${isHiddenCombo(u) ? '' : ` <small class="ui-atk-base">(기본 ${(+u.dmg).toFixed(1)} +${upFlat})</small>`}</div>` +
     // 공속: 콰르텟 버프·히든 페널티 반영된 실제 값
@@ -11719,7 +11747,7 @@ function renderShop() {
     const superAces = HAND_NAMES.map((n, t) => btn('sa' + t, `${n} 슈퍼에이스`)).join('');
     const hiddenKeys = Object.keys(HIDDEN_META);
     const hiddens = hiddenKeys.map(k => btn('hid_' + k, `${HIDDEN_META[k][0]} ${HIDDEN_META[k][1]}`)).join('');
-    const miners = btn('miner', '⛏️ 광부') + btn('sminer', '⛏️ 슈퍼광부') + btn('exc', '🚜 굴착기');
+    const miners = btn('miner', '⛏️ 광부') + btn('sminer', '⛏️ 슈퍼 광부') + btn('exc', '🚜 굴착기');
     const itemKeys = ['timestop', 'stimpack', 'acid', 'bombard', 'revive', 'plank'];
     const items = itemKeys.map(k => btn('it_' + k, `${ITEM_META[k].icon} ${ITEM_META[k].name}`)).join('');
     const misc = btn('gold', '💰 골드 +100k') + btn('chip', '🪙 칩 +10');
@@ -12159,14 +12187,7 @@ function updateDpsRank() {
   body.style.display = dpsMode === 2 ? 'none' : '';
   if (dpsMode === 2) return;
   const fmt = v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'k' : Math.round(v);
-  // 족보로 묶어 집계 (08-16 유저): "원페어"·"원페어 영웅"·"투페어 슈퍼영웅"… — S.stats 키·결산 MVP는 무기명 유지, 위젯 표시만 묶는다
-  const agg = {};
-  for (const [nm, st] of Object.entries(S.stats)) {
-    const L = dpsGroupLabel(nm);
-    const a = agg[L] || (agg[L] = { dmg: 0, kills: 0 });
-    a.dmg += st.dmg; a.kills += st.kills;
-  }
-  const all = Object.entries(agg).sort((a, b) => b[1].dmg - a[1].dmg);
+  const all = dpsGroups();
   const top = dpsMode === 1 ? all : all.slice(0, 5);
   const maxD = top.length ? top[0][1].dmg : 1;
   const html = top.length
@@ -12175,6 +12196,17 @@ function updateDpsRank() {
       : `<div class="dr">${['①', '②', '③', '④', '⑤'][i]} ${nm} <b style="color:#ffd166">${fmt(st.dmg)}</b></div>`).join('')
     : '<div class="dr" style="color:#8a8298">아직 없음</div>';
   if (html !== dpsLastHtml) { body.innerHTML = html; dpsLastHtml = html; } // DOM churn 방지 — 값이 변했을 때만
+}
+// 족보로 묶어 집계 (08-16 유저): "원페어"·"영웅 원페어"·"슈퍼영웅 투페어"… — S.stats 키(무기명)는 그대로, 표시만 묶는다
+// 10-06 유저: 딜 순위 표기 통일 — 위젯(상위 5·전체)과 결산(MVP·목록)이 이 한 목록을 쓴다 (08-16의 '결산은 무기명 유지'는 대체됨)
+function dpsGroups() {
+  const agg = {};
+  for (const [nm, st] of Object.entries(S.stats)) {
+    const L = dpsGroupLabel(nm);
+    const a = agg[L] || (agg[L] = { dmg: 0, kills: 0 });
+    a.dmg += st.dmg; a.kills += st.kills;
+  }
+  return Object.entries(agg).sort((a, b) => b[1].dmg - a[1].dmg);
 }
 // 무기명 → 족보 그룹 라벨 (미분류는 원명 그대로 — 곡괭이 등)
 const HAND_SHORT = ['하이카드', '원페어', '투페어', '트리플', '스트레이트', '플러쉬', '풀하우스', '포카드', '스트플', '로얄'];
@@ -12197,7 +12229,7 @@ function dpsGroupLabel(nm) {
   else { base = nm; grade = ''; }
   const t = /영웅/.test(grade) ? dpsNameMap.hero[base] : dpsNameMap.unit[base];
   if (t === undefined) return nm;
-  return HAND_SHORT[t] + (grade ? ' ' + grade : '');
+  return gradeName(grade, HAND_SHORT[t]); // 10-06 유저: 등급 앞 ('영웅 원페어') — 상태창 이름과 같은 체계
 }
 document.getElementById('dpsHead').onclick = () => { dpsMode = (dpsMode + 1) % 3; dpsLastHtml = ''; updateDpsRank(); };
 // 📈 투자 위젯 클릭 → 투자 현황 바로 열기 (2026-08-08 유저 지정)
