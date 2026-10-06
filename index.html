@@ -3069,6 +3069,10 @@ html body #objInfo {
   color-scheme: dark;
 }
 html body.mobile #objInfo { padding: 9px; } /* 기존 .mobile #objInfo 10px - 1 */
+/* 10-06 후속: PC 포커 판이 올라오면 남은 높이에 맞춰 줄인다 (placeObjInfo가 인라인 max-height) → 넘친 내용은 안에서 스크롤 · 제목 줄도 안 들어가면 숨김 (상태창과 같은 규칙)
+   max-height가 없을 땐 overflow만으로는 모양이 안 바뀐다 */
+html body #objInfo { overflow-y: auto; }
+html body #objInfo.uiNoRoom { visibility: hidden !important; }
 html body #objInfo b { color: var(--ui-gold); }
 html body #objInfo > b:first-child { color: var(--ui-text); font-weight: 750; } /* 제목 줄 (건물·몬스터 이름) — 유닛 상태창 .ui-name과 같은 흰 굵은 글씨, 강조 숫자·단어는 금빛 */
 /* 💡 팁 = 인디고 위 금빛 안내 칩 (테두리 대신 inset 그림자 — 크기 불변) */
@@ -4457,17 +4461,18 @@ function minerSpecial(kind, u) {
 // 👑 뽑기권 개봉: 족보 티어 룰렛 (원페어40 투페어30 트리플20 스트9 5 플러쉬2 풀하2 포카0.5 SF0.3 로얄0.2 — %)
 const GACHA_W = [[1, 40], [2, 30], [3, 20], [4, 5], [5, 2], [6, 2], [7, 0.5], [8, 0.3], [9, 0.2]];
 function gachaTier(rng) { let r = (rng || Math.random)() * 100; for (const [t, w] of GACHA_W) { r -= w; if (r < 0) return t; } return 1; } // rng = 🤖 멀티 봇 상자(b.rng)·테스트 고정 난수 (싱글은 Math.random 그대로)
-function gachaReveal(t, label, mkUnit) {
+function gachaReveal(t, label, mkUnit, key) { // key = 일반 유닛의 키 카드 (멀티 상자 — '원페어 (8)', 상태창과 같은 이름) · 등급 있는 뽑기권은 없음
   const hot = t >= 4; // 스트레이트 이상 = 상위 5% 당첨
+  const nm = gradeName(label, HAND_NAMES[t]) + (key ? ` (${key})` : ''); // 10-06 후속: 등급 앞 ('영웅 원페어') — 상태창 이름과 같은 체계
   // 🎁 캔버스 위 상자 개봉 연출 — 유닛 지급은 상자가 열리는 순간(onReveal)
   gachaBoxAnim(document.getElementById('cvWrap'), {
     ovl: true, win: true, revealIcon: '👑',
-    revealText: `${HAND_NAMES[t]} ${label}!`, color: hot ? '#ff6b9d' : '#ffd166',
+    revealText: `${nm}!`, color: hot ? '#ff6b9d' : '#ffd166',
     onReveal: () => {
       mkUnit(t);
-      logMsg(`👑 뽑기권 개봉 — <b>${HAND_NAMES[t]} ${label}</b>!`);
+      logMsg(`👑 뽑기권 개봉 — <b>${nm}</b>!`);
       sfx(hot ? 'jackpot' : 'reward'); sfx('hero');
-      if (hot) goldBurst(0.55, `👑 ${HAND_NAMES[t]} ${label}!`);
+      if (hot) goldBurst(0.55, `👑 ${nm}!`);
     },
   });
 }
@@ -4478,7 +4483,7 @@ function useGachaAceHero() { const t = gachaTier(); gachaReveal(t, '에이스 �
   spawnHero(tt, RACE_OF_RANK[tt], ALTAR.x, ALTAR.y - 66, (ACE_MUL[tt] || 1.5) * 1.2); // 에이스 5기 합성과 동일 배수
   const h = S.units[S.units.length - 1]; h.ace = true; h.weapon = '에이스 영웅 ' + WEAPONS[tt].hero.name;
 }); }
-function useGachaSuper()   { const t = gachaTier(); gachaReveal(t, '슈퍼에이스 영웅', tt => {
+function useGachaSuper()   { const t = gachaTier(); gachaReveal(t, '에이스 슈퍼영웅', tt => { // 10-06 후속: 결과 문구 = 상태창 이름 ('에이스 슈퍼영웅 원페어' — 표는 이름이 '슈퍼에이스 영웅 뽑기권' 그대로)
   spawnHero(tt, RACE_OF_RANK[tt], ALTAR.x, ALTAR.y - 66, (ACE_MUL[tt] || 1.5) * 1.2 * 2, true); // 슈퍼에이스 5기 합성과 동일 배수
   const h = S.units[S.units.length - 1]; h.ace = true; h.weapon = '에이스 슈퍼영웅 ' + WEAPONS[tt].hero.name;
 }); }
@@ -4936,7 +4941,7 @@ function spawnJoker(x, y) {
   });
   addFloat(x, y - 30, '🃏 조커 강림!! 🃏', '#8c5bff', 2.8);
   sfx('jackpot'); sfx('hero');
-  logMsg('🃏✨ 히든 조합 발견!! [원페어·투페어·트리플 영웅 각1] → 히든 영웅 <b>조커</b>! 낫으로 베며 몹을 끌어당깁니다!');
+  logMsg('🃏✨ 히든 조합 발견!! [영웅 원페어·투페어·트리플 각1] → 히든 영웅 <b>조커</b>! 낫으로 베며 몹을 끌어당깁니다!');
   markHidden('joker');
 }
 // 🪨 투석기: 하이카드 20기를 포털에 제물로 바치면 완성되는 거대 공성병기 (이동 불가)
@@ -5345,7 +5350,7 @@ function update(dt) {
         S.hiAceGiven = true;
         spawnUnit(0, RACE_OF_RANK[0], true, 14); // ♠ 하이카드 에이스 (스펙은 기존 에이스 규격 그대로)
         addFloat(OREPOS.x, OREPOS.y - 40, '🥚✨ 이스터에그!! 겸손한 첫 손님에게 ♠ 에이스의 축복!', '#e91e8c', 3);
-        logMsg('🥚✨ <b>이스터에그 발견!!</b> 가장 하찮은 카드가 가장 먼저 광석에 닿았다… ♠ <b>하이카드 에이스</b> 강림!');
+        logMsg('🥚✨ <b>이스터에그 발견!!</b> 가장 하찮은 카드가 가장 먼저 광석에 닿았다… ♠ <b>에이스 하이카드</b> 강림!');
         sfx('jackpot'); sfx('hero');
       }
     }
@@ -6563,12 +6568,12 @@ function minerDrawOdds(sep) { return MINER_DRAW_P.map(([k, w]) => `${MINER_KIND[
 const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단련 담당) — needs: 제단 위 제물 [{tier, hero?, n}]
   gamble: [
     { needs: [{ tier: 3, n: 3 }], mat: '트리플 3기', desc: '주사위 최소 2 (1 없음)' },
-    { needs: [{ tier: 3, hero: true, n: 1 }], mat: '트리플 영웅 1기', desc: '6이 나오면 8연타' },
+    { needs: [{ tier: 3, hero: true, n: 1 }], mat: '영웅 트리플 1기', desc: '6이 나오면 8연타' },
   ],
   junk: [
     // 2026-08-04 유저: 하이카드 2기가 재료였는데 🪨 제물대(투석기)가 하이카드를 먼저 먹어버려 승급 제물로 못 썼다 → 원3·투3으로 교체.
     { needs: [{ tier: 1, n: 3 }, { tier: 2, n: 3 }], mat: '원페어·투페어 각 3기', desc: '버프 대상 5기 → 7기' },
-    { needs: [{ tier: 1, hero: true, n: 1 }], mat: '원페어 영웅 1기', desc: '킬 골드 ×1.2 → ×1.35' },
+    { needs: [{ tier: 1, hero: true, n: 1 }], mat: '영웅 원페어 1기', desc: '킬 골드 ×1.2 → ×1.35' },
   ],
   quartet: [
     { needs: [{ tier: 4, n: 2 }], mat: '스트레이트 2기', desc: '버프 대상 5기 → 7기 · 범위 +27%' }, // 근접 5기 방식 전환 (2026-08-08) — 반경 190은 리시 범위로 유지
@@ -6584,16 +6589,16 @@ const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단
   ],
   chrono: [
     { needs: [{ tier: 4, n: 3 }], mat: '스트레이트 3기', desc: '시간 정지 4초 → 6초' },
-    { needs: [{ tier: 4, hero: true, n: 1 }], mat: '스트레이트 영웅 1기', desc: '쿨타임 150초 → 110초' },
+    { needs: [{ tier: 4, hero: true, n: 1 }], mat: '영웅 스트레이트 1기', desc: '쿨타임 150초 → 110초' },
   ],
   slot: [
     { needs: [{ tier: 3, n: 3 }], mat: '트리플 3기', desc: '폭탄 14~22 → 20~30개' },
-    { needs: [{ tier: 3, hero: true, n: 1 }], mat: '트리플 영웅 1기', desc: '쿨타임 75초 → 55초' },
+    { needs: [{ tier: 3, hero: true, n: 1 }], mat: '영웅 트리플 1기', desc: '쿨타임 75초 → 55초' },
   ],
   joker: [ // 공속은 실제 발사 간격(effCd — 히든 페널티 반영) 기준. 정보창 표기와 일치시킨다
     // 2026-08-08 유저: 재료를 "아무 영웅"에서 레시피 계열(원페어→투페어 영웅)로 구체화
-    { needs: [{ tier: 1, hero: true, n: 1 }], mat: '원페어 영웅 1기', desc: '공속 2.8회/초 · 사거리 138 · 견인 최대 140마리' },
-    { needs: [{ tier: 1, hero: true, n: 1 }, { tier: 2, hero: true, n: 1 }], mat: '원페어·투페어 영웅 각 1기', desc: '공속 4.4회/초 · 사거리 165 · 견인 280마리 + 견인 강화' },
+    { needs: [{ tier: 1, hero: true, n: 1 }], mat: '영웅 원페어 1기', desc: '공속 2.8회/초 · 사거리 138 · 견인 최대 140마리' },
+    { needs: [{ tier: 1, hero: true, n: 1 }, { tier: 2, hero: true, n: 1 }], mat: '영웅 원페어·투페어 각 1기', desc: '공속 4.4회/초 · 사거리 165 · 견인 280마리 + 견인 강화' },
   ],
   catapult: [
     { needs: [{ tier: 0, n: 10 }], mat: '하이카드 10기', desc: '착탄 시 파편 4방 폭발' },
@@ -11008,8 +11013,9 @@ function showObjInfo(k) {
   const tip = o.tip; // 히든 소문은 🐦 새를 잡아야 얻는다 (여기서 공짜로 흘리지 않는다)
   el.innerHTML = `<b>${o.t}</b><br>${d}${bar}<span class="tip">${tip}</span>`;
   el.style.display = 'block';
+  placeObjInfo(); // 10-06 후속: 포커 판 위 남은 높이에 맞춤
 }
-function hideObjInfo() { S.selMon = null; S.selObj = null; document.getElementById('objInfo').style.display = 'none'; }
+function hideObjInfo() { S.selMon = null; S.selObj = null; document.getElementById('objInfo').style.display = 'none'; placeObjInfo(); }
 // 🎯 몬스터 클릭 정보 (스타크래프트처럼 이름·아기자기한 설명·실시간 체력)
 const MAT_DESC = [
   '말랑말랑 물풍선. 톡 터뜨리면 첨벙! 🫧',
@@ -11069,6 +11075,7 @@ function showMonsterInfo(m) {
     `<div class="oi-track oi-hp-track"><div style="height:100%;width:${(pct*100).toFixed(0)}%;background:${col}"></div></div></div>` +
     (tags.length ? `<span class="tip">${tags.join('<br>')}</span>` : '');
   el.style.display = 'block';
+  placeObjInfo(); // 10-06 후속: 포커 판 위 남은 높이에 맞춤
 }
 function objAt(x, y) {
   if (Math.abs(x - ALTAR.x) <= ALTAR.w/2 && Math.abs(y - ALTAR.y) <= ALTAR.h/2) return 'altar';
@@ -11280,12 +11287,7 @@ function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 
   const sx = cv.getBoundingClientRect().width / 940;              // 캔버스 좌표 → 화면 배율
   const avg = sel.reduce((a, u) => a + u.x, 0) / sel.length;
   const W = el.getBoundingClientRect().width || 220;
-  const cw = document.getElementById('cvWrap'), cb = cw.getBoundingClientRect();
-  const pT = cb.top + cw.clientTop, pL = cb.left + cw.clientLeft;   // 상태창 기준 상자(cvWrap 안쪽)
-  const pH = IS_MOBILE ? 0 : parseFloat(document.documentElement.style.getPropertyValue('--panelH')) || 0;
-  const bot = IS_MOBILE ? el.getBoundingClientRect().bottom : pT + cw.clientHeight - 10 - pH, room = bot - (pT + 4);
-  const nat = el.style.maxHeight ? Math.min(el.scrollHeight + el.offsetHeight - el.clientHeight, PC_MAX) : el.offsetHeight; // 줄여 둔 상태면 원래 높이를 내용으로 다시 잰다
-  const cap = !IS_MOBILE && room < nat, noRoom = room < (IS_MOBILE ? nat : MIN_ROOM), top = bot - (cap ? room : nat);
+  const f = infoRoom(el, PC_MAX, MIN_ROOM), { cw, pT, pL, pH, bot, noRoom, top } = f; // 10-06 후속: 남은 높이 계산은 건물 정보창과 같은 헬퍼
   const bR = document.getElementById('chipBar').getBoundingClientRect();
   const dy = IS_MOBILE ? 0 : pT + (cw.clientHeight - pH) / 2 - (bR.top + bR.height / 2); // 자금운영 칸도 도착 지점으로
   const hit = (a0, a1, b0, b1) => a0 < b1 && b0 < a1;
@@ -11297,12 +11299,33 @@ function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 
   const wantRight = nearLeft;
   if (wantRight) { el.style.left = 'auto'; el.style.right = '10px'; }
   else { el.style.right = 'auto'; el.style.left = (10 + shift) + 'px'; }
-  const mh = (cap && !noRoom) ? Math.floor(room) + 'px' : '';
-  if (el.style.maxHeight !== mh) el.style.maxHeight = mh;
-  el.classList.toggle('uiNoRoom', noRoom);
+  fitInfoRoom(el, f);
   const x0 = wantRight ? pL + cw.clientWidth - 10 - W : L0 + shift;
   const v = (!noRoom && dR.width && hit(x0, x0 + W, dR.left, dR.right) && hit(top, bot, dR.top + dy, dR.bottom + dy)) ? 'hidden' : '';
   if (dps.style.visibility !== v) dps.style.visibility = v;
+}
+// 10-06 후속: 상태창(#unitInfo)·건물 정보창(#objInfo) 공용 — 포커 판 위 남은 높이 재기(읽기만)와 적용(쓰기만)을 나눈다 (HUD 틱마다 강제 레이아웃 방지)
+//   maxH = 원래 높이 상한 (상태창 = unitinfo.css 220 · 건물 정보창 = 없음) · minRoom = 제목 줄 높이 — 남은 높이가 이보다 작으면 숨김 (모바일은 슬라이드가 없어 실제 위치, 다 안 들어가면 숨김)
+function infoRoom(el, maxH, minRoom) {
+  const cw = document.getElementById('cvWrap'), cb = cw.getBoundingClientRect();
+  const pT = cb.top + cw.clientTop, pL = cb.left + cw.clientLeft;   // 기준 상자(cvWrap 안쪽)
+  const pH = IS_MOBILE ? 0 : parseFloat(document.documentElement.style.getPropertyValue('--panelH')) || 0;
+  const bot = IS_MOBILE ? el.getBoundingClientRect().bottom : pT + cw.clientHeight - 10 - pH, room = bot - (pT + 4);
+  const nat = el.style.maxHeight ? Math.min(el.scrollHeight + el.offsetHeight - el.clientHeight, maxH) : el.offsetHeight; // 줄여 둔 상태면 원래 높이를 내용으로 다시 잰다
+  const cap = !IS_MOBILE && room < nat, noRoom = room < (IS_MOBILE ? nat : minRoom);
+  return { cw, pT, pL, pH, bot, room, cap, noRoom, top: bot - (cap ? room : nat) };
+}
+function fitInfoRoom(el, f) {
+  const mh = (f.cap && !f.noRoom) ? Math.floor(f.room) + 'px' : '';
+  if (el.style.maxHeight !== mh) el.style.maxHeight = mh;
+  el.classList.toggle('uiNoRoom', f.noRoom);
+}
+// 10-06 후속(유저: PC 포커 판이 올라오면 건물 정보창도 위가 잘렸다 — 1280×800 위 끝 ≈ 캔버스 시작 · 1366×768 −28): 상태창과 같은 규칙
+//   오른쪽 고정(right 10px)이라 왼쪽 💰 자금운영과는 안 만난다 — 비킴은 필요 없음 · 제목 줄(위 테두리·여백 + 13px 굵은 글씨 한 줄 + 아래 여백·테두리) 실측 44 → 48
+function placeObjInfo() {
+  const el = document.getElementById('objInfo');
+  if (el.style.display !== 'block' || !el.offsetHeight) { if (el.style.maxHeight) el.style.maxHeight = ''; el.classList.remove('uiNoRoom'); return; } // 닫힘·모바일 포커 탭(CSS로 숨김)
+  fitInfoRoom(el, infoRoom(el, Infinity, 48));
 }
 // 10-06 유저: 상태창 이름 = 족보 + 등급 ('원페어 (K)') — 무기 이름은 그림으로 보이니 뺀다. 등급은 u.weapon 문자열이 아니라 플래그로 판정 (이름 붙이는 경로가 6곳)
 // 10-06 오전 유저: 등급을 앞에 — '영웅 원페어'·'에이스 슈퍼영웅 원페어' (괄호 없음) · 일반만 '원페어 (K)' · 딜 순위 라벨도 같은 gradeName
@@ -11663,7 +11686,7 @@ const HIDDEN_DEX = [
     voice: '시간아, 잠깐 멈춰라 ⏳', hint: '끊기지 않고 이어지는 다섯 장. 그것을 세 번 겹치면 시계가 숨을 멈춘다.' },
   { id: 'slot', icon: '🎰', name: '슬롯머신', recipe: '같은 숫자 트리플×3', desc: '대박 폭격 스킬 (쿨 75초)',
     voice: '릴이 맞아떨어지는 순간… 하늘을 봐 🎰', hint: '같은 얼굴 셋이, 다시 세 번. 릴이 맞아떨어지면 하늘이 쏟아진다.' },
-  { id: 'joker', icon: '🃏', name: '조커', recipe: '원페어·투페어·트리플 영웅 각 1', desc: '낫으로 베며 몹을 끌어당김 (클럼핑)',
+  { id: 'joker', icon: '🃏', name: '조커', recipe: '영웅 원페어·투페어·트리플 각 1', desc: '낫으로 베며 몹을 끌어당김 (클럼핑)',
     voice: '이리 와~ 같이 놀자고. 도망은 못 가 🃏', hint: '아래 세 칸의 왕관들이 손을 맞잡을 때, 광대가 낫을 든다.' },
   { id: 'catapult', icon: '🪨', name: '투석기', recipe: '하이카드 20기 제물(제물대)', desc: '거대한 돌덩이로 소환장 전체 포격 (이동 불가)',
     voice: '나는 움직이지 않아. 대신 전장이 무너지지 🪨', hint: '가장 하찮은 것을 스무 번. 소용돌이가 아니라 오래된 돌 위에.' },
@@ -11970,10 +11993,10 @@ function renderShop() {
     const grid = (label, inner) => `<div class="rpgGuide" style="margin-top:10px">${label}</div><div style="display:flex;flex-wrap:wrap;gap:4px">${inner}</div>`;
     const btn = (idx, label) => `<button class="shopBtn" data-sb="${idx}" style="width:auto;flex:0 0 auto">${label}</button>`;
     const units = HAND_NAMES.map((n, t) => btn('u' + t, `${n}(${WEAPONS[t].name})`)).join('');
-    const heroes = HAND_NAMES.map((n, t) => btn('h' + t, `${n} 영웅`)).join('');
-    const supers = HAND_NAMES.map((n, t) => btn('sh' + t, `${n} 슈퍼영웅`)).join('');
-    const aces = HAND_NAMES.map((n, t) => btn('a' + t, `${n} 에이스`)).join('');
-    const superAces = HAND_NAMES.map((n, t) => btn('sa' + t, `${n} 슈퍼에이스`)).join('');
+    const heroes = HAND_NAMES.map((n, t) => btn('h' + t, `영웅 ${n}`)).join('');
+    const supers = HAND_NAMES.map((n, t) => btn('sh' + t, `슈퍼영웅 ${n}`)).join('');
+    const aces = HAND_NAMES.map((n, t) => btn('a' + t, `에이스 ${n}`)).join('');
+    const superAces = HAND_NAMES.map((n, t) => btn('sa' + t, `슈퍼에이스 ${n}`)).join('');
     const hiddenKeys = Object.keys(HIDDEN_META);
     const hiddens = hiddenKeys.map(k => btn('hid_' + k, `${HIDDEN_META[k][0]} ${HIDDEN_META[k][1]}`)).join('');
     const miners = btn('miner', '⛏️ 광부') + btn('sminer', '⛏️ 슈퍼 광부') + btn('exc', '🚜 굴착기');
@@ -12764,6 +12787,7 @@ function updateHUD() {
       }
     } else if (f && S.hunt.done) showObjInfo('room');
   }
+  placeObjInfo(); // 10-06 후속: 포커 판이 오르내릴 때 건물 정보창도 남은 높이에 맞춤 (내용 갱신 뒤)
   // ⚡ 08-22: textContent는 같은 문자열이라도 텍스트 노드를 교체해 레이아웃을 더럽힌다. 값이 바뀔 때만 쓰는 더티 가드로
   // 쓰기 횟수를 줄여 다음 틱 syncPokerPanel offsetHeight의 리플로우 비용을 낮춘다 (호출당 0.97→0.39ms 실측).
   // ⚠️ 완전 제거는 불가: 포커 페이즈의 pokerTimerFill width·전투의 몹 수 카운트는 매 틱 실제로 변한다.
@@ -15217,7 +15241,7 @@ function mpMinimap() {
 function mpBakeWorld() {
   const k = Math.min(RS, 1.5), c = document.createElement('canvas');
   c.width = Math.ceil(MT.W * k); c.height = Math.ceil(MT.H * k);
-  MP.world = c; MP.worldK = k; MP.worldArt = mtEnsureArt(); // 실패해도 캐시는 잡는다 (매 프레임 재시도 폭주 방지 — mtBakeWorld와 같은 원칙)
+  MP.world = c; MP.worldK = k; MP.worldArt = mtEnsureArt(); MP.worldM3 = M3.done; // 실패해도 캐시는 잡는다 (매 프레임 재시도 폭주 방지 — mtBakeWorld와 같은 원칙)
   const old = ctx; ctx = c.getContext('2d');
   try {
     ctx.scale(k, k); ctx.imageSmoothingQuality = 'high';
@@ -15256,7 +15280,8 @@ function mpDraw() {
   ctx = g;
   try { draw(); } finally { ctx = main; }
   // ② 합성 (메인 캔버스, 기준 변환 = RS)
-  if (!MP.world || MP.worldK !== Math.min(RS, 1.5) || (!MP.worldArt && MTART.img)) mpBakeWorld(); // 아트가 늦게 로드되거나 RS(전체화면·창 크기·🪫저사양)가 바뀌면 다시 굽는다
+  if (!MP.world || MP.worldK !== Math.min(RS, 1.5) || (!MP.worldArt && MTART.img) || (MP.worldM3 !== M3.done && M3.done === M3.want)) mpBakeWorld(); // 아트가 늦게 로드되거나 RS(전체화면·창 크기·🪫저사양)가 바뀌면 다시 굽는다
+  // 10-06 후속: 🎨 V3 맵 아트(m3Load)가 데모 시작 뒤에 다 도착해도 1번 다시 굽는다 (P2 진영 건물·광부길이 이전 그림으로 남지 않게 — 도착 중간마다 굽지 않고 전부 온 뒤 1회)
   if (!mpVoidG) {
     mpVoidG = ctx.createRadialGradient(470, 250, 60, 470, 250, 640);
     mpVoidG.addColorStop(0, '#211a3c'); mpVoidG.addColorStop(0.55, '#151027'); mpVoidG.addColorStop(1, '#0a0714');
@@ -16113,6 +16138,7 @@ function mpLaneInfo(m) { // showMonsterInfo의 레인 분기
     `<div class="oi-hp">❤️ <b>${Math.max(0, Math.ceil(e.hp))}</b> / ${Math.ceil(e.max)}` +
     `<div class="oi-track oi-hp-track"><div style="height:100%;width:${(pct * 100).toFixed(0)}%;background:${col}"></div></div></div>`;
   el.style.display = 'block';
+  placeObjInfo(); // 10-06 후속: 포커 판 위 남은 높이에 맞춤
 }
 function mpTeamDps(head, body, box) { // updateDpsRank 멀티 분기: 보스 라운드 전투 = 팀 딜 바 (진영색)
   if (S.round % 10 !== 0 || S.phase !== 'wave') return false;
@@ -16237,7 +16263,7 @@ function mpLaneHitAt(lp) { const m = monsterAt(lp.x, lp.y); return !!(m && m.lan
 // ==================== 🎫 단계 C2: 골드티켓 (★★ v3 10-04 — 더블 포커 라운드(r % 5 === 0) 포커왕 = 칩 ¼ 대신) ====================
 // · 판정은 mpKingJudge(라운드 키 멱등) 안 → ⏩3배속 서브스텝·자동 소환에도 라운드당 1회. 공동 1등이면 둘 다 받는다
 // · 나 = 받는 즉시 비모달 카드 #mpGold (syncGamePause 목록 밖 — v3 '멀티 창은 게임을 멈추지 않는다'). 안 고른 티켓은 쌓인다(×N, 카드 1장)
-// · ① 광부 뽑기(나만 — 꽝 50 · 광부 48 · 슈퍼 광부 1.5 · 굴착기 0.5 — 10-06 유저: 히어로 광부는 굴착기로 통합) ② 대의를 위한 선택 = 모두에게 뽑기권 상자 (나 = 제물대 개봉 아이템 · 봇 = 모델 유닛 즉시)
+// · ① 광부 상자(나만 — 꽝 50 · 광부 48 · 슈퍼 광부 1.5 · 굴착기 0.5 — 10-06 유저: 히어로 광부는 굴착기로 통합) ② 대의를 위한 선택 = 모두에게 뽑기권 상자 (나 = 제물대 개봉 아이템 · 봇 = 모델 유닛 즉시)
 //   ③ 왕국 HP +1 (상한 KINGDOM_MAX) ④ 다음 웨이브 팀(나·봇) 공격력 +20% ⑤ 방장 일시정지 +1 = 같이하기 전용 (오프라인 데모엔 방장 일시정지가 없다 → 비활성 표시)
 // · 봇이 이기면 b.rng로 ②~④ 중 가능한 것 무작위 + 포커왕 배너 꼬리·로그 공지 (봇은 ① 제외 — 봇 모델에 광부 경제가 없다 · 10-06 유저)
 const KINGDOM_MAX = KINGDOM_HP + 2; // ③ 상한 — 5칸이 꽉 차 있어도 ③이 헛되지 않게 2칸까지 덧쌓는다 (하트 ❤️ 6~7개 · HUD 실값)
@@ -16281,7 +16307,7 @@ function mpGoldPick(k, rng) { // 내 선택 (칩 펼침의 버튼) — rng = 테
   updateHUD();
   return true;
 }
-function mpGoldBot(b) { const ks = [2, 3, 4].filter(mpGoldOk); return mpGoldApply(ks[Math.floor(b.rng() * ks.length)], b.seat, b.rng); } // 봇 = ①(광부 뽑기) 빼고 가능한 것 중 무작위
+function mpGoldBot(b) { const ks = [2, 3, 4].filter(mpGoldOk); return mpGoldApply(ks[Math.floor(b.rng() * ks.length)], b.seat, b.rng); } // 봇 = ①(광부 상자) 빼고 가능한 것 중 무작위
 function mpGoldApply(k, seat, rng) { // 효과 (나·봇 공용) → 공지 문구
   const b = MP.bot;
   if (k === 1) { mpMinerReveal(mpGtRoll(GT_MINER, rng)); return '⛏️ 광부 상자'; } // 나만 (봇은 ① 제외) — 결과는 상자가 열릴 때 로그 (미리 알리면 연출이 김빠진다)
@@ -16306,7 +16332,7 @@ function mpMinerReveal(res) { // ① 결과 상자 연출 → 열리는 순간 �
 function mpOpenBox(rng) { // 🎁 제물대 개봉 (updateAltar): 일반 유닛 = 족보 룰렛(gachaReveal) · 뽑기권 = 상자 연출 뒤 뽑기권 아이템 (다시 제물대로 — 기존 개봉 경로)
   rng = rng || Math.random;
   const k = mpGtRoll(GT_BOX, rng);
-  if (k === 'unit') { const kr = 2 + Math.floor(rng() * 13); gachaReveal(gachaTier(rng), '유닛', tt => spawnUnit(tt, RACE_OF_RANK[tt], false, kr)); return k; }
+  if (k === 'unit') { const kr = 2 + Math.floor(rng() * 13); gachaReveal(gachaTier(rng), '', tt => spawnUnit(tt, RACE_OF_RANK[tt], false, kr), rankLabel(kr)); return k; } // 일반 = 등급 없이 '원페어 (8)'
   const m = ITEM_META[k];
   gachaBoxAnim(document.getElementById('cvWrap'), { ovl: true, win: true, revealIcon: m.icon, revealText: m.name + '!', color: GACHA_COL[k],
     onReveal: () => { spawnItemUnit(k); logMsg(`🎁 뽑기권 상자 — <b>${m.name}</b>! 제물대로 옮기면 개봉합니다.`); sfx('jackpot'); } });
