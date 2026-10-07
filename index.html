@@ -10529,6 +10529,10 @@ const HERO_LOOK = {
   4: { w: 29, h: 38, shape: 'rect', cape: { ay: -13.0, tip: [-30.5, 19.0], hemEnd: [-13.0, 21.4], hemT: 2.6, foldX: -21.5, trim: true }, pad: { k: 1.2, face: 'race' }, suitY: -4.2, suitS: 5.8, chest: { y0: -15.4, hw: 8.7, dep: 6.4 }, back: g2Back, front: g2Front, head: g2HeadCenturion }, // 스트레이트: 붉은 볏 로마 투구, 긴 망토
   5: { w: 40, h: 35, shape: 'fat', cape: { ay: -11.0, tip: [-31.0, 12.0], hemEnd: [-17.0, 15.6], hemT: 2.6, foldX: -24.0, hero: false }, pad: { k: 1.05, face: 'race' }, suitY: -1.5, suitS: 7.0, chest: { y0: -14.0, hw: 10.0, dep: 5.6 }, back: g2Back, front: g2Front, head: g2HeadBurner }, // 플러쉬: 큰 가스버너 + 등 연료통 (영웅은 망토 없음, 슈퍼는 두 겹 망토 위에 연료통)
   6: { w: 17, h: 40, shape: 'thin', cape: { ay: -14.5, tip: [-25.5, 18.5], hemEnd: [-8.2, 21.8], hemT: 2.6, foldX: -16.0, trim: true }, pad: { k: 1.1, face: 'race' }, suitY: -3.0, suitS: 5.0, chest: { y0: -16.0, hw: 6.0, dep: 5.0 }, back: g2Back, front: g2Front, head: g2HeadPirate }, // 풀하우스: 해골 해적 삼각모 + 두건, 긴 망토 + 금 허리띠, 가장 홀쭉한 몸
+  // g3 (spec_g3_draw.js) — cape.fur = 로얄 털 밑단·앞여밈(g3RoyalBack), cape.flap = 로얄 무기 쪽 자락(영웅부터), chest null = 가슴판 없음(SF는 스카프 V 끝 브로치가 대신). 망토 색은 heroPal(로얄 보라·SF 파란 안감, 에이스는 핑크)
+  7: { w: 31, h: 38, shape: 'rect', cape: { ay: -13.0, tip: [-30.5, 19.0], hemEnd: [-13.5, 21.0], hemT: 2.6, foldX: -21.5, trim: true }, pad: { k: 1.2, face: 'race' }, suitY: 1.0, suitS: 6.4, chest: { y0: -14.0, hw: 9.0, dep: 6.6 }, back: g2Back, front: g1Front, head: g3HeadFour }, // 포카드: 담비 칼라 + 영국 왕실관(두 봉우리 + 골에 구슬·십자), 빨간 망토 + 앞여밈 금선. 다리 자리는 게임 궤도(u.vis 'tank' — 코어 베이크 제외, 매 프레임 벡터)
+  8: { w: 26, h: 38, shape: 'rect', cape: { ay: -13.5, tip: [-29.5, 16.0], hemEnd: [-11.5, 20.4], hemT: 2.6, foldX: -19.5, trim: true }, pad: { k: 1.1, face: 'race' }, suitY: 2.0, suitS: 6.6, chest: null, back: g2Back, front: g1Front, head: g3HeadSF }, // 스트레이트 플러쉬: 파란 스카프(뒤 두 갈래 자락) + 은빛 가시 왕관(예외 — 슈퍼도 은색 그대로), 초록 망토 + 파란 안감
+  9: { w: 30, h: 39, shape: 'rect', cape: { ay: -13.0, tip: [-31.0, 19.5], hemEnd: [-13.0, 22.2], hemT: 2.6, foldX: -21.5, fur: true, flap: true }, pad: { k: 1.25, face: 'race' }, suitY: -0.5, suitS: 6.8, chest: { y0: -14.2, hw: 9.0, dep: 6.4 }, back: g3RoyalBack, front: g3RoyalFront, head: g3HeadRoyal }, // 로얄: 넓은 담비 칼라 + 임페리얼 대관(종 모양 돔), 보라 망토 + 흰 털 밑단·앞여밈 + 무기 쪽 털 자락, 금 견장 술
 };
 function heroLook(u) { return isStdHero(u) ? (HERO_LOOK[u.tier] || null) : null; }
 // 고정색 (금 + 로얄 보라 · 스트레이트 플러쉬 안감) — 에이스여도 금은 그대로
@@ -10554,6 +10558,17 @@ const HERO_C2 = {
   HAT: '#2e323c', HAT_BRIM: '#1f2028', HAT_OUT: '#0c0d11', HAT_HL: '#5a6070',    // 해적 삼각모
   BONE: '#f5f0e8', BONE_EYE: '#2b2f3a',                                          // 해골
   PLUME: '#d7262a', PLUME_OUT: '#7d1212', PLUME_HL: '#ff8a80',                   // 빨간 깃털
+};
+// g3 고정색 (spec_g3_draw.js G3) — 에이스여도 그대로 (망토 보라·안감 파랑만 HERO_C.ROBE_*·LINING으로 heroPal에서 전환). 시안 04의 광택·벨벳 주름·털 질감을 뺀 단색 면 + 어두운 외곽선 + 하이라이트 한 줄
+const HERO_C3 = {
+  ERM: '#f5f0e8', ERM_D: '#d8cfc0', ERM_OUT: '#857b6c', ERM_SPOT: '#2b2b2b',     // 담비 흰 털 (포카드·로얄 칼라, 로얄 망토 털) + 꼬리 점
+  PEARL: '#f7f4ec', PEARL_OUT: '#8f8878',                                        // 진주 (포카드 봉우리·띠 끝, 슈퍼 아치 줄)
+  VEL_R: '#c62828', VEL_R_OUT: '#5c0f0f', VEL_R_HL: '#ef7a74',                   // 포카드 왕관 벨벳 (노말 포카드 velvet과 같은 빨강)
+  VEL_P: '#6d2a96', VEL_P_OUT: '#2c0b40', VEL_P_HL: '#b07ad6',                   // 로얄 왕관 벨벳 보라
+  C_RUBY: '#e53935', C_RUBY_OUT: '#6d0b10', C_SAPH: '#2f6fe0', C_SAPH_OUT: '#0f2f73', SPARK: '#ffffff', // 왕관 보석 + 흰 반짝 점
+  SILVER: '#dde4ea', SILVER_D: '#a9b5bf', SILVER_HL: '#ffffff', SILVER_OUT: '#4f5c67', // 은빛 가시 왕관
+  SAPH: '#2f6fe0', SAPH_D: '#1c4bb2', SAPH_OUT: '#0f2f73', NEEDLE: '#cfe9ff',    // 사파이어 구슬·안쪽 벨벳 / 바늘
+  SCARF: '#2f62c9', SCARF_D: '#1f468f', SCARF_OUT: '#122a5a', SCARF_HL: '#80aaf2', // 파란 스카프
 };
 // 팔레트: 종족색 ↔ 에이스색 전환은 여기 한 곳 (spec_g1 g1Pal + spec_g3 g3Pal). 에이스 = 테·망토 #e91e8c 계열 + 흰 ♠, 금·보석은 그대로. 로얄(비에이스)만 망토 보라, 스트레이트 플러쉬(비에이스)만 안감 파랑.
 // tier|race|ace 키로 캐시 (P5) — 머리 장식은 매 프레임 라이브라 shade() 문자열을 프레임마다 새로 만들지 않게. 코어 베이크 키 필드(tier·race·ace)만 읽는다 (개체별·시간 값 없음).
@@ -11140,6 +11155,254 @@ function g2HeadPirate(u, P) {
   ctx.beginPath(); ctx.arc(11.2, -29.6, br, 0, Math.PI * 2); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
   if (u.super) { ctx.beginPath(); ctx.arc(11.2, -29.6, 1.2, 0, Math.PI * 2); ctx.fillStyle = P.gem; ctx.fill(); }
 }
+// ---------- g3 (tier 7~9) — spec_g3_draw.js 이식: back(t7·t8 = g2Back 망토+앞여밈 금선 / t9 = 로얄 흰 털 망토) · front(어깨판, t9 = + 금 견장 술) · 라이브 head(담비 칼라+영국 왕실관 / 파란 스카프+은빛 가시 왕관 / 담비 칼라+임페리얼 대관) ----------
+// 게임 drawCrown은 쓰지 않는다(반폭 8 고정 + 외곽선 rgba(0,0,0,.3)) → 경로 함수 g3Crown + 파라미터 표 G3_CROWN[7|9]. 왕관·흰 털은 포카드·로얄 전용 (SF 은빛 가시 왕관은 확정본 예외)
+// 로얄 망토 (코어): (슈퍼) 뒤 겹 → 뒤 겹 털 밑단 → 무기 쪽 털 자락(영웅부터, flap) → 앞 겹(super:false 사본) → 앞 겹 털 밑단 → 털 앞여밈. 모두 그린 뒤 털을 덧칠하면 뒤 겹 털이 앞 겹 위로 올라오므로 이 순서
+function g3RoyalBack(u, P) {
+  const L = HERO_LOOK[u.tier], W = L.w, H = L.h, c = L.cape, left = -W / 2;
+  if (u.super) {
+    g1SuperCapeBack(u, P);                         // 뒤 겹(땅까지) + 무기 쪽 어두운 앞 자락 (금 밑단)
+    const [tx] = c.tip, by = H / 2 + 6.0;          // 뒤 겹 금 밑단 위에 흰 털 (g1SuperCapeBack 밑단 곡선 그대로, 두께 3.6)
+    g3FurBand([tx + 1.0, by - 1.5], [(tx + left) / 2, by + 1.6], [left + 5, by - 0.5], 3.6, 3);
+  }
+  if (c.flap) g3RoyalFlap(u, P);                   // 무기 쪽 앞 자락 (슈퍼면 위 어두운 자락 앞에 겹침)
+  // 앞 겹 = 영웅 망토 (보라 + 접힌 면 + 금 밑단). P4: 사본은 Object.create만 — 베이크의 가짜 객체(자기 속성 x·y뿐)도 프로토타입으로 tier·race를 읽는다. 스프레드·Object.assign 사본은 tier가 빠져 예외
+  const u0 = Object.create(u); u0.super = false;
+  g1Back(u0, P);
+  const [tx, ty] = c.tip, [ex, ey] = c.hemEnd;
+  const hemC = [(tx + ex) / 2 + 1.0, Math.max(ty, ey) + 1.6];
+  g3FurBand([tx, ty], hemC, [ex, ey], 4.2, 4);     // 앞 겹 밑단 = 굵은 흰 털 (금 밑단 2.6을 덮음)
+  const x0 = left - 0.4, x1 = left - 4.9;          // 털 앞여밈: 몸통 테 바깥을 따라 세로 털 띠 (보이는 폭 ≈ 3, 테 바깥선 left−1.75부터)
+  const yb0 = heroQuadY(tx, ty, hemC, ex, ey, x0) - 1.0, yb1 = heroQuadY(tx, ty, hemC, ex, ey, x1) - 1.0;
+  ctx.beginPath(); ctx.moveTo(x0, c.ay + 0.6); ctx.lineTo(x1, c.ay + 2.0); ctx.lineTo(x1, yb1); ctx.lineTo(x0, yb0); ctx.closePath();
+  ctx.fillStyle = HERO_C3.ERM; ctx.fill(); heroOut(HERO_C3.ERM_OUT);
+  g3Spots([[left - 3.3, c.ay + 9.0], [left - 3.1, c.ay + 17.5], [left - 3.4, c.ay + 26.0]]);
+}
+function g3RoyalFlap(u, P) { // 무기 쪽(+x) 어깨에서 내려오는 보라 자락(아래 끝 R+9.4까지 종 모양으로 벌어짐 — 포카드와 실루엣을 가르는 축) + 몸 쪽 털 띠 + 아래 털
+  const L = HERO_LOOK[u.tier], W = L.w, H = L.h, R = W / 2, top = -H / 2;
+  ctx.beginPath();
+  ctx.moveTo(R - 3.0, top + 3.0);
+  ctx.lineTo(R + 2.4, top + H * 0.16);
+  ctx.quadraticCurveTo(R + 6.2, H * 0.02, R + 9.4, H / 2 + 2.8);
+  ctx.lineTo(R - 3.0, H / 2 + 1.0);
+  ctx.closePath();
+  ctx.fillStyle = P.cape; ctx.fill(); heroOut(P.capeOut);
+  ctx.beginPath();                                 // 몸 쪽 털 띠 (테 바깥 R+1.75 ~ R+3.9가 보임)
+  ctx.moveTo(R + 0.6, top + H * 0.17); ctx.lineTo(R + 3.0, top + H * 0.2);
+  ctx.quadraticCurveTo(R + 4.2, H * 0.12, R + 4.2, H / 2 + 0.2);
+  ctx.lineTo(R + 0.6, H / 2 - 0.6); ctx.closePath();
+  ctx.fillStyle = HERO_C3.ERM; ctx.fill(); heroOut(HERO_C3.ERM_OUT);
+  ctx.beginPath();                                 // 아래 털 (자락 끝)
+  ctx.moveTo(R + 0.4, H / 2 - 1.4); ctx.lineTo(R + 8.6, H / 2 - 0.4); ctx.lineTo(R + 9.4, H / 2 + 2.8); ctx.lineTo(R + 0.4, H / 2 + 1.6); ctx.closePath();
+  ctx.fillStyle = HERO_C3.ERM; ctx.fill(); heroOut(HERO_C3.ERM_OUT);
+  g3Spots([[R + 2.5, top + H * 0.42], [R + 2.7, H * 0.18]]);
+}
+function g3FurBand(p0, c, p1, T, n) { // 2차 곡선 밑단을 따라 두께 T의 흰 털 띠(바깥선 = 곡선, 안쪽선 = T만큼 위) + 담비 꼬리 점 n개 (띠 가운데)
+  ctx.beginPath();
+  ctx.moveTo(p0[0], p0[1]);
+  ctx.quadraticCurveTo(c[0], c[1], p1[0], p1[1]);
+  ctx.lineTo(p1[0] + 0.6, p1[1] - T);
+  ctx.quadraticCurveTo(c[0], c[1] - T, p0[0] + 2.0, p0[1] - T * 0.85);
+  ctx.closePath();
+  ctx.fillStyle = HERO_C3.ERM; ctx.fill(); heroOut(HERO_C3.ERM_OUT);
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const tt = (i + 0.6) / (n + 0.2), v = 1 - tt;
+    pts.push([v * v * p0[0] + 2 * v * tt * c[0] + tt * tt * p1[0], v * v * p0[1] + 2 * v * tt * c[1] + tt * tt * p1[1] - T * 0.5]);
+  }
+  g3Spots(pts);
+}
+function g3Spots(pts) { // 담비 꼬리 점 (검은 작은 세로 타원). 1배에선 거의 안 보이고 2배 베이크에서 "담비"로 읽힘
+  ctx.fillStyle = HERO_C3.ERM_SPOT;
+  for (const [x, y] of pts) { ctx.beginPath(); ctx.ellipse(x, y, 0.55, 1.0, 0, 0, Math.PI * 2); ctx.fill(); }
+}
+// front: 로얄 = 어깨판(슈퍼 = 가슴판 + 어깨 갑옷, 안쪽 면 보라) 다음 금 견장 술. t7·t8은 g1Front 그대로 (t8 슈퍼는 chest null → 가슴판 없이 어깨 갑옷만, 보석 금 장식은 스카프 브로치)
+function g3RoyalFront(u, P) {
+  g1Front(u, P);
+  g3Fringe(u);
+}
+function g3Fringe(u) { // 로얄 견장 술: 어깨판 아래 변(8.6k 부근)을 따라 금 짧은 줄 3개씩, 2단 선. 슈퍼는 어깨 갑옷 k ×1.15를 따라감
+  const L = HERO_LOOK[u.tier], W = L.w, H = L.h, k = L.pad.k * (u.super ? 1.15 : 1);
+  for (const sx of [-1, 1]) {
+    ctx.save(); ctx.translate(sx * W / 2, -H / 2); ctx.scale(sx < 0 ? 1 : -1, 1);
+    ctx.lineCap = 'round';
+    for (const fx of [-4.2, -2.4, -0.6]) {
+      const y0 = 8.6 * k - (fx + 4.2) * 0.12 * k;
+      ctx.beginPath(); ctx.moveTo(fx * k, y0); ctx.lineTo(fx * k - 0.2, y0 + 2.6);
+      ctx.strokeStyle = HERO_C.GOLD_OUT; ctx.lineWidth = 1.7; ctx.stroke();
+      ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 0.9; ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
+    ctx.restore();
+  }
+}
+// head (라이브) — 공통: 담비 칼라 (몸통 위 변을 덮는 흰 털 띠, 아래 변은 가운데가 1.8 처짐) + 아래 그늘 한 줄 + 꼬리 점 5개. 포카드 반폭 17.4 / 로얄 19.8 (실루엣 차이)
+function g3Collar(hw, yt, yb) {
+  ctx.beginPath();
+  ctx.moveTo(-hw, yt + 2.6);
+  ctx.quadraticCurveTo(-hw, yt, -hw + 3.0, yt);
+  ctx.lineTo(hw - 3.0, yt);
+  ctx.quadraticCurveTo(hw, yt, hw, yt + 2.6);
+  ctx.lineTo(hw - 0.4, yb - 2.4);
+  ctx.quadraticCurveTo(hw - 0.9, yb + 0.4, hw - 4.0, yb);
+  ctx.quadraticCurveTo(0, yb + 1.8, -hw + 4.0, yb);
+  ctx.quadraticCurveTo(-hw + 0.9, yb + 0.4, -hw + 0.4, yb - 2.4);
+  ctx.closePath();
+  ctx.fillStyle = HERO_C3.ERM; ctx.fill(); heroOut(HERO_C3.ERM_OUT);
+  ctx.beginPath(); ctx.moveTo(-hw + 3.2, yb - 1.3); ctx.quadraticCurveTo(0, yb + 0.5, hw - 3.2, yb - 1.3);
+  ctx.strokeStyle = HERO_C3.ERM_D; ctx.lineWidth = 1.2; ctx.stroke();
+  const ym = (yt + yb) / 2;
+  g3Spots([[-hw * 0.74, ym - 0.6], [-hw * 0.37, ym + 0.6], [0, ym - 0.6], [hw * 0.37, ym + 0.6], [hw * 0.74, ym - 0.6]]);
+}
+// 왕관 파라미터 표 (포카드·로얄이 같은 g3Crown). bh 띠 반폭 · yb 띠 아래 변 · bandH 띠 높이 · capHalf/capTop 벨벳 돔 · archTop 아치 꼭대기 · dip 가운데 골 깊이 · flare 띠 밖으로 휘는 정도 · fleur 봉우리 x
+const G3_CROWN = {
+  // 포카드 ♥: 영국 왕실관(St Edward 식). 아치 3이 가운데에서 꺼져(dip) "두 봉우리 + 골에 구슬·십자" 실루엣. 빨간 벨벳은 아치보다 낮아 아치 사이가 뚫려 보임, 봉우리 끝·띠 양 끝 진주
+  7: { bh: 12.8, yb: -21.0, bandH: 4.4, capHalf: 11.8, capTop: -32.6, archTop: -36.6, dip: 3.0, flare: 0.6, archW: 1.7, innerW: 0, arches: 3,
+       orbR: 2.0, crossTop: -43.4, crossW: 1.8, armW: 4.8, armY: -41.4, crossGem: null,
+       vel: 'VEL_R', fleur: [-6.3, 6.3], fleurH: 3.6, fleurTip: 'pearl', endPearl: true,
+       gems: [[0, 1.5, 1.7, 'C_SAPH'], [-7.6, 1.05, 1.05, 'C_RUBY'], [7.6, 1.05, 1.05, 'C_RUBY']] },
+  // 로얄 ♦: 임페리얼 대관. 아치 5가 띠 밖으로 크게 휘어(flare) "종 모양 매끈한 돔" 실루엣. 보라 벨벳, 봉우리마다 루비, 십자 사파이어
+  9: { bh: 15.2, yb: -21.6, bandH: 5.0, capHalf: 15.6, capTop: -36.6, archTop: -37.8, dip: 0, flare: 5.6, archW: 1.6, innerW: 1.0, arches: 5,
+       orbR: 2.1, crossTop: -43.3, crossW: 1.9, armW: 5.0, armY: -42.2, crossGem: 'C_SAPH',
+       vel: 'VEL_P', fleur: [-10.6, -3.6, 3.6, 10.6], fleurH: 3.8, fleurTip: 'gem', endPearl: false,
+       gems: [[0, 1.8, 2.0, 'C_RUBY'], [-6.6, 1.15, 1.15, 'C_SAPH'], [6.6, 1.15, 1.15, 'C_SAPH'], [-11.8, 0.9, 0.9, 'C_RUBY'], [11.8, 0.9, 0.9, 'C_RUBY']] },
+};
+function g3ArchPts(C, sx, side, inner) { // 아치 3차 베지어 제어점 (side = −1 왼쪽 / +1 오른쪽, inner = 로얄 안쪽 가는 아치)
+  const bt = C.yb - C.bandH, h = bt - C.archTop;
+  if (!inner) return [[side * (C.bh * sx - 0.6), bt + 0.3], [side * (C.bh + C.flare) * sx, bt - h * 0.62], [side * C.bh * 0.52 * sx, C.archTop - C.dip * 0.6], [0, C.archTop + C.dip]];
+  return [[side * C.bh * 0.47 * sx, bt + 0.3], [side * C.bh * 0.55 * sx, bt - h * 0.66], [side * C.bh * 0.24 * sx, C.archTop + 0.7], [0, C.archTop + 0.5]];
+}
+function g3Bez(p, t) { const v = 1 - t; return [0, 1].map(i => v * v * v * p[0][i] + 3 * v * v * t * p[1][i] + 3 * v * t * t * p[2][i] + t * t * t * p[3][i]); }
+// 왕관: 벨벳 돔 → 금 아치(3 또는 5, 2단 선) → 십자 → 꼭대기 구슬 → 띠 위 봉우리 → 띠 → 띠 보석 → (슈퍼) 바깥 아치 진주 4개씩. 슈퍼는 가로만 ×1.14(sx — 높이 한도 −53, 반지름엔 안 곱함)
+function g3Crown(C, u) {
+  const sx = u.super ? 1.14 : 1, bt = C.yb - C.bandH, bh = C.bh * sx, cw = C.capHalf * sx;
+  const V = HERO_C3[C.vel], VO = HERO_C3[C.vel + '_OUT'], VH = HERO_C3[C.vel + '_HL'];
+  ctx.beginPath(); // (1) 벨벳 돔 + 하이라이트 한 줄
+  ctx.moveTo(-cw, bt + 0.5);
+  ctx.bezierCurveTo(-cw, C.capTop + 3.6, -cw * 0.55, C.capTop, 0, C.capTop);
+  ctx.bezierCurveTo(cw * 0.55, C.capTop, cw, C.capTop + 3.6, cw, bt + 0.5);
+  ctx.closePath(); ctx.fillStyle = V; ctx.fill(); heroOut(VO);
+  ctx.beginPath(); ctx.moveTo(-cw * 0.72, C.capTop + 4.4); ctx.quadraticCurveTo(-cw * 0.5, C.capTop + 1.3, -cw * 0.14, C.capTop + 1.0);
+  ctx.strokeStyle = VH; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.stroke();
+  // (2) 금 아치 — 안쪽 아치(로얄만)는 가늘게(innerW) 먼저, 바깥·가운데 아치(archW) 다음. 아치가 굵으면 벨벳이 묻혀 "금 돔"이 됨
+  const outer = [g3ArchPts(C, sx, -1), g3ArchPts(C, sx, 1)], inner = C.arches === 5 ? [g3ArchPts(C, sx, -1, true), g3ArchPts(C, sx, 1, true)] : [];
+  for (const [paths, aw, mid] of [[inner, C.innerW, false], [outer, C.archW, true]]) {
+    for (const [w, col] of [[aw + 1.2, HERO_C.GOLD_OUT], [aw, HERO_C.GOLD]]) {
+      ctx.strokeStyle = col; ctx.lineWidth = w;
+      for (const p of paths) { ctx.beginPath(); ctx.moveTo(p[0][0], p[0][1]); ctx.bezierCurveTo(p[1][0], p[1][1], p[2][0], p[2][1], p[3][0], p[3][1]); ctx.stroke(); }
+      if (mid) { ctx.beginPath(); ctx.moveTo(0, bt + 0.3); ctx.lineTo(0, C.archTop + C.dip); ctx.stroke(); } // 가운데 아치 (정면, 골 깊이까지)
+    }
+  }
+  ctx.lineCap = 'butt';
+  const oy = C.archTop + C.dip - C.orbR + 0.6; // (3) 십자(짧고 굵게 — 높이 한도) → 꼭대기 구슬 (아치 골에 앉음)
+  ctx.beginPath(); ctx.moveTo(-C.crossW / 2, C.crossTop); ctx.lineTo(C.crossW / 2, C.crossTop); ctx.lineTo(C.crossW / 2, C.armY);
+  ctx.lineTo(C.armW / 2, C.armY); ctx.lineTo(C.armW / 2, C.armY + C.crossW * 0.85); ctx.lineTo(C.crossW / 2, C.armY + C.crossW * 0.85);
+  ctx.lineTo(C.crossW / 2, oy - C.orbR + 0.6); ctx.lineTo(-C.crossW / 2, oy - C.orbR + 0.6);
+  ctx.lineTo(-C.crossW / 2, C.armY + C.crossW * 0.85); ctx.lineTo(-C.armW / 2, C.armY + C.crossW * 0.85); ctx.lineTo(-C.armW / 2, C.armY);
+  ctx.lineTo(-C.crossW / 2, C.armY); ctx.closePath();
+  ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  if (C.crossGem) { ctx.beginPath(); ctx.arc(0, C.armY + C.crossW * 0.42, 0.7, 0, Math.PI * 2); ctx.fillStyle = HERO_C3[C.crossGem]; ctx.fill(); }
+  ctx.beginPath(); ctx.arc(0, oy, C.orbR, 0, Math.PI * 2); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  ctx.beginPath(); ctx.arc(-C.orbR * 0.35, oy - C.orbR * 0.35, C.orbR * 0.32, 0, Math.PI * 2); ctx.fillStyle = HERO_C.GOLD_HL; ctx.fill();
+  for (const fx0 of C.fleur) { // (4) 띠 위 봉우리 (잎 모양 금 + 끝 진주 / 가운데 루비)
+    const fx = fx0 * sx, fh = C.fleurH;
+    ctx.beginPath(); ctx.moveTo(fx, bt - fh);
+    ctx.quadraticCurveTo(fx + 2.0, bt - fh * 0.45, fx + 1.5, bt + 0.4); ctx.lineTo(fx - 1.5, bt + 0.4);
+    ctx.quadraticCurveTo(fx - 2.0, bt - fh * 0.45, fx, bt - fh); ctx.closePath();
+    ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+    if (C.fleurTip === 'pearl') { ctx.beginPath(); ctx.arc(fx, bt - fh - 0.7, 1.1, 0, Math.PI * 2); ctx.fillStyle = HERO_C3.PEARL; ctx.fill(); ctx.strokeStyle = HERO_C3.PEARL_OUT; ctx.lineWidth = 0.6; ctx.stroke(); }
+    else { ctx.beginPath(); ctx.arc(fx, bt - fh * 0.42, 0.95, 0, Math.PI * 2); ctx.fillStyle = HERO_C3.C_RUBY; ctx.fill(); }
+  }
+  roundRect(-bh, bt, bh * 2, C.bandH, 1.2); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT); // (5) 띠 + 아래 그늘 + 하이라이트 한 줄 (+ 띠 양 끝 진주: 포카드) — 게임 roundRect (P1)
+  ctx.beginPath(); ctx.rect(-bh + 0.7, C.yb - 1.5, bh * 2 - 1.4, 1.0); ctx.fillStyle = HERO_C.GOLD_D; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-bh + 1.3, bt + 1.0); ctx.lineTo(-bh * 0.35, bt + 1.0);
+  ctx.strokeStyle = HERO_C.GOLD_HL; ctx.lineWidth = 0.8; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  if (C.endPearl) for (const sx2 of [-1, 1]) {
+    ctx.beginPath(); ctx.arc(sx2 * (bh - 0.4), bt - 0.6, 1.2, 0, Math.PI * 2); ctx.fillStyle = HERO_C3.PEARL; ctx.fill(); ctx.strokeStyle = HERO_C3.PEARL_OUT; ctx.lineWidth = 0.6; ctx.stroke();
+  }
+  const gy = bt + C.bandH / 2 - 0.2; // (6) 띠 보석 + 반짝 점 (큰 보석만)
+  for (const [gx, rx, ry, gc] of C.gems) {
+    ctx.beginPath(); ctx.ellipse(gx * sx, gy, rx, ry, 0, 0, Math.PI * 2); ctx.fillStyle = HERO_C3[gc]; ctx.fill();
+    ctx.strokeStyle = HERO_C3[gc + '_OUT']; ctx.lineWidth = 0.6; ctx.stroke();
+    if (rx >= 1.4) { ctx.beginPath(); ctx.arc(gx * sx - rx * 0.35, gy - ry * 0.4, 0.45, 0, Math.PI * 2); ctx.fillStyle = HERO_C3.SPARK; ctx.fill(); }
+  }
+  if (u.super) { // (7) 슈퍼: 바깥 아치를 따라 진주 4개씩 (가로 ×1.14는 위 sx) — "더 크고 화려한 왕관"
+    for (const side of [-1, 1]) {
+      const p = g3ArchPts(C, sx, side);
+      for (const tt of [0.22, 0.42, 0.62, 0.8]) {
+        const [px, py] = g3Bez(p, tt);
+        ctx.beginPath(); ctx.arc(px, py, 0.8, 0, Math.PI * 2); ctx.fillStyle = HERO_C3.PEARL; ctx.fill(); ctx.strokeStyle = HERO_C3.PEARL_OUT; ctx.lineWidth = 0.5; ctx.stroke();
+      }
+    }
+  }
+}
+function g3HeadFour(u, P) { // 포카드 ♥: 담비 칼라(좁음) + 영국 왕실관(빨간 벨벳)
+  g3Collar(17.4, -22.4, -14.4);
+  g3Crown(G3_CROWN[7], u);
+}
+function g3HeadRoyal(u, P) { // 로얄 ♦: 담비 칼라(넓음 — 반폭 19.8 vs 17.4) + 임페리얼 대관(보라 벨벳·아치 5·크게 휨)
+  g3Collar(19.8, -23.0, -14.4);
+  g3Crown(G3_CROWN[9], u);
+}
+// 스트레이트 플러쉬 ♣: 파란 스카프(뒤로 두 갈래 자락 — 라이브 흔들림 + 앞 V 드레이프) + 은빛 가시 왕관(바늘 5 + 사파이어 구슬, 가운데가 가장 높은 계단형)
+// 슈퍼: 왕관은 "원래 모습"(확정본 예외) — 모양·은색 그대로, ×1.2만. 슈퍼 장식은 왕관 밖(띠 금선·가운데 구슬 금 고리·스카프 금 단·V 끝 금 브로치 = 가슴판 대신)
+const G3_SPIKES = [[-11.4, -32.4, 2.6, 1.9, 3.1], [-5.8, -34.6, 2.8, 2.0, 3.6], [0, -36.6, 3.1, 2.4, 4.2], [5.8, -34.6, 2.8, 2.0, 3.6], [11.4, -32.4, 2.6, 1.9, 3.1]]; // [x, 끝 y, 밑변 반폭, 구슬 r, 바늘 길이]
+function g3HeadSF(u, P) {
+  const L = u.super ? 3.0 : 0; // 슈퍼: 자락 3 더 김
+  const sw = heroWave(u, 6) * 0.8, sw2 = heroWave(u, 6, 1.4) * 0.9;
+  ctx.beginPath(); ctx.moveTo(-10.6, -18.8); ctx.quadraticCurveTo(-16.2 - L * 0.5, -18.8 + sw, -20.6 - L, -15.0 + sw); // (1) 스카프 자락 2갈래 (뒤로 날림)
+  ctx.quadraticCurveTo(-16.2, -15.4, -11.2, -15.8); ctx.closePath();
+  ctx.fillStyle = HERO_C3.SCARF; ctx.fill(); heroOut(HERO_C3.SCARF_OUT);
+  ctx.beginPath(); ctx.moveTo(-10.8, -16.6); ctx.quadraticCurveTo(-15.0 - L * 0.4, -14.0 + sw2, -18.0 - L * 0.8, -10.2 + sw2 + L * 0.4);
+  ctx.quadraticCurveTo(-14.4, -12.8, -11.0, -14.4); ctx.closePath();
+  ctx.fillStyle = HERO_C3.SCARF_D; ctx.fill(); heroOut(HERO_C3.SCARF_OUT);
+  ctx.beginPath(); // (2) 스카프 몸 (목둘레 + 앞 V 드레이프, V 끝은 살짝 앞쪽 +0.6)
+  ctx.moveTo(-14.2, -21.0); ctx.quadraticCurveTo(0, -22.6, 14.2, -21.0);
+  ctx.lineTo(14.4, -15.4); ctx.lineTo(5.4, -14.2); ctx.lineTo(0.6, -8.6); ctx.lineTo(-4.6, -14.0); ctx.lineTo(-14.4, -15.6);
+  ctx.closePath(); ctx.fillStyle = HERO_C3.SCARF; ctx.fill(); heroOut(HERO_C3.SCARF_OUT);
+  ctx.beginPath(); ctx.moveTo(0.6, -8.6); ctx.lineTo(5.4, -14.2); ctx.lineTo(1.8, -14.8); ctx.closePath(); // V 오른쪽 그늘 면
+  ctx.fillStyle = HERO_C3.SCARF_D; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-12.0, -18.0); ctx.quadraticCurveTo(0, -17.0, 12.0, -18.2); // 접힌 선
+  ctx.strokeStyle = HERO_C3.SCARF_D; ctx.lineWidth = 0.9; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-12.6, -20.3); ctx.lineTo(-6.0, -21.2); // 하이라이트 한 줄
+  ctx.strokeStyle = HERO_C3.SCARF_HL; ctx.lineWidth = 0.8; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.beginPath(); ctx.arc(-12.2, -17.4, 2.1, 0, Math.PI * 2); ctx.fillStyle = HERO_C3.SCARF; ctx.fill(); heroOut(HERO_C3.SCARF_OUT); // 뒤 매듭
+  if (u.super) { // 슈퍼: 스카프 아래 단 금선 + V 끝 금 브로치(보석) — 스카프가 가슴판 자리를 덮으므로 가슴판 대신
+    ctx.beginPath(); ctx.moveTo(-14.0, -15.9); ctx.lineTo(-4.8, -14.5); ctx.moveTo(5.6, -14.7); ctx.lineTo(14.0, -15.8);
+    ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 1.0; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+    ctx.beginPath(); ctx.arc(0.6, -10.6, 2.3, 0, Math.PI * 2); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+    ctx.beginPath(); ctx.arc(0.6, -10.6, 1.3, 0, Math.PI * 2); ctx.fillStyle = P.gem; ctx.fill();
+    ctx.beginPath(); ctx.arc(0.1, -11.1, 0.45, 0, Math.PI * 2); ctx.fillStyle = HERO_C3.SPARK; ctx.fill();
+  }
+  ctx.beginPath(); ctx.moveTo(-12.0, -25.4); ctx.bezierCurveTo(-11.6, -32.6, 11.6, -32.6, 12.0, -25.4); ctx.closePath(); // (3) 왕관 안 사파이어 벨벳 돔 (가시 사이로 보이는 파랑)
+  ctx.fillStyle = HERO_C3.SAPH_D; ctx.fill(); heroOut(HERO_C3.SAPH_OUT);
+  for (const [x, ty, bw] of G3_SPIKES) { // (4) 가시 5개 (왼쪽 면 은 / 오른쪽 면 그늘 — 빛 왼쪽 위), 밑동은 띠 뒤
+    ctx.beginPath(); ctx.moveTo(x - bw, -25.0); ctx.lineTo(x, ty); ctx.lineTo(x + bw, -25.0); ctx.closePath();
+    ctx.fillStyle = HERO_C3.SILVER; ctx.fill(); heroOut(HERO_C3.SILVER_OUT);
+    ctx.beginPath(); ctx.moveTo(x, ty + 0.6); ctx.lineTo(x + bw - 0.45, -25.2); ctx.lineTo(x, -25.2); ctx.closePath();
+    ctx.fillStyle = HERO_C3.SILVER_D; ctx.fill();
+  }
+  ctx.beginPath(); ctx.ellipse(0, -29.8, 0.95, 1.6, 0, 0, Math.PI * 2); ctx.fillStyle = HERO_C3.SAPH; ctx.fill(); // 가운데 가시 눈물 사파이어
+  roundRect(-13.2, -26.4, 26.4, 5.0, 1.4); ctx.fillStyle = HERO_C3.SILVER; ctx.fill(); heroOut(HERO_C3.SILVER_OUT); // (5) 띠 + 아래 테 그늘 + 하이라이트 한 줄 + 사파이어 3개 — 게임 roundRect (P1)
+  ctx.beginPath(); ctx.rect(-12.6, -22.8, 25.2, 1.2); ctx.fillStyle = HERO_C3.SILVER_D; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-11.2, -25.5); ctx.lineTo(-3.4, -25.5);
+  ctx.strokeStyle = HERO_C3.SILVER_HL; ctx.lineWidth = 0.8; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  for (const [gx, r] of [[-7.2, 1.1], [0, 1.6], [7.2, 1.1]]) {
+    ctx.beginPath(); ctx.ellipse(gx, -24.0, r, r * 1.1, 0, 0, Math.PI * 2); ctx.fillStyle = HERO_C3.SAPH; ctx.fill();
+    ctx.strokeStyle = HERO_C3.SAPH_OUT; ctx.lineWidth = 0.6; ctx.stroke();
+  }
+  if (u.super) { // 슈퍼: 띠 위·아래 가장자리 금선
+    ctx.beginPath(); ctx.moveTo(-12.8, -26.1); ctx.lineTo(12.8, -26.1); ctx.moveTo(-12.8, -21.7); ctx.lineTo(12.8, -21.7);
+    ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 0.9; ctx.stroke();
+  }
+  for (const [x, ty, , r, nl] of G3_SPIKES) { // (6) 바늘 (구슬을 꿰뚫고 위로) → 사파이어 구슬 + 반짝 점. 슈퍼는 가운데 구슬 뒤 금 고리
+    ctx.beginPath(); ctx.moveTo(x - 0.8, ty - r + 0.5); ctx.lineTo(x, ty - r - nl); ctx.lineTo(x + 0.8, ty - r + 0.5); ctx.closePath();
+    ctx.fillStyle = HERO_C3.NEEDLE; ctx.fill(); ctx.strokeStyle = HERO_C3.SILVER_OUT; ctx.lineWidth = 0.7; ctx.lineJoin = 'round'; ctx.stroke();
+    if (u.super && x === 0) { ctx.beginPath(); ctx.arc(x, ty, r + 0.9, 0, Math.PI * 2); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT); }
+    ctx.beginPath(); ctx.arc(x, ty, r, 0, Math.PI * 2); ctx.fillStyle = HERO_C3.SAPH; ctx.fill(); ctx.strokeStyle = HERO_C3.SAPH_OUT; ctx.lineWidth = 0.7; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x - r * 0.38, ty - r * 0.38, r * 0.26, 0, Math.PI * 2); ctx.fillStyle = HERO_C3.SPARK; ctx.fill();
+  }
+}
 // 티어별 몸통 크기/모양 — 유닛의 tier/hero/vis는 스폰 후 불변이라 유닛 객체에 메모이즈 (프레임당 128회 객체 생성이 GC를 긁었다)
 function bodyShape(u) {
   return u._bs || (u._bs = bodyShapeRaw(u));
@@ -11278,15 +11541,12 @@ function drawHeadgear(u, topY, faceX) { // faceX = 바라보는 쪽(±1) — dra
     return;
   }
   const t = u.tier;
-  { // 표준 영웅 고유 머리 장식 (HERO_LOOK[tier].head, 라이브 — 10-08). 히든 9종·슈퍼에이스·에이스 노말은 위에서 걸러졌고, 표에 없는 tier는 아래 기존 분기로
+  { // 표준 영웅 고유 머리 장식 (HERO_LOOK[tier].head, 라이브 — 10-08, tier 0~9 전부). 히든 9종·슈퍼에이스·에이스 노말은 위에서 걸러졌고, 히든 영웅은 아래 u.hero 왕관 분기로
     const L = heroLook(u);
     if (L) { if (faceX == null) faceX = ((u.moving ? u.tx : (u.aimX != null ? u.aimX : CX)) >= u.x) ? 1 : -1; heroG(u, faceX, L.head, heroPal(u)); return; }
   }
-  if (u.super) { // 슈퍼영웅: 무지개 보석 대관 + 큰 돔
-    drawCrown(cx, topY, { col:'#ffe082', points:7, h:15, gem:`hsl(${(S.time*120)%360},90%,60%)`, band:'#c9a227', dome:true });
-    return;
-  }
-  // (10-08) 풀하우스 해적모·플러쉬 가스버너 분기(hero && tier && !isHiddenCombo = 표준 영웅)는 위 HERO_LOOK[4~6].head가 대신하므로 삭제
+  // (10-08) 풀하우스 해적모·플러쉬 가스버너 분기(hero && tier && !isHiddenCombo = 표준 영웅)는 위 HERO_LOOK[4~6].head가 대신하므로 삭제.
+  //   슈퍼영웅 무지개 보석 대관(u.super) 분기도 삭제 — 슈퍼는 spawnHero(…, sup)로만 생기는 표준 영웅이라 위 HERO_LOOK[0~9].head가 전부 받고, 히든 영웅 9종은 슈퍼가 되는 경로가 없으며 슈퍼에이스는 위 superAce 분기에서 걸린다 (도달 불가)
   if (u.hero) { drawCrown(cx, topY, { col:'#ffd54f', points:5, h:11, gem:'#e91e8c', band:'#c9a227', dome:true }); return; }
   switch (t) {
     case 9: { // 로얄: 임페리얼 대관 (아치 + 벨벳 + 대형 루비 + 광채)
