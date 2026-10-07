@@ -3518,8 +3518,9 @@ const WEAPONS = [
   // 7 포카드 — 바주카포 (5초, 스플래쉬)
   {name:'바주카포', dmg:38, cd:2.5, range:330, splash:78, bounce:0, atk:'area', vis:'rocket', // 공격력 1.5배(25→38)·폭발 반경 1.5배(52→78)
    hero:{name:'탱크', atk:'pen', vis:'tank', cd:2.0}}, // 소환장 전체 타격
-  // 8 스트레이트 플러쉬 — 표창 (닌자, 초고속 + 착탄 범위 공격 SF_SPLASH — 10-07 유저: "투석기보다 약하다, 얻기 힘드니 많이 좋아야")
-  {name:'표창', dmg:26, cd:0.2, range:300, splash:0, bounce:0, atk:'shot', proj:'shuriken',
+  // 8 스트레이트 플러쉬 — 고속 유탄발사기 (10-07 저녁 유저: 표창 → 유탄발사기, 그림·이름만 · 수치 그대로. 초고속 + 착탄 범위 공격 SF_SPLASH)
+  //   proj 키 'shuriken'은 내부 이름으로 유지(착탄 범위 판정·광역 칩·광석방 탄이 이 키를 본다) — 그림은 유탄
+  {name:'고속 유탄발사기', dmg:26, cd:0.2, range:300, splash:0, bounce:0, atk:'shot', proj:'shuriken',
    hero:{name:'스플래쉬 폭탄', atk:'area', vis:'bomb', splash:116, cd:0.1}},
   // 9 로얄 — 미사일 (2초, 초강력 스플래쉬)
   {name:'미사일', dmg:90, cd:2.0, range:410, splash:132, bounce:0, atk:'area', vis:'rocket',
@@ -4512,7 +4513,7 @@ const CROWN_DEADLINE = 20; // 👑 10-04 유저: 이 라운드 전투가 끝날 
 // 자기 족보(u.tier)의 종족으로 본다 (10-01 크로스체크 P1 — u.race 자체는 fuseKey·색이 참조하므로 건드리지 않음)
 function crownRaceOf(u) { return (u.hidden || u.ace) ? RACE_OF_RANK[u.tier] : u.race; }
 function effDmg(u, splashPer) { return S.multi ? effDmgBase(u, splashPer) * mpAtkMul() : effDmgBase(u, splashPer); } // 🤖 멀티: 🎫 골드티켓 ④ 팀 공격력 +20% (지정 웨이브 동안 최종 배수)
-// 스트레이트 플러쉬 표창 범위 공격 (10-07 유저): 직격은 그대로(단일 +2.5/Lv · 결투 무변경), 착탄 반경 r 안의 다른 몹에 k × 'splashPer 공격력'.
+// 스트레이트 플러쉬 유탄 범위 공격 (10-07 유저): 직격은 그대로(단일 +2.5/Lv · 결투 무변경), 착탄 반경 r 안의 다른 몹에 k × 'splashPer 공격력'.
 //   splashPer = 업글분만 스플래시 규칙(0.55×cd)으로 계산 — 직격 계수 그대로 퍼뜨리면 L30 군집이 로얄을 넘는다.
 //   실측(200마리 군집 초당 총딜, L0/L12/L30): 표창 144/282/861 → 7.5k/7.9k/9.8k — 투석기(단련 0 · 용암 3.5k → 10-07 1/3 너프 후 1.2k)·포카드(2.2k/3.0k/6.3k) 위, 로얄 미사일(10.8k/12.1k/17.7k)의 55~69%.
 //   체감 레버 = k (군집 총딜이 거의 비례 — 1.3이면 L0에서 로얄 턱밑). r을 바꾸면 그림 링도 같이 바뀐다
@@ -5818,11 +5819,12 @@ function update(dt) {
         S.effects.push({ type:'boom', x: t.x, y: t.y, r: 17, t: 0.2 });
         for (let i = 0; i < 3; i++) { const aa = Math.random()*6.28, v = 80 + Math.random()*130; const sc = p.dice ? '#ffd54f' : p.star ? '#e8eefc' : '#ffc27a'; S.parts.push({ x: t.x, y: t.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.24, r: 1.4 + Math.random()*2, c: sc }); }
         sfx('boom'); // 팅길 때마다 탕!
-      } else if (p.owner && p.owner.tier === 8) { // ☢️ 스트레이트 플러쉬: 표창도 핵처럼 버섯구름 (연사가 빨라 작고 짧게)
-        S.effects.push({ type:'mush', x: t.x, y: t.y, r: 26, t: 0.55, dur: 0.55 });
+      } else if (p.owner && p.owner.tier === 8) { // 스트레이트 플러쉬 유탄: 작은 화염 폭발 + 범위 링 + 펑 (연사가 빨라 작고 짧게 · 난수 안 씀)
+        S.effects.push({ type:'fireball', x: t.x, y: t.y, r: 18, t: 0.24, dur: 0.24 });
+        sfx('boom');
         S.effects.push({ type:'boom', x: t.x, y: t.y, r: p.sdmg ? SF_SPLASH.r : 30, t: 0.16 }); // 링 = 범위 공격 반경
       } else S.effects.push({ type:'boom', x: t.x, y: t.y, r: 5, t: 0.1 });
-      if (p.kind === 'shuriken' && p.sdmg) { // 표창 범위 공격: 맞은 몹 주변 반경 안 다른 몹에 범위 피해 (바주카·투석기 착탄 루프와 같은 판정)
+      if (p.kind === 'shuriken' && p.sdmg) { // 유탄 범위 공격: 맞은 몹 주변 반경 안 다른 몹에 범위 피해 (바주카·투석기 착탄 루프와 같은 판정)
         const r2 = SF_SPLASH.r * SF_SPLASH.r;
         for (const m of S.monsters) { if (m === t) continue; const ddx = m.x - t.x, ddy = m.y - t.y; if (ddx * ddx + ddy * ddy <= r2) dealDamage(m, p.sdmg, p.owner); }
       }
@@ -6037,12 +6039,12 @@ function fireAt(u, target) {
         onHit: 'shards', shards: u.shards, shardDmg: dmg * u.shardFrac, ang: 0 });
       break;
     }
-    default: { // shot: 단일 투사체 (새총/활/총/기관총/표창)
+    default: { // shot: 단일 투사체 (새총/활/총/기관총/유탄)
       const speed = u.proj === 'pellet' ? 250 : u.proj === 'arrow' ? 440 : u.proj === 'shuriken' ? 600 : 730;
       target.inc += dmg;
       S.projs.push({ x: m.x, y: m.y, tgt: target, dmg, speed, kind: u.proj, owner: u,
         gold: u.tier >= 7 && !u.hero, ang: Math.atan2(target.y - m.y, target.x - m.x),
-        sdmg: u.proj === 'shuriken' ? effDmg(u, true) * SF_SPLASH.k : 0 }); // 표창 착탄 범위 피해 (발사 시점 값)
+        sdmg: u.proj === 'shuriken' ? effDmg(u, true) * SF_SPLASH.k : 0 }); // 유탄 착탄 범위 피해 (발사 시점 값)
       if (u.proj === 'bullet' || u.proj === 'mg') {
         const fa = Math.atan2(target.y - m.y, target.x - m.x);
         S.effects.push({ type:'mflash', x: m.x, y: m.y, ang: fa, r: u.proj === 'mg' ? 7 : 10, t: 0.07, dur: 0.07 });
@@ -6922,7 +6924,8 @@ function weaponTipLocal(u) { // drawWeapon(u, wx, wy)의 (wx, wy) 기준 무기 
   if (has('바주카')) return [20, -9];
   if (has('미사일')) return [5.5, 1.5];
   if (has('폭탄')) return [4, 0];
-  if (has('표창')) return u.atk === 'boomerang' ? [5, 0] : [3, 0];
+  if (has('유탄')) return [17, -0.7]; // 고속 유탄발사기 포구
+  if (has('표창')) return [5, 0]; // 트리플 영웅 대형 표창
   if (has('저격')) return [16, 0];
   if (has('석궁')) return [9, 0];
   if (has('새총')) return [2, -5];
@@ -8434,11 +8437,13 @@ function draw() {
       const x = e.x1 + (e.x2 - e.x1) * pr, y = e.y1 + (e.y2 - e.y1) * pr;
       const ang = Math.atan2(e.y2 - e.y1, e.x2 - e.x1), pk = e.proj || 'pellet';
       // 전투 투사체와 완전히 동일한 모양·색 (S.projs 렌더와 1:1 — 광석방이라고 다르게 보이지 않게)
-      if (pk === 'shuriken') { // 표창 (회전하는 별)
-        ctx.save(); ctx.translate(x, y); ctx.rotate(S.time * 30);
-        ctx.fillStyle = '#455a64'; polyPath(0, 0, 4, 6, 0, 2.2); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 1.4, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
+      if (pk === 'shuriken') { // 스트레이트 플러쉬 유탄 (내부 키 shuriken — 전투 탄과 같은 그림)
+        ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+        ctx.strokeStyle = 'rgba(210,210,210,0.5)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-4, 0); ctx.stroke();
+        ctx.fillStyle = '#556b2f'; ctx.beginPath(); ctx.ellipse(0, 0, 4.2, 2.9, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#c9a227'; ctx.beginPath(); ctx.arc(2.6, 0, 1.8, -Math.PI / 2, Math.PI / 2); ctx.fill();
+        ctx.restore(); ctx.lineWidth = 1;
       } else if (pk === 'chip') { // 갬블러 골드 칩
         ctx.save(); ctx.translate(x, y); ctx.rotate(S.time * 14);
         ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(0, 0, 3.6, 0, Math.PI * 2); ctx.fill();
@@ -8545,12 +8550,13 @@ function draw() {
         ctx.lineCap = 'butt';
       }
       ctx.restore(); ctx.lineWidth = 1;
-    } else if (p.kind === 'shuriken') { // 표창 (회전하는 별)
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(S.time * 30);
-      ctx.fillStyle = '#455a64';
-      polyPath(0, 0, 4, 6, 0, 2.2); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 1.4, 0, Math.PI*2); ctx.fill();
-      ctx.restore();
+    } else if (p.kind === 'shuriken') { // 스트레이트 플러쉬 유탄 (내부 키 shuriken) — 짧은 연기 꼬리 + 올리브 탄체 + 황동 탄두
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.ang || 0);
+      ctx.strokeStyle = 'rgba(210,210,210,0.5)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-4, 0); ctx.stroke();
+      ctx.fillStyle = '#556b2f'; ctx.beginPath(); ctx.ellipse(0, 0, 4.2, 2.9, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#c9a227'; ctx.beginPath(); ctx.arc(2.6, 0, 1.8, -Math.PI/2, Math.PI/2); ctx.fill();
+      ctx.restore(); ctx.lineWidth = 1;
     } else if (p.kind === 'chip') { // 갬블러 골드 칩
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(S.time * 14);
       ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(0, 0, 3.6, 0, Math.PI*2); ctx.fill();
@@ -10911,15 +10917,23 @@ function drawWeapon(u, x, y) {
   } else if (has('폭탄')) { // 스플래쉬 폭탄
     ctx.fillStyle = '#37474f'; ctx.beginPath(); ctx.arc(x + 4, y, 4.5, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = '#ff6d1f'; ctx.beginPath(); ctx.moveTo(x + 6, y - 4); ctx.lineTo(x + 9, y - 7); ctx.stroke();
-  } else if (has('표창')) { // 표창 별 (대형 표창은 던진 동안 빈손 — 실시간 조회)
-    if (u.atk === 'boomerang') { // 트리플 영웅·슈퍼: 대형 표창 (소모품 — 던져도 다음 표창을 바로 쥔다)
-      ctx.fillStyle = '#455a64';
-      polyPath(x + 5, y, 4, 9, S.time * 6, 3.2); ctx.fill();
-      ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.4; ctx.stroke();
-      ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(x + 5, y, 2.2, 0, 6.28); ctx.fill();
-      ctx.lineWidth = 1; return;
-    }
-    polyPath(x + 3, y, 4, 5.5, S.time * 6, 2); ctx.fill();
+  } else if (has('유탄')) { // 스트레이트 플러쉬 고속 유탄발사기: 개머리판 + 회전 탄창(테 = 등급색 wc) + 굵고 짧은 포신 — 끝 = weaponTipLocal [17, -0.7]
+    ctx.fillStyle = '#3e4a3d';                                             // 개머리판
+    ctx.beginPath(); ctx.moveTo(x - 9, y - 1.5); ctx.lineTo(x - 2, y - 2.6); ctx.lineTo(x - 2, y + 1.4); ctx.lineTo(x - 8, y + 3.2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#2b2b2b'; ctx.fillRect(x - 1.2, y + 1, 2.4, 5);      // 손잡이
+    ctx.fillStyle = '#4e5a48'; ctx.fillRect(x + 4, y - 3, 11, 4.6);       // 포신 (굵게)
+    ctx.fillStyle = '#2f372e'; ctx.fillRect(x + 14.5, y - 3.6, 2.5, 5.8); // 포구 링
+    ctx.fillStyle = '#5d6b55'; ctx.beginPath(); ctx.arc(x + 2, y - 0.5, 4.4, 0, 6.28); ctx.fill(); // 회전 탄창
+    ctx.strokeStyle = wc; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.fillStyle = '#263238'; const ra = (u.atkAnim || 0) * 1.05;        // 약실 6개 — 쏠 때마다 한 칸 돈다
+    for (let k = 0; k < 6; k++) { const a = ra + k * 1.047; ctx.beginPath(); ctx.arc(x + 2 + Math.cos(a) * 2.5, y - 0.5 + Math.sin(a) * 2.5, 0.9, 0, 6.28); ctx.fill(); }
+    ctx.lineWidth = 1;
+  } else if (has('표창')) { // 트리플 영웅·슈퍼: 대형 표창 (소모품 — 던져도 다음 표창을 바로 쥔다)
+    ctx.fillStyle = '#455a64';
+    polyPath(x + 5, y, 4, 9, S.time * 6, 3.2); ctx.fill();
+    ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(x + 5, y, 2.2, 0, 6.28); ctx.fill();
+    ctx.lineWidth = 1; return;
   } else if (has('저격')) { // 저격총 (긴 총열 + 조준경)
     ctx.fillRect(x, y - 1.5, 16, 3); ctx.fillRect(x + 4, y + 1.5, 2, 4);
     ctx.strokeStyle = '#333'; ctx.beginPath(); ctx.arc(x + 8, y - 3, 2, 0, Math.PI*2); ctx.stroke();
@@ -11478,7 +11492,7 @@ function unitTraits(u) {
   if (u.atk === 'pen') t.push('소환장 전체 타격');
   else if (u.vis === 'flame') t.push('화염');
   else if ((u.vis === 'sword' || u.vis === 'twin') && !u.shogun) t.push('단일');
-  else if (u.splash || (u.atk === 'shot' && u.proj === 'shuriken')) t.push('광역'); // 표창 = 착탄 범위 공격 (SF_SPLASH)
+  else if (u.splash || (u.atk === 'shot' && u.proj === 'shuriken')) t.push('광역'); // 유탄 = 착탄 범위 공격 (SF_SPLASH)
   if (u.gamble) t.push((u.ascend || 0) >= 1 ? '2~6 팅김' : '1~6 팅김'); // 갬블러는 bounce 6 필드가 있어 팅김보다 먼저 본다 · 🩸승급1부터 주사위 최소 2 (리뷰 UI-P2-1)
   else if (u.bounce) t.push(`팅김×${u.bounce}`);
   if (u.pierce) t.push(`관통×${u.pierce}`);
