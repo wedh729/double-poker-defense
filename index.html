@@ -3752,7 +3752,7 @@ function pokerPeekOnMapUse() {
 }
 function setPanelClearance(px) { document.documentElement.style.setProperty('--panelH', Math.round(px) + 'px'); }
 document.getElementById('pokerHandle').onclick = () => { pokerPeek = false; syncPokerPanel(); };
-document.getElementById('pgHelp').onclick = () => toggleShop('book'); // ? = 자세한 족보 도감
+document.getElementById('pgHelp').onclick = () => { if (openShop !== 'book') bookTab = 'hand'; toggleShop('book'); }; // ? = 자세한 족보 도감 — 10-07 유저: 이 입구는 항상 포커 족보 탭 (툴바 도감은 마지막 탭 기억)
 // 우측 상시 족보 안내: 강한 족보가 위로. ranks(현재 패의 족보 인덱스들)는 금색 강조
 let pgLastKey = '';
 function renderHandGuide(ranks) {
@@ -12757,7 +12757,7 @@ function renderPoker(spin) {
       + (match ? ' <span class="jackpot">일치! 에이스 확정!</span>' : '')
       + `<span class="rankGauge" title="족보 순위 — 눌러서 족보 도감">${HAND_NAMES.map((_, k) => `<i${k === ranks[h] ? ' class="on"' : ''}></i>`).join('')}</span>`; // 📱 폰엔 족보 순위표가 없다 — 칸 위치로만 (숫자 없음)
     const gauge = label.querySelector('.rankGauge');
-    gauge.onclick = e => { e.stopPropagation(); toggleShop('book'); };
+    gauge.onclick = e => { e.stopPropagation(); if (openShop !== 'book') bookTab = 'hand'; toggleShop('book'); }; // 족보 순위 게이지 = 항상 포커 족보 탭 (10-07)
     const cardsRow = document.createElement('div');
     cardsRow.className = 'handCards';
     const madeIdx = madeCardIdx(hand.cards, ranks[h]);
