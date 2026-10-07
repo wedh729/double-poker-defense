@@ -5397,7 +5397,7 @@ function update(dt) {
     blockRoomWalls(u); // 🧱 광석방 담장: 입구 외에는 못 넘는다
     blockSky(u);       // ☁️ 하늘 모퉁이: 통행 불가
     if (isInRoom(u) && u.x > ORE_LINE) { u.x = ORE_LINE; if (u.tx > ORE_LINE) u.tx = ORE_LINE; } // 💎 광석 앞 통행 금지선 — 광석이 유닛에 가려지지 않게
-    if (stopNow) roomStopSnap(u); // 담에 막혀 멈춘 자리가 돌담 그림 위면 확실한 안/밖으로 (담 되돌림 뒤 위치 기준)
+    if (stopNow && u.wallT != null && S.time - u.wallT < 1) roomStopSnap(u); // 담에 막혀(최근 1초 안 되돌림) 멈춘 자리가 돌담 그림 위면 확실한 안/밖으로 — 추격·A명령 등 다른 정지는 그대로
   }
   // 유닛 분리: 경계가 명확하도록 (간격 20px, 2회 반복 — 살짝 낑기는 것까지만 허용)
   const U = S.units, MINSEP = 20;
@@ -6398,13 +6398,13 @@ function blockRoomWalls(u) { // 이동 전 위치(u.px,u.py)와 비교해 담장
   const crossV = (xw, hasGate) => {
     if ((px - xw) * (u.x - xw) < 0) {
       const t2 = (xw - px) / (u.x - px), cy2 = py + (u.y - py) * t2;
-      if (cy2 > y0 - 2 && cy2 < y1 + 2 && !(hasGate && cy2 > gy0 && cy2 < gy1)) u.x = xw + Math.sign(px - xw) * 2;
+      if (cy2 > y0 - 2 && cy2 < y1 + 2 && !(hasGate && cy2 > gy0 && cy2 < gy1)) { u.x = xw + Math.sign(px - xw) * 2; u.wallT = S.time; } // wallT = 담에 막힌 시각 (roomStopSnap 조건)
     }
   };
   const crossH = (yw) => {
     if ((py - yw) * (u.y - yw) < 0) {
       const t2 = (yw - py) / (u.y - py), cx2 = px + (u.x - px) * t2;
-      if (cx2 > x0 - 2 && cx2 < x1 + 2) u.y = yw + Math.sign(py - yw) * 2;
+      if (cx2 > x0 - 2 && cx2 < x1 + 2) { u.y = yw + Math.sign(py - yw) * 2; u.wallT = S.time; }
     }
   };
   crossV(x0, true); crossV(x1, false); crossH(y0); crossH(y1);
