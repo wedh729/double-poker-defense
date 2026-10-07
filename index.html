@@ -6110,16 +6110,9 @@ function areaHit(u, x, y, dmg) {
     S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.88, a: ang0 + 0.35, t: 0.55, dur: 0.55, joker: true }); // 뒤따르는 보라 잔상 (사거리 안)
     for (let i = 0; i < 9; i++) { const v = 60 + Math.random()*110, aa = ang0 + (Math.random()-0.5)*1.5; S.parts.push({ x: u.x, y: u.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.3, r: 1.3 + Math.random()*2.2, c: '#8c5bff' }); }
   } else if (vis === 'flame') {
-    // 진짜 불꽃: 총구에서 조준 방향으로 **사거리 끝까지** 뻗는 화염 스트림 (착탄점이 아니라 range까지 항상 표현)
-    const wide = u.hero; // 영웅은 두껍게, 일반은 얇은 불줄기
-    const n = wide ? 28 : 18, reach0 = u.range; // 스트림 길이 = 사거리 (불꽃 개수↑)
-    const spread = Math.atan2(u.splash * 0.8, reach0); // 불길 퍼짐각 ≈ 판정 반폭 (splash 2배라 더 뚱뚱)
-    const wt = weaponTip(u), lead = Math.max(0, (wt.x - mz.x) * Math.cos(a) + (wt.y - mz.y) * Math.sin(a)); // 🎯 불꽃은 노즐 끝에서 — 앞선 만큼 짧게 (판정 띠 끝 = 불길 끝 유지)
-    for (let i = 0; i < n; i++) {
-      const reach = Math.max(8, reach0 * (0.5 + Math.random() * 0.55) - lead), sp = reach / 0.42, aa = a + (Math.random() - 0.5) * 2 * spread;
-      S.parts.push({ x: wt.x, y: wt.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp,
-        t: 0.52 + Math.random() * 0.36, r: (wide ? 8 : 5.5) + Math.random() * (wide ? 9 : 6), fire: true, spin: Math.random()*6.28 }); // 크게 + 오래(안 금방 꺼짐)
-    }
+    // 🔥 불길 = 유닛마다 일렁이는 불꽃 줄기 1개 (10-07 유저: 렉 — 예전엔 한 발마다 불꽃 파티클 18~28개). 노즐 끝 → 사거리 끝, 폭 ≈ 판정 반폭
+    const wt = weaponTip(u), lead = Math.max(0, (wt.x - mz.x) * Math.cos(a) + (wt.y - mz.y) * Math.sin(a)); // 🎯 노즐 끝에서 — 앞선 만큼 짧게 (판정 띠 끝 = 불길 끝 유지)
+    flameStreamOn(u, a, Math.max(8, u.range * 1.02 - lead), u.splash * 0.85);
   } else { // rocket / bomb: 폭발
     S.effects.push({ type:'boom', x, y, r: u.splash * (big ? 1.3 : 1), t: big ? 0.42 : 0.28 });
     if (big) S.effects.push({ type:'boom', x, y, r: u.splash * 1.9, t: 0.28 }); // 바깥으로 퍼지는 충격파 링
@@ -6463,12 +6456,9 @@ function fireAtDuel(u) {
     S.effects.push({ type:'slash', x: d.x, y: d.y, r: u.splash, a: ang + soff, t: sdur, dur: sdur, fire: u.shogun });
   } else if (u.vis === 'saw') {
     S.effects.push({ type:'saw', x: d.x, y: d.y, r: u.splash * 0.7, t: 0.18 });
-  } else if (u.vis === 'flame') {
-    for (let i = 0; i < (u.hero ? 14 : 9); i++) {
-      const reach = Math.hypot(d.x - m.x, d.y - m.y) * (0.6 + Math.random() * 0.5), sp = reach / 0.4;
-      const aa = ang + (Math.random() - 0.5) * 0.5;
-      S.parts.push({ x: m.x, y: m.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, t: 0.4 + Math.random() * 0.25, r: (u.hero ? 7 : 5) + Math.random() * 5, fire: true, spin: Math.random() * 6.28 });
-    }
+  } else if (u.vis === 'flame') { // 🔥 불꽃 줄기 1개 (areaHit와 같은 그림 — 길이 = 대상까지)
+    const len = Math.hypot(d.x - m.x, d.y - m.y) * 1.05;
+    flameStreamOn(u, ang, len, Math.min(u.splash * 0.85, len * 0.3));
   } else { // 원거리 무기: 광선 + 총구 섬광
     S.effects.push({ type:'roomshot', x1: m.x, y1: m.y, x2: d.x, y2: d.y, t: 0.14, dur: 0.14, proj: u.proj || 'pellet' });
     S.effects.push({ type:'boom', x: m.x, y: m.y, r: 4, t: 0.07 });
@@ -6596,12 +6586,9 @@ function fireAtOre(u) {
     S.effects.push({ type:'slash', x: OREPOS.x, y: OREPOS.y, r: u.splash, a: ang + soff, t: sdur, dur: sdur, fire: u.shogun });
   } else if (u.vis === 'saw') {
     S.effects.push({ type:'saw', x: OREPOS.x, y: OREPOS.y, r: u.splash * 0.7, t: 0.18 });
-  } else if (u.vis === 'flame') {
-    for (let i = 0; i < (u.hero ? 14 : 9); i++) {
-      const reach = Math.hypot(OREPOS.x - m.x, OREPOS.y - m.y) * (0.6 + Math.random() * 0.5), sp = reach / 0.4;
-      const aa = ang + (Math.random() - 0.5) * 0.5;
-      S.parts.push({ x: m.x, y: m.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, t: 0.4 + Math.random() * 0.25, r: (u.hero ? 7 : 5) + Math.random() * 5, fire: true, spin: Math.random() * 6.28 });
-    }
+  } else if (u.vis === 'flame') { // 🔥 불꽃 줄기 1개 (areaHit와 같은 그림 — 길이 = 광석까지)
+    const len = Math.hypot(OREPOS.x - m.x, OREPOS.y - m.y) * 1.05;
+    flameStreamOn(u, ang, len, Math.min(u.splash * 0.85, len * 0.3));
   } else { // 원거리 무기: 기존 광선 + 총구 섬광
     S.effects.push({ type:'roomshot', x1: m.x, y1: m.y, x2: OREPOS.x, y2: OREPOS.y, t: 0.14, dur: 0.14, proj: u.proj || 'pellet' });
     S.effects.push({ type:'boom', x: m.x, y: m.y, r: 4, t: 0.07 });
@@ -8584,6 +8571,7 @@ function draw() {
       ctx.lineWidth = 1;
     }
   }
+  drawFlameStreams(); // 화염방사기 불꽃 줄기 (예전 불꽃 파티클 자리)
   // 파티클
   for (const p of S.parts) {
     if (p.fire) {
@@ -9630,6 +9618,75 @@ function fireGrad(s) {
     fireGradCache.set(q, g);
   }
   return g;
+}
+// 🔥 화염방사기 불길 (10-07 유저: "하나씩 쏘는 거 말고 일렁이는 고정된 1개의 불꽃"): 쏘는 동안 유닛마다 노즐 끝에 불꽃 줄기 1개.
+//    예전 = 한 발마다 불꽃 파티클 18~28개 → 플러쉬 영웅 3기 R81에 ≈460개 겹쳐 그리기(그래픽 처리량 초과). 이건 그림만 — 판정 띠는 areaHit 그대로.
+//    난수 없음(S.time + 유닛 흩어짐 값 위상) · 벡터 패스(스프라이트 다운스케일 꼬리 침식 없음) · 겹 3장(바깥 주황→중간 노랑→흰 심지) + 불똥 몇 개
+const FLAME_FADE = 0.12;
+function flameHold(u) { return Math.max(0.18, 1.6 * effCd(u)); } // 다음 발까지 끊기지 않게 (스팀팩·공속 업글 반영)
+function flameStreamOn(u, a, len, w) { // 발사 순간: 조준각·길이(노즐 끝부터)·끝 반폭만 기록
+  if (u._flT === undefined || S.time - u._flT > flameHold(u) + FLAME_FADE) u._flS = S.time; // 쉬다가 다시 쏘면 노즐에서 뻗어 나간다
+  u._flT = S.time; u._flA = a; u._flL = len; u._flW = w;
+}
+function drawFlameStreams() {
+  for (const u of S.units) {
+    if (u._flT === undefined || u.grabbed) continue;
+    const age = S.time - u._flT, hold = flameHold(u);
+    if (age < 0 || age > hold + FLAME_FADE) continue;
+    drawFlameStream(u, age > hold ? 1 - (age - hold) / FLAME_FADE : 1);
+  }
+}
+const FLAME_LAYERS = [ // [폭 배율, 길이 배율, 색 3단(노즐 → 중간 → 끝), 일렁 위상]
+  [1.0, 1.0, ['rgba(255,110,30,0.92)', 'rgba(245,70,20,0.8)', 'rgba(190,20,0,0)'], 0],
+  [0.64, 0.86, ['rgba(255,214,79,0.96)', 'rgba(255,150,30,0.9)', 'rgba(255,87,34,0)'], 1.7],
+  [0.3, 0.6, ['rgba(255,251,230,0.95)', 'rgba(255,236,150,0.85)', 'rgba(255,202,40,0)'], 3.1],
+];
+function drawFlameStream(u, fade) {
+  const wt = weaponTip(u), t = S.time, ph = (u.jx || 0) * 0.37 + (u.jy || 0) * 0.21; // 유닛별 위상 (난수 대신 스폰 때 흩어짐 값)
+  const grow = Math.min(1, (t - u._flS) / 0.1);
+  const L0 = Math.max(8, u._flL * (1 + 0.04 * Math.sin(t * 9 + ph))) * grow;
+  const W = Math.max(6, u._flW), w0 = u.hero ? 7 : 4.5, N = 12;
+  ctx.save(); ctx.translate(wt.x, wt.y); ctx.rotate(u._flA);
+  const flick = 0.86 + 0.14 * Math.sin(t * 29 + ph);
+  for (const [ws, ls, cs, lp] of FLAME_LAYERS) {
+    if (ws < 0.5) { // 심지 전에 불혀 몇 개: 노즐에서 끝 쪽으로 흘러가며 작아지고 사라진다 (예전 파티클 모양·그라디언트 그대로, 개수만 고정)
+      const nT = u.hero ? 10 : 7, s0 = (u.hero ? 17 : 11) * Math.min(1.2, Math.max(0.7, W / 45));
+      for (let i = 0; i < nT; i++) {
+        const p = ((t * 2.2 + i / nT + ph * 0.05) % 1 + 1) % 1, s = s0 * (1.05 - 0.55 * p);
+        const tx = L0 * (0.08 + 0.84 * p), ty = W * 0.1 * p * Math.sin(p * 5 - t * 11 + ph) + Math.sin(i * 1.9 + ph) * W * 0.6 * p;
+        ctx.save(); ctx.translate(tx, ty); ctx.rotate(Math.PI / 2 + Math.sin(t * 20 + i * 2.3 + ph) * 0.15);
+        ctx.globalAlpha = fade * Math.min(1, (1 - p) * 2.2); ctx.fillStyle = fireGrad(s);
+        ctx.beginPath(); ctx.moveTo(0, -s*1.7); ctx.quadraticCurveTo(s, s*0.1, 0, s); ctx.quadraticCurveTo(-s, s*0.1, 0, -s*1.7); ctx.fill();
+        ctx.restore();
+      }
+    }
+    const L = L0 * ls, Wl = W * ws, wn = w0 * Math.max(0.45, ws);
+    const g = ctx.createLinearGradient(0, 0, L, 0);
+    g.addColorStop(0, cs[0]); g.addColorStop(0.55, cs[1]); g.addColorStop(1, cs[2]);
+    ctx.fillStyle = g; ctx.globalAlpha = fade * (lp ? 0.9 + 0.1 * Math.sin(t * 23 + ph + lp) : flick);
+    ctx.beginPath();
+    for (let side = 0; side < 2; side++) { // 위 가장자리 → 끝 → 아래 가장자리 (물결은 노즐에서 끝 쪽으로 흐른다)
+      const sg = side ? -1 : 1, q = side ? 2.1 : 0;
+      for (let k = 0; k <= N; k++) {
+        const s = side ? (N - k) / N : k / N;
+        const tip = s < 0.78 ? 1 : Math.sqrt(Math.max(0, 1 - (s - 0.78) / 0.22));
+        const rip = 1 + (0.1 + 0.16 * s) * Math.sin(s * 7 - t * 16 + ph + lp + q) + 0.12 * s * Math.sin(s * 13 - t * 23 + ph * 1.7 + q); // 끝 쪽일수록 크게 날름
+        const hw = (wn + (Wl - wn) * Math.pow(s, 0.7)) * tip * rip;
+        const cy = W * 0.1 * s * Math.sin(s * 5 - t * 11 + ph);
+        if (!side && !k) ctx.moveTo(0, cy + hw * sg); else ctx.lineTo(s * L, cy + hw * sg);
+      }
+    }
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha = fade * 0.85; ctx.fillStyle = '#ffca28'; // 불똥: 끝 쪽으로 흩날리다 사라진다 (한 패스)
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const p = ((t * 1.6 + i * 0.23 + ph * 0.1) % 1 + 1) % 1, er = Math.max(0, (u.hero ? 2.4 : 1.8) * (1 - p) + 0.4);
+    const ex = L0 * (0.55 + 0.6 * p), ey = Math.sin(i * 2.4 + t * 5 + ph) * W * 0.6 * p;
+    ctx.moveTo(ex + er, ey); ctx.arc(ex, ey, er, 0, Math.PI * 2);
+  }
+  ctx.fill();
+  ctx.restore();
 }
 function drawMonster(m) {
   if (m.pullT > 0) { // 🃏 조커 시그니처: 낫에 걸린 몹을 조커 쪽으로 잇는 보라 사슬 (지그재그, shadowBlur 대신 2겹 스트로크로 광 표현)
