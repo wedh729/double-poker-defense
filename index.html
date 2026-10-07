@@ -10598,6 +10598,34 @@ function heroPal(u) {
 }
 // 영웅 좌표 → 게임 절대좌표: 원점을 몸통 중심(u.x, u.y)으로, 좌우 반전 f(±1), 슈퍼 1.2배. drawUnit은 1.5배를 걸고 원점을 되돌리므로, 베이크·유령·멀티 고스트에서도 같은 식이 맞다.
 function heroG(u, f, fn, P) { const s = u.super ? 1.2 : 1; ctx.save(); ctx.translate(u.x, u.y); ctx.scale(f * s, s); fn(u, P); ctx.restore(); }
+// (C4 H6, 10-08) 머리 장식 정지 부분 베이크 — 라이브 머리가 영웅 1기당 프레임마다 fill/stroke 10~72개(g3 왕관·바늘)라 영웅·슈퍼 20기 장면에서 draw가 기준 대비 +45~60%였다(§3-3 기준 +15%).
+//   흔들리는 부분(플러쉬 불꽃·풀하우스 두건 자락과 깃털·SF 스카프 자락 — S.time·u.jx를 읽는 유일한 곳)만 라이브로 그리고, 나머지는 tier|super|ace|race|부분|배율 키의 캔버스 1장(drawImage 1회).
+//   순서는 원래 그리기 순서 그대로(아래 표). 영웅 좌표(원점 = 몸통 중심, faceX 반전·슈퍼 1.2는 heroG 변환) 안에서 그리므로 스프라이트도 같은 좌표에 놓으면 좌우 반전·확대가 자동으로 맞는다.
+const HERO_HEAD_PARTS = { // 표에 없는 tier = 머리 전체가 정지 그림 → HERO_LOOK[t].head 한 장
+  5: [{ fn: g2BurnerFlame, live: true }, { fn: g2HeadBurner }],
+  6: [{ fn: g2PirateTails, live: true }, { fn: g2HeadPirate }, { fn: g2PirateFeather, live: true }, { fn: g2PirateBrim }],
+  8: [{ fn: g3SFTails, live: true }, { fn: g3HeadSF }],
+};
+const HH = { X0: -34, Y0: -48, W: 68, H: 52, MAX: 120 }; // 베이크 범위(영웅 좌표): 머리 x 최대 ±24.1(슈퍼 SF ×1.2 전 ≈ ±24)·꼭대기 −43.9(왕관 바늘 끝·슈퍼 대관은 ×1.2 전 −43.8)·아래 −8.6(SF 스카프 V 끝)+슈퍼 브로치 — 좌우 ±34·위 −48·아래 +4 여유. 캐시 상한 120장(실사용 ≤ 10족보 × 영웅/슈퍼 × 에이스 × 부분 2 ≈ 50)
+const heroHeadCache = new Map();
+function heroHeadSprite(u, P, i, fn) {
+  const k = Math.max(2, Math.round(RS * 1.5 * (u.super ? 1.2 : 1))); // 1 영웅좌표 = 화면 px(RS × 본체 1.5 × 슈퍼 1.2)에 가장 가까운 정수 배율로 굽는다 → 그릴 때 거의 1:1 (PC RS 2: 영웅 3·슈퍼 4)
+  const key = u.tier + '|' + (u.super ? 1 : 0) + '|' + (u.ace ? 1 : 0) + '|' + u.race + '|' + i + '|' + k;
+  let c = heroHeadCache.get(key);
+  if (!c) {
+    c = document.createElement('canvas'); c.width = HH.W * k; c.height = HH.H * k;
+    const old = ctx; ctx = c.getContext('2d');
+    try { ctx.scale(k, k); ctx.translate(-HH.X0, -HH.Y0); fn(u, P); } finally { ctx = old; } // 머리 함수는 전역 ctx에 그린다 — 코어 베이크와 같은 스왑 관례
+    if (heroHeadCache.size >= HH.MAX) heroHeadCache.clear();
+    heroHeadCache.set(key, c);
+  }
+  return c;
+}
+function heroHead(u, P) { // heroG 안에서 호출 — 라이브 부분은 그대로, 정지 부분은 스프라이트 1장
+  const parts = HERO_HEAD_PARTS[u.tier];
+  if (!parts) { ctx.drawImage(heroHeadSprite(u, P, 0, HERO_LOOK[u.tier].head), HH.X0, HH.Y0, HH.W, HH.H); return; }
+  for (let i = 0; i < parts.length; i++) { const p = parts[i]; if (p.live) p.fn(u, P); else ctx.drawImage(heroHeadSprite(u, P, i, p.fn), HH.X0, HH.Y0, HH.W, HH.H); }
+}
 // ---------- 공통 부품 (영웅 좌표 — heroG 안에서만 부른다) ----------
 function heroBodyPath(L) { // 몸통 경로 = 게임 bodyPath의 영웅 크기판 (원점 = 몸통 중심). rect = roundRect r4 / tri = 위 W, 아래 0.48W
   const W = L.w, H = L.h;
@@ -11039,16 +11067,8 @@ function g2SuperCenturion(u, P) { // 스트레이트 슈퍼: 돔 아래 금테 +
   }
 }
 // 플러쉬: 큰 가스버너 — 금 연결관(연료통 목 → 어깨 위 → 버너 옆) → 불꽃 4겹(바깥 파랑, 흔들림) → 금속 링 + 구멍 3개 → 아래 테 → 위 입술. 슈퍼 = 테·입술 금 + 가운데 금 메달 보석. 무기 화염 줄기와는 별개
-function g2HeadBurner(u, P) {
-  ctx.beginPath();
-  ctx.moveTo(-24.5, -13.8); ctx.lineTo(-24.5, -17.6);
-  ctx.quadraticCurveTo(-24.5, -22.2, -19.6, -22.2);
-  ctx.quadraticCurveTo(-11.8, -22.2, -8.3, -19.6);
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = HERO_C.GOLD_OUT; ctx.lineWidth = 3.2; ctx.stroke();
-  ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 2.0; ctx.stroke(); ctx.lineCap = 'butt';
-  ctx.beginPath(); ctx.rect(-9.6, -21.2, 1.6, 3.4); ctx.fillStyle = HERO_C2.STRAP; ctx.fill();
-  ctx.strokeStyle = HERO_C2.STRAP_OUT; ctx.lineWidth = 0.6; ctx.stroke();
+// (C4 H6) 머리를 '흔들리는 부분(라이브)'과 '정지 부분(베이크)'으로 나눔: 불꽃(라이브) → 연결관·띠·링·입술(정지). 원래 순서는 연결관 → 불꽃 → 링이었지만 연결관 끝(−8.3, −19.6)은 불꽃 밑동(y −22.8 위)과 겹치지 않고 위 입술이 밑동을 가리므로 그림이 같다
+function g2BurnerFlame(u, P) {
   const w = heroWave(u, 8), fh = Math.abs(w) * 1.2, fl = w * 1.0, fl2 = Math.cos(S.time * 10 + (u.jx || 0)) * 0.8;
   ctx.save(); ctx.translate(2, -22.8); ctx.scale(0.83, 1.1); ctx.translate(-2, 24.6); // 불꽃 좌표(밑동 y −24.6, 가운데 x 2)를 좁고 높게: 밑동 → (2, −22.8), 폭 ×0.83, 높이 ×1.1
   ctx.beginPath(); // 바깥 파랑
@@ -11084,6 +11104,17 @@ function g2HeadBurner(u, P) {
   ctx.quadraticCurveTo(6.2, -29.0, 5.8, -24.6);
   ctx.closePath(); ctx.fillStyle = HERO_C2.FL_CORE; ctx.fill();
   ctx.restore();
+}
+function g2HeadBurner(u, P) { // 정지 부분 (베이크) — 금 연결관(연료통 → 버너) + 띠 이음쇠 + 링 몸·구멍·아래 테·위 입술 (+ 슈퍼 금 메달)
+  ctx.beginPath();
+  ctx.moveTo(-24.5, -13.8); ctx.lineTo(-24.5, -17.6);
+  ctx.quadraticCurveTo(-24.5, -22.2, -19.6, -22.2);
+  ctx.quadraticCurveTo(-11.8, -22.2, -8.3, -19.6);
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = HERO_C.GOLD_OUT; ctx.lineWidth = 3.2; ctx.stroke();
+  ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 2.0; ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.beginPath(); ctx.rect(-9.6, -21.2, 1.6, 3.4); ctx.fillStyle = HERO_C2.STRAP; ctx.fill();
+  ctx.strokeStyle = HERO_C2.STRAP_OUT; ctx.lineWidth = 0.6; ctx.stroke();
   roundRect(-8.0, -22.6, 20.0, 8.0, 1.6); ctx.fillStyle = HERO_C2.STEEL; ctx.fill(); heroOut(HERO_C2.STEEL_OUT); // 링 몸 + 왼쪽 하이라이트 + 구멍 3개(안쪽 불빛)
   ctx.beginPath(); ctx.moveTo(-6.5, -21.0); ctx.lineTo(-6.5, -16.6);
   ctx.strokeStyle = HERO_C2.STEEL_L; ctx.lineWidth = 0.8; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
@@ -11105,7 +11136,8 @@ function g2HeadBurner(u, P) {
   }
 }
 // 풀하우스: 해골 해적 삼각모 + 모자 아래 두건(종족색·에이스 핑크) + 뒤로 날리는 두건 자락(슈퍼 두 갈래) + 앞쪽 빨간 깃털 (faceX로 바라보는 쪽에 붙음)
-function g2HeadPirate(u, P) {
+// (C4 H6) 네 부분 순서 그대로: 두건 자락(라이브) → 띠·매듭·돔·해골(정지 A) → 빨간 깃털(라이브) → 챙·금선·고정쇠(정지 B)
+function g2PirateTails(u, P) {
   const sw = heroWave(u, 5) * 0.8;
   if (u.super) { // (1) 슈퍼: 두 번째 두건 자락 (아래, 더 길게)
     const sw2 = heroWave(u, 5, 1.3) * 0.9;
@@ -11116,6 +11148,8 @@ function g2HeadPirate(u, P) {
   ctx.beginPath(); ctx.moveTo(-7.5, -19.6); ctx.quadraticCurveTo(-12.5, -19.2 + sw, -16.2, -14.8 + sw); // 두건 자락
   ctx.quadraticCurveTo(-12.6, -15.4, -8.0, -16.4); ctx.closePath();
   ctx.fillStyle = P.edge; ctx.fill(); heroOut(P.capeOut);
+}
+function g2HeadPirate(u, P) { // 정지 A
   ctx.beginPath(); ctx.moveTo(-9.0, -21.6); ctx.quadraticCurveTo(0, -22.8, 9.0, -21.6); ctx.lineTo(9.2, -16.4); // (2) 두건 띠 (몸통 위 변을 감쌈) + 접힌 선 + 뒤 매듭
   ctx.quadraticCurveTo(0, -14.8, -9.2, -16.4); ctx.closePath();
   ctx.fillStyle = P.edge; ctx.fill(); heroOut(P.capeOut);
@@ -11140,12 +11174,16 @@ function g2HeadPirate(u, P) {
   ctx.fillStyle = HERO_C2.BONE_EYE;
   for (const ex of [-0.7, 1.9]) { ctx.beginPath(); ctx.arc(ex, -32.5, 1.0, 0, Math.PI * 2); ctx.fill(); }
   ctx.beginPath(); ctx.moveTo(0.6, -29.6); ctx.lineTo(0.6, -27.9); ctx.strokeStyle = HERO_C2.BONE_EYE; ctx.lineWidth = 0.5; ctx.stroke();
+}
+function g2PirateFeather(u, P) { // 라이브
   const fw = heroWave(u, 4) * 1.0; // (5) 빨간 깃털 (앞쪽, 살랑, 밑동은 챙 뒤) + 깃대 한 줄
   ctx.beginPath(); ctx.moveTo(10.6, -30.6); ctx.quadraticCurveTo(19.2, -35.6, 13.8 + fw, -43.2);
   ctx.quadraticCurveTo(12.2, -36.6, 10.6, -30.6); ctx.closePath();
   ctx.fillStyle = HERO_C2.PLUME; ctx.fill(); heroOut(HERO_C2.PLUME_OUT);
   ctx.beginPath(); ctx.moveTo(11.4, -31.4); ctx.quadraticCurveTo(15.2, -36.4, 13.7 + fw, -41.8);
   ctx.strokeStyle = HERO_C2.PLUME_HL; ctx.lineWidth = 0.6; ctx.stroke();
+}
+function g2PirateBrim(u, P) { // 정지 B
   ctx.beginPath(); ctx.moveTo(-16.2, -30.6); ctx.quadraticCurveTo(0.5, -24.6, 17.2, -30.6); // (6) 챙 (양 끝이 들린 두꺼운 띠) + 위 가장자리 금선
   ctx.lineTo(16.4, -27.0); ctx.quadraticCurveTo(0.5, -17.6, -15.4, -27.0); ctx.closePath();
   ctx.fillStyle = HERO_C2.HAT_BRIM; ctx.fill(); heroOut(HERO_C2.HAT_OUT);
@@ -11347,7 +11385,8 @@ function g3HeadRoyal(u, P) { // 로얄 ♦: 담비 칼라(넓음 — 반폭 19.8
 // 스트레이트 플러쉬 ♣: 파란 스카프(뒤로 두 갈래 자락 — 라이브 흔들림 + 앞 V 드레이프) + 은빛 가시 왕관(바늘 5 + 사파이어 구슬, 가운데가 가장 높은 계단형)
 // 슈퍼: 왕관은 "원래 모습"(확정본 예외) — 모양·은색 그대로, ×1.2만. 슈퍼 장식은 왕관 밖(띠 금선·가운데 구슬 금 고리·스카프 금 단·V 끝 금 브로치 = 가슴판 대신)
 const G3_SPIKES = [[-11.4, -32.4, 2.6, 1.9, 3.1], [-5.8, -34.6, 2.8, 2.0, 3.6], [0, -36.6, 3.1, 2.4, 4.2], [5.8, -34.6, 2.8, 2.0, 3.6], [11.4, -32.4, 2.6, 1.9, 3.1]]; // [x, 끝 y, 밑변 반폭, 구슬 r, 바늘 길이]
-function g3HeadSF(u, P) {
+// (C4 H6) 스카프 자락 2갈래(라이브) → 스카프 몸·왕관(정지)
+function g3SFTails(u, P) {
   const L = u.super ? 3.0 : 0; // 슈퍼: 자락 3 더 김
   const sw = heroWave(u, 6) * 0.8, sw2 = heroWave(u, 6, 1.4) * 0.9;
   ctx.beginPath(); ctx.moveTo(-10.6, -18.8); ctx.quadraticCurveTo(-16.2 - L * 0.5, -18.8 + sw, -20.6 - L, -15.0 + sw); // (1) 스카프 자락 2갈래 (뒤로 날림)
@@ -11356,6 +11395,8 @@ function g3HeadSF(u, P) {
   ctx.beginPath(); ctx.moveTo(-10.8, -16.6); ctx.quadraticCurveTo(-15.0 - L * 0.4, -14.0 + sw2, -18.0 - L * 0.8, -10.2 + sw2 + L * 0.4);
   ctx.quadraticCurveTo(-14.4, -12.8, -11.0, -14.4); ctx.closePath();
   ctx.fillStyle = HERO_C3.SCARF_D; ctx.fill(); heroOut(HERO_C3.SCARF_OUT);
+}
+function g3HeadSF(u, P) { // 정지 부분
   ctx.beginPath(); // (2) 스카프 몸 (목둘레 + 앞 V 드레이프, V 끝은 살짝 앞쪽 +0.6)
   ctx.moveTo(-14.2, -21.0); ctx.quadraticCurveTo(0, -22.6, 14.2, -21.0);
   ctx.lineTo(14.4, -15.4); ctx.lineTo(5.4, -14.2); ctx.lineTo(0.6, -8.6); ctx.lineTo(-4.6, -14.0); ctx.lineTo(-14.4, -15.6);
@@ -11543,7 +11584,7 @@ function drawHeadgear(u, topY, faceX) { // faceX = 바라보는 쪽(±1) — dra
   const t = u.tier;
   { // 표준 영웅 고유 머리 장식 (HERO_LOOK[tier].head, 라이브 — 10-08, tier 0~9 전부). 히든 9종·슈퍼에이스·에이스 노말은 위에서 걸러졌고, 히든 영웅은 아래 u.hero 왕관 분기로
     const L = heroLook(u);
-    if (L) { if (faceX == null) faceX = ((u.moving ? u.tx : (u.aimX != null ? u.aimX : CX)) >= u.x) ? 1 : -1; heroG(u, faceX, L.head, heroPal(u)); return; }
+    if (L) { if (faceX == null) faceX = ((u.moving ? u.tx : (u.aimX != null ? u.aimX : CX)) >= u.x) ? 1 : -1; heroG(u, faceX, heroHead, heroPal(u)); return; } // heroHead = 정지 부분 스프라이트 + 흔들리는 부분 라이브 (C4 H6)
   }
   // (10-08) 풀하우스 해적모·플러쉬 가스버너 분기(hero && tier && !isHiddenCombo = 표준 영웅)는 위 HERO_LOOK[4~6].head가 대신하므로 삭제.
   //   슈퍼영웅 무지개 보석 대관(u.super) 분기도 삭제 — 슈퍼는 spawnHero(…, sup)로만 생기는 표준 영웅이라 위 HERO_LOOK[0~9].head가 전부 받고, 히든 영웅 9종은 슈퍼가 되는 경로가 없으며 슈퍼에이스는 위 superAce 분기에서 걸린다 (도달 불가)
