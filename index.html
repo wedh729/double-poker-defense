@@ -5375,6 +5375,7 @@ function update(dt) {
       u.tx = u.x; u.ty = u.y; continue;
     }
     const dx = u.tx - u.x, dy = u.ty - u.y, d = Math.hypot(dx, dy);
+    let stopNow = false;
     if (d > 3) {
       const spd = (u.skillT > 0 && !u.hero) ? u.speed * 2.4 : u.speed; // 🗡️ 암살 급습 대시
       const step = Math.min(d, spd * dt);
@@ -5389,13 +5390,14 @@ function update(dt) {
         else u.stuckT = Math.max(0, (u.stuckT || 0) - dt * 0.5);
         u.lastD = d;
         u.nearT = d < 30 ? (u.nearT || 0) + dt : 0;
-        if (u.stuckT > 0.6 || u.nearT > 0.4) { u.tx = u.x; u.ty = u.y; u.moving = false; u.stuckT = 0; u.nearT = 0; u.lastD = undefined; }
+        if (u.stuckT > 0.6 || u.nearT > 0.4) { u.tx = u.x; u.ty = u.y; u.moving = false; u.stuckT = 0; u.nearT = 0; u.lastD = undefined; stopNow = true; }
       }
     } else { u.moving = false; u.stuckT = 0; u.nearT = 0; u.lastD = undefined; }
     pushOutOfPen(u);
     blockRoomWalls(u); // 🧱 광석방 담장: 입구 외에는 못 넘는다
     blockSky(u);       // ☁️ 하늘 모퉁이: 통행 불가
     if (isInRoom(u) && u.x > ORE_LINE) { u.x = ORE_LINE; if (u.tx > ORE_LINE) u.tx = ORE_LINE; } // 💎 광석 앞 통행 금지선 — 광석이 유닛에 가려지지 않게
+    if (stopNow) roomStopSnap(u); // 담에 막혀 멈춘 자리가 돌담 그림 위면 확실한 안/밖으로 (담 되돌림 뒤 위치 기준)
   }
   // 유닛 분리: 경계가 명확하도록 (간격 20px, 2회 반복 — 살짝 낑기는 것까지만 허용)
   const U = S.units, MINSEP = 20;
@@ -6359,6 +6361,14 @@ function roomSnap(pts, units, c, pad = 0) { // pts = [{x,y}] 격자 칸 (제자�
   cand.sort((a, b) => Math.abs(a.dx) + Math.abs(a.dy) - Math.abs(b.dx) - Math.abs(b.dy));
   shift(cand[0].dx, cand[0].dy);
   return pts;
+}
+// 담에 막혀 멈춘 1기 (10-07 ⑤): 담장 충돌선은 안뜰 사각형 변이라, 담 너머로 우클릭하면 돌담 그림 한가운데서 멈춰 '걸친 채 밖'이 됐다 →
+//    멈춘 자리가 애매한 띠면 roomSnap 규칙 그대로 확실한 안/밖으로. 같은 쪽이면 걸어서, 밖에 설 자리가 없어 안으로 가야 하면(결투장에 막힌 아래쪽·맵 끝 쪽) 착지처럼 바로
+function roomStopSnap(u) {
+  const p = roomSnap([{ x: u.x, y: u.y }], [u], { x: u.x, y: u.y }, 12)[0]; // 여유 12 = issueMove와 같은 도착 오차 (재정착이 8px 안쪽 목표를 지운다)
+  if (p.x === u.x && p.y === u.y) return;
+  if (isInRoom(p) === isInRoom(u)) { u.tx = p.x; u.ty = p.y; }
+  else { u.x = u.tx = u.px = p.x; u.y = u.ty = u.py = p.y; } // px·py도 = 이 프레임 분리 뒤 담 판정이 '담을 넘었다'며 되돌리지 않게
 }
 // 🏷️ 캔버스 건물 라벨: 흰 글씨 + 어두운 외곽선. 배경(잔디·돌담·아트 타일)이 뭐든 읽힌다.
 // 예전엔 labelCol()로 난이도가 어두울 때만 흰색으로 바꿨는데, 쉬움/보통에서도 돌담 위 라벨이
