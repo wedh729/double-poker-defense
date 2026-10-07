@@ -3687,7 +3687,7 @@ function rsMaybe() { // RS 의존 베이크 전부 무효화 후 재적용 — �
   sbWorldBake = null;
   bldgLayers.clear();
   for (const k in matSprites) delete matSprites[k];
-  // unitSprites·u._us는 RS 무관(USPR 128 고정 2x 베이크)이라 무효화 불필요 — 지우면 순수 낭비 (크로스체크 P2)
+  // unitSprites·u._us는 RS 무관(USPR 160 고정 2x 베이크)이라 무효화 불필요 — 지우면 순수 낭비 (크로스체크 P2)
 }
 rsSetCanvas(); // 부팅 즉시 DPR 반영 (캐시는 아직 없어 무효화 불필요)
 window.addEventListener('resize', () => setTimeout(rsMaybe, 200));
@@ -6491,7 +6491,7 @@ function duelWin(u) {
 // 🏛️ 결투 시간 초과 챔피언 사망 — 유닛 제거는 제물대(updateAltar) 패턴 재사용
 // 👻 유령 스프라이트: 죽는 순간의 유닛 모습(다리 제외)을 회백색으로 1회 구워 승천 이펙트가 쓴다 (ctx 임시 스왑 — 베이크 관례)
 let ghostBaking = false; // 베이크 중 drawUnitCore가 다리(궤도)를 생략한다 — 그 자리는 이펙트의 꼬리가 대신
-const GH_W = 120, GH_H = 136, GH_CX = 60, GH_CY = 68; // 논리 px (베이크는 2x — RS=2에서도 선명). 하단 여유 68: 아래 조준 영웅 무기가 최대 11px 뚫는다 (크로스체크 P2)
+const GH_W = 144, GH_H = 152, GH_CX = 72, GH_CY = 84; // 논리 px (베이크는 2x — RS=2에서도 선명). 10-08 영웅 고유 디자인으로 120×136(60,68)에서 확대: 1.5배 본체 기준 위 84/1.5=56(슈퍼 머리 꼭대기 −53) · 좌우 72/1.5=48(슈퍼 플러쉬 무기 끝 43 — 예전 ±40은 슈퍼 투페어 소총 끝 40.7이 잘렸다) · 아래 68/1.5≈45.3(아래 조준 영웅 무기가 최대 11px 뚫는다 — 크로스체크 P2). 중심 이동 (12,16) = 2x에서 (24,32)px, 8의 배수(디더 격자 유지). 시작값, M1 가장자리 알파 검사로 확정
 function bakeGhostSprite(u) {
   const c = document.createElement('canvas'); c.width = GH_W * 2; c.height = GH_H * 2;
   const old = ctx; ctx = c.getContext('2d');
@@ -6500,8 +6500,9 @@ function bakeGhostSprite(u) {
     ctx.translate(GH_CX - u.x, GH_CY - u.y);
     ctx.translate(u.x, u.y); ctx.scale(1.5, 1.5); ctx.translate(-u.x, -u.y); // drawUnit과 동일한 1.5배 본체 확대
     ghostBaking = true;
-    drawUnitCore(u, 0, (u.aimX != null && u.aimX < u.x) ? -1 : 1); // 망토·몸통·라벨 (다리는 플래그로 생략)
-    drawHeadgear(u, u.y - bodyShape(u).h / 2 - 1);
+    const fx = (u.aimX != null && u.aimX < u.x) ? -1 : 1; // 바라보는 쪽 — 코어와 머리 장식에 같은 값
+    drawUnitCore(u, 0, fx); // 망토·몸통·라벨 (다리는 플래그로 생략)
+    drawHeadgear(u, u.y - bodyShape(u).h / 2 - 1, fx);
     drawUnitArm(u);
   } catch (e) {} finally { ghostBaking = false; }
   // 회백색화는 try 밖 — 그리기가 도중에 던져도 부분 베이크가 회백색으로는 나간다 (크로스체크 P2)
@@ -10166,7 +10167,7 @@ function drawUnit(u, sq) { // sq: 🖐️ 착지 스쿼시(0~0.22) — 몸통 �
   drawUnitBody(u, faceX); // 망토→다리→몸통→라벨 (베이크 가능 코어 — 아래 함수)
   // 🌈 영웅 홀로그램: 시간 애니메이션이라 베이크 불가 — 코어 위에 라이브로 (원래는 몸통과 라벨 사이였으나 위로 올라온 차이는 미세)
   if (u.hero || u.superAce) drawHeroHolo(u);
-  drawHeadgear(u, u.y - bodyShape(u).h / 2 - 1); // 모자도 라이브 — 횃불·왕관 반짝이 애니메이션 유지
+  drawHeadgear(u, u.y - bodyShape(u).h / 2 - 1, faceX); // 모자도 라이브 — 횃불·왕관 반짝이 애니메이션 유지 (faceX = 비대칭 장식 좌우 반전)
   // 팔 + 무기 (4방향: 좌/우/상/하) — 상완만 몸에 고정, 하완+주먹은 무기 변환을 따라 움직인다
   drawUnitArm(u);
   ctx.restore();
@@ -10251,7 +10252,7 @@ function drawUnitBody(u, faceX) {
 }
 const UNIT_BAKE = true; // 문제 시 false로 — 원래 벡터 경로 복귀
 const unitSprites = new Map();
-const USPR = 128, USPR_CX = 64, USPR_CY = 72; // 2x 캔버스 (논리 64×64, 유닛 중심 = (32, 36) — 모자 위 여유)
+const USPR = 160, USPR_CX = 80, USPR_CY = 88; // 2x 캔버스 (논리 80×80, 유닛 중심 = (40, 44) — 위 44·아래 36·좌우 40). 10-08 영웅 고유 디자인: 슈퍼 두 겹 망토(아래 +31·좌 −38)가 예전 128(중심 (32,36) — 위 36·아래 28·좌우 32)에선 잘려 확대, 엔트리 64KB → 100KB. 중심 이동은 2x 캔버스에서 (16,16)px = 8의 배수 — 그라데이션 디더 격자(8×8)와 맞물려 베이크 픽셀이 그대로 (M0 diff 0, 10-08 실측: 이동 12px이면 디더 점 1단계 차이)
 function unitCoreSprite(u, lw, faceX) {
   const key = [u.tier, u.race, +!!u.hero, +!!u.super, +!!u.hidden, +!!u.ace, +!!u.miner, +!!u.sminer, +!!u.hminer,
     u.vis || '', u.keyLabel || '', (hiddenMeta(u) || [''])[0], lw, faceX].join('|');
@@ -10508,6 +10509,50 @@ function drawItemUnit(u) {
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 // 티어별 몸통 크기/모양 — 유닛의 tier/hero/vis는 스폰 후 불변이라 유닛 객체에 메모이즈 (프레임당 128회 객체 생성이 GC를 긁었다)
+// ==================== 표준 영웅 고유 디자인 (10-08) — 족보별 표 HERO_LOOK · 판별 isStdHero · 팔레트 heroPal · 좌표 래퍼 heroG ====================
+// 설계 = Desktop\Claude Code\DPD\영웅디자인_직접이식_2026-10-07 (10_구현계획 §3-1, spec_g1~g3). 좌표는 몸통 중심 원점·아래 +y·오른쪽 조준(faceX +1) 기준의 영웅 크기이고, 슈퍼는 heroG가 ×1.2.
+// 표준 영웅 = hero이면서 히든 조합 9종이 아닌 것 (에이스 영웅·에이스 슈퍼영웅 포함). 노말·에이스 노말·슈퍼에이스(hero 아님)·히든 영웅·광부는 이 경로를 한 픽셀도 타지 않는다.
+function isStdHero(u) { return !!u.hero && !isHiddenCombo(u); }
+// 족보별 표 { w, h, shape, cape, pad, suitY, suitS, chest, back(u,P), front(u,P), head(u,P) } — 몸통 크기 원본도 이 표 하나 (P2). 표에 없는 tier는 기존 그림 경로.
+const HERO_LOOK = {};
+function heroLook(u) { return isStdHero(u) ? (HERO_LOOK[u.tier] || null) : null; }
+// 고정색 (금 + 로얄 보라 · 스트레이트 플러쉬 안감) — 에이스여도 금은 그대로
+const HERO_C = {
+  GOLD: '#f2c14e', GOLD_D: '#d39a22', GOLD_HL: '#fff1bf', GOLD_OUT: '#8a5a10', // 금 밝은 면 · 그늘 면 · 하이라이트 한 줄 · 외곽선
+  GEM: '#e0245e', GEM_H: '#2f7cf6',                                           // 슈퍼 보석 (♦·♣·에이스 = 루비 / ♥ = 사파이어 — 빨강 위에서 묻히지 않게)
+  OUT_W: 0.9, FRAME_W: 3.5, BAND_IN: 1.3,                                     // 장식 외곽선 굵기 · 몸통 종족색 테 굵기 · 테 안쪽 금선 폭
+  ROBE: '#7e2a9c', ROBE_FOLD: '#561a6e', ROBE_BACK: '#3d1050', ROBE_OUT: '#26072f', // 로얄 망토 보라 (앞 겹 / 접힌 면 / 슈퍼 뒤 겹 / 외곽선)
+  LINING: '#1d4a9e',                                                          // 스트레이트 플러쉬 망토 안감 파랑
+};
+// 팔레트: 종족색 ↔ 에이스색 전환은 여기 한 곳 (spec_g1 g1Pal + spec_g3 g3Pal). 에이스 = 테·망토 #e91e8c 계열 + 흰 ♠, 금·보석은 그대로. 로얄(비에이스)만 망토 보라, 스트레이트 플러쉬(비에이스)만 안감 파랑.
+// tier|race|ace 키로 캐시 (P5) — 머리 장식은 매 프레임 라이브라 shade() 문자열을 프레임마다 새로 만들지 않게. 코어 베이크 키 필드(tier·race·ace)만 읽는다 (개체별·시간 값 없음).
+const heroPalCache = new Map();
+function heroPal(u) {
+  const ace = !!u.ace, key = u.tier + '|' + u.race + '|' + (ace ? 1 : 0);
+  let P = heroPalCache.get(key);
+  if (P) return P;
+  const edge = ace ? '#e91e8c' : RACES[u.race].color;
+  P = {
+    ace, edge,                                                      // 테·문양 색
+    body: ace ? '#2a2340' : '#ffffff',                              // 몸통 기본색 (기존 2단 명암 그라데 그대로)
+    cape: ace ? '#e91e8c' : shade(edge, -35),                       // 망토 바깥 면
+    capeFold: ace ? shade('#e91e8c', -60) : shade(edge, -70),       // 망토 안쪽 접힌 면
+    capeBack: ace ? shade('#e91e8c', -95) : shade(edge, -100),      // 슈퍼 뒤 겹 망토
+    capeOut: ace ? shade('#e91e8c', -110) : shade(edge, -120),      // 망토 외곽선
+    suit: ace ? '♠' : RACES[u.race].suit, suitCol: ace ? '#ffffff' : edge,
+    deep: ace ? shade('#e91e8c', -30) : shade(edge, -25),           // 종족색에서 나온 장식 (하이카드 비행모)
+    deepOut: shade(edge, -120),
+    padFace: ace ? '#e91e8c' : edge,                                // 어깨판 안쪽 면이 종족색인 족보
+    gem: (ace || u.race !== 1) ? HERO_C.GEM : HERO_C.GEM_H,
+  };
+  if (!ace && u.tier === 9) Object.assign(P, { cape: HERO_C.ROBE, capeFold: HERO_C.ROBE_FOLD, capeBack: HERO_C.ROBE_BACK, capeOut: HERO_C.ROBE_OUT, padFace: HERO_C.ROBE });
+  else if (!ace && u.tier === 8) P.capeFold = HERO_C.LINING;
+  heroPalCache.set(key, P);
+  return P;
+}
+// 영웅 좌표 → 게임 절대좌표: 원점을 몸통 중심(u.x, u.y)으로, 좌우 반전 f(±1), 슈퍼 1.2배. drawUnit은 1.5배를 걸고 원점을 되돌리므로, 베이크·유령·멀티 고스트에서도 같은 식이 맞다.
+function heroG(u, f, fn, P) { const s = u.super ? 1.2 : 1; ctx.save(); ctx.translate(u.x, u.y); ctx.scale(f * s, s); fn(u, P); ctx.restore(); }
+// 티어별 몸통 크기/모양 — 유닛의 tier/hero/vis는 스폰 후 불변이라 유닛 객체에 메모이즈 (프레임당 128회 객체 생성이 GC를 긁었다)
 function bodyShape(u) {
   return u._bs || (u._bs = bodyShapeRaw(u));
 }
@@ -10583,7 +10628,7 @@ function drawCrown(cx, topY, o) {
   }
   ctx.restore();
 }
-function drawHeadgear(u, topY) {
+function drawHeadgear(u, topY, faceX) { // faceX = 바라보는 쪽(±1) — drawUnit·유령·멀티 고스트가 넘긴다. 없으면(굴착기 탑승자) 표준 영웅 분기에서 drawUnit과 같은 식으로 계산
   const cx = u.x;
   if (u.joker) { // 🃏 조커: 광대 모자 (좌빨강·우검정 뿔 + 주황 방울 + 흰 띠)
     ctx.fillStyle = '#f5f0e8'; roundRect(cx - 7, topY - 2, 14, 3, 1.2); ctx.fill(); // 모자 띠
@@ -10644,6 +10689,10 @@ function drawHeadgear(u, topY) {
     return;
   }
   const t = u.tier;
+  { // 표준 영웅 고유 머리 장식 (HERO_LOOK[tier].head, 라이브 — 10-08). 히든 9종·슈퍼에이스·에이스 노말은 위에서 걸러졌고, 표에 없는 tier는 아래 기존 분기로
+    const L = heroLook(u);
+    if (L) { if (faceX == null) faceX = ((u.moving ? u.tx : (u.aimX != null ? u.aimX : CX)) >= u.x) ? 1 : -1; heroG(u, faceX, L.head, heroPal(u)); return; }
+  }
   if (u.super) { // 슈퍼영웅: 무지개 보석 대관 + 큰 돔
     drawCrown(cx, topY, { col:'#ffe082', points:7, h:15, gem:`hsl(${(S.time*120)%360},90%,60%)`, band:'#c9a227', dome:true });
     return;
@@ -15809,7 +15858,9 @@ function mpBotSnap(b) {
 // 유닛 = 전신 정지 포즈 스프라이트(bakeGhostSprite에서 회백색화를 뺀 것 — 다리 포함, unitSprites와 분리된 LRU) + 진영색 링
 // 몹 = 센서스 재생: (mat, shape, golden, boss)별 수만큼 시드 고정 공전체 — 수가 줄면 팝 링, 늘면 자라며 등장. 렌더 경로에 Math.random 없음
 // 앵커(CX·CY)는 방향별로 민다 (OX·OY) — 오른쪽·아래를 볼 때 무기가 캔버스 밖으로 잘리지 않게 (리뷰 B-VIS-5: 10-05 실측 최대 범위 = 좌우 62 · 위 65 · 아래 62, 전 등급·영웅·슈퍼영웅·에이스 × 8방향 × 공격 포즈)
-const MP_GS = { W: 112, H: 130, CX: 56, CY: 70, MAX: 64, BUDGET: 4, OX: [-7, -4, 0, 4, 7, 0, 0, 0], OY: [0, 0, -3, 0, 0, 0, 0, 0] }; // 논리 px (본체 1.5배 + 무기 여유) · 캐시 상한 · 프레임당 베이크 상한 (리뷰 PERF-2)
+const MP_GS = { W: 148, H: 146, CX: 56, CY: 70, PX: 16, PY: 16, MAX: 64, BUDGET: 4, OX: [-7, -4, 0, 4, 7, 0, 0, 0], OY: [0, 0, -3, 0, 0, 0, 0, 0] }; // 논리 px (본체 1.5배 + 무기 여유) · 캐시 상한 · 프레임당 베이크 상한 (리뷰 PERF-2)
+// 10-08 영웅 고유 디자인: 캔버스 112×130 → 148×146. 확대분은 PX·PY 평행이동으로만 넣고 가짜 유닛 좌표(CX·CY = f.x·f.y)는 그대로 둔다 — 좌표를 바꾸면 작은 원(arc, 왕관 보석)의 AA가 달라져 픽셀이 미세하게 바뀜(10-08 실측, 평행이동은 무영향).
+//   여유(1.5배 본체 기준): 위 (70−3+16)/1.5≈55.3(슈퍼 머리 꼭대기 −53) · 망토 쪽 (56−7+16)/1.5≈43.3(슈퍼 망토 −38) · 무기 쪽 (148−(56+7+16))/1.5=46(무기 끝 43) · 아래 (146−86)/1.5=40. 시작값, M1 가장자리 알파 검사로 확정
 const mpGsCache = new Map();
 function mpSigFake(sg, dir, atk) {
   const f = sg.hero ? mpHeroObj(sg.tier, sg.race, 1, !!sg.super) : mpUnitObj(sg.tier, sg.race, sg.ace > 0, 14, sg.ace === 2);
@@ -15831,13 +15882,15 @@ function mpGhostSprite(sg, dir, atk) { // → { c, foot, cx, cy } (cx·cy = 캔�
   ctx = c.getContext('2d');
   try {
     ctx.scale(k, k);
+    ctx.translate(MP_GS.PX, MP_GS.PY); // 캔버스 확대분 (가짜 유닛 좌표는 그대로 — 위 MP_GS 주석)
     ctx.translate(f.x, f.y); ctx.scale(1.5, 1.5); ctx.translate(-f.x, -f.y); // drawUnit과 같은 1.5배 본체
     const B = bodyShape(f);
     ctx.fillStyle = 'rgba(0,0,0,0.13)'; ctx.beginPath(); ctx.ellipse(f.x, f.y + B.h / 2 + 6, B.w * 0.55, 4, 0, 0, Math.PI * 2); ctx.fill();
-    drawUnitCore(f, 0, f.aimX >= f.x ? 1 : -1);
-    drawHeadgear(f, f.y - B.h / 2 - 1);
+    const fx = f.aimX >= f.x ? 1 : -1; // 바라보는 쪽 — 코어와 머리 장식에 같은 값
+    drawUnitCore(f, 0, fx);
+    drawHeadgear(f, f.y - B.h / 2 - 1, fx);
     drawUnitArm(f);
-    e = { c, foot: (B.h / 2 + 6) * 1.5, cx: f.x, cy: f.y };
+    e = { c, foot: (B.h / 2 + 6) * 1.5, cx: f.x + MP_GS.PX, cy: f.y + MP_GS.PY }; // 앵커 = 캔버스 안 발 중심 (평행이동분 포함)
   } finally { ctx = old; }
   if (mpGsCache.size >= MP_GS.MAX) mpGsCache.delete(mpGsCache.keys().next().value);
   mpGsCache.set(key, e);
