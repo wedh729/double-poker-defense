@@ -10525,6 +10525,10 @@ const HERO_LOOK = {
   1: { w: 31, h: 38, shape: 'rect', cape: { ay: -13.0, tip: [-30.5, 8.0], hemEnd: [-14.0, 15.6], hemT: 2.6, foldX: -21.5, tail: true }, pad: { k: 1.2, face: 'race' }, suitY: 0, suitS: 6.2, back: g1Back, front: g1Front, head: g1HeadRobin },   // 원페어: 초록 로빈후드 모자
   2: { w: 24, h: 39, shape: 'rect', cape: { ay: -14.0, tip: [-29.5, 10.8], hemEnd: [-10.5, 18.0], hemT: 2.6, foldX: -18.5 }, pad: { k: 1.15, face: 'gold' }, suitY: -2.4, suitS: 6.5, back: g1Back, front: g1Front, head: g1HeadTopHat },       // 투페어: 큰 톱햇
   3: { w: 35, h: 35, shape: 'tri', cape: { ay: -12.5, tip: [-30.5, 3.5], hemEnd: [-8.5, 15.4], hemT: 2.8, foldX: -19.0 }, pad: { k: 1.3, face: 'gold' }, suitY: -3.0, suitS: 5.8, chest: { gem: false }, back: g1Back, front: g1Front, head: g1HeadKnight }, // 트리플: 깃털 기사 투구, 역삼각 몸 (가슴 보석 = 투구 턱 구슬)
+  // g2 (spec_g2_draw.js) — cape.trim = 망토 앞여밈 금선, cape.hero:false = 영웅은 망토 없음(슈퍼만), chest = 절대 좌표(y0 위 변·hw 반폭·dep 깊이 — 투구·버너·두건이 덮지 않는 높이로 내림)
+  4: { w: 29, h: 38, shape: 'rect', cape: { ay: -13.0, tip: [-30.5, 19.0], hemEnd: [-13.0, 21.4], hemT: 2.6, foldX: -21.5, trim: true }, pad: { k: 1.2, face: 'race' }, suitY: -4.2, suitS: 5.8, chest: { y0: -15.4, hw: 8.7, dep: 6.4 }, back: g2Back, front: g2Front, head: g2HeadCenturion }, // 스트레이트: 붉은 볏 로마 투구, 긴 망토
+  5: { w: 40, h: 35, shape: 'fat', cape: { ay: -11.0, tip: [-31.0, 12.0], hemEnd: [-17.0, 15.6], hemT: 2.6, foldX: -24.0, hero: false }, pad: { k: 1.05, face: 'race' }, suitY: -1.5, suitS: 7.0, chest: { y0: -14.0, hw: 10.0, dep: 5.6 }, back: g2Back, front: g2Front, head: g2HeadBurner }, // 플러쉬: 큰 가스버너 + 등 연료통 (영웅은 망토 없음, 슈퍼는 두 겹 망토 위에 연료통)
+  6: { w: 17, h: 40, shape: 'thin', cape: { ay: -14.5, tip: [-25.5, 18.5], hemEnd: [-8.2, 21.8], hemT: 2.6, foldX: -16.0, trim: true }, pad: { k: 1.1, face: 'race' }, suitY: -3.0, suitS: 5.0, chest: { y0: -16.0, hw: 6.0, dep: 5.0 }, back: g2Back, front: g2Front, head: g2HeadPirate }, // 풀하우스: 해골 해적 삼각모 + 두건, 긴 망토 + 금 허리띠, 가장 홀쭉한 몸
 };
 function heroLook(u) { return isStdHero(u) ? (HERO_LOOK[u.tier] || null) : null; }
 // 고정색 (금 + 로얄 보라 · 스트레이트 플러쉬 안감) — 에이스여도 금은 그대로
@@ -10534,6 +10538,22 @@ const HERO_C = {
   OUT_W: 0.9, FRAME_W: 3.5, BAND_IN: 1.3,                                     // 장식 외곽선 굵기 · 몸통 종족색 테 굵기 · 테 안쪽 금선 폭
   ROBE: '#7e2a9c', ROBE_FOLD: '#561a6e', ROBE_BACK: '#3d1050', ROBE_OUT: '#26072f', // 로얄 망토 보라 (앞 겹 / 접힌 면 / 슈퍼 뒤 겹 / 외곽선)
   LINING: '#1d4a9e',                                                          // 스트레이트 플러쉬 망토 안감 파랑
+};
+// g2 고정색 (spec_g2_draw.js G2) — 금속·장식은 에이스여도 그대로. 03·04 시안의 광택·그라데를 뺀 단색 면 + 어두운 외곽선 + 하이라이트 한 줄
+const HERO_C2 = {
+  HELM: '#aebfc9', HELM_D: '#8ea0aa', HELM_HL: '#e6eef2', HELM_OUT: '#4e5f69',   // 로마 투구 회청색
+  CREST: '#e3342b', CREST_D: '#a81d19', CREST_OUT: '#7a1210',                    // 붉은 볏
+  VISOR: '#2b3434',                                                              // 눈구멍·얼굴 구멍
+  RUBY: '#d81b2a', RUBY_OUT: '#6d0b10',                                          // 투구 앞 붉은 보석
+  STEEL: '#7f8c93', STEEL_D: '#66737a', STEEL_L: '#a7b3b9', STEEL_HL: '#e3e9ec', STEEL_OUT: '#37474f', // 버너 금속
+  HOLE: '#2f3a3f', EMBER: '#ffab40',                                             // 버너 구멍 + 안쪽 불빛
+  FL_BLUE: '#4a6cf7', FL_BLUE_OUT: '#2a45b8', FL_RED: '#ff5527', FL_YEL: '#ffcf2e', FL_CORE: '#fffbea', // 버너 불꽃 4겹 (시안 D06: 바깥 파랑 → 빨강 → 노랑 → 흰 심)
+  FUEL: '#e3a52b', FUEL_D: '#c98a1a', FUEL_HL: '#ffe08a',                        // 등 연료통 (금보다 살짝 주황 — 어깨판과 구분)
+  STRAP: '#3f5c56', STRAP_OUT: '#1f2e2b',                                        // 연료통 띠·관 이음쇠
+  HOSE: '#47534f', HOSE_OUT: '#1c2321',                                          // 아래 U자 호스
+  HAT: '#2e323c', HAT_BRIM: '#1f2028', HAT_OUT: '#0c0d11', HAT_HL: '#5a6070',    // 해적 삼각모
+  BONE: '#f5f0e8', BONE_EYE: '#2b2f3a',                                          // 해골
+  PLUME: '#d7262a', PLUME_OUT: '#7d1212', PLUME_HL: '#ff8a80',                   // 빨간 깃털
 };
 // 팔레트: 종족색 ↔ 에이스색 전환은 여기 한 곳 (spec_g1 g1Pal + spec_g3 g3Pal). 에이스 = 테·망토 #e91e8c 계열 + 흰 ♠, 금·보석은 그대로. 로얄(비에이스)만 망토 보라, 스트레이트 플러쉬(비에이스)만 안감 파랑.
 // tier|race|ace 키로 캐시 (P5) — 머리 장식은 매 프레임 라이브라 shade() 문자열을 프레임마다 새로 만들지 않게. 코어 베이크 키 필드(tier·race·ace)만 읽는다 (개체별·시간 값 없음).
@@ -10604,7 +10624,8 @@ function g1Pad(P, k, faceCol) {
 function heroSuperFront(u, P, face) {
   const L = HERO_LOOK[u.tier], W = L.w, H = L.h, ch = L.chest;
   if (ch !== null) {
-    const o = ch || {}, hw = W * (o.hw || 0.30), dep = H * (o.dep || (L.shape === 'tri' ? 0.15 : 0.17)), y0 = -H / 2 + (o.y0 != null ? o.y0 : 0.6);
+    const o = ch || {}; // g1 행(chest 없음·gem:false만) = 기본값, g2·g3 행 = 절대 좌표 y0·hw·dep 그대로 (spec_g2 g2SuperFront)
+    const hw = o.hw != null ? o.hw : W * 0.30, dep = o.dep != null ? o.dep : H * (L.shape === 'tri' ? 0.15 : 0.17), y0 = o.y0 != null ? o.y0 : -H / 2 + 0.6;
     ctx.beginPath();
     ctx.moveTo(-hw, y0);
     ctx.lineTo(hw, y0);
@@ -10880,6 +10901,245 @@ function g1SuperVisor(u, P) { // 트리플 슈퍼: 눈구멍 둘레 금 테 + �
   ctx.beginPath(); ctx.moveTo(-1.4, -33.0); ctx.quadraticCurveTo(-0.6, -30.6, -0.4, -27.6);
   ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
 }
+// ---------- g2 (tier 4~6) — spec_g2_draw.js 이식: back(망토 + 앞여밈 금선 / 플러쉬 연료통) · front(어깨판 + 풀하우스 금 허리띠) · 라이브 head(로마 투구·가스버너·해적 삼각모) ----------
+// 흔들림 — 라이브 head 전용 (P6: S.time·u.jx는 여기서만, jx 없는 가짜 객체도 0으로)
+function heroWave(u, sp, ph) { return Math.sin(S.time * sp + (u.jx || 0) + (ph || 0)); }
+// back: t4·t6 = 망토 + 앞여밈 금선 / t5 영웅 = 연료통만(망토 없음) / t5 슈퍼 = 두 겹 망토 → 연료통
+function g2Back(u, P) {
+  const L = HERO_LOOK[u.tier], c = L.cape;
+  if (c.hero === false && !u.super) { g2Fuel(u, P); return; }
+  g1Back(u, P);
+  if (c.trim) g2CapeTrim(u, P);
+  if (u.tier === 5) g2Fuel(u, P);
+}
+function g2CapeTrim(u, P) { // 망토 앞여밈 금선 — 몸통 테 바로 바깥을 따라 어깨 높이에서 금 밑단 윗선까지 (시안 D05·D07)
+  const L = HERO_LOOK[u.tier], W = L.w, c = L.cape;
+  const left = -W / 2, [tx, ty] = c.tip, [ex, ey] = c.hemEnd;
+  const hemC = [(tx + ex) / 2 + 1.0, Math.max(ty, ey) + 1.6];
+  const x = left - 2.6;
+  const yb = heroQuadY(tx, ty, hemC, ex, ey, x) - c.hemT + 0.2;
+  ctx.beginPath(); ctx.moveTo(x + 0.3, c.ay + 1.6); ctx.lineTo(x, yb);
+  ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 1.3; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+}
+function g2Fuel(u, P) { // 플러쉬 등 연료통 (코어) — 아래 U자 호스 → 목·뚜껑 → 통 몸 + 그늘 띠 + 하이라이트 → 띠 2줄(슈퍼 = 금 + 보석). 호스는 몸통 뒤로 들어가고 무기에 닿지 않음
+  ctx.beginPath(); ctx.moveTo(-26.0, 9.8); ctx.bezierCurveTo(-27.5, 18.4, -20.5, 20.2, -17.0, 14.6);
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = HERO_C2.HOSE_OUT; ctx.lineWidth = 3.4; ctx.stroke();
+  ctx.strokeStyle = HERO_C2.HOSE; ctx.lineWidth = 2.2; ctx.stroke();
+  ctx.lineCap = 'butt';
+  ctx.beginPath(); ctx.rect(-25.9, -14.6, 2.8, 2.2); ctx.fillStyle = HERO_C2.FUEL_D; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  ctx.beginPath(); ctx.moveTo(-29.6, -9.2); ctx.quadraticCurveTo(-29.0, -13.0, -24.5, -13.1); ctx.quadraticCurveTo(-20.0, -13.0, -19.4, -9.2); ctx.closePath();
+  ctx.fillStyle = HERO_C2.FUEL; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  roundRect(-30.5, -9.8, 12.0, 21.0, 3.6); ctx.fillStyle = HERO_C2.FUEL; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  ctx.beginPath(); ctx.rect(-24.4, -8.6, 2.6, 18.6); ctx.fillStyle = HERO_C2.FUEL_D; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-28.4, -6.8); ctx.lineTo(-28.4, 6.6);
+  ctx.strokeStyle = HERO_C2.FUEL_HL; ctx.lineWidth = 1.1; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  for (const y of [-4.8, 5.2]) {
+    ctx.beginPath(); ctx.rect(-31.2, y, 13.2, 2.4);
+    if (u.super) { ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT); }
+    else { ctx.fillStyle = HERO_C2.STRAP; ctx.fill(); ctx.strokeStyle = HERO_C2.STRAP_OUT; ctx.lineWidth = 0.6; ctx.stroke(); }
+  }
+  if (u.super) for (const y of [-3.6, 6.4]) {
+    ctx.beginPath(); ctx.arc(-26.6, y, 1.25, 0, Math.PI * 2); ctx.fillStyle = P.gem; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  }
+}
+// front: 어깨판(슈퍼 = 가슴판 + 어깨 갑옷, chest 표 값) + 풀하우스만 금 허리띠
+function g2Front(u, P) {
+  g1Front(u, P);
+  if (u.tier === 6) g2Belt(u, P);
+}
+function g2Belt(u, P) { // 풀하우스 금 허리띠 + 가운데 버클 (슈퍼 = 버클 키움 + 보석)
+  ctx.beginPath(); ctx.rect(-9.3, 9.2, 18.6, 2.6); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  ctx.beginPath(); ctx.moveTo(-8.6, 11.2); ctx.lineTo(8.6, 11.2); ctx.strokeStyle = HERO_C.GOLD_D; ctx.lineWidth = 0.8; ctx.stroke();
+  const bw = u.super ? 5.0 : 4.0, bh = u.super ? 5.0 : 4.2;
+  roundRect(-bw / 2, 10.5 - bh / 2, bw, bh, 0.8); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  if (u.super) { ctx.beginPath(); ctx.arc(0, 10.5, 1.4, 0, Math.PI * 2); ctx.fillStyle = P.gem; ctx.fill(); heroOut(HERO_C.GOLD_OUT); }
+  else { ctx.beginPath(); ctx.rect(-0.9, 9.5, 1.8, 2.0); ctx.fillStyle = HERO_C.GOLD_D; ctx.fill(); }
+}
+// head (라이브) — 스트레이트: 붉은 볏 로마(백인대장) 투구. 볏은 머리 위를 아치로 덮고 뒤로 어깨까지, 금 볏받침 + 금 눈썹판 + 붉은 보석. 트리플(뒤로 휩쓸린 깃털·역삼각 몸)과 구분
+function g2CrestPath() { // 볏 바깥 면 (뒤 아래 → 꼭대기 → 앞 끝 → 안쪽 선을 따라 되돌아옴)
+  ctx.beginPath();
+  ctx.moveTo(-24.0, -19.0);
+  ctx.bezierCurveTo(-26.0, -31.5, -16.0, -43.4, -1.0, -43.2);
+  ctx.bezierCurveTo(6.5, -43.1, 13.5, -42.0, 17.4, -37.2);
+  ctx.quadraticCurveTo(10.5, -36.2, 2.0, -36.4);
+  ctx.bezierCurveTo(-8.0, -36.4, -13.4, -32.0, -14.0, -24.0);
+  ctx.lineTo(-15.2, -19.0);
+  ctx.closePath();
+}
+function g2HolderPath() { // 볏받침 = 볏 안쪽 선 (앞 끝 → 뒤 아래)
+  ctx.beginPath();
+  ctx.moveTo(15.8, -36.9);
+  ctx.quadraticCurveTo(10.5, -36.2, 2.0, -36.4);
+  ctx.bezierCurveTo(-8.0, -36.4, -13.4, -32.0, -14.0, -24.0);
+  ctx.lineTo(-14.4, -21.0);
+}
+function g2HeadCenturion(u, P) {
+  g2CrestPath(); ctx.fillStyle = HERO_C2.CREST; ctx.fill(); heroOut(HERO_C2.CREST_OUT); // (1) 볏 + 결 6줄 (안쪽 선 → 바깥 선의 85%까지)
+  ctx.strokeStyle = HERO_C2.CREST_D; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
+  for (const [a, b, c, d] of [[-13.6, -27.0, -23.4, -30.0], [-11.4, -32.0, -19.4, -38.0], [-6.6, -35.4, -11.6, -41.4],
+                               [-0.5, -36.5, -2.0, -42.2], [5.6, -36.5, 6.6, -42.0], [11.0, -36.3, 12.8, -40.4]]) {
+    ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(a + (c - a) * 0.85, b + (d - b) * 0.85); ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+  g2HolderPath(); ctx.lineCap = 'round'; // (2) 금 볏받침 (2단 선, 슈퍼는 굵게) + 받침 기둥
+  ctx.strokeStyle = HERO_C.GOLD_OUT; ctx.lineWidth = u.super ? 3.4 : 2.6; ctx.stroke();
+  ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = u.super ? 2.4 : 1.6; ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.beginPath(); ctx.rect(-1.6, -36.6, 3.2, 3.8); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  ctx.beginPath(); // (3) 투구 돔 (회청) + 뒤 목가리개 그늘 + 하이라이트 한 줄
+  ctx.moveTo(-12.65, -16.5); ctx.lineTo(-12.65, -23.0);
+  ctx.bezierCurveTo(-12.3, -30.5, -6.05, -33.2, 0.55, -33.2);
+  ctx.bezierCurveTo(7.15, -33.2, 12.55, -30.0, 12.75, -23.5);
+  ctx.lineTo(12.75, -16.5); ctx.closePath();
+  ctx.fillStyle = HERO_C2.HELM; ctx.fill(); heroOut(HERO_C2.HELM_OUT);
+  ctx.beginPath(); ctx.moveTo(-12.65, -16.0); ctx.lineTo(-12.65, -23.0); ctx.lineTo(-8.6, -23.2); ctx.lineTo(-8.6, -15.0); ctx.closePath();
+  ctx.fillStyle = HERO_C2.HELM_D; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-9.5, -28.4); ctx.quadraticCurveTo(-5.7, -32.0, 0.2, -32.2);
+  ctx.strokeStyle = HERO_C2.HELM_HL; ctx.lineWidth = 1.0; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.beginPath(); ctx.moveTo(-6.4, -20.6); ctx.lineTo(12.75, -22.4); ctx.lineTo(12.75, -17.8); ctx.lineTo(-6.4, -16.8); ctx.closePath(); // (4) 얼굴 구멍 (어두운 띠)
+  ctx.fillStyle = HERO_C2.VISOR; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-12.75, -24.2); ctx.lineTo(13.0, -27.4); ctx.lineTo(13.0, -22.4); ctx.lineTo(-12.75, -20.4); ctx.closePath(); // (5) 금 눈썹판 (뒤 낮고 앞 들림) + 눈구멍 2개 + 하이라이트
+  ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  ctx.fillStyle = HERO_C2.VISOR;
+  for (const [x, y] of [[0.9, -25.0], [5.1, -25.5]]) { ctx.beginPath(); ctx.rect(x, y, 2.6, 2.2); ctx.fill(); }
+  ctx.beginPath(); ctx.moveTo(-11.7, -23.4); ctx.lineTo(-2.2, -24.6);
+  ctx.strokeStyle = HERO_C.GOLD_HL; ctx.lineWidth = 0.7; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  for (const pts of [[[9.5, -22.3], [13.0, -22.6], [13.2, -15.0], [9.9, -15.8]], [[-7.3, -20.6], [-4.2, -21.0], [-4.0, -16.2], [-7.0, -15.4]]]) { // (6) 금 볼가리개 (앞·뒤)
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.closePath();
+    ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  }
+  ctx.beginPath(); ctx.arc(-9.5, -21.0, 2.6, 0, Math.PI * 2); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT); // (7) 귀 장식 금 고리 + 앞 붉은 보석 (슈퍼 = 금 고리 둘레)
+  ctx.beginPath(); ctx.arc(-9.5, -21.0, 1.15, 0, Math.PI * 2); ctx.fillStyle = HERO_C2.HELM_D; ctx.fill();
+  if (u.super) { ctx.beginPath(); ctx.arc(9.9, -25.6, 2.9, 0, Math.PI * 2); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT); }
+  ctx.beginPath(); ctx.ellipse(9.9, -25.6, 1.6, 2.1, 0, 0, Math.PI * 2); ctx.fillStyle = HERO_C2.RUBY; ctx.fill();
+  ctx.strokeStyle = HERO_C2.RUBY_OUT; ctx.lineWidth = 0.6; ctx.stroke();
+  ctx.beginPath(); ctx.arc(9.4, -26.3, 0.5, 0, Math.PI * 2); ctx.fillStyle = '#ffd0d0'; ctx.fill();
+  if (u.super) g2SuperCenturion(u, P);
+}
+function g2SuperCenturion(u, P) { // 스트레이트 슈퍼: 돔 아래 금테 + 볏받침 보석 3개 (왕관 없음)
+  ctx.beginPath(); ctx.moveTo(-12.75, -16.6); ctx.lineTo(12.75, -16.6);
+  ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 1.4; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  for (const [x, y] of [[-12.9, -29.0], [-6.6, -35.2], [8.4, -36.3]]) {
+    ctx.beginPath(); ctx.arc(x, y, 1.25, 0, Math.PI * 2); ctx.fillStyle = P.gem; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  }
+}
+// 플러쉬: 큰 가스버너 — 금 연결관(연료통 목 → 어깨 위 → 버너 옆) → 불꽃 4겹(바깥 파랑, 흔들림) → 금속 링 + 구멍 3개 → 아래 테 → 위 입술. 슈퍼 = 테·입술 금 + 가운데 금 메달 보석. 무기 화염 줄기와는 별개
+function g2HeadBurner(u, P) {
+  ctx.beginPath();
+  ctx.moveTo(-24.5, -13.8); ctx.lineTo(-24.5, -17.6);
+  ctx.quadraticCurveTo(-24.5, -22.2, -19.6, -22.2);
+  ctx.quadraticCurveTo(-11.8, -22.2, -8.3, -19.6);
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = HERO_C.GOLD_OUT; ctx.lineWidth = 3.2; ctx.stroke();
+  ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 2.0; ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.beginPath(); ctx.rect(-9.6, -21.2, 1.6, 3.4); ctx.fillStyle = HERO_C2.STRAP; ctx.fill();
+  ctx.strokeStyle = HERO_C2.STRAP_OUT; ctx.lineWidth = 0.6; ctx.stroke();
+  const w = heroWave(u, 8), fh = Math.abs(w) * 1.2, fl = w * 1.0, fl2 = Math.cos(S.time * 10 + (u.jx || 0)) * 0.8;
+  ctx.save(); ctx.translate(2, -22.8); ctx.scale(0.83, 1.1); ctx.translate(-2, 24.6); // 불꽃 좌표(밑동 y −24.6, 가운데 x 2)를 좁고 높게: 밑동 → (2, −22.8), 폭 ×0.83, 높이 ×1.1
+  ctx.beginPath(); // 바깥 파랑
+  ctx.moveTo(-9.4, -24.6);
+  ctx.quadraticCurveTo(-11.0, -30.0, -6.4 + fl2 * 0.5, -34.0 - fh * 0.4);
+  ctx.quadraticCurveTo(-5.4, -31.0, -2.8, -30.6);
+  ctx.quadraticCurveTo(-1.0, -37.6, 3.6 + fl, -41.6 - fh);
+  ctx.quadraticCurveTo(6.4, -37.2, 7.8, -34.4);
+  ctx.quadraticCurveTo(9.8, -35.2, 11.8 + fl2 * 0.6, -37.0 - fh * 0.5);
+  ctx.quadraticCurveTo(15.0, -30.6, 13.4, -24.6);
+  ctx.closePath(); ctx.fillStyle = HERO_C2.FL_BLUE; ctx.fill();
+  ctx.strokeStyle = HERO_C2.FL_BLUE_OUT; ctx.lineWidth = 0.7; ctx.lineJoin = 'round'; ctx.stroke();
+  ctx.beginPath(); // 빨강
+  ctx.moveTo(-6.8, -24.6);
+  ctx.quadraticCurveTo(-8.0, -29.0, -3.8, -31.8 - fh * 0.3);
+  ctx.quadraticCurveTo(-2.8, -29.6, -0.8, -29.4);
+  ctx.quadraticCurveTo(0.6, -34.6, 3.4 + fl * 0.8, -38.0 - fh * 0.8);
+  ctx.quadraticCurveTo(6.2, -34.0, 7.6, -31.8);
+  ctx.quadraticCurveTo(9.6, -33.4, 10.4 + fl2 * 0.4, -33.6 - fh * 0.4);
+  ctx.quadraticCurveTo(12.6, -28.6, 10.8, -24.6);
+  ctx.closePath(); ctx.fillStyle = HERO_C2.FL_RED; ctx.fill();
+  ctx.beginPath(); // 노랑
+  ctx.moveTo(-4.2, -24.6);
+  ctx.quadraticCurveTo(-5.0, -29.2, -0.6, -30.4);
+  ctx.quadraticCurveTo(1.2, -33.4, 3.2 + fl * 0.6, -35.0 - fh * 0.6);
+  ctx.quadraticCurveTo(6.8, -31.6, 7.4, -29.0);
+  ctx.quadraticCurveTo(9.4, -27.0, 8.2, -24.6);
+  ctx.closePath(); ctx.fillStyle = HERO_C2.FL_YEL; ctx.fill();
+  ctx.beginPath(); // 흰 심
+  ctx.moveTo(-1.4, -24.6);
+  ctx.quadraticCurveTo(-2.2, -28.4, 1.2, -29.6);
+  ctx.quadraticCurveTo(2.6, -31.6, 3.0 + fl * 0.4, -32.4 - fh * 0.4);
+  ctx.quadraticCurveTo(6.2, -29.0, 5.8, -24.6);
+  ctx.closePath(); ctx.fillStyle = HERO_C2.FL_CORE; ctx.fill();
+  ctx.restore();
+  roundRect(-8.0, -22.6, 20.0, 8.0, 1.6); ctx.fillStyle = HERO_C2.STEEL; ctx.fill(); heroOut(HERO_C2.STEEL_OUT); // 링 몸 + 왼쪽 하이라이트 + 구멍 3개(안쪽 불빛)
+  ctx.beginPath(); ctx.moveTo(-6.5, -21.0); ctx.lineTo(-6.5, -16.6);
+  ctx.strokeStyle = HERO_C2.STEEL_L; ctx.lineWidth = 0.8; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  for (const hx of [-3.2, 2.0, 7.2]) {
+    if (u.super && hx === 2.0) continue; // 슈퍼: 가운데 구멍 대신 금 메달
+    roundRect(hx - 1.5, -20.9, 3.0, 3.4, 1.2); ctx.fillStyle = HERO_C2.HOLE; ctx.fill();
+    ctx.beginPath(); ctx.arc(hx, -19.1, 0.85, 0, Math.PI * 2); ctx.fillStyle = HERO_C2.EMBER; ctx.fill();
+  }
+  roundRect(-8.8, -16.6, 21.6, 2.6, 1.0); // 아래 테
+  ctx.fillStyle = u.super ? HERO_C.GOLD : HERO_C2.STEEL_D; ctx.fill(); heroOut(u.super ? HERO_C.GOLD_OUT : HERO_C2.STEEL_OUT);
+  roundRect(-9.2, -24.4, 22.4, 2.8, 1.4); // 위 입술 (불꽃 밑동을 가림) + 하이라이트 한 줄
+  ctx.fillStyle = u.super ? HERO_C.GOLD : HERO_C2.STEEL_L; ctx.fill(); heroOut(u.super ? HERO_C.GOLD_OUT : HERO_C2.STEEL_OUT);
+  ctx.beginPath(); ctx.moveTo(-7.6, -23.7); ctx.lineTo(6.0, -23.7);
+  ctx.strokeStyle = u.super ? HERO_C.GOLD_HL : HERO_C2.STEEL_HL; ctx.lineWidth = 0.8; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  if (u.super) {
+    ctx.beginPath(); ctx.arc(2.0, -18.8, 2.6, 0, Math.PI * 2); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+    ctx.beginPath(); ctx.arc(2.0, -18.8, 1.5, 0, Math.PI * 2); ctx.fillStyle = P.gem; ctx.fill();
+    ctx.beginPath(); ctx.arc(1.5, -19.3, 0.5, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  }
+}
+// 풀하우스: 해골 해적 삼각모 + 모자 아래 두건(종족색·에이스 핑크) + 뒤로 날리는 두건 자락(슈퍼 두 갈래) + 앞쪽 빨간 깃털 (faceX로 바라보는 쪽에 붙음)
+function g2HeadPirate(u, P) {
+  const sw = heroWave(u, 5) * 0.8;
+  if (u.super) { // (1) 슈퍼: 두 번째 두건 자락 (아래, 더 길게)
+    const sw2 = heroWave(u, 5, 1.3) * 0.9;
+    ctx.beginPath(); ctx.moveTo(-7.6, -17.6); ctx.quadraticCurveTo(-11.6, -14.6 + sw2, -15.0, -9.4 + sw2);
+    ctx.quadraticCurveTo(-11.0, -12.2, -7.6, -15.0); ctx.closePath();
+    ctx.fillStyle = P.cape; ctx.fill(); heroOut(P.capeOut);
+  }
+  ctx.beginPath(); ctx.moveTo(-7.5, -19.6); ctx.quadraticCurveTo(-12.5, -19.2 + sw, -16.2, -14.8 + sw); // 두건 자락
+  ctx.quadraticCurveTo(-12.6, -15.4, -8.0, -16.4); ctx.closePath();
+  ctx.fillStyle = P.edge; ctx.fill(); heroOut(P.capeOut);
+  ctx.beginPath(); ctx.moveTo(-9.0, -21.6); ctx.quadraticCurveTo(0, -22.8, 9.0, -21.6); ctx.lineTo(9.2, -16.4); // (2) 두건 띠 (몸통 위 변을 감쌈) + 접힌 선 + 뒤 매듭
+  ctx.quadraticCurveTo(0, -14.8, -9.2, -16.4); ctx.closePath();
+  ctx.fillStyle = P.edge; ctx.fill(); heroOut(P.capeOut);
+  ctx.beginPath(); ctx.moveTo(-7.4, -18.6); ctx.quadraticCurveTo(0, -17.6, 7.4, -18.8);
+  ctx.strokeStyle = P.cape; ctx.lineWidth = 0.9; ctx.stroke();
+  ctx.beginPath(); ctx.arc(-8.4, -18.6, 2.0, 0, Math.PI * 2); ctx.fillStyle = P.edge; ctx.fill(); heroOut(P.capeOut);
+  ctx.beginPath(); ctx.moveTo(-12.6, -27.0); // (3) 모자 돔 (아래 변은 챙 뒤에 숨는 곡선) + 하이라이트 한 줄
+  ctx.bezierCurveTo(-12.4, -35.0, -6.0, -38.4, 0.6, -38.4);
+  ctx.bezierCurveTo(7.4, -38.4, 13.2, -35.0, 13.6, -27.0);
+  ctx.quadraticCurveTo(0.5, -23.0, -12.6, -27.0); ctx.closePath();
+  ctx.fillStyle = HERO_C2.HAT; ctx.fill(); heroOut(HERO_C2.HAT_OUT);
+  ctx.beginPath(); ctx.moveTo(-9.4, -33.4); ctx.quadraticCurveTo(-5.4, -37.0, 0.0, -37.2);
+  ctx.strokeStyle = HERO_C2.HAT_HL; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  if (u.super) { // 슈퍼: 모자 꼭대기 테두리 금선
+    ctx.beginPath(); ctx.moveTo(-11.8, -31.0); ctx.bezierCurveTo(-11.2, -36.0, -5.8, -37.8, 0.6, -37.8);
+    ctx.bezierCurveTo(7.2, -37.8, 12.4, -35.4, 12.8, -31.0);
+    ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 1.1; ctx.stroke();
+  }
+  ctx.fillStyle = HERO_C2.BONE; // (4) 해골 (머리 + 턱 + 눈 2개 + 이 한 줄)
+  ctx.beginPath(); ctx.arc(0.6, -32.4, 3.6, 0, Math.PI * 2); ctx.fill();
+  roundRect(-1.4, -30.2, 4.0, 2.6, 0.6); ctx.fill();
+  ctx.fillStyle = HERO_C2.BONE_EYE;
+  for (const ex of [-0.7, 1.9]) { ctx.beginPath(); ctx.arc(ex, -32.5, 1.0, 0, Math.PI * 2); ctx.fill(); }
+  ctx.beginPath(); ctx.moveTo(0.6, -29.6); ctx.lineTo(0.6, -27.9); ctx.strokeStyle = HERO_C2.BONE_EYE; ctx.lineWidth = 0.5; ctx.stroke();
+  const fw = heroWave(u, 4) * 1.0; // (5) 빨간 깃털 (앞쪽, 살랑, 밑동은 챙 뒤) + 깃대 한 줄
+  ctx.beginPath(); ctx.moveTo(10.6, -30.6); ctx.quadraticCurveTo(19.2, -35.6, 13.8 + fw, -43.2);
+  ctx.quadraticCurveTo(12.2, -36.6, 10.6, -30.6); ctx.closePath();
+  ctx.fillStyle = HERO_C2.PLUME; ctx.fill(); heroOut(HERO_C2.PLUME_OUT);
+  ctx.beginPath(); ctx.moveTo(11.4, -31.4); ctx.quadraticCurveTo(15.2, -36.4, 13.7 + fw, -41.8);
+  ctx.strokeStyle = HERO_C2.PLUME_HL; ctx.lineWidth = 0.6; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-16.2, -30.6); ctx.quadraticCurveTo(0.5, -24.6, 17.2, -30.6); // (6) 챙 (양 끝이 들린 두꺼운 띠) + 위 가장자리 금선
+  ctx.lineTo(16.4, -27.0); ctx.quadraticCurveTo(0.5, -17.6, -15.4, -27.0); ctx.closePath();
+  ctx.fillStyle = HERO_C2.HAT_BRIM; ctx.fill(); heroOut(HERO_C2.HAT_OUT);
+  ctx.beginPath(); ctx.moveTo(-15.8, -30.2); ctx.quadraticCurveTo(0.5, -24.4, 16.8, -30.2);
+  ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = u.super ? 1.4 : 1.1; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  const br = u.super ? 2.2 : 1.3; // (7) 깃털 금 고정쇠 (슈퍼: 큰 브로치 + 보석)
+  ctx.beginPath(); ctx.arc(11.2, -29.6, br, 0, Math.PI * 2); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  if (u.super) { ctx.beginPath(); ctx.arc(11.2, -29.6, 1.2, 0, Math.PI * 2); ctx.fillStyle = P.gem; ctx.fill(); }
+}
 // 티어별 몸통 크기/모양 — 유닛의 tier/hero/vis는 스폰 후 불변이라 유닛 객체에 메모이즈 (프레임당 128회 객체 생성이 GC를 긁었다)
 function bodyShape(u) {
   return u._bs || (u._bs = bodyShapeRaw(u));
@@ -11026,45 +11286,7 @@ function drawHeadgear(u, topY, faceX) { // faceX = 바라보는 쪽(±1) — dra
     drawCrown(cx, topY, { col:'#ffe082', points:7, h:15, gem:`hsl(${(S.time*120)%360},90%,60%)`, band:'#c9a227', dome:true });
     return;
   }
-  if (u.hero && u.tier === 6 && !isHiddenCombo(u)) { // 🏴‍☠️ 풀하우스 영웅(쌍단검): 해적 모자 — 챙 넓은 삼각모 + 해골 엠블럼 + 붉은 깃털
-      ctx.fillStyle = '#2b2f3a'; // 모자 본체 (삼각모)
-      ctx.beginPath(); ctx.moveTo(cx - 11, topY + 2);
-      ctx.quadraticCurveTo(cx - 9, topY - 9, cx, topY - 10);
-      ctx.quadraticCurveTo(cx + 9, topY - 9, cx + 11, topY + 2);
-      ctx.quadraticCurveTo(cx, topY - 1.5, cx - 11, topY + 2); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#f5f0e8'; // 챙 하이라이트
-      ctx.beginPath(); ctx.moveTo(cx - 11, topY + 2); ctx.quadraticCurveTo(cx, topY - 0.5, cx + 11, topY + 2);
-      ctx.quadraticCurveTo(cx, topY + 1.2, cx - 11, topY + 2); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#f5f0e8'; // 해골
-      ctx.beginPath(); ctx.arc(cx, topY - 4.5, 2.6, 0, 6.28); ctx.fill();
-      ctx.fillRect(cx - 1.6, topY - 2.6, 3.2, 1.8);
-      ctx.fillStyle = '#2b2f3a'; // 눈구멍
-      ctx.beginPath(); ctx.arc(cx - 1, topY - 5, 0.8, 0, 6.28); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx + 1, topY - 5, 0.8, 0, 6.28); ctx.fill();
-      ctx.strokeStyle = '#c62828'; ctx.lineWidth = 1.6; // 붉은 깃털 (살랑)
-      const fw = Math.sin(S.time * 4 + u.jx) * 1.5;
-      ctx.beginPath(); ctx.moveTo(cx + 8, topY - 4); ctx.quadraticCurveTo(cx + 13 + fw, topY - 10, cx + 10 + fw, topY - 14); ctx.stroke();
-      ctx.lineWidth = 1; return;
-  }
-  if (u.hero && u.tier === 5 && !isHiddenCombo(u)) { // 🔥 플러쉬 영웅: 가스버너 (2026-08-08 유저 — 기본 횃불보다 불이 크고 넓게, 파란 가스 코어)
-    ctx.fillStyle = '#546e7a'; ctx.fillRect(cx - 2.2, topY - 2, 4.4, 4);              // 가스 목
-    ctx.fillStyle = '#78909c'; roundRect(cx - 6, topY - 5, 12, 3.6, 1.6); ctx.fill(); // 버너 헤드 (금속 링)
-    ctx.strokeStyle = '#37474f'; ctx.lineWidth = 1; roundRect(cx - 6, topY - 5, 12, 3.6, 1.6); ctx.stroke();
-    const fl = Math.sin(S.time * 8 + u.jx) * 2.4, fl2 = Math.cos(S.time * 10 + u.jx) * 1.9;
-    ctx.fillStyle = '#ff5722'; // 바깥 불꽃 — 횃불 대비 폭 1.75배·높이 1.4배
-    ctx.beginPath(); ctx.moveTo(cx - 7, topY - 5.5);
-    ctx.quadraticCurveTo(cx - 9 + fl, topY - 14.5, cx + fl2, topY - 22.5 - Math.abs(fl));
-    ctx.quadraticCurveTo(cx + 9 + fl, topY - 14.5, cx + 7, topY - 5.5); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#ffb300'; // 속불꽃
-    ctx.beginPath(); ctx.moveTo(cx - 4.2, topY - 6);
-    ctx.quadraticCurveTo(cx - 5 + fl, topY - 13, cx + fl2 * 0.6, topY - 17.5 - Math.abs(fl) * 0.6);
-    ctx.quadraticCurveTo(cx + 5 + fl, topY - 13, cx + 4.2, topY - 6); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#4fc3f7'; // 가스 코어 (파란 불 — 버너의 정체성)
-    ctx.beginPath(); ctx.ellipse(cx + fl2 * 0.4, topY - 8.5, 2.6, 4.2, 0, 0, 6.28); ctx.fill();
-    ctx.fillStyle = '#e1f5fe';
-    ctx.beginPath(); ctx.ellipse(cx + fl2 * 0.3, topY - 7.5, 1.2, 2, 0, 0, 6.28); ctx.fill();
-    return;
-  }
+  // (10-08) 풀하우스 해적모·플러쉬 가스버너 분기(hero && tier && !isHiddenCombo = 표준 영웅)는 위 HERO_LOOK[4~6].head가 대신하므로 삭제
   if (u.hero) { drawCrown(cx, topY, { col:'#ffd54f', points:5, h:11, gem:'#e91e8c', band:'#c9a227', dome:true }); return; }
   switch (t) {
     case 9: { // 로얄: 임페리얼 대관 (아치 + 벨벳 + 대형 루비 + 광채)
