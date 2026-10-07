@@ -13190,8 +13190,17 @@ function bgmInit() { // initAudio 안(첫 입력)에서 — 두 덱을 만들고
       AC.createMediaElementSource(a).connect(g); g.connect(musicGain);
       return { a, g, key: null, ok: false };
     });
-    bgm = { decks, cur: -1, failed: false, xfUntil: 0 };
-    decks.forEach(d => d.a.addEventListener('error', () => { if (d.key && bgm) { bgm.failed = true; bgm.decks.forEach(x => { x.g.gain.value = 0; x.a.pause(); }); } }));
+    bgm = { decks, cur: -1, failed: false, xfUntil: 0, errN: 0, lastCt: -1, still: 0 };
+    // 미디어 오류: 일시적(회선 흔들림 등)이면 그 덱을 버리고 다른 덱에서 같은 곡을 다시 튼다 — 전엔 한 번만 나도 판 끝까지 파일 BGM이 꺼진 채였다 (10-07 유저 "R40 후반부터 BGM이 꺼져").
+    //   재생에 한 번도 못 닿은 채 연속 4번째 오류 = 파일 자체 문제 → 합성 음악으로 복귀 (errN은 'playing'에서 0)
+    decks.forEach(d => d.a.addEventListener('error', () => {
+      if (!d.key || !bgm || bgm.failed) return;
+      if (++bgm.errN > 3) { bgm.failed = true; bgm.decks.forEach(x => { x.g.gain.value = 0; x.a.pause(); }); return; }
+      const cur = bgm.decks[bgm.cur] === d;
+      d.key = null; // 다음에 이 덱을 쓸 때 src를 새로 건다
+      if (cur) bgmSwitch(bgmKeyNow());
+    }));
+    decks.forEach(d => d.a.addEventListener('playing', () => { if (bgm) bgm.errN = 0; }));
     bgmUnlock();
     bgmSwitch(bgmKeyNow(), 1.2);
   } catch (e) { bgm = { failed: true, decks: [] }; }
@@ -13232,6 +13241,21 @@ function bgmTick() { // 250ms 음악 타이머에서: 곡 선택·반복·일시
   const key = bgmKeyNow();
   if (!cd || cd.key !== key) { bgmSwitch(key); return; }
   if (cd.a.paused && AC.state === 'running') { const p = cd.a.play(); if (p) p.catch(() => {}); } // 음악 켜기·앱 복귀 후 재개
+  // 자가 복구 (10-07 유저 "R40 후반부터 BGM이 꺼져" — 오래 플레이하면 곡 끝 반복이 수십 번 일어나고, 그중 한 번만 막혀도 판 끝까지 무음으로 굳을 수 있었다).
+  //   크로스페이드 밖에서만: ① 재생 중이어야 할 덱의 시간이 멈춤(데이터가 있는데 4초 / 버퍼링이면 10초) → 다른 덱에서 같은 곡 처음부터
+  //   ② 덱은 흐르는데 볼륨이 목표에 못 미침(play() 결과가 끝내 안 와 페이드가 안 걸림) → 1.2초 페이드인 · 남은 다른 덱은 페이드아웃 후 정지
+  const t = AC.currentTime, ct = cd.a.currentTime, moving = ct !== bgm.lastCt;
+  bgm.lastCt = ct;
+  if (AC.state === 'running' && !cd.a.paused && t > bgm.xfUntil + 1) {
+    bgm.still = moving ? 0 : bgm.still + 1;
+    if (bgm.still >= (cd.a.readyState >= 3 ? 16 : 40)) { bgm.still = 0; bgmSwitch(key); return; }
+    const tg = BGM_GAIN * (BGM_TRIM[key] || 1), od = bgm.decks[bgm.cur === 0 ? 1 : 0];
+    if (moving && (cd.g.gain.value < tg * 0.9 || od.g.gain.value > tg * 0.1)) {
+      bgm.gen++; bgm.xfUntil = t + 1.2; // 늦게 도착한 옛 전환의 페이드가 이걸 덮지 않게
+      for (const [d, v] of [[cd, tg], [od, 0]]) { d.g.gain.cancelScheduledValues(t); d.g.gain.setValueAtTime(d.g.gain.value, t); d.g.gain.linearRampToValueAtTime(v, t + 1.2); }
+      setTimeout(() => { if (bgm && bgm.decks[bgm.cur] !== od) od.a.pause(); }, 1350);
+    }
+  } else bgm.still = 0;
   const dur = cd.a.duration;
   if (dur > BGM_XF * 3 && cd.a.currentTime > dur - BGM_XF - 0.3 && AC.currentTime > bgm.xfUntil) bgmSwitch(key); // 곡 끝 → 같은 곡을 다른 덱에서 처음부터
 }
