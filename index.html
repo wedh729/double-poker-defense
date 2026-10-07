@@ -3123,8 +3123,9 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
 .mobile #mktToast.mktOpen .mkoTx { font-size: 12px; }
 .mobile #mktToast.mktOpen .mkoGo { padding: 3px 7px; font-size: 10.5px; }
 @media (prefers-reduced-motion: reduce) { #mktToast.mktOpen .mkoBox, #mktToast.mktOpen.on::before { animation: none !important; } }
-/* ⑦ 📖 족보 도감 섹션: 소제목 + 구분선 (나무·양피지 톤) */
-#shopBody .dexSec + .dexSec { margin-top: 16px; padding-top: 12px; border-top: 2px dashed #b88b4f; }
+/* ⑦ 📖 족보 도감 섹션: 소제목 (나무·양피지 톤) — 10-07부터 상단 카테고리 탭(.dexTabs, 나무 톤 = #shopWin .v2-tab 재사용)으로 한 섹션씩 */
+#shopBody .dexTabs .v2-tab { white-space: nowrap; }
+#shopWin[data-view="book"] { height: 100%; } /* 창 높이 고정(= 각 화면의 max-height) — 짧은 탭(히든 9줄)에서 창이 줄며 탭 줄이 PC에서 57px 아래로 튀던 것 */
 #shopBody .dexSecH { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 15px; font-weight: 900; color: #5c3a14; letter-spacing: -.2px; }
 #shopBody .dexSecH small { font-size: 11.5px; font-weight: 700; color: #8a6a3a; }
 #shopBody .dexSecH::after { content: ''; flex: 1 1 auto; height: 2px; border-radius: 2px; background: linear-gradient(90deg, #b88b4f, #b88b4f00); }
@@ -11810,6 +11811,7 @@ const HIDDEN_DEX = [
 ];
 // ⭐ 강화창 영웅 탭: 보유 영웅 단련 + 히든 영웅 도감 (미발견 = ??? + 대사 힌트 / 발견·미보유 = 회색 + 조합법)
 let castleTab = 'upg';
+let bookTab = 'hand'; // 족보 도감 카테고리 탭 (10-07) — 판 안에서 마지막 탭 기억
 const HIDDEN_FLAG = { gambler: 'gamble', junk: 'junk', quartet: 'quartet', guillotine: 'execute', shogun: 'shogun', chrono: 'chrono', slot: 'slot', joker: 'joker', catapult: 'catapult' };
 function shopHeroes() { return S.units.filter(u => isHiddenCombo(u) && !u.clone); } // 단련 대상 = 히든 영웅만 (종족 없음 → 별도 성장)
 function heroSectionHTML() {
@@ -12090,8 +12092,9 @@ function renderShop() {
     const mcard = ([r, s, hl]) =>
       `<span class="mcard ${(s === '♥' || s === '♦') ? 'red' : 'black'}${hl ? ' hl' : ''}"><i>${r}</i>${s}</span>`;
     // 📑 섹션 구분 (10-05 유저: "족보도감 섹션 구분해줘") — 실제 내용 4덩어리: 포커 족보(+더블 포커 안내) / 히든 조합 / 업적 / 몬스터.
-    //    각 덩어리의 기존 제목 줄(rpgGuide)을 소제목으로 올리고 구분선으로 나눈다. 문구·정보량 그대로 (첫 덩어리만 소제목 새로)
-    el.innerHTML =
+    //    각 덩어리의 기존 제목 줄(rpgGuide)을 소제목으로 올린다. 문구·정보량 그대로 (첫 덩어리만 소제목 새로)
+    // 10-07 유저: "카테고리를 상단에 놓고 누르면 그 카테고리가 나오게" → 상단 탭 4개 + 고른 섹션 하나만 (성 강화 탭과 같은 방식: 다시 그리기)
+    const handDexHTML = () =>
       '<section class="dexSec"><h3 class="dexSecH">포커 족보</h3>' +
       '<div style="font-size:11.5px;color:#9a8a60;text-align:center;margin-bottom:8px">아래로 갈수록 강한 족보 · <span style="color:#b8860b">금테 카드</span>가 족보를 만드는 카드입니다</div>' +
       HAND_GUIDE.map(([name, cards, desc], i) =>
@@ -12103,8 +12106,17 @@ function renderShop() {
       `<div class="rpgGuide">어떤 유닛/무기가 나오는지는 직접 뽑아보며 알아가세요<br>
        같은 족보라도 <b>핵심 카드 숫자가 높을수록</b> 강함 (AA 원페어 &gt; 22 원페어)<br>
        5라운드마다 <b>더블 포커</b> — 두 족보가 일치하면 <b style="color:#e91e8c">♠ 에이스</b>,
-       족보에 <b>숫자까지</b> 일치하면 <b style="color:#ff2d95">♠♠ 슈퍼에이스</b>!</div></section>` +
-      hiddenDexHTML() + achvDexHTML() + monDexHTML();
+       족보에 <b>숫자까지</b> 일치하면 <b style="color:#ff2d95">♠♠ 슈퍼에이스</b>!</div></section>`;
+    const secs = { hand: ['cards', '포커 족보', handDexHTML], hidden: ['crown', '히든 조합', hiddenDexHTML], achv: ['trophy', '업적', achvDexHTML], mon: ['skull', '몬스터', monDexHTML] };
+    el.innerHTML = '<div class="v2-tabs dexTabs" aria-label="도감 분류">' + Object.keys(secs).map(k =>
+      `<button class="v2-tab" data-btab="${k}" aria-pressed="false">${dpdIconSVG(secs[k][0])}${secs[k][1]}</button>`).join('') + '</div>' +
+      secs[bookTab][2]();
+    // 탭 활성 = JS로 .on·aria-pressed 토글 (:has 안 씀 — 10-02 성능 교훈). 활성색 = 기존 #shopWin .v2-tab[aria-pressed=true] 초록
+    el.querySelectorAll('[data-btab]').forEach(b => {
+      const on = b.dataset.btab === bookTab;
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+      b.onclick = () => { bookTab = b.dataset.btab; renderShop(); win.scrollTop = 0; };
+    });
   } else if (openShop === 'sandbox') {
     title.textContent = '샌드박스 소환';
     const grid = (label, inner) => `<div class="rpgGuide" style="margin-top:10px">${label}</div><div style="display:flex;flex-wrap:wrap;gap:4px">${inner}</div>`;
@@ -17008,7 +17020,7 @@ if (WORLD_MOTION_V2) (() => {
   const baseRenderShop = renderShop;
   renderShop = function () {
     const active = document.activeElement;
-    const focusKey = active && $('shopBody').contains(active) ? ['data-upg','data-gupg','data-ctab','data-ht','data-htg','data-asc'].map(k=>active.hasAttribute(k)?[k,active.getAttribute(k)]:null).find(Boolean) : null;
+    const focusKey = active && $('shopBody').contains(active) ? ['data-upg','data-gupg','data-ctab','data-btab','data-ht','data-htg','data-asc'].map(k=>active.hasAttribute(k)?[k,active.getAttribute(k)]:null).find(Boolean) : null;
     baseRenderShop();
     if (!openShop) return;
     $('shopWin').dataset.view = openShop;
