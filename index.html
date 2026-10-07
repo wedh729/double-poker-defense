@@ -3873,7 +3873,7 @@ function reset() {
     roomVirgin: true, hiAceGiven: false, // 🥚 이스터에그: 라운드 첫 광석방 입장이 하이카드 단독이면 하이카드 에이스
 
     minerMoveLv: 0, minerMoveCost: 12000, minerMineLv: 0, minerMineCost: 12000, // 광부 업글은 비싸다 (×5·×5·×7·×8 — 12k·60k·300k·2.1M·16.8M. 08-15 유저: 광산 특별보상 도입 대응 밸런스)
-    poker: null, portalA: 0,
+    poker: null,
     speed: 1, time: 0, paused: false,
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0, slowT: 0, graves: [], // 🪦 결투 전사자 비석 (판 내 영구 누적)
     lifeLog: [], maxCombo: 0, bestHand: 0, aceN: 0, superAceN: 0, castleOpened: castleSeen(), // 📋 09-08: 게임오버 정산용(목숨 타임라인·최고 콤보·최고 족보·에이스 수) / 🏰 성 강화창 안내 라벨 — 브라우저당 1회(dpd_castle_seen)
@@ -4698,7 +4698,7 @@ function startWave() {
   const count = S.multi && S.round % 10 === 0 ? 0 : Math.max(1, Math.floor(mobCount(S.round) * (em.countMul || 1))); // 🤖 멀티 보스 라운드 = 소환장 스폰 0 (보스는 수로로)
   const boss = (S.round % 10 === 0);
   if (em.instantGold) { const g = S.round * 30; S.gold += g; addFloat(HOUSE.x, HOUSE.y - 40, `+${g}G`, '#ffd54f', 2); }
-  // 소환장 포탈에서 우르르 쏟아지듯 (약 2초 안에 전부 등장)
+  // 소환장 가운데에서 우르르 쏟아지듯 (약 2초 안에 전부 등장)
   S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0 };
   if (S.multi) mpWaveStart(); // 🤖 멀티: 레인 개체 출발 + 프록시 투입 · 보스 라운드 bossLeft 0
   if (S.duel) { // 연장전(포커)까지 못 잡았으면 새 웨이브 시작에 퇴장 — 챔피언이 잠겨 있었으면 대신 사망
@@ -8206,7 +8206,6 @@ function draw() {
   drawArena(); // 🏛️ 결투장
   drawGraves(); // 🪦 결투 전사자 비석 (계속 쌓인다)
   if (S.plank) drawPlank();
-  drawEnemyPortal(); // 소환장 안 적 포탈 (몹보다 뒤)
   for (const p of S.acidPools) {
     const al = Math.min(1, p.t) * (0.28 + 0.1*Math.sin(S.time*6));
     ctx.fillStyle = `rgba(124,179,66,${al.toFixed(2)})`;
@@ -8798,7 +8797,7 @@ function m3Img(id) {
   return c;
 }
 if (MAPART_V3) {
-  const kick = () => { const go = () => { for (const id of ['camp_castle', 'upgrade_portal', 'enemy_portal', 'altar', 'arena', 'pen_plank', 'mine', 'miner_road', ...M3_ORES]) m3Load(id, id === 'miner_road' ? im => { if (im) { sbWorldBake = null; mtWorldBake = null; } } : null); }; // 흙길이 오면 지면 베이크 무효화 — 풀맵 배경 전 대체 베이크에 구워진 이전 흙길 테두리가 새 흙길 밑으로 비치지 않게
+  const kick = () => { const go = () => { for (const id of ['camp_castle', 'upgrade_portal', 'altar', 'arena', 'pen_plank', 'mine', 'miner_road', ...M3_ORES]) m3Load(id, id === 'miner_road' ? im => { if (im) { sbWorldBake = null; mtWorldBake = null; } } : null); }; // 흙길이 오면 지면 베이크 무효화 — 풀맵 배경 전 대체 베이크에 구워진 이전 흙길 테두리가 새 흙길 밑으로 비치지 않게
     if (window.requestIdleCallback) requestIdleCallback(go, { timeout: 1500 }); else setTimeout(go, 200); };
   if (document.readyState === 'complete') kick(); else addEventListener('load', kick);
 }
@@ -9008,29 +9007,6 @@ function drawCastleRaw() {
   ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
   dpdDrawIcon(ctx, 'sword', x, y - 44.5, 13, '#fff');
   ctx.textAlign = 'left';
-}
-// 적 소환 포탈: 소환장 안에 생겨 몹이 우르르 쏟아진다
-function drawEnemyPortal() {
-  const q = S.spawnQueue;
-  const active = (S.phase === 'wave' && q && q.left > 0);
-  S.portalA = Math.max(0, Math.min(1, (S.portalA || 0) + (active ? 0.08 : -0.05)));
-  const g3 = m3Img('enemy_portal'); // 🎨 V3 돌 관문은 웨이브 밖에도 늘 서 있다 — 페이드는 아래 소용돌이만
-  if (g3) ctx.drawImage(g3, CX + 3.37 - 30, CY + 24.77 - 52.5, 60, 52.5); // 원판 중심 = 소환장 중심 (manifest: 발치 + (-3.37, -24.77))
-  if (S.portalA <= 0.01) return;
-  const a = S.portalA, R = g3 ? 17 : 30; // 🎨 V3: 틀(60×52.5) 원판(가로 반지름 18) 안에 소용돌이
-  ctx.save(); ctx.globalAlpha = a; ctx.translate(CX, CY);
-  if (g3) ctx.scale(1, 0.82); // 원판이 납작해 소용돌이도 세로 0.82
-  const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, R);
-  grad.addColorStop(0, '#1a0206'); grad.addColorStop(0.55, '#7a1520'); grad.addColorStop(1, 'rgba(122,21,32,0)');
-  ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI*2); ctx.fill();
-  for (let arm = 0; arm < 3; arm++) {
-    ctx.strokeStyle = `rgba(240,70,80,${0.75 - arm * 0.18})`; ctx.lineWidth = 2;
-    ctx.beginPath();
-    const off = -S.time * 3.5 + arm * Math.PI * 2 / 3;
-    for (let i = 0; i <= 16; i++) { const t = i / 16, ang = off + t * 3.4, r = 3 + t * (R - 5); const px = Math.cos(ang)*r, py = Math.sin(ang)*r; i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py); }
-    ctx.stroke();
-  }
-  ctx.restore(); ctx.globalAlpha = 1;
 }
 function drawOreRoom() {
   const R = ROOM, x0 = R.cx - R.w / 2, y0 = R.cy - R.h / 2;
@@ -14851,7 +14827,7 @@ function drawMapTest() {
     if (!vis(q)) return;
     ctx.save(); mtQuadCtx(q); // 광부 갓길만 베이크. 시설은 전부 라이브(에셋 인지 드로우) — 싱글과 완전히 같은 그림
     const unpatch = mtUprightText(q.rot); // 건물 라벨은 회전 밖으로 (읽을 수 있게)
-    try { drawCastle(); drawMine(); drawOreRoom(); drawBarrack(); drawEnemyPortal(); drawPortal(); drawAltar(); drawArena(); }
+    try { drawCastle(); drawMine(); drawOreRoom(); drawBarrack(); drawPortal(); drawAltar(); drawArena(); }
     finally { if (unpatch) unpatch(); ctx.restore(); }
   });
   if (!A) for (const [gx2, gy2, ga] of MT.GATES) mtGate(gx2, gy2, ga);
@@ -15417,12 +15393,12 @@ function mpBakeWorld() {
     for (const b of MT.BRIDGES) mtBridgeShadow(b); // 🌊 물 그늘·말뚝 물살만 굽는다 — 판자 상판은 mpLaneDrawAll이 매 프레임 레인 개체 위에 (굽고 다시 덧그리면 그림자가 두 겹으로 진해진다)
     for (const q of MT.QUAD) {
       if (q.i === S.multi.me) continue;
-      // 남의 기지 그림에 내 진행(결투·포털 페이드·광산/광석방 단계·제물·유닛·라운드)이 새지 않게 R1 값으로 잠시 바꿔 그린다 — 판 도중 재베이크(RS 변경)에도 빈 진영 그대로
-      const keys = ['duel', 'portalA', 'units', 'hunt', 'mineLayer', 'mineHp', 'mineMax', 'tribute', 'round'], sv = {};
+      // 남의 기지 그림에 내 진행(결투·광산/광석방 단계·제물·유닛·라운드)이 새지 않게 R1 값으로 잠시 바꿔 그린다 — 판 도중 재베이크(RS 변경)에도 빈 진영 그대로
+      const keys = ['duel', 'units', 'hunt', 'mineLayer', 'mineHp', 'mineMax', 'tribute', 'round'], sv = {};
       for (const k2 of keys) sv[k2] = S[k2];
       Object.assign(S, { duel: null, units: [], hunt: { stage: 1, hp: huntHP(1), max: huntHP(1), unit: null }, mineLayer: 1, mineHp: mineHP(1), mineMax: mineHP(1), tribute: 0, round: 1 });
       ctx.save(); mtQuadCtx(q);
-      try { drawCastle(); drawMine(); drawOreRoom(); drawBarrack(); drawEnemyPortal(); drawPortal(); drawAltar(); drawArena(); }
+      try { drawCastle(); drawMine(); drawOreRoom(); drawBarrack(); drawPortal(); drawAltar(); drawArena(); }
       finally { ctx.restore(); Object.assign(S, sv); }
       const dim = ctx.createLinearGradient(q.ox, 0, q.ox + q.w, 0), e = 36 / q.w; // 어둡게 덮기 — 좌우 끝 36px 페이드 (같은 잔디 위 세로 경계선 방지)
       dim.addColorStop(0, 'rgba(22,16,40,0)'); dim.addColorStop(e, 'rgba(22,16,40,0.28)'); dim.addColorStop(1 - e, 'rgba(22,16,40,0.28)'); dim.addColorStop(1, 'rgba(22,16,40,0)');
@@ -15718,7 +15694,7 @@ function mpBotSnap(b) {
     u.push({ nid: x.nid, x: p.x, y: p.y, tier: x.tier, race: x.race, flag: fight ? 1 : 0, pose: mpDirIdx(CX - p.x, CY - p.y) });
     sig[x.nid] = { tier: x.tier, race: x.race, hero: x.hero ? 1 : 0, super: x.super ? 1 : 0, hiddenId: '', ace: x.superAce ? 2 : x.hidden ? 1 : 0, miner: 0, keyLabel: x.keyLabel };
   });
-  MP.snap[b.seat] = { v: 1, seat: b.seat, rnd: b.rnd, ph: b.ph, t: S.time, b: { mineLayer: 1, minePct: 100, hunt: 1, anyIn: 0, tribute: 0, portalA: 0, duel: 0, graves: 0 },
+  MP.snap[b.seat] = { v: 1, seat: b.seat, rnd: b.rnd, ph: b.ph, t: S.time, b: { mineLayer: 1, minePct: 100, hunt: 1, anyIn: 0, tribute: 0, duel: 0, graves: 0 },
     cen: mpBotCensus(b.wave), u, sig };
   b.snapT = S.time;
 }
