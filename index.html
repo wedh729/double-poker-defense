@@ -3125,6 +3125,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
 @media (prefers-reduced-motion: reduce) { #mktToast.mktOpen .mkoBox, #mktToast.mktOpen.on::before { animation: none !important; } }
 /* ⑦ 📖 족보 도감 섹션: 소제목 (나무·양피지 톤) — 10-07부터 상단 카테고리 탭(.dexTabs, 나무 톤 = #shopWin .v2-tab 재사용)으로 한 섹션씩 */
 #shopBody .dexTabs .v2-tab { white-space: nowrap; }
+#shopBody .dexTabs { position: sticky; top: var(--dexTop, 0px); z-index: 3; } /* 탭 줄 고정 — 긴 탭을 내려 봐도 다른 카테고리로 바로 (스크롤 상자 = #shopWin, 머리 줄 .v2-modal-head(z4) 바로 아래, 배경은 .v2-tabs 나무색 불투명) */
 #shopWin[data-view="book"] { height: 100%; } /* 창 높이 고정(= 각 화면의 max-height) — 짧은 탭(히든 9줄)에서 창이 줄며 탭 줄이 PC에서 57px 아래로 튀던 것 */
 #shopBody .dexSecH { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 15px; font-weight: 900; color: #5c3a14; letter-spacing: -.2px; }
 #shopBody .dexSecH small { font-size: 11.5px; font-weight: 700; color: #8a6a3a; }
@@ -6363,12 +6364,12 @@ function roomSnap(pts, units, c, pad = 0) { // pts = [{x,y}] 격자 칸 (제자�
   return pts;
 }
 // 담에 막혀 멈춘 1기 (10-07 ⑤): 담장 충돌선은 안뜰 사각형 변이라, 담 너머로 우클릭하면 돌담 그림 한가운데서 멈춰 '걸친 채 밖'이 됐다 →
-//    멈춘 자리가 애매한 띠면 roomSnap 규칙 그대로 확실한 안/밖으로. 같은 쪽이면 걸어서, 밖에 설 자리가 없어 안으로 가야 하면(결투장에 막힌 아래쪽·맵 끝 쪽) 착지처럼 바로
+//    멈춘 자리가 애매한 띠면 roomSnap 규칙 그대로 확실한 안/밖으로 — 같은 쪽일 때만 걸어서. 쪽이 바뀌는 경우(결투장에 막힌 아래쪽·맵 끝 쪽은 roomSnap이 '안')는
+//    그대로 둔다: 걸어가다 멈춘 유닛이 담을 넘어 순간 이동하면 '입구로만' 규칙이 깨진다 (10-07 리뷰 — 착지 스냅만 쪽을 바꾼다)
 function roomStopSnap(u) {
   const p = roomSnap([{ x: u.x, y: u.y }], [u], { x: u.x, y: u.y }, 12)[0]; // 여유 12 = issueMove와 같은 도착 오차 (재정착이 8px 안쪽 목표를 지운다)
   if (p.x === u.x && p.y === u.y) return;
   if (isInRoom(p) === isInRoom(u)) { u.tx = p.x; u.ty = p.y; }
-  else { u.x = u.tx = u.px = p.x; u.y = u.ty = u.py = p.y; } // px·py도 = 이 프레임 분리 뒤 담 판정이 '담을 넘었다'며 되돌리지 않게
 }
 // 🏷️ 캔버스 건물 라벨: 흰 글씨 + 어두운 외곽선. 배경(잔디·돌담·아트 타일)이 뭐든 읽힌다.
 // 예전엔 labelCol()로 난이도가 어두울 때만 흰색으로 바꿨는데, 쉬움/보통에서도 돌담 위 라벨이
@@ -11798,6 +11799,7 @@ const HIDDEN_DEX = [
 // ⭐ 강화창 영웅 탭: 보유 영웅 단련 + 히든 영웅 도감 (미발견 = ??? + 대사 힌트 / 발견·미보유 = 회색 + 조합법)
 let castleTab = 'upg';
 let bookTab = 'hand'; // 족보 도감 카테고리 탭 (10-07) — 판 안에서 마지막 탭 기억
+window.addEventListener('dpd:resetui', () => { bookTab = 'hand'; }); // 새 판(다시하기·나가기)이면 처음 탭으로 — resetTransientUI 끝의 이벤트 (위에서 직접 대입하면 선언 전 실행 위험)
 const HIDDEN_FLAG = { gambler: 'gamble', junk: 'junk', quartet: 'quartet', guillotine: 'execute', shogun: 'shogun', chrono: 'chrono', slot: 'slot', joker: 'joker', catapult: 'catapult' };
 function shopHeroes() { return S.units.filter(u => isHiddenCombo(u) && !u.clone); } // 단련 대상 = 히든 영웅만 (종족 없음 → 별도 성장)
 function heroSectionHTML() {
@@ -16977,6 +16979,8 @@ if (WORLD_MOTION_V2) (() => {
     $(closeId).innerHTML = '<svg class="v2-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
   }
   mountHeader('shopWin', 'shopTitle', 'shopClose', 'castle');
+  { const hd = $('shopWin').querySelector('.v2-modal-head'); // 도감 탭 줄 고정 위치 = 이 머리 줄(같이 sticky) 바로 아래 — 머리 높이는 화면·제목 줄 수마다 달라 실측 (--dexTop)
+    if (window.ResizeObserver) new ResizeObserver(() => $('shopWin').style.setProperty('--dexTop', hd.offsetHeight + 'px')).observe(hd); }
   mountHeader('chipWin', 'chipTitle', 'chipClose', 'coin');
 
   // Keep wireUpg intact: its exact data attributes and .rpgItem anchor are retained.
