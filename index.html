@@ -3687,7 +3687,7 @@ function rsMaybe() { // RS 의존 베이크 전부 무효화 후 재적용 — �
   sbWorldBake = null;
   bldgLayers.clear();
   for (const k in matSprites) delete matSprites[k];
-  // unitSprites·u._us는 RS 무관(USPR 160 고정 2x 베이크)이라 무효화 불필요 — 지우면 순수 낭비 (크로스체크 P2)
+  // unitSprites·u._us는 RS 무관(USPR 160 · USPR_ETC 128 고정 2x 베이크)이라 무효화 불필요 — 지우면 순수 낭비 (크로스체크 P2)
 }
 rsSetCanvas(); // 부팅 즉시 DPR 반영 (캐시는 아직 없어 무효화 불필요)
 window.addEventListener('resize', () => setTimeout(rsMaybe, 200));
@@ -6330,7 +6330,7 @@ const ROOM_GATE = 40; // 🧱 입구 반높이 (왼쪽 벽 가운데) — 담장
 const ROOM_ART = { l: 23, t: 21, r: 27, b: 27 };
 function roomSnap(pts, units, c, pad = 0) { // pts = [{x,y}] 격자 칸 (제자리 수정), units = 같은 순서의 유닛, c = 부대 중심, pad = 걸어가는 목표의 도착 오차 여유
   const x0 = ROOM.cx - ROOM.w / 2, x1 = ROOM.cx + ROOM.w / 2, y0 = ROOM.cy - ROOM.h / 2, y1 = ROOM.cy + ROOM.h / 2;
-  const half = pts.map((p, i) => { const u = units[i], B = bodyShape(u); return { w: B.w * 0.75 + 2 + pad, h: B.h * 0.75 + 2 + pad, hat: u.item || (u.tier <= 1 && !u.hero && !u.hidden && !u.joker && !u.superAce && !u.miner) ? 0 : 24 }; }); // 본체 1.5배 그림의 반폭·반높이 + 2 (+ 도착 오차) · hat = 머리 장식(drawHeadgear, 1.5배 ≈ 24) — 하이카드·원페어·아이템은 없음
+  const half = pts.map((p, i) => { const u = units[i], B = bodyShape(u); return { w: B.w * 0.75 + 2 + pad, h: B.h * 0.75 + 2 + pad, hat: u.item || (u.tier <= 1 && !u.hero && !u.hidden && !u.joker && !u.superAce && !u.miner) ? 0 : isStdHero(u) ? (u.super ? 44 : 36) : 24 }; }); // 본체 1.5배 그림의 반폭·반높이 + 2 (+ 도착 오차) · hat = 머리 장식(drawHeadgear, 1.5배 ≈ 24) — 하이카드·원페어·아이템은 없음. 10-08 영웅 고유 디자인: 표준 영웅 왕관·깃털은 더 높다(실측 최대 35.5 · 슈퍼 44) → 36/44 — 아래 돌담 띠에 얹히지 않게. 그 외 유닛 판정 무변경
   const inZ = pts.map((p, i) => ({ xa: x0 + half[i].w, xb: ORE_LINE, ya: y0 + half[i].h + half[i].hat, yb: y1 - half[i].h - 6 })); // 확실히 안 (위는 머리 장식까지, 아래는 발 6px 더)
   const outL = i => x0 - ROOM_ART.l - half[i].w, outR = i => x1 + ROOM_ART.r + half[i].w, outB = i => y1 + ROOM_ART.b + half[i].h + half[i].hat; // 확실히 밖 (아래는 몸 반높이 + 머리 장식까지 — 모자·왕관이 돌담에 안 얹히게)
   const inArena = p => Math.hypot(p.x - ARENA.x, p.y - ARENA.y) < ARENA.r; // 결투장 링 안은 광석방 기준 확실히 밖 — 스냅 안 함 (링 윗부분이 아래 돌담 그림과 겹친다)
@@ -6492,12 +6492,14 @@ function duelWin(u) {
 // 👻 유령 스프라이트: 죽는 순간의 유닛 모습(다리 제외)을 회백색으로 1회 구워 승천 이펙트가 쓴다 (ctx 임시 스왑 — 베이크 관례)
 let ghostBaking = false; // 베이크 중 drawUnitCore가 다리(궤도)를 생략한다 — 그 자리는 이펙트의 꼬리가 대신
 const GH_W = 144, GH_H = 152, GH_CX = 72, GH_CY = 84; // 논리 px (베이크는 2x — RS=2에서도 선명). 10-08 영웅 고유 디자인으로 120×136(60,68)에서 확대: 1.5배 본체 기준 위 84/1.5=56(슈퍼 머리 꼭대기 −53) · 좌우 72/1.5=48(슈퍼 플러쉬 무기 끝 43 — 예전 ±40은 슈퍼 투페어 소총 끝 40.7이 잘렸다) · 아래 68/1.5≈45.3(아래 조준 영웅 무기가 최대 11px 뚫는다 — 크로스체크 P2). 중심 이동 (12,16) = 2x에서 (24,32)px, 8의 배수(디더 격자 유지). 시작값, M1 가장자리 알파 검사로 확정
+const GH_HERO = { W: GH_W, H: GH_H, CX: GH_CX, CY: GH_CY }, GH_ETC = { W: 120, H: 136, CX: 60, CY: 68 }; // 10-08 리뷰 수정: 표준 영웅(isStdHero)만 큰 캔버스, 그 외 유닛은 예전 120×136(60,68) 그대로 (캔버스 크기만 바꿔도 크롬 렌더러 노이즈로 픽셀이 미세하게 바뀜 — unitCoreSprite 주석). 캔버스에 dim으로 기록 → 유령 이펙트 drawImage가 읽는다
 function bakeGhostSprite(u) {
-  const c = document.createElement('canvas'); c.width = GH_W * 2; c.height = GH_H * 2;
+  const D = isStdHero(u) ? GH_HERO : GH_ETC;
+  const c = document.createElement('canvas'); c.width = D.W * 2; c.height = D.H * 2; c.dim = D;
   const old = ctx; ctx = c.getContext('2d');
   try {
     ctx.save(); ctx.scale(2, 2);
-    ctx.translate(GH_CX - u.x, GH_CY - u.y);
+    ctx.translate(D.CX - u.x, D.CY - u.y);
     ctx.translate(u.x, u.y); ctx.scale(1.5, 1.5); ctx.translate(-u.x, -u.y); // drawUnit과 동일한 1.5배 본체 확대
     ghostBaking = true;
     const fx = (u.aimX != null && u.aimX < u.x) ? -1 : 1; // 바라보는 쪽 — 코어와 머리 장식에 같은 값
@@ -8296,7 +8298,7 @@ function draw() {
       for (let i = N; i >= 0; i--) ctx.lineTo(R[i][0], R[i][1]);
       ctx.closePath(); ctx.fill();
       ctx.globalAlpha = a * 0.92;
-      ctx.drawImage(e.img, gx - GH_CX, gy - GH_CY, GH_W, GH_H);
+      const D = e.img.dim; ctx.drawImage(e.img, gx - D.CX, gy - D.CY, D.W, D.H); // 캔버스에 적힌 크기·중심 (표준 영웅 144×152/(72,84) · 그 외 120×136/(60,68))
       ctx.globalAlpha = 1;
     } else if (e.type === 'boom') {
       // 반지름은 t가 0.65를 넘으면 음수가 된다 → arc가 IndexSizeError를 던져 그 프레임의 draw가 통째로 중단됨.
@@ -10244,25 +10246,27 @@ function drawUnitBody(u, faceX) {
     const lw = u.grabbed ? Math.round(Math.sin(S.time * 22)) * 3 : u.moving ? Math.round(Math.sin(u.walk)) * 3 : 0; // 다리 스윙 3포즈 양자화 (-3/0/3), 집히면 버둥버둥
     // 유닛별 참조 캐시: 키 문자열 조인(13필드 × 유닛 수 × 60fps)만으로 0.1ms/frame이 나갔다 — 포즈·방향이 같으면 재조회 생략
     let c = u._us;
-    if (!c || c.lw !== lw || c.fx !== faceX) c = u._us = { lw, fx: faceX, sp: unitCoreSprite(u, lw, faceX) };
-    ctx.drawImage(c.sp, u.x - USPR_CX / 2, u.y - USPR_CY / 2, USPR / 2, USPR / 2); // 2x 베이크 → ½로
+    if (!c || c.lw !== lw || c.fx !== faceX) { const sp = unitCoreSprite(u, lw, faceX); c = u._us = { lw, fx: faceX, sp, d: sp.dim }; } // d = 그 캔버스의 크기·중심 (표준 영웅 160/(80,88) · 그 외 128/(64,72))
+    ctx.drawImage(c.sp, u.x - c.d.CX / 2, u.y - c.d.CY / 2, c.d.S / 2, c.d.S / 2); // 2x 베이크 → ½로
     return;
   }
   drawUnitCore(u, u.grabbed ? Math.sin(S.time * 22) * 3 : u.moving ? Math.sin(u.walk) * 3 : 0, faceX);
 }
 const UNIT_BAKE = true; // 문제 시 false로 — 원래 벡터 경로 복귀
 const unitSprites = new Map();
-const USPR = 160, USPR_CX = 80, USPR_CY = 88; // 2x 캔버스 (논리 80×80, 유닛 중심 = (40, 44) — 위 44·아래 36·좌우 40). 10-08 영웅 고유 디자인: 슈퍼 두 겹 망토(아래 +31·좌 −38)가 예전 128(중심 (32,36) — 위 36·아래 28·좌우 32)에선 잘려 확대, 엔트리 64KB → 100KB. 중심 이동은 2x 캔버스에서 (16,16)px = 8의 배수 — 그라데이션 디더 격자(8×8)와 맞물려 베이크 픽셀이 그대로 (M0 diff 0, 10-08 실측: 이동 12px이면 디더 점 1단계 차이)
+const USPR = 160, USPR_CX = 80, USPR_CY = 88; // 표준 영웅(isStdHero) 2x 캔버스 (논리 80×80, 유닛 중심 = (40, 44) — 위 44·아래 36·좌우 40). 10-08 영웅 고유 디자인: 슈퍼 두 겹 망토(아래 +31·좌 −38)가 예전 128(중심 (32,36) — 위 36·아래 28·좌우 32)에선 잘려 확대, 엔트리 64KB → 100KB. 중심 이동은 2x 캔버스에서 (16,16)px = 8의 배수 — 그라데이션 디더 격자(8×8)와 맞물려 베이크 픽셀이 그대로 (M0 diff 0, 10-08 실측: 이동 12px이면 디더 점 1단계 차이)
+const USPR_HERO = { S: USPR, CX: USPR_CX, CY: USPR_CY }, USPR_ETC = { S: 128, CX: 64, CY: 72 }; // 10-08 리뷰 수정: 표준 영웅이 아닌 유닛(노말·에이스 노말·히든 영웅·광부)은 예전 128 캔버스·중심 (32,36) 그대로 — 캔버스 크기만 바꿔도 크롬 렌더러가 디더·AA를 미세하게 다르게 찍어(Δ≤15, 칸당 ≤27px) 영웅과 무관한 유닛 픽셀이 바뀌었다. 캔버스에 dim으로 기록 → u._us 엔트리가 들고 drawImage가 그 값으로 그린다
 function unitCoreSprite(u, lw, faceX) {
   const key = [u.tier, u.race, +!!u.hero, +!!u.super, +!!u.hidden, +!!u.ace, +!!u.miner, +!!u.sminer, +!!u.hminer,
     u.vis || '', u.keyLabel || '', (hiddenMeta(u) || [''])[0], lw, faceX].join('|');
   let cnv = unitSprites.get(key);
   if (!cnv) {
-    cnv = document.createElement('canvas'); cnv.width = cnv.height = USPR;
+    const D = isStdHero(u) ? USPR_HERO : USPR_ETC; // 캔버스 크기·중심 (키에 hero·hidden·히든 메타가 있어 같은 키 = 같은 D)
+    cnv = document.createElement('canvas'); cnv.width = cnv.height = D.S; cnv.dim = D;
     const old = ctx; ctx = cnv.getContext('2d');
     try {
       ctx.save(); ctx.scale(2, 2);
-      const fake = Object.create(u); fake.x = USPR_CX / 2; fake.y = USPR_CY / 2; // 프로토타입 체인으로 나머지 속성 그대로
+      const fake = Object.create(u); fake.x = D.CX / 2; fake.y = D.CY / 2; // 프로토타입 체인으로 나머지 속성 그대로
       drawUnitCore(fake, lw, faceX);
       ctx.restore();
     } finally { ctx = old; }
@@ -16713,6 +16717,7 @@ function mpBotSnap(b) {
 const MP_GS = { W: 148, H: 152, CX: 56, CY: 70, PX: 16, PY: 16, MAX: 64, BUDGET: 4, OX: [-7, -4, 0, 4, 7, 0, 0, 0], OY: [0, 0, -3, 0, 0, 0, 0, 0] }; // 논리 px (본체 1.5배 + 무기 여유) · 캐시 상한 · 프레임당 베이크 상한 (리뷰 PERF-2)
 // 10-08 영웅 고유 디자인: 캔버스 112×130 → 148×152. 확대분은 PX·PY 평행이동으로만 넣고 가짜 유닛 좌표(CX·CY = f.x·f.y)는 그대로 둔다 — 좌표를 바꾸면 작은 원(arc, 왕관 보석)의 AA가 달라져 픽셀이 미세하게 바뀜(10-08 실측, 평행이동은 무영향).
 //   여유(1.5배 본체 기준): 위 (70−3+16)/1.5≈55.3(슈퍼 머리 꼭대기 −53) · 망토 쪽 (56−7+16)/1.5≈43.3(슈퍼 망토 −38) · 무기 쪽 (148−(56+7+16))/1.5=46(무기 끝 43) · 아래 조준 (152−(70−3+16))/1.5=46(슈퍼 플러쉬 화염방사기 끝 42 — H 146(여유 42)에서는 1px 닿았다, M1 10-08). M1 가장자리 알파 검사로 확정한 값
+const MP_GS_ETC = { W: 112, H: 130, PX: 0, PY: 0 }; // 10-08 리뷰 수정: 표준 영웅(isStdHero)만 위 큰 캔버스+평행이동, 그 외 시그니처(노말·에이스·슈퍼에이스)는 예전 112×130·평행이동 없음 그대로 (캔버스 크기만 바꿔도 크롬 렌더러 노이즈로 픽셀이 미세하게 바뀜 — unitCoreSprite 주석). 엔트리 e.w/e.h에 기록 → drawGhostQuad가 읽는다
 const mpGsCache = new Map();
 function mpSigFake(sg, dir, atk) {
   const f = sg.hero ? mpHeroObj(sg.tier, sg.race, 1, !!sg.super) : mpUnitObj(sg.tier, sg.race, sg.ace > 0, 14, sg.ace === 2);
@@ -16728,13 +16733,13 @@ function mpGhostSprite(sg, dir, atk) { // → { c, foot, cx, cy } (cx·cy = 캔�
   const k = RS > 1 ? 2 : 1, key = mpGsKey(sg, dir, atk);
   let e = mpGsCache.get(key);
   if (e) { mpGsCache.delete(key); mpGsCache.set(key, e); return e; } // LRU: 최근 사용을 뒤로
-  const f = mpSigFake(sg, dir, atk), c = document.createElement('canvas');
-  c.width = MP_GS.W * k; c.height = MP_GS.H * k;
+  const f = mpSigFake(sg, dir, atk), c = document.createElement('canvas'), D = isStdHero(f) ? MP_GS : MP_GS_ETC; // 캔버스 크기·평행이동 (표준 영웅만 큰 캔버스)
+  c.width = D.W * k; c.height = D.H * k;
   const old = ctx;
   ctx = c.getContext('2d');
   try {
     ctx.scale(k, k);
-    ctx.translate(MP_GS.PX, MP_GS.PY); // 캔버스 확대분 (가짜 유닛 좌표는 그대로 — 위 MP_GS 주석)
+    if (D.PX || D.PY) ctx.translate(D.PX, D.PY); // 캔버스 확대분 (가짜 유닛 좌표는 그대로 — 위 MP_GS 주석). 그 외 유닛은 0 — 호출 자체를 안 해 예전 변환 그대로
     ctx.translate(f.x, f.y); ctx.scale(1.5, 1.5); ctx.translate(-f.x, -f.y); // drawUnit과 같은 1.5배 본체
     const B = bodyShape(f);
     ctx.fillStyle = 'rgba(0,0,0,0.13)'; ctx.beginPath(); ctx.ellipse(f.x, f.y + B.h / 2 + 6, B.w * 0.55, 4, 0, 0, Math.PI * 2); ctx.fill();
@@ -16742,7 +16747,7 @@ function mpGhostSprite(sg, dir, atk) { // → { c, foot, cx, cy } (cx·cy = 캔�
     drawUnitCore(f, 0, fx);
     drawHeadgear(f, f.y - B.h / 2 - 1, fx);
     drawUnitArm(f);
-    e = { c, foot: (B.h / 2 + 6) * 1.5, cx: f.x + MP_GS.PX, cy: f.y + MP_GS.PY }; // 앵커 = 캔버스 안 발 중심 (평행이동분 포함)
+    e = { c, foot: (B.h / 2 + 6) * 1.5, cx: f.x + D.PX, cy: f.y + D.PY, w: D.W, h: D.H }; // 앵커 = 캔버스 안 발 중심 (평행이동분 포함) · w/h = 캔버스 논리 크기 (drawGhostQuad가 이 값으로 그림)
   } finally { ctx = old; }
   if (mpGsCache.size >= MP_GS.MAX) mpGsCache.delete(mpGsCache.keys().next().value);
   mpGsCache.set(key, e);
@@ -16882,7 +16887,7 @@ function drawGhostQuad(seat, lod) {
       if (lod === 0 && dl.length) { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); }
       for (const i of dl) {
         const su = g.order[i], p = g.pos.get(su.nid), e = g.sps[i] || g.last.get(su.nid);
-        ctx.drawImage(e.c, p.x - e.cx, p.y - e.cy, MP_GS.W, MP_GS.H);
+        ctx.drawImage(e.c, p.x - e.cx, p.y - e.cy, e.w, e.h); // 엔트리에 적힌 캔버스 크기 (표준 영웅 148×152 · 그 외 112×130)
       }
       if (dots) { // 아직 못 구운 유닛 (첫 보기 몇 프레임) = L2와 같은 진영색 점
         ctx.beginPath();
