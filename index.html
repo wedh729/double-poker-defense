@@ -5821,7 +5821,7 @@ function update(dt) {
         sfx('boom'); // 팅길 때마다 탕!
       } else if (p.owner && p.owner.tier === 8) { // 스트레이트 플러쉬 유탄: 작은 화염 폭발 + 범위 링 + 펑 (연사가 빨라 작고 짧게 · 난수 안 씀)
         S.effects.push({ type:'fireball', x: t.x, y: t.y, r: 18, t: 0.24, dur: 0.24 });
-        sfx('boom');
+        sfx('gboom'); // 유탄 전용 펑 — 몹 터짐·부메랑 'boom'과 연타 제한을 따로 써서 그 소리를 막지 않고, SF가 여럿이어도 0.15초에 한 번만(1기 연사는 다 울림)
         S.effects.push({ type:'boom', x: t.x, y: t.y, r: p.sdmg ? SF_SPLASH.r : 30, t: 0.16 }); // 링 = 범위 공격 반경
       } else S.effects.push({ type:'boom', x: t.x, y: t.y, r: 5, t: 0.1 });
       if (p.kind === 'shuriken' && p.sdmg) { // 유탄 범위 공격: 맞은 몹 주변 반경 안 다른 몹에 범위 피해 (바주카·투석기 착탄 루프와 같은 판정)
@@ -13147,7 +13147,7 @@ function comboHit(n) {
 }
 function sfx(type, arg) {
   if (!AC || !sfxOn || AC.state !== 'running') return;
-  const now = performance.now(), gap = { shoot: 45, slash: 90, boom: 55, bigboom: 300, jackpot: 400, combo: 70,
+  const now = performance.now(), gap = { shoot: 45, slash: 90, boom: 55, gboom: 150, bigboom: 300, jackpot: 400, combo: 70,
     splash: 70, glass: 70, metal: 65, thud: 80,
     pick: 200, coin: 220, boss: 1500, clear: 1500, leak: 800, reward: 500, hero: 800, chirp: 300, deal: 1500 }[type] || 60;
   const mil = type === 'combo' && arg > 0 && arg % 10 === 0; // 10·20·30… 마디 쿵은 스로틀 면제 — 다중 처치 한 틱에선 첫 킬만 통과해 마디가 거의 안 울렸다 (10-02 크로스체크)
@@ -13155,7 +13155,7 @@ function sfx(type, arg) {
   lastSfx[type] = now;
   if (type === 'shoot') noiseBurst(0.045, 0.17, 2600 + Math.random() * 900, 'bandpass'); // 착! (찰진 슬라이스)
   else if (type === 'slash') { noiseBurst(0.1, 0.2, 1800, 'bandpass'); tone(230, 0.09, 'sawtooth', sfxGain, 0.07); } // 촤악 (썰림)
-  else if (type === 'boom') popSound(false); // 팡!
+  else if (type === 'boom' || type === 'gboom') popSound(false); // 팡! (gboom = SF 유탄, 소리 같고 연타 제한만 따로)
   else if (type === 'bigboom') popSound(true); // 퍼-엉!! (보스)
   else if (type === 'jackpot') [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'triangle', sfxGain, 0.18, AC.currentTime + i * 0.09));
   else if (type === 'pick') { noiseBurst(0.04, 0.10); tone(190 + Math.random() * 50, 0.05, 'triangle', sfxGain, 0.09); } // ⛏️ 곡괭이 톡톡
