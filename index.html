@@ -9568,7 +9568,7 @@ function m3Juice(shape) { if (shape === 13) shape = 27; return shape === 21 ? MO
 function m3OutW(r) { return Math.max(MON_BOSS.OUT_MIN, r * MON_BOSS.OUT_K); }
 function m3Base(shape) { return shape === 21 ? MON_BOSS.LIT : MON_BOSS.BODY[shape]; }                 // 외곽선·하이라이트·금 색의 기준색 (수성만 햇볕면)
 function m3OutCol(shape) { return MON_BOSS.DARK[shape] ? MON_HOT.FLAME : shade(m3Base(shape), MON_BOSS.OUT_D[shape] != null ? MON_BOSS.OUT_D[shape] : MON_LOOK.OUT_D); }
-function m3Outline(r, shape) { const w = m3OutW(r); ctx.strokeStyle = m3OutCol(shape); ctx.lineWidth = w; ctx.beginPath(); ctx.arc(0, 0, r - w / 2, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1; }
+function m3Outline(r, shape) { const w = m3OutW(r); ctx.strokeStyle = m3OutCol(shape); ctx.lineWidth = w; ctx.beginPath(); ctx.arc(0, 0, Math.max(0, r - w / 2), 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1; } // max(0): 아포칼립스(PAD 0) r < 1.1 에서 음수 반지름 → 예외로 draw 프레임 통째 취소되던 것 방지 (ver 10-09)
 function m3Band(r, c) { // = m1Band 밝은 재질식 (아래·오른쪽 어두운 띠 shade −38, 밀린 원 (−.10r, −.12r) .90r) — 보스는 재질 번호가 없어 따로
   ctx.save(); m1Circle(r); ctx.clip();
   ctx.fillStyle = shade(c, MON_LOOK.BAND_D); m1Circle(r); ctx.fill();
@@ -9706,7 +9706,7 @@ M3_BOSS[15] = { // 15 블랙홀 (헬 보스) 몸통 #000 — 도플러 선형 �
     ctx.save(); ctx.rotate(0.10);
     const w = m3OutW(R);
     ctx.strokeStyle = MON_BOSS.PHOTON; ctx.lineWidth = Math.max(1.6, R * 0.035 * (0.8 + 0.2 * Math.sin(t * 4 + ph))); // 광자 링 (외곽선 바로 안쪽) — 굵기 맥동
-    ctx.beginPath(); ctx.arc(0, 0, R - w - ctx.lineWidth / 2, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, Math.max(0, R - w - ctx.lineWidth / 2), 0, Math.PI * 2); ctx.stroke(); // max(0): 등장(born 0→1) 첫 프레임 sz < 1 → R − 3 이 음수 → 예외로 draw 프레임 통째 취소되던 것 방지 (ver 10-09 M3 발견)
     M3_BOSS[15].band(R, 0, Math.PI, 0.36, 2.05, 0.34);                  // 수평 원반 앞쪽
     ctx.fillStyle = MON_BOSS.PARTICLE;
     for (let i = 0; i < 4; i++) {
