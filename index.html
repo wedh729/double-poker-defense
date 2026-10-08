@@ -5621,7 +5621,6 @@ function update(dt) {
     if (S.freezeT > 0) continue; // 시간 정지 중엔 위치 갱신 없이 제자리
     m.born = Math.min(1, m.born + dt * 2.5);
     m.ang += m.spin * dt;
-    m.rot += dt * 0.8;
     if (m.pullT > 0) {
       // 🃏 조커: 낫에 맞아 끌려가는 중 — 오빗 대신 조커 쪽으로 직행
       m.pullT -= dt;
@@ -9679,9 +9678,9 @@ M3_BOSS[26] = { // 26 토성 (R70) #e3c27a — 고리만 −0.32 rad 기울임(�
     ctx.restore(); ctx.lineWidth = 1;
   },
 };
-M3_BOSS[27] = { // 27(=13) 태양 (R80) #ff8a1e — 광선 12갈래 조각 + 방사 그라데 → 몹 태양과 같은 12각 코로나 별: 골 .95R, 끝 1.22R + (짝수 .12R | 홀수 .06R)×flick(현행 일렁), 회전 ph + t×0.2(현행 m.rot). 핵 원 lighten(c, .30) (−.06R, −.06R) .56R
+M3_BOSS[27] = { // 27(=13) 태양 (R80) #ff8a1e — 광선 12갈래 조각 + 방사 그라데 → 몹 태양과 같은 12각 코로나 별: 골 .95R, 끝 1.22R + (짝수 .12R | 홀수 .06R)×flick(현행 일렁), 회전 ph + t×0.8(옛 광선의 m.rot 속도 dt×0.8 그대로 — 설계 JS의 t×0.2는 1/4 속도라 10-09 리뷰 수정). 핵 원 lighten(c, .30) (−.06R, −.06R) .56R
   pre(R, t, ph, c) {
-    const flick = 0.7 + 0.3 * Math.sin(t * 7 + ph), rot = ph + t * 0.2;
+    const flick = 0.7 + 0.3 * Math.sin(t * 7 + ph), rot = ph + t * 0.8;
     ctx.lineJoin = 'round'; ctx.fillStyle = shade(c, -45); ctx.strokeStyle = shade(c, MON_LOOK.OUT_D); ctx.lineWidth = m3OutW(R) * 0.7;
     m3StarPath(12, 0.95 * R, i => R * (1.22 + (i % 2 ? 0.06 : 0.12) * flick), rot); ctx.fill(); ctx.stroke();
     ctx.lineJoin = 'miter'; ctx.lineWidth = 1;
@@ -17435,7 +17434,7 @@ function drawGhostQuad(seat, lod) {
       }
       for (const o of g.orbs) {
         if (o.boss) {
-          drawMonster({ x: o.x, y: o.y, boss: true, shape: o.shape, born: 1, hitT: 0, hell: sn.rnd > FINAL_ROUND, rot: t * 0.8, phase: o.phase, mat: 0, esc: 0,
+          drawMonster({ x: o.x, y: o.y, boss: true, shape: o.shape, born: 1, hitT: 0, hell: sn.rnd > FINAL_ROUND, phase: o.phase, mat: 0, esc: 0,
             colorIdx: stageInfo(Math.max(1, sn.rnd)).ci, hp: o.hp, max: 15, golden: false, pullT: 0, burnT: 0, split: false, shield: 0, shieldMax: 0, sunBoss: false, small: false, entering: false });
           continue;
         }
@@ -17970,7 +17969,7 @@ function mpBossSc(e, t) { return (e.kind === 'mini' ? 0.72 : 1) * (e.t0 == null 
 function mpBossDraw(e, x, y, t) { // drawMonster 보스 재사용 — 체력바는 mpLaneBars가 필드 블릿 뒤에 (entering = drawMonster 보스 바 생략 플래그)
   const sc = mpBossSc(e, t);
   const f = e.fake || (e.fake = { boss: true, born: 1, phase: 0, mat: 0, esc: 0, golden: false, pullT: 0, burnT: 0, split: false, shield: 0, shieldMax: 0, sunBoss: false, small: false, entering: true });
-  f.x = x; f.y = y; f.shape = e.shape; f.hitT = t - e.hitAt < 0.09 ? 0.09 : 0; f.hell = S.round > FINAL_ROUND; f.rot = t * 0.8; // 매 프레임 객체 리터럴 없이 (GC — 리뷰 PERF-2)
+  f.x = x; f.y = y; f.shape = e.shape; f.hitT = t - e.hitAt < 0.09 ? 0.09 : 0; f.hell = S.round > FINAL_ROUND; // 매 프레임 객체 리터럴 없이 (GC — 리뷰 PERF-2)
   f.colorIdx = stageInfo(Math.max(1, S.round)).ci; f.hp = Math.max(0, e.hp); f.max = e.max;
   ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.translate(-x, -y);
   try { drawMonster(f); } finally { ctx.restore(); }
