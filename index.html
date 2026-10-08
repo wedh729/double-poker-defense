@@ -9828,83 +9828,10 @@ function m3Boss(x, y, sz, shape, t, ph) {
   ctx.restore();
 }
 function m3CrackCol(shape) { const c = m3Base(shape === 13 ? 27 : shape); return m1Lum(c) > 150 ? shade(c, -90) : m1Lighten(c, 0.75); } // 보스 파손 금 색(C2): 기준색 밝기 > 150 → 진한 금 / 그 외 밝은 금 (현행 = HP 파랑 lighten ≈ 흰)
-// 재질 몹 정적 렌더 (스프라이트 캐시용 — 시간/개체 의존 없음). 몸통+패턴+테두리+하이라이트+보강밴드
+// 재질 몹 정적 렌더 (스프라이트 캐시용 — 시간/개체 의존 없음) = 평면 그림체 monFlat (C1 10-09). 시그니처·matSprite 베이크 경로·캐시 키·SPR 88·bbox 블릿 그대로 → 일반·소형·황금·결투 도전자·맵 데모·멀티 알·관전 orbs 자동 추종.
+//   옛 몸통(그라데 광택 3곳·반투명 수정구·점선 실밥·당구 글자 '8'·공통 반투명 테·하이라이트 원)은 도달 불가가 되어 삭제. broken 인자는 받되 무시(현행과 동일 — 장비 OFF, 파손은 drawMonster 라이브 블록). drawMonGear 호출(무효, 픽셀 0)도 삭제.
 function drawMatStatic(x, y, sz, mat, esc, c, broken = 0) {
-  const circle = () => { ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2); };
-  const clip = () => { ctx.save(); circle(); ctx.clip(); };
-  // 몸통
-  ctx.fillStyle = c;
-  if (mat === 0) { // 물풍선: 매듭 (출렁은 라이브에서 drawImage 스케일로)
-    circle(); ctx.fill();
-    ctx.fillStyle = shade(c, -30); ctx.beginPath(); ctx.moveTo(x - 2, y + sz - 1); ctx.lineTo(x + 2, y + sz - 1); ctx.lineTo(x, y + sz + 3); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = c;
-  } else { circle(); ctx.fill(); }
-  // 재질 패턴 (원 밖으로 삐져나오는 재질만 clip)
-  const needClip = mat === 2 || mat === 3 || mat === 4 || mat === 10 || mat === 11 || mat === 13;
-  if (needClip) clip();
-  if (mat === 1) { // 수정구: 반투명 크리스탈 + 면 분할
-    ctx.globalAlpha = 0.5; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x - sz*0.2, y - sz*0.2, sz*0.5, 0, 6.28); ctx.fill(); ctx.globalAlpha = 1;
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1;
-    for (let i = 0; i < 4; i++) { const a = i * 0.9 + 0.3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a)*sz, y + Math.sin(a)*sz); ctx.stroke(); }
-  } else if (mat === 2) { // 축구공: 검은 오각 점 (5개 모두 같은 크기)
-    ctx.fillStyle = shade(c, -180);
-    polyPath(x, y, 5, sz*0.24, 0); ctx.fill();
-    for (let i = 0; i < 4; i++) { const a = i*1.57; polyPath(x + Math.cos(a)*sz*0.7, y + Math.sin(a)*sz*0.7, 5, sz*0.24, a); ctx.fill(); }
-  } else if (mat === 3) { // 농구공: 표준 심 — 십자 + 좌우 대칭 곡선
-    ctx.strokeStyle = 'rgba(30,15,5,0.65)'; ctx.lineWidth = Math.max(1.2, sz * 0.09);
-    ctx.beginPath(); ctx.moveTo(x - sz, y); ctx.lineTo(x + sz, y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x, y - sz); ctx.lineTo(x, y + sz); ctx.stroke();
-    ctx.beginPath(); ctx.arc(x - sz * 1.45, y, sz * 1.16, -0.62, 0.62); ctx.stroke();
-    ctx.beginPath(); ctx.arc(x + sz * 1.45, y, sz * 1.16, Math.PI - 0.62, Math.PI + 0.62); ctx.stroke();
-  } else if (mat === 4) { // 야구공: 빨간 실밥 ) ( — 양쪽 실밥이 안쪽으로 휜다
-    ctx.strokeStyle = '#d02a2a'; ctx.lineWidth = 1.4; ctx.setLineDash([2, 2]);
-    ctx.beginPath(); ctx.arc(x - sz*1.35, y, sz*1.15, -0.7, 0.7); ctx.stroke();          // 왼쪽 )
-    ctx.beginPath(); ctx.arc(x + sz*1.35, y, sz*1.15, Math.PI-0.7, Math.PI+0.7); ctx.stroke(); // 오른쪽 (
-    ctx.setLineDash([]);
-  } else if (mat === 5) { // 당구공: 클래식 8볼
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y - sz*0.05, sz*0.42, 0, 6.28); ctx.fill();
-    ctx.fillStyle = '#222'; ctx.font = `bold ${Math.max(6, sz*0.5)|0}px sans-serif`; ctx.textAlign = 'center';
-    ctx.fillText('8', x, y + sz*0.13); ctx.textAlign = 'left';
-  } else if (mat === 6) { // 볼링공: 몸통이 검정이라 광택+밝은 테두리로 구멍 3개가 확실히 보이게
-    const bg = ctx.createRadialGradient(x - sz*0.35, y - sz*0.4, 1, x, y, sz); // 진주광택 하이라이트
-    bg.addColorStop(0, 'rgba(120,130,175,0.85)'); bg.addColorStop(0.45, 'rgba(50,52,80,0.4)'); bg.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = bg; circle(); ctx.fill();
-    for (const [dx, dy] of [[-0.24, -0.3], [0.24, -0.3], [0, -0.04]]) { // 손가락 구멍: 새까만 속 + 밝은 림
-      ctx.fillStyle = '#000';
-      ctx.beginPath(); ctx.arc(x + dx*sz, y + dy*sz, sz*0.15, 0, 6.28); ctx.fill();
-      ctx.strokeStyle = 'rgba(160,170,205,0.75)'; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.arc(x + dx*sz, y + dy*sz, sz*0.15, 0, 6.28); ctx.stroke();
-    }
-    ctx.lineWidth = 1;
-  } else if (mat === 7 || mat === 8) { // 쇠구슬/불타는 쇠구슬: 크롬 하이라이트 (화염 펄스는 라이브)
-    const g = ctx.createRadialGradient(x - sz*0.3, y - sz*0.35, 1, x, y, sz);
-    g.addColorStop(0, '#ffffff'); g.addColorStop(0.4, c); g.addColorStop(1, shade(c, -50));
-    ctx.fillStyle = g; circle(); ctx.fill();
-  } else if (mat === 9) { // 달: 크레이터
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    for (const [dx, dy, r] of [[-0.3,-0.2,0.22],[0.3,0.25,0.18],[0.1,-0.35,0.13],[-0.15,0.4,0.14]]) { ctx.beginPath(); ctx.arc(x+dx*sz, y+dy*sz, r*sz, 0, 6.28); ctx.fill(); }
-  } else if (mat === 10) { // 지구: 대륙 + 구름
-    ctx.fillStyle = '#2e9e5b';
-    ctx.beginPath(); ctx.ellipse(x - sz*0.2, y - sz*0.1, sz*0.4, sz*0.3, 0.5, 0, 6.28); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(x + sz*0.35, y + sz*0.3, sz*0.28, sz*0.2, -0.4, 0, 6.28); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(x + sz*0.1, y - sz*0.4, sz*0.3, sz*0.12, 0.3, 0, 6.28); ctx.fill();
-  } else if (mat === 11) { // 목성: 가로 띠 + 대적점
-    for (let i = -2; i <= 2; i++) { ctx.fillStyle = i % 2 ? shade(c, 24) : shade(c, -22); ctx.fillRect(x - sz, y + i*sz*0.4 - sz*0.2, sz*2, sz*0.4); }
-    ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.ellipse(x + sz*0.3, y + sz*0.25, sz*0.22, sz*0.15, 0, 0, 6.28); ctx.fill();
-  } else if (mat === 12) { // 태양: 밝은 코어
-    const g = ctx.createRadialGradient(x, y, 1, x, y, sz); g.addColorStop(0, '#fff6c0'); g.addColorStop(0.5, '#ffcf3a'); g.addColorStop(1, c);
-    ctx.fillStyle = g; circle(); ctx.fill();
-  } else if (mat === 13) { // 블랙홀: 소용돌이 강착원반 (회전은 라이브에서 drawImage 회전)
-    ctx.strokeStyle = '#ff8a1e'; ctx.lineWidth = 2;
-    ctx.beginPath(); for (let i = 0; i <= 20; i++) { const a = i*0.5, r = sz*0.3 + i*sz*0.035; const px = x+Math.cos(a)*r, py = y+Math.sin(a)*r*0.5; i?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.stroke();
-    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x, y, sz*0.5, 0, 6.28); ctx.fill();
-  }
-  if (needClip) ctx.restore();
-  ctx.lineWidth = 1;
-  // 공통 테두리 + 입체 하이라이트
-  ctx.strokeStyle = 'rgba(0,0,0,0.32)'; ctx.lineWidth = 1.4; circle(); ctx.stroke(); ctx.lineWidth = 1;
-  if (mat !== 7 && mat !== 8 && mat !== 12) { ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.beginPath(); ctx.arc(x - sz*0.3, y - sz*0.32, sz*0.34, 0, 6.28); ctx.fill(); }
-  drawMonGear(x, y, sz, Math.min(2, Math.floor(esc * 3)), broken, mat);
+  ctx.save(); ctx.translate(x, y); monFlat(sz, mat, esc, c); ctx.restore();
 }
 // 장비 (밴드 후반부 대체): 미니멀 투구·갑옷 — 프로시저럴·아트 몹 공용 (난이도 신호는 아트 위에도 얹는다)
 // gearCount: 0=맨몸 1=투구 2=투구+갑옷. broken: 부서진 개수(갑옷 먼저, 그다음 투구) — 부서진 장비는 그리지 않는다.
@@ -9923,7 +9850,7 @@ const GEARART = { helms: null, shoulders: null, n: 0 };
   }
 })();
 function drawMonGear(x, y, sz, gearCount, broken, mat) {
-  if (!MON_GEAR_ON) return; // 🪖 장비 OFF — 호출처(아트 경로 monGearCount / 프로시저럴 drawMatStatic의 esc 직접 계산) 어느 쪽이든 여기서 차단 (09-20 유저: 물풍선 안에 투구 문양 잔재)
+  if (!MON_GEAR_ON) return; // 🪖 장비 OFF — 호출처(아트 경로 monGearCount; 프로시저럴 drawMatStatic 쪽 호출은 C1 10-09에 삭제) 여기서 차단 (09-20 유저: 물풍선 안에 투구 문양 잔재)
   if (GEARART.n === 2) { // 시트 셀 공용 매핑: 반지름 120 → k = sz/120, 셀 내 공 중심 (192,230)
     const idx = Math.min(9, mat | 0), k = sz / 120, sx = (idx % 5) * 384, sy = (idx / 5 | 0) * 384;
     if (gearCount >= 2 && broken < 1) ctx.drawImage(GEARART.shoulders, sx, sy, 384, 384, x - 192 * k, y - 230 * k, 384 * k, 384 * k); // 어깨갑옷 (먼저 부서짐)
@@ -10082,9 +10009,10 @@ function drawMatMob(m, sz, c) {
   } else {
     sprBlit(sp, x - SPR_C * k, y - SPR_C * k, SPR * k);
   }
-  if (mat === 8) { // 불타는 쇠구슬: 화염 펄스
-    ctx.fillStyle = `rgba(255,${100 + 80 * Math.sin(t * 8 + m.phase) | 0},20,0.4)`;
-    ctx.beginPath(); ctx.arc(x, y, sz * 0.9, 0, 6.28); ctx.fill();
+  if (mat === 8) { // 불타는 쇠구슬: 화염 펄스 — 몸 밖 링 (C1 M7 10-09: 옛 α.4 원 r .9sz는 스프라이트의 불꽃 혀·이음선을 덮었다). 패스 수 1 그대로, 설계 m2FirePulse 'ring'
+    const ps = Math.sin(t * 8 + m.phase);
+    ctx.strokeStyle = `rgba(255,${100 + 80 * ps | 0},20,${(0.30 + 0.25 * ps).toFixed(2)})`; ctx.lineWidth = Math.max(1.5, sz * 0.10);
+    ctx.beginPath(); ctx.arc(x, y, sz * 1.08, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1;
   }
   // ✨ 황금 레어: 반짝이는 별 (링은 스프라이트 몸색이 금색이라 별만)
   if (m.golden) {
