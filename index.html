@@ -6330,7 +6330,7 @@ const ROOM_GATE = 40; // 🧱 입구 반높이 (왼쪽 벽 가운데) — 담장
 const ROOM_ART = { l: 23, t: 21, r: 27, b: 27 };
 function roomSnap(pts, units, c, pad = 0) { // pts = [{x,y}] 격자 칸 (제자리 수정), units = 같은 순서의 유닛, c = 부대 중심, pad = 걸어가는 목표의 도착 오차 여유
   const x0 = ROOM.cx - ROOM.w / 2, x1 = ROOM.cx + ROOM.w / 2, y0 = ROOM.cy - ROOM.h / 2, y1 = ROOM.cy + ROOM.h / 2;
-  const half = pts.map((p, i) => { const u = units[i], B = bodyShape(u); return { w: B.w * 0.75 + 2 + pad, h: B.h * 0.75 + 2 + pad, hat: u.item || (u.tier <= 1 && !u.hero && !u.hidden && !u.joker && !u.superAce && !u.miner) ? 0 : isStdHero(u) ? (u.super ? 44 : 36) : 24 }; }); // 본체 1.5배 그림의 반폭·반높이 + 2 (+ 도착 오차) · hat = 머리 장식(drawHeadgear, 1.5배 ≈ 24) — 하이카드·원페어·아이템은 없음. 10-08 영웅 고유 디자인: 표준 영웅 왕관·깃털은 더 높다(실측 최대 35.5 · 슈퍼 44) → 36/44 — 아래 돌담 띠에 얹히지 않게. 그 외 유닛 판정 무변경
+  const half = pts.map((p, i) => { const u = units[i], B = bodyShape(u), HL = hiddenLook(u); return { w: B.w * 0.75 + 2 + pad, h: B.h * 0.75 + 2 + pad, hat: u.item || (u.tier <= 1 && !u.hero && !u.hidden && !u.joker && !u.superAce && !u.miner) ? 0 : isStdHero(u) ? (u.super ? 44 : 36) : HL ? HL.hat : 24 }; }); // 본체 1.5배 그림의 반폭·반높이 + 2 (+ 도착 오차) · hat = 머리 장식(drawHeadgear, 1.5배 ≈ 24) — 하이카드·원페어·아이템은 없음. 10-08 영웅 고유 디자인: 표준 영웅 왕관·깃털은 더 높다(실측 최대 35.5 · 슈퍼 44) → 36/44 — 아래 돌담 띠에 얹히지 않게. 히든 영웅 고유 디자인(HIDDEN_LOOK 표에 있는 유닛)은 표의 hat(40 — 머리 꼭대기 최대 −43.9 논리). 그 외 유닛 판정 무변경
   const inZ = pts.map((p, i) => ({ xa: x0 + half[i].w, xb: ORE_LINE, ya: y0 + half[i].h + half[i].hat, yb: y1 - half[i].h - 6 })); // 확실히 안 (위는 머리 장식까지, 아래는 발 6px 더)
   const outL = i => x0 - ROOM_ART.l - half[i].w, outR = i => x1 + ROOM_ART.r + half[i].w, outB = i => y1 + ROOM_ART.b + half[i].h + half[i].hat; // 확실히 밖 (아래는 몸 반높이 + 머리 장식까지 — 모자·왕관이 돌담에 안 얹히게)
   const inArena = p => Math.hypot(p.x - ARENA.x, p.y - ARENA.y) < ARENA.r; // 결투장 링 안은 광석방 기준 확실히 밖 — 스냅 안 함 (링 윗부분이 아래 돌담 그림과 겹친다)
@@ -6494,7 +6494,7 @@ let ghostBaking = false; // 베이크 중 drawUnitCore가 다리(궤도)를 생�
 const GH_W = 144, GH_H = 152, GH_CX = 72, GH_CY = 84; // 논리 px (베이크는 2x — RS=2에서도 선명). 10-08 영웅 고유 디자인으로 120×136(60,68)에서 확대: 1.5배 본체 기준 위 84/1.5=56(슈퍼 머리 꼭대기 −53) · 좌우 72/1.5=48(슈퍼 플러쉬 무기 끝 43 — 예전 ±40은 슈퍼 투페어 소총 끝 40.7이 잘렸다) · 아래 68/1.5≈45.3(아래 조준 영웅 무기가 최대 11px 뚫는다 — 크로스체크 P2). 중심 이동 (12,16) = 2x에서 (24,32)px, 8의 배수(디더 격자 유지). 시작값, M1 가장자리 알파 검사로 확정
 const GH_HERO = { W: GH_W, H: GH_H, CX: GH_CX, CY: GH_CY }, GH_ETC = { W: 120, H: 136, CX: 60, CY: 68 }; // 10-08 리뷰 수정: 표준 영웅(isStdHero)만 큰 캔버스, 그 외 유닛은 예전 120×136(60,68) 그대로 (캔버스 크기만 바꿔도 크롬 렌더러 노이즈로 픽셀이 미세하게 바뀜 — unitCoreSprite 주석). 캔버스에 dim으로 기록 → 유령 이펙트 drawImage가 읽는다
 function bakeGhostSprite(u) {
-  const D = isStdHero(u) ? GH_HERO : GH_ETC;
+  const D = (isStdHero(u) || hiddenLook(u)) ? GH_HERO : GH_ETC; // 표준 영웅 + 히든 고유 디자인 유닛(HIDDEN_LOOK 표에 있는 것 — 쇼군 깃발 −41.2·투석기 받침 +29가 옛 캔버스 밖)만 큰 캔버스. 그 외는 옛 120×136 그대로 (캔버스 크기만 바꿔도 픽셀이 미세하게 바뀌므로 바뀌는 유닛 키에만)
   const c = document.createElement('canvas'); c.width = D.W * 2; c.height = D.H * 2; c.dim = D;
   const old = ctx; ctx = c.getContext('2d');
   try {
@@ -10122,7 +10122,8 @@ function drawUnit(u, sq) { // sq: 🖐️ 착지 스쿼시(0~0.22) — 몸통 �
   const faceX = (aimX >= u.x) ? 1 : -1;
   // 그림자
   ctx.fillStyle = 'rgba(0,0,0,0.13)';
-  if (!u.grabbed) { ctx.beginPath(); ctx.ellipse(u.x, u.y + B.h/2 + 6, B.w*0.55, 4, 0, 0, Math.PI*2); ctx.fill(); } // 집힌 유닛은 draw 루프가 지면 그림자를 따로 그린다
+  const HLs = hiddenLook(u); // 히든 고유 디자인 유닛만 표의 shadowW(투석기 받침틀 반폭 21)로 그림자 폭 지정 — 그 외 null → 기존 0.55W
+  if (!u.grabbed) { ctx.beginPath(); ctx.ellipse(u.x, u.y + B.h/2 + 6, (HLs && HLs.shadowW) || B.w*0.55, 4, 0, 0, Math.PI*2); ctx.fill(); } // 집힌 유닛은 draw 루프가 지면 그림자를 따로 그린다
   // 합성 가능(같은 유닛 5기+) 힌트: 주황 오라
   if (u.fusable) {
     ctx.strokeStyle = `rgba(255,145,0,${(0.5 + 0.4*Math.sin(S.time*6)).toFixed(2)})`;
@@ -10261,7 +10262,7 @@ function unitCoreSprite(u, lw, faceX) {
     u.vis || '', u.keyLabel || '', (hiddenMeta(u) || [''])[0], lw, faceX].join('|');
   let cnv = unitSprites.get(key);
   if (!cnv) {
-    const D = isStdHero(u) ? USPR_HERO : USPR_ETC; // 캔버스 크기·중심 (키에 hero·hidden·히든 메타가 있어 같은 키 = 같은 D)
+    const D = (isStdHero(u) || hiddenLook(u)) ? USPR_HERO : USPR_ETC; // 캔버스 크기·중심 (키에 hero·hidden·히든 메타가 있어 같은 키 = 같은 D). 히든 고유 디자인 유닛(HIDDEN_LOOK 표에 있는 것)도 큰 캔버스 — 쇼군 깃발 −41.2·투석기 받침 +29가 옛 128(위 36·아래 28) 밖. 표에 없는 유닛은 옛 128 그대로(캔버스 크기만 바꿔도 픽셀이 미세하게 바뀌므로 바뀌는 키에만)
     cnv = document.createElement('canvas'); cnv.width = cnv.height = D.S; cnv.dim = D;
     const old = ctx; ctx = cnv.getContext('2d');
     try {
@@ -10307,9 +10308,10 @@ function drawUnitCore(u, lw, faceX) {
   const hm = (!u.miner && !u.hidden) ? hiddenMeta(u) : null;
   const raceC = (u.hidden || u.ace) ? '#e91e8c' : (u.miner ? (u.sminer ? '#e6a817' : u.hminer ? '#c9a227' : '#8d8d8d') : hm ? hm[2] : RACES[u.race].color);
   const B = bodyShape(u);
-  const L = heroLook(u), P = L && heroPal(u); // 표준 영웅 고유 디자인(10-08): 표에 있는 tier는 back(망토)·inner(금선+테+큰 문양)·front(어깨판/슈퍼 갑옷)를 표 함수로 그린다. 그 외(노말·에이스 노말·슈퍼에이스·히든 영웅·광부)는 아래 기존 경로 그대로
+  const L = heroLook(u), HL = L ? null : hiddenLook(u), P = L ? heroPal(u) : HL ? hiddenPal(u) : null; // 표준 영웅 고유 디자인(10-08): 표에 있는 tier는 back(망토)·inner(금선+테+큰 문양)·front(어깨판/슈퍼 갑옷)를 표 함수로 그린다. 히든 영웅 고유 디자인(10-08, HIDDEN_LOOK 표에 있는 id)은 HL의 back·inner·front. 그 외(노말·에이스 노말·슈퍼에이스·표에 없는 히든·광부)는 아래 기존 경로 그대로
   // 망토 (풀하우스+ / 영웅 / 슈퍼에이스) — 몸통 뒤(바라보는 반대쪽)
   if (L) heroG(u, faceX, L.back, P);
+  else if (HL) heroG(u, faceX, HL.back, P); // 히든 고유 back(망토·등 장식·받침틀 뒤)
   else if (!u.miner && (u.hero || u.tier >= 6 || u.superAce)) {
     const cw = B.w*0.66, ch = B.h + 8;
     if (u.superAce) {
@@ -10333,7 +10335,7 @@ function drawUnitCore(u, lw, faceX) {
     }
   }
   // 다리 (짧고 단순) — 🛞 탱크(포카드 영웅)는 다리 대신 무한궤도. 👻 유령 베이크 중엔 생략 (꼬리가 대신)
-  if (ghostBaking) {} else if (u.vis === 'tank') {
+  if (ghostBaking || (HL && HL.legs === false)) {} else if (u.vis === 'tank') { // 히든 고유 디자인 legs:false(투석기 — 받침틀·바퀴가 back/front 정지 그림)는 다리 없음
     const ty = u.y + B.h/2 + 1, tw = B.w/2 + 5;
     ctx.fillStyle = '#37474f'; roundRect(u.x - tw, ty - 3.5, tw * 2, 8, 3.5); ctx.fill(); // 궤도 벨트
     ctx.strokeStyle = '#20272c'; ctx.lineWidth = 1.2; roundRect(u.x - tw, ty - 3.5, tw * 2, 8, 3.5); ctx.stroke();
@@ -10355,7 +10357,7 @@ function drawUnitCore(u, lw, faceX) {
   // 몸통 (좌우 그라데이션 셰이딩 + 티어별 모양)
   ctx.save();
   if (u.hidden || u.ace) ctx.drawImage(glowSprite('ace', 'rgba(233,30,140,0.45)', 'rgba(233,30,140,0)'), u.x - 24, u.y - 24, 48, 48);
-  else if (u.tier >= 6 && !u.miner) ctx.drawImage(glowSprite('t' + raceC, hexGlow(raceC, 0.4), hexGlow(raceC, 0)), u.x - 20, u.y - 20, 40, 40);
+  else if (u.tier >= 6 && !u.miner && !HL) ctx.drawImage(glowSprite('t' + raceC, hexGlow(raceC, 0.4), hexGlow(raceC, 0)), u.x - 20, u.y - 20, 40, 40); // 히든 고유 디자인 유닛은 몸 뒤 발광 없음(공통 표시는 모서리 쇠 하나로 — tier 7 길로틴·투석기만 켜지던 것을 끔)
   const base = (u.hidden || u.ace) ? '#2a2340' : (u.sminer ? '#ffe9ad' : '#ffffff'); // 에이스 영웅도 다크 바디
   const grad = ctx.createLinearGradient(u.x - B.w/2, 0, u.x + B.w/2, 0);
   grad.addColorStop(0, shade(base, 18)); grad.addColorStop(1, shade(base, -22));
@@ -10366,6 +10368,7 @@ function drawUnitCore(u, lw, faceX) {
   // 몸통 안: 무늬 + 라벨 (광부는 표기 없음 — 곡괭이만)
   ctx.textAlign = 'center';
   if (L) { heroG(u, faceX, g1Inner, P); heroG(u, faceX, L.front, P); } // 표준 영웅: 금선+테+큰 문양(에이스 = 흰 ♠) → 어깨판(슈퍼 = 가슴판+어깨 갑옷). 에이스 영웅이 아래 ♠ 분기를 타지 않게 먼저 검사
+  else if (HL) { heroG(u, faceX, HL.inner, P); heroG(u, faceX, HL.front, P); } // 히든 고유 디자인: 가운데 문양·소품(inner) → 어깨·가슴 장식 + 공통 표시 모서리 쇠(front 맨 끝). 아래 조커 얼굴·hm 아이콘 분기보다 앞
   else if (u.hidden || u.ace) { // 에이스·에이스 영웅: ♠ 유지
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
     drawSuit('♠', u.x, u.y - 1, 5.6, '#fff'); // 벡터 ♠ (정중앙)
@@ -10539,6 +10542,83 @@ const HERO_LOOK = {
   9: { w: 30, h: 39, shape: 'rect', cape: { ay: -13.0, tip: [-31.0, 19.5], hemEnd: [-13.0, 22.2], hemT: 2.6, foldX: -21.5, fur: true, flap: true }, pad: { k: 1.25, face: 'race' }, suitY: -0.5, suitS: 6.8, chest: { y0: -14.2, hw: 9.0, dep: 6.4 }, back: g3RoyalBack, front: g3RoyalFront, head: g3HeadRoyal }, // 로얄: 넓은 담비 칼라 + 임페리얼 대관(종 모양 돔), 보라 망토 + 흰 털 밑단·앞여밈 + 무기 쪽 털 자락, 금 견장 술
 };
 function heroLook(u) { return isStdHero(u) ? (HERO_LOOK[u.tier] || null) : null; }
+// ==================== 히든 영웅 9종 고유 디자인 (10-08) — 표 HIDDEN_LOOK · 판별 hiddenLook · 팔레트 hiddenPal · 몸통 경로 hiddenBodyPath · 공통 표시 hiddenMark · 머리 hiddenHead ====================
+// 설계 = Desktop\Claude Code\DPD\히든영웅_직접이식_2026-10-08 (10_검수·구현계획 §3-1·§3-3, spec_h1~h3 — 좌표 원본 spec_h*_draw.js). 좌표는 몸통 중심 원점·아래 +y·오른쪽 조준(faceX +1) 기준, heroG로 감싼다(히든은 super 없음 → s = 1).
+// 키 = 플래그명(= ascendKey(u) = HIDDEN_META 키). tier 키 금지 — 조커 tier 1(원페어)·길로틴/투석기 7(포카드)·콰르텟/시간술사 4(스트레이트)가 겹친다. 표에 없는 유닛(노말·에이스·슈퍼에이스·표준 영웅·광부·아직 안 옮긴 히든)은 hiddenLook null → 기존 경로 한 픽셀도 안 바뀜.
+// 행 = { w, h, shape:'rect'|'cab'|'hour', waist?, lobe?, legs:true|false, hat, shadowW?, back(u,P), inner(u,P), front(u,P), head(u,P) } — C0 = 빈 표(인프라만), C1 h1(갬블러·슬롯머신·조커) · C2 h2(고물상·콰르텟·시간술사) · C3 h3(쇼군·길로틴·투석기)에서 3행씩 채운다.
+const HIDDEN_LOOK = {};
+function hiddenLook(u) { return isHiddenCombo(u) ? (HIDDEN_LOOK[ascendKey(u)] || null) : null; }
+// 고정색 — "히든 = 은·남색" 언어(영웅 금·에이스 핑크·슈퍼 무지개·포카드/로얄 흰 털과 안 겹침) + h3 옻칠·가죽·나무·쇠·돌 (spec_h1 H1 · spec_h3 H3 상수 그대로). 면 / 외곽 / 하이라이트
+const HID_C = {
+  OUT_W: 0.9,                                                                                   // 장식 외곽선 굵기 (몸통 테 3보다 가늘게)
+  NAVY: '#1e2140', NAVY_OUT: '#0d0f24',                                                         // 슬롯 릴 틀·동전받이·간판
+  SILVER: '#dfe5e9', SILVER_L: '#f6f8f9', SILVER_D: '#9fabb4', SILVER_OUT: '#3a464e',           // 공통 표시 모서리 쇠 · 슬롯 레버 막대 · 시간술사 은 띠
+  LACQ: '#3a2420', LACQ_OUT: '#1a0d0a', LACQ_HL: '#6b4a44',                                    // 쇼군 옻칠(투구·어깨 판갑·전립)
+  MAROON: '#5c1e12', MAROON_OUT: '#2e0c06', MAROON_HL: '#8a3a24',                               // 쇼군 진홍 하오리
+  BLACK: '#1f1f26', BLACK_OUT: '#0b0b10', BLACK_HL: '#3c3c4a',                                  // 길로틴 검은 두건
+  CRIMSON: '#3b0d12', CRIMSON_OUT: '#1e0608', CRIMSON_HL: '#6a1c24',                            // 길로틴 암적색 망토
+  IRON: '#2e2e36', IRON_OUT: '#121216',                                                         // 길로틴 처형대 쇠 기둥
+  LEATHER: '#4a2c1e', LEATHER_OUT: '#2a160e', LEATHER_HL: '#7a5240',                            // 길로틴 가죽 띠·벨트
+  STEEL: '#cfd6da', STEEL_OUT: '#3a464e', STEEL_HL: '#f6f8f9',                                  // 칼날
+  WOOD: '#6d4c41', WOOD_D: '#5d4037', WOOD_OUT: '#3e2723', WOOD_HL: '#9c7b6b', WOOD_L: '#8d6e63', // 투석기 받침틀·고물상 배낭
+  METAL: '#9aa3a8', METAL_OUT: '#4d555a', METAL_HL: '#cfd6da',                                  // 쇠 버클·축 원판·바퀴 축·톱니
+  STONE: '#90a4ae', STONE_OUT: '#455a64', STONE_HL: '#cfd6da',                                  // 바위
+  ROPE: '#d7c4a0',
+};
+// id 키 캐시 (P5) — 코어 베이크 키 필드(플래그)만 읽는다. 주의: HIDDEN_INK 키 = 아이콘명(gambler·guillotine…), HIDDEN_META 키 = 플래그명(gamble·execute…) — 변환은 여기 한 곳(HP2). ink = 문양 진한색(표에 없으면 테마색)
+const hiddenPalCache = new Map();
+function hiddenPal(u) {
+  const id = ascendKey(u); let P = hiddenPalCache.get(id); if (P) return P;
+  const m = HIDDEN_META[id], edge = m[2], ink = HIDDEN_INK[m[0]] || edge;
+  P = { id, edge, ink, body: '#ffffff', edgeD: shade(edge, -35), edgeL: shade(edge, 45), edgeOut: shade(edge, -110) }; // edge = 테마색(테·깃발·불꽃), edgeL = 테마색 하이라이트, edgeD/edgeOut = 어두운 파생
+  hiddenPalCache.set(id, P); return P;
+}
+// 몸통 경로 (원점 = 몸통 중심, dx·dy = 평행이동) — rect = roundRect r4 / cab = 위 모서리 r10·아래 r4 캐비닛(슬롯머신) / hour = 모래시계(위·아래 폭 W, 허리 반폭 waist[0] at y waist[1], 직선 변 끝 lobe[0](위)·lobe[1](아래), r4)(시간술사)
+//   = spec_h1 h1BodyPath + spec_h2 h2BodyPath 합본. 게임 bodyPath가 'cab'·'hour'일 때 translate(u.x,u.y) 안에서 부른다(경로 점은 만들 때 변환되므로 restore 뒤 fill·clip이 맞음). 내장 ctx.roundRect 금지(P1) — 게임 roundRect만
+function hiddenBodyPath(L, dx, dy) {
+  dx = dx || 0; dy = dy || 0;
+  const W = L.w, H = L.h, x = -W / 2 + dx, y = -H / 2 + dy;
+  if (L.shape === 'cab') {
+    const rt = 10, rb = 4;
+    ctx.beginPath();
+    ctx.moveTo(x + rt, y); ctx.lineTo(x + W - rt, y); ctx.arc(x + W - rt, y + rt, rt, -Math.PI / 2, 0);
+    ctx.lineTo(x + W, y + H - rb); ctx.arc(x + W - rb, y + H - rb, rb, 0, Math.PI / 2);
+    ctx.lineTo(x + rb, y + H); ctx.arc(x + rb, y + H - rb, rb, Math.PI / 2, Math.PI);
+    ctx.lineTo(x, y + rt); ctx.arc(x + rt, y + rt, rt, Math.PI, Math.PI * 1.5);
+    ctx.closePath();
+  } else if (L.shape === 'hour') {
+    const r = 4, wx = L.waist[0], wy = L.waist[1] + dy, lt = L.lobe[0] + dy, lb = L.lobe[1] + dy;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.lineTo(x + W - r, y); ctx.arc(x + W - r, y + r, r, -Math.PI / 2, 0);
+    ctx.lineTo(x + W, lt); ctx.quadraticCurveTo(x + W, wy - 4, dx + wx, wy); ctx.quadraticCurveTo(x + W, wy + 3, x + W, lb);   // 오른쪽 허리
+    ctx.lineTo(x + W, y + H - r); ctx.arc(x + W - r, y + H - r, r, 0, Math.PI / 2);
+    ctx.lineTo(x + r, y + H); ctx.arc(x + r, y + H - r, r, Math.PI / 2, Math.PI);
+    ctx.lineTo(x, lb); ctx.quadraticCurveTo(x, wy + 3, dx - wx, wy); ctx.quadraticCurveTo(x, wy - 4, x, lt);                  // 왼쪽 허리
+    ctx.lineTo(x, y + r); ctx.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
+    ctx.closePath();
+  } else roundRect(x, y, W, H, 4);
+}
+// 히든 공통 표시 (유저 선택 M1, 10-08) — 카드 네 모서리 은 모서리 쇠(브래킷): 테마색 테(3) 위에 쇠 테 3.6 → 은 면 2.2 → 호 부분만 밝은 줄 0.8. 호 길이 ≈ 6.4 고정(r4 = 90° 전체 + 양쪽 변으로 2.0 / cab 위 r10 = 호 가운데 37°만).
+//   9종 front 맨 끝에서 부른다(= spec_h1 h1MarkCorners). 몸통 밖 요소라 홀로그램 클립과 독립. 영웅 금 어깨판(위 2곳·금·둥근 판)과 개수·색·모양이 다름
+function hiddenMark(L) {
+  const W = L.w, H = L.h, rt = L.shape === 'cab' ? 10 : 4, rb = 4;
+  const corners = [[-W / 2 + rt, -H / 2 + rt, rt, Math.PI * 1.25], [W / 2 - rt, -H / 2 + rt, rt, Math.PI * 1.75], [W / 2 - rb, H / 2 - rb, rb, Math.PI * 0.25], [-W / 2 + rb, H / 2 - rb, rb, Math.PI * 0.75]];
+  for (const [cx, cy, r, mid] of corners) {
+    const half = Math.min(Math.PI / 4, 3.2 / r), a0 = mid - half, a1 = mid + half, ext = half >= Math.PI / 4 - 1e-6 ? 2.0 : 0;
+    ctx.beginPath();
+    if (ext) ctx.moveTo(cx + Math.cos(a0) * r - Math.sin(a0) * ext, cy + Math.sin(a0) * r + Math.cos(a0) * ext);   // 호 시작점에서 접선 방향으로 ext 만큼 변 위로
+    ctx.arc(cx, cy, r, a0, a1);
+    if (ext) ctx.lineTo(cx + Math.cos(a1) * r + Math.sin(a1) * ext, cy + Math.sin(a1) * r - Math.cos(a1) * ext);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = HID_C.SILVER_OUT; ctx.lineWidth = 3.6; ctx.stroke();   // 쇠 테(외곽선 역할)
+    ctx.strokeStyle = HID_C.SILVER; ctx.lineWidth = 2.2; ctx.stroke();       // 은 면
+    ctx.beginPath(); ctx.arc(cx, cy, r, a0, a1);                              // 호 부분만 밝은 줄 한 줄 (하이라이트)
+    ctx.strokeStyle = HID_C.SILVER_L; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.lineCap = 'butt';
+  }
+}
+// 머리 장식 — heroG 안에서 호출. 히든 머리는 전부 정지 그림(S.time·u.jx 안 읽음) → heroHeadSprite 1장. 캐시 키 'tier|super|ace|race|i|k'의 i 자리에 'h:'+id 문자열 → 표준 영웅 키(숫자 i)와 절대 안 겹침(tier 공유 함정 회피). heroHeadSprite 수정 0
+function hiddenHead(u, P) { ctx.drawImage(heroHeadSprite(u, P, 'h:' + P.id, hiddenLook(u).head), HH.X0, HH.Y0, HH.W, HH.H); }
 // 고정색 (금 + 로얄 보라 · 스트레이트 플러쉬 안감) — 에이스여도 금은 그대로
 const HERO_C = {
   GOLD: '#f2c14e', GOLD_D: '#d39a22', GOLD_HL: '#fff1bf', GOLD_OUT: '#8a5a10', // 금 밝은 면 · 그늘 면 · 하이라이트 한 줄 · 외곽선
@@ -11456,6 +11536,7 @@ function bodyShapeRaw(u) {
   if (u.item) return { w: 22, h: 22, shape: 'rect' };
   if (u.miner) return { w: 16, h: 20, shape: 'rect' };
   { const L = heroLook(u); if (L) { const s = u.super ? 1.2 : 1; return { w: L.w * s, h: L.h * s, shape: L.shape }; } } // 표준 영웅 족보별 크기·모양 (10-08, 슈퍼 = 정확히 ×1.2 — heroG의 scale과 맞물림). 표에 없는 tier·히든 영웅은 아래 그대로
+  { const HL = hiddenLook(u); if (HL) return { w: HL.w, h: HL.h, shape: HL.shape }; } // 히든 영웅 고유 디자인 크기·모양 (10-08, HIDDEN_LOOK 표 — rect/cab/hour). 그림자·어깨·muzzle·weaponTip·홀로 클립이 자동 추종. 표에 없으면 아래 u.hero 30×38
   if (u.super) return { w: 36, h: 46, shape: 'rect' }; // 슈퍼영웅: 크게
   if (u.hero) return { w: 30, h: 38, shape: 'rect' };
   switch (u.tier) {
@@ -11479,6 +11560,8 @@ function bodyPath(u, B) {
     ctx.moveTo(x - w/2, y - h/2); ctx.lineTo(x + w/2, y - h/2);
     ctx.lineTo(x + w*0.24, y + h/2); ctx.lineTo(x - w*0.24, y + h/2);
     ctx.closePath();
+  } else if (B.shape === 'cab' || B.shape === 'hour') { // 히든 고유 몸통(슬롯머신 캐비닛·시간술사 모래시계, 10-08): 원점 경로 함수를 평행이동해 재사용 — 경로 점은 만들 때 변환이 적용되므로 restore 뒤 fill/stroke/clip이 그대로 맞는다
+    ctx.save(); ctx.translate(x, y); hiddenBodyPath(hiddenLook(u), 0, 0); ctx.restore();
   } else {
     roundRect(x - w/2, y - h/2, w, h, 4);
   }
@@ -11527,6 +11610,10 @@ function drawCrown(cx, topY, o) {
 }
 function drawHeadgear(u, topY, faceX) { // faceX = 바라보는 쪽(±1) — drawUnit·유령·멀티 고스트가 넘긴다. 없으면(굴착기 탑승자) 표준 영웅 분기에서 drawUnit과 같은 식으로 계산
   const cx = u.x;
+  { // 히든 영웅 9종 고유 머리 장식 (10-08, HIDDEN_LOOK[id].head — 정지 그림 1장 스프라이트). 조커 모자·u.hero 왕관 분기보다 앞. 표에 없는 히든은 아래 기존 분기
+    const HL = hiddenLook(u);
+    if (HL) { if (faceX == null) faceX = ((u.moving ? u.tx : (u.aimX != null ? u.aimX : CX)) >= u.x) ? 1 : -1; heroG(u, faceX, hiddenHead, hiddenPal(u)); return; }
+  }
   if (u.joker) { // 🃏 조커: 광대 모자 (좌빨강·우검정 뿔 + 주황 방울 + 흰 띠)
     ctx.fillStyle = '#f5f0e8'; roundRect(cx - 7, topY - 2, 14, 3, 1.2); ctx.fill(); // 모자 띠
     ctx.fillStyle = '#d92b2b'; // 왼쪽 뿔
@@ -16733,7 +16820,7 @@ function mpGhostSprite(sg, dir, atk) { // → { c, foot, cx, cy } (cx·cy = 캔�
   const k = RS > 1 ? 2 : 1, key = mpGsKey(sg, dir, atk);
   let e = mpGsCache.get(key);
   if (e) { mpGsCache.delete(key); mpGsCache.set(key, e); return e; } // LRU: 최근 사용을 뒤로
-  const f = mpSigFake(sg, dir, atk), c = document.createElement('canvas'), D = isStdHero(f) ? MP_GS : MP_GS_ETC; // 캔버스 크기·평행이동 (표준 영웅만 큰 캔버스)
+  const f = mpSigFake(sg, dir, atk), c = document.createElement('canvas'), D = (isStdHero(f) || hiddenLook(f)) ? MP_GS : MP_GS_ETC; // 캔버스 크기·평행이동 (표준 영웅 + 히든 고유 디자인만 큰 캔버스 — 멀티 고스트엔 히든이 안 오므로(시그니처 hiddenId '', mpSigFake에 플래그 없음 → null) 지금은 표준 영웅만)
   c.width = D.W * k; c.height = D.H * k;
   const old = ctx;
   ctx = c.getContext('2d');
