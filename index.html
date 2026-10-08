@@ -9336,6 +9336,498 @@ function drawGem(cx, cy, r, col, cut) {
   ctx.beginPath(); ctx.arc(cx - r * 0.3, cy - r * 0.38, Math.max(1.4, r * 0.16), 0, Math.PI * 2); ctx.fill();
   path(); ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.4; ctx.stroke(); ctx.lineWidth = 1;
 }
+// ==================== 몬스터 평면 그림체 (10-09) — 영웅 01·02 규칙: 단색 면 + 진한 외곽선 + 하이라이트 한 줄 + 아래·오른쪽 어두운 띠 1단(B안) ====================
+// 좌표·색 원본 = Desktop/Claude Code/DPD/몬스터디자인_직접이식_2026-10-08/spec_m1·m2·m3_draw.js (설계서와 다르면 JS가 맞다). 원점 = 몬스터 중심, 아래 +y, 모든 좌표·굵기 = 반지름 비율.
+// 단계: C0 = 이 블록 정의만(호출 0) → C1 drawMatStatic 몸통 → monFlat(14종 스프라이트, 결투 도전자·맵 데모·멀티 알·관전 orbs 자동 추종) → C2 파손 색 → C3 보스 switch → m3Boss · drawApocSunBody → m3ApocBody → C4 보스 즙 색.
+// 규칙: 스프라이트 함수(monFlat)는 인자(sz·mat·esc·c)만 읽는다 — S.time·Math.random·m.* 금지(베이크가 얼어붙거나 캐시가 어긋남, 400마리 렉 교훈). 보스 m3Boss는 t(=S.time)·ph(=m.phase)를 인자로.
+//       그라데·globalAlpha·shadowBlur·fillText·setLineDash 0건. 크기(MAT_SIZE·sz 52/104·PAD)·대표색(MATERIALS.col → 즙·얼룩·도감 칩)·실루엣(구) 변경 없음. 눈(보스 표정 제외)·장비·숫자·글자 없음.
+const MON_LOOK = { // = 설계 M1 + m2 추가분(어두운 재질 8·13). 이름만 바꿈(M1/M2/M3는 게임의 M3_PEN·M3_ROOM·MAPART_V3와 섞여서)
+  BAND: true,            // 유저 선택(10-09) B안 = 아래·오른쪽 어두운 띠 1단 (false = A안 완전 평면). 24종 전부 한 안 — monFlat·m3Boss·m3ApocBody가 이 플래그 하나를 본다
+  SOOT: true,            // esc 험악해짐 평면 패턴(검댕·재 얼룩 0~3개). false = 색 어둡힘만(현행과 같은 신호량). 장비 아님(09-20 유저 장비 삭제와 별개)
+  OUT_D: -80,            // 외곽선 색 = shade(c, OUT_D) (밝은 재질 — 그을림·황금이 자동 전파)
+  DARK_MATS: { 6: true, 8: true, 13: true },   // 어두운 재질 = 재질 번호로 고정(볼링공·불쇠·블랙홀). 몸색 밝기로 판정하면 그을린 당구공이 밴드 중간에 뒤집힌다(설계 1차 결함)
+  OUT_DARK: { 6: '#6a6f8e', 8: '#ff8a1e', 13: '#ff8a1e' }, // 어두운 재질 외곽선 고정색: 볼링공 푸른 회색 림 / 불쇠·블랙홀 주황(헬 글로우 위에서 실루엣 — 달아오른 테). 황금이면 밝은 재질 규칙
+  HI_K: 0.5,             // 하이라이트 색 = lighten(c, 0.5)
+  HI_SKIP_LUM: 232,      // 이보다 밝은 몸(축구공 242·야구공 238)은 하이라이트 생략 (영웅 카드 흰 면도 하이라이트 없음) — 그을리면 다시 생긴다
+  BAND_D: -38,           // B안 밝은 재질: 아래·오른쪽 띠 = shade(c, −38)
+  BAND_L: 34,            // B안 어두운 재질: 위·왼쪽 밝은 띠 = shade(c, +34) (빛은 그대로 왼쪽 위)
+  BAND_OFF: 0.10, BAND_OFF_Y: 0.12, BAND_R: 0.90, // 띠 = 원 r − 밀린 원(중심 (∓0.10r, ∓0.12r), 0.90r). 가장 두꺼운 곳 0.26r
+  GOLD: '#ffcf3a',       // 황금 몸색 (monColor·matSprite 리터럴과 동일 — m1Dark의 황금 판정)
+  SOOT_INK: '#2a2420',   // 검댕(밝은 몸). 어두운 몸은 shade(c, +48) 재 얼룩
+};
+const MON_HOT = { // = 설계 M2 (OUT_HOT은 MON_LOOK.OUT_DARK/FLAME과 같은 값이라 제외, PULSE_MODE는 링으로 확정) — 헬 재질·보스 공통 "열" 색
+  FLAME: '#ff8a1e', FLAME_CORE: '#ffd36b', FLAME_OUT: '#8a2a00', // 불꽃 혀·강착 띠·블랙홀 아치 바깥 / 속 연노랑(황금 #ffcf3a와 구분) / 테
+  CONT: '#2e9e5b', CONT_OUT: '#005815',  // 지구 대륙(현행 색) + 테
+  ICE: '#eef3f8',          // 지구 몹 극관
+  SPOT: '#c0392b', SPOT_OUT: '#840000',  // 목성 몹 대적점(현행) + 테
+  VOID: '#000000',         // 블랙홀 중심
+  RING_BAND: [0.80, 1.00], // 블랙홀 B안 띠 = 중심 대칭 고리(바깥 20%) — 스프라이트가 회전해도 빛 방향이 안 흔들린다
+  ROCK_CRACK: { 9: true, 11: true }, // 바위 행성(달·목성) 파손 금 = shade(c, −90) 진한 금 (밝은 몸에 흰 금은 안 보임) — C2에서 사용
+  NO_HI: { 13: true },     // 하이라이트 생략 재질(블랙홀 — 회전 스프라이트)
+};
+const MON_BOSS = { // = 설계 M3 (SHAPES·NAME 제외). 라이브 보스 = 행성 사다리 10종 20~27(27 = 13 별칭)·15·28 — 레거시 14·10·11·12는 도달 불가(C3에서 삭제)
+  PAD: { 20: 4, 21: 4, 22: 4, 23: 4, 24: 4, 25: 5, 26: 4, 27: 2, 15: 2, 28: 0 }, // 몸통 반지름 R = sz + PAD (현행 case의 sz+4/+5/+2/+0 그대로 → 실루엣 크기 불변)
+  OUT_MIN: 2.2, OUT_K: 0.08,     // 보스 외곽선 = max(2.2, 0.08R) (R 56 → 4.5 · 104 → 8.3). m1의 .13R은 스티커 테, .06R은 1배에서 몹과 구분 안 됨
+  BODY: { 20: '#fffdf0', 21: '#6b5c4e', 22: '#f4d78a', 23: '#2f74d0', 24: '#c1440e', 25: '#cf9a5f', 26: '#e3c27a', 27: '#ff8a1e', 15: '#000000', 28: '#d84315' }, // 몸통 단색(현행 그라데 중간색) — 즙·금·외곽선·하이라이트·띠 전부 여기서 파생
+  LIT: '#d9a066',                // 수성 햇볕면 (몸통 = 어두운 면, 햇볕면은 패턴) — 외곽선·하이라이트·즙·금은 햇볕면 기준
+  DARK: { 15: true },            // 어두운 보스 = 블랙홀: 외곽선 고정 주황, B안 띠 = 고리, 하이라이트 생략
+  NO_HI: { 15: true, 24: true }, // 하이라이트 생략: 블랙홀 · 화성(흰 극관과 호 끝이 붙어 한 덩어리로 읽힘)
+  OUT_D: { 20: -120 },           // 외곽선 어둡힘 예외: 달 #fffdf0은 −80이면 연회색이라 흐림 → −120. 그 외 −80
+  MOOD_LADDER: true,             // 유저 선택(10-09) 표정 사다리: 달 순둥 → 수성 뚱 → 금성·지구 성남 → 화성·목성 더 성남 → 토성부터 극대노 (false = 전 보스 극대노 4)
+  MOOD: { 20: 0, 21: 1, 22: 2, 23: 2, 24: 3, 25: 3, 26: 4, 27: 4, 15: 4, 28: 4 },
+  INK: '#111111', EYE_RED: '#c62828', BLUSH: '#f3a3b5', // 얼굴 선·눈동자 / 극대노 눈동자 / 순둥 볼터치(현행 rgba(255,120,150,.4) → 불투명)
+  CLOUD: '#f2f6fa',              // 지구 보스 만화 구름
+  ICE: '#f4ece2',                // 화성 극관(현행)
+  GRS: '#c75b3a', GRS_OUT: '#7a2a10',       // 목성 대적점(현행) + 테
+  RING_BACK: '#d9c08a', RING_FRONT: '#e8cf99', RING_OUT: '#8a6a3a', // 토성 고리 뒤/앞(현행) + 테·카시니 간극
+  PHOTON: '#fff0d2', PARTICLE: '#ffebbe',   // 블랙홀 광자 링(굵기 맥동) · 빨려드는 입자(크기 페이드)
+  APOC: { HEART: '#8a1f0e', CORE: '#57120b', FLAME: '#ff6a1e', PROM: '#ffa040', SPOT: '#3a0c06' }, // 아포칼립스 태양: 몸 #d84315 → 심장 → 핵 3단 + 화염 갈래 + 프로미넌스 + 흑점
+};
+// 검댕 얼룩 3개 (r 비율: x, y, rx, ry, 회전, 위성 x, y, r) — 1개 = 오른쪽 아래, 2개 = + 왼쪽 아래, 3개 = + 위 오른쪽
+const M1_SOOT = [[0.46, 0.40, 0.21, 0.13, 0.7, 0.62, 0.22, 0.09], [-0.52, 0.32, 0.18, 0.11, -0.6, -0.70, 0.46, 0.08], [0.20, -0.62, 0.15, 0.09, 0.3, 0.38, -0.55, 0.07]];
+// --- m1 색·굵기 헬퍼 ---
+function m1Rgb(col) { if (col[0] === '#') return hex2rgb(col); const m = col.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/); return [+m[1], +m[2], +m[3]]; }
+function m1Lum(col) { const [r, g, b] = m1Rgb(col); return 0.299 * r + 0.587 * g + 0.114 * b; }
+function m1Lighten(col, k) { const [r, g, b] = m1Rgb(col); const f = v => Math.round(v + (255 - v) * k); return `rgb(${f(r)},${f(g)},${f(b)})`; }
+function m1Dark(mat, c) { return c !== MON_LOOK.GOLD && !!MON_LOOK.DARK_MATS[mat]; }
+function m1OutW(r) { return Math.max(1.8, r * 0.13); }      // 외곽선 굵기: 11.31 → 1.8 · 14.9 → 1.94 · 17.29 → 2.25 · 결투 24 → 3.1 (소형 ×0.6 블릿 후에도 ≥1.08px)
+function m1PatW(r) { return Math.max(1.3, r * 0.09); }      // 패턴 선 굵기
+function m1HiW(r) { return Math.max(1.4, r * 0.10); }       // 하이라이트 굵기
+function m1OutCol(mat, c) { return m1Dark(mat, c) ? (MON_LOOK.OUT_DARK[mat] || m1Lighten(c, 0.32)) : shade(c, MON_LOOK.OUT_D); }
+function m1SootN(esc) { return esc < 0.4 ? 0 : esc < 0.7 ? 1 : esc < 0.95 ? 2 : 3; } // 버킷 0~2 → 0 · 3~4 → 1 · 5~6 → 2 · 7 → 3
+// --- m1 공통 부품 (원점 = 중심) ---
+function m1Circle(r) { ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); }
+function m1Body(r, c) { ctx.fillStyle = c; m1Circle(r); ctx.fill(); }
+function m1Band(r, mat, c) { // B안 명암 띠: 원 r 안에서 "원 r − 빛 쪽으로 밀린 원(0.90r)" = 초승달 띠. 밝은 재질은 어두운 띠가 아래·오른쪽, 어두운 재질은 밝은 띠가 위·왼쪽
+  const dark = m1Dark(mat, c), s = dark ? 1 : -1;
+  ctx.save(); m1Circle(r); ctx.clip();
+  ctx.fillStyle = shade(c, dark ? MON_LOOK.BAND_L : MON_LOOK.BAND_D); m1Circle(r); ctx.fill();
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(s * MON_LOOK.BAND_OFF * r, s * MON_LOOK.BAND_OFF_Y * r, MON_LOOK.BAND_R * r, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+function m1Outline(r, mat, c) { // 외곽선: 안쪽으로 그어 실루엣 반지름 = r 그대로 (스프라이트 bbox·몸통 clip·충돌 반지름과 일치)
+  const w = m1OutW(r);
+  ctx.strokeStyle = m1OutCol(mat, c); ctx.lineWidth = w;
+  ctx.beginPath(); ctx.arc(0, 0, r - w / 2, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1;
+}
+function m1Highlight(r, c) { // 하이라이트 한 줄: 왼쪽 위, 반지름 0.70r 호, 각 −2.70 ~ −1.90 rad(길이 0.56r), 둥근 끝
+  if (m1Lum(c) > MON_LOOK.HI_SKIP_LUM) return;
+  ctx.strokeStyle = m1Lighten(c, MON_LOOK.HI_K); ctx.lineWidth = m1HiW(r); ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(0, 0, 0.70 * r, -2.70, -1.90); ctx.stroke();
+  ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+}
+function m1Soot(r, mat, esc, c) { // esc 험악해짐 평면 패턴: 검댕(밝은 몸 #2a2420) / 재(어두운 몸 shade +48) 얼룩 0~3개 — 색 어둡힘(호출자 c)에 "더해지는" 신호
+  if (!MON_LOOK.SOOT) return;
+  const n = m1SootN(esc || 0); if (!n) return;
+  ctx.save(); m1Circle(r); ctx.clip();
+  ctx.fillStyle = m1Dark(mat, c) ? shade(c, 48) : MON_LOOK.SOOT_INK;
+  for (let i = 0; i < n; i++) {
+    const [x, y, rx, ry, a, sx, sy, sr] = M1_SOOT[i];
+    ctx.beginPath(); ctx.ellipse(x * r, y * r, rx * r, ry * r, a, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx * r, sy * r, sr * r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+function m1Knot(r, c) { // 물풍선 매듭: 목 타원 + 꼬리 삼각(원 밖 1.26r까지, 크기 비례 — 예전엔 절대 px) — 외곽선 다음에 그려 테두리 위로 튀어나온 모양
+  const k = shade(c, -40), w = Math.max(1.2, r * 0.08);
+  ctx.fillStyle = k; ctx.strokeStyle = m1OutCol(0, c); ctx.lineWidth = w; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(-0.17 * r, 0.90 * r); ctx.lineTo(0.17 * r, 0.90 * r); ctx.lineTo(0, 1.26 * r); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0, 0.93 * r, 0.21 * r, 0.085 * r, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.lineJoin = 'miter'; ctx.lineWidth = 1;
+}
+// --- 재질 패턴 14종 M1_PAT[mat](r, c) — 몸통 원으로 clip 된 상태에서 호출, 원점 = 중심 ---
+const M1_PAT = {};
+M1_PAT[0] = function (r, c) { }; // 0 물풍선 #3fa9e8 — 패턴 없음(매듭은 clip 밖 m1Knot). 출렁은 라이브 scale 그대로
+M1_PAT[1] = function (r, c) { // 1 수정구 #b07de0 — 속 빛 원(밝은 단색, 왼쪽 위) + 반짝 별 2 (큰 별 오른쪽 위 4각, 작은 별 왼쪽 아래). 방사선은 뺐다(파이 차트처럼 보여서)
+  ctx.fillStyle = m1Lighten(c, 0.32); ctx.beginPath(); ctx.arc(-0.12 * r, -0.12 * r, 0.52 * r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  polyPath(0.40 * r, -0.40 * r, 4, 0.22 * r, 0, 0.075 * r); ctx.fill();
+  polyPath(-0.36 * r, 0.42 * r, 4, 0.12 * r, 0, 0.045 * r); ctx.fill();
+};
+M1_PAT[2] = function (r, c) { // 2 축구공 #f2f2f2 — 가운데 오각 + 둘레 오각 5(꼭짓점이 중심을 향함) + 잇는 솔기 5. 색 = shade(c, −170): 흰→(72,72,72), 금→(85,37,0)
+  const ink = shade(c, -170), R0 = 0.24 * r, R1 = 0.22 * r, D = 0.74 * r;
+  ctx.fillStyle = ink; ctx.strokeStyle = ink; ctx.lineWidth = Math.max(1.2, r * 0.08);
+  polyPath(0, 0, 5, R0, 0); ctx.fill();
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + i * Math.PI * 2 / 5, cx = Math.cos(a) * D, cy = Math.sin(a) * D;
+    polyPath(cx, cy, 5, R1, a + Math.PI * 1.5); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(Math.cos(a) * R0, Math.sin(a) * R0); ctx.lineTo(Math.cos(a) * (D - R1), Math.sin(a) * (D - R1)); ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+};
+M1_PAT[3] = function (r, c) { // 3 농구공 #e07322 — 십자 + 좌우 호(현행 기하 그대로), 불투명 shade(c, −90) = (134,25,0)
+  ctx.strokeStyle = shade(c, -90); ctx.lineWidth = m1PatW(r) * 1.1;
+  ctx.beginPath(); ctx.moveTo(-r, 0); ctx.lineTo(r, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(0, r); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-1.45 * r, 0, 1.16 * r, -0.62, 0.62); ctx.stroke();
+  ctx.beginPath(); ctx.arc(1.45 * r, 0, 1.16 * r, Math.PI - 0.62, Math.PI + 0.62); ctx.stroke();
+  ctx.lineWidth = 1;
+};
+M1_PAT[4] = function (r, c) { // 4 야구공 #f4efe4 — 실밥 호 ) ( 현행 기하(중심 ∓1.35r, 반지름 1.15r, ±0.7 rad)를 실선으로 + 사선 땀 5개씩 (점선 대체)
+  const red = '#d02a2a', R = 1.15 * r, L = 0.15 * r;
+  ctx.strokeStyle = red; ctx.lineCap = 'round';
+  for (const s of [-1, 1]) {
+    const cx = s * 1.35 * r, a0 = s < 0 ? -0.7 : Math.PI - 0.7, a1 = s < 0 ? 0.7 : Math.PI + 0.7;
+    ctx.lineWidth = Math.max(1.3, r * 0.085);
+    ctx.beginPath(); ctx.arc(cx, 0, R, a0, a1); ctx.stroke();
+    ctx.lineWidth = Math.max(1.2, r * 0.07);
+    for (let j = 0; j < 5; j++) {
+      const t = (s < 0 ? 0 : Math.PI) + (-0.56 + j * 0.28), px = cx + Math.cos(t) * R, py = Math.sin(t) * R;
+      const d = t + 0.55; // 호의 법선에서 0.55 rad 기울인 땀
+      ctx.beginPath(); ctx.moveTo(px - Math.cos(d) * L, py - Math.sin(d) * L); ctx.lineTo(px + Math.cos(d) * L, py + Math.sin(d) * L); ctx.stroke();
+    }
+  }
+  ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+};
+M1_PAT[5] = function (r, c) { // 5 당구공 #c62828 — 숫자 '8' 삭제(숫자·글자 금지) → 스트라이프 볼: 흰 띠(높이 0.46r)를 −0.45 rad 기울여(수평이면 진입금지 표지판처럼 보임). 몸색(즙 색)은 빨강 그대로
+  ctx.save(); ctx.rotate(-0.45);
+  ctx.fillStyle = '#f6f3ea'; ctx.fillRect(-1.2 * r, -0.23 * r, 2.4 * r, 0.46 * r);
+  ctx.restore();
+};
+// 6 볼링공 손가락 구멍 3 자리 — 현행 삼각 (−0.24,−0.30)(0.24,−0.30)(0,−0.04)은 불투명 구멍 + 밝은 림의 평면 그림체에서(특히 황금) 눈 2 + 입 = 얼굴로 읽혀(눈 없음 규칙) 왼쪽 위 사선 호로(검수 R1). 되돌리기 = 이 한 줄
+const M1_BOWL_HOLES = [[-0.34, -0.18], [-0.04, -0.40], [0.26, -0.22]];
+M1_PAT[6] = function (r, c) { // 6 볼링공 #1c1c26 — 구멍 3 속 #07070b + 밝은 림 shade(c, +70). 그라데 광택 삭제
+  ctx.lineWidth = Math.max(1.2, r * 0.07); ctx.strokeStyle = shade(c, 70); ctx.fillStyle = '#07070b';
+  for (const [dx, dy] of M1_BOWL_HOLES) {
+    ctx.beginPath(); ctx.arc(dx * r, dy * r, 0.15 * r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+};
+M1_PAT[7] = function (r, c) { // 7 쇠구슬 #9aa3af — 이음선(적도 직선 + 자오선 타원 rx 0.36r) shade(c, −55) + 리벳 4 (r 0.08r) shade(c, −85): 적도×자오선 교점 2 + 자오선 위아래 2. 크롬 그라데 삭제
+  ctx.strokeStyle = shade(c, -55); ctx.lineWidth = m1PatW(r);
+  ctx.beginPath(); ctx.moveTo(-r, 0); ctx.lineTo(r, 0); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0, 0, 0.36 * r, r, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = shade(c, -85);
+  for (const [x, y] of [[-0.36, 0], [0.36, 0], [0, -0.58], [0, 0.58]]) { ctx.beginPath(); ctx.arc(x * r, y * r, 0.08 * r, 0, Math.PI * 2); ctx.fill(); }
+  ctx.lineWidth = 1;
+};
+// --- 몸통 "뒤" 층 M1_PRE[mat](r, c) — 몸통 원보다 먼저 그려 원 밖으로 나온 부분만 보인다 (불쇠 불꽃 띠 1.48r = 17.7px · 태양 코로나 1.26r = 21.8px < 스프라이트 여유 26px) ---
+const M1_PRE = {};
+function m2Flame(pts, r) { // 불꽃 혀 폴리곤: 골·끝 번갈아, 골→끝은 바깥으로 볼록한 2차 곡선. 마지막 점에서 (x, 0)·(첫x, 0)으로 닫아 밑동은 몸통 뒤에 숨는다
+  ctx.beginPath(); ctx.moveTo(pts[0][0] * r, pts[0][1] * r);
+  for (let i = 1; i < pts.length; i++) {
+    const [px, py] = pts[i - 1], [x, y] = pts[i];
+    const tip = i % 2 === 1; // 홀수 인덱스 = 끝
+    const cx = tip ? px * 0.3 + x * 0.7 : px * 0.7 + x * 0.3, cy = tip ? py : y; // 골 쪽은 수평으로 출발, 끝은 뾰족
+    ctx.quadraticCurveTo(cx * r, cy * r, x * r, y * r);
+  }
+  ctx.lineTo(pts[pts.length - 1][0] * r, 0); ctx.lineTo(pts[0][0] * r, 0); ctx.closePath();
+}
+// 위 큰 혀 3: 골 y −1.02·−1.00이 원 밖(가장자리 −0.98)이라 밑동이 하나의 불꽃 띠로 이어지고 끝 −1.28·−1.48·−1.26이 솟는다 + 오른쪽 작은 혀 1(비대칭 — 불꽃 방향감)
+const M2_FLAME_OUT = [[-0.86, -0.30], [-0.50, -1.28], [-0.22, -1.02], [0.02, -1.48], [0.28, -1.00], [0.50, -1.26], [0.88, -0.30]];
+const M2_FLAME_CORE = [[-0.56, -0.40], [-0.34, -1.02], [-0.12, -0.86], [0.04, -1.20], [0.20, -0.84], [0.36, -1.00], [0.56, -0.40]];
+const M2_FLAME_SIDE = [[0.55, -0.62], [1.16, -0.74], [0.98, -0.02]];
+M1_PRE[8] = function (r, c) { // 8 불타는 쇠구슬: 불꽃 혀(주황 + 속 연노랑 + 테 #8a2a00) — 색 고정(그을림·황금과 무관 = 야구 실밥과 같은 규칙)
+  ctx.lineJoin = 'round'; ctx.strokeStyle = MON_HOT.FLAME_OUT; ctx.lineWidth = Math.max(1.2, r * 0.08);
+  ctx.fillStyle = MON_HOT.FLAME; m2Flame(M2_FLAME_OUT, r); ctx.fill(); ctx.stroke();
+  m2Flame(M2_FLAME_SIDE, r); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = MON_HOT.FLAME_CORE; m2Flame(M2_FLAME_CORE, r); ctx.fill();
+  ctx.lineJoin = 'miter'; ctx.lineWidth = 1;
+};
+M1_PRE[12] = function (r, c) { // 12 태양 코로나: 12각 별(바깥 1.26r · 안 0.95r) 채움 shade(c, −45) + 테 m1OutCol — 몸통이 안쪽을 덮어 삼각 갈래 12개만 남는다 (어두운 주황 = 황금 몹과 혼동 방지)
+  ctx.lineJoin = 'round'; ctx.fillStyle = shade(c, -45); ctx.strokeStyle = m1OutCol(12, c); ctx.lineWidth = Math.max(1.4, r * 0.09);
+  polyPath(0, 0, 12, 1.26 * r, 0, 0.95 * r); ctx.fill(); ctx.stroke();
+  ctx.lineJoin = 'miter'; ctx.lineWidth = 1;
+};
+// --- 헬 재질 패턴 6종 ---
+M1_PAT[8] = function (r, c) { M1_PAT[7](r, c); }; // 8 불타는 쇠구슬 #7a3320 — 쇠구슬의 이음선·리벳 그대로(c 파생이라 적갈색 위 진한 선). 불꽃은 M1_PRE[8]
+M1_PAT[9] = function (r, c) { // 9 달 #c6cace — 분화구 5(현행 4 자리 + 작은 1): 속 shade(c, −42) 불투명 + 테 shade(c, −90) — 쇠구슬(회색 + 십자)과 1배에서 "점"으로 갈린다
+  ctx.fillStyle = shade(c, -42); ctx.strokeStyle = shade(c, -90); ctx.lineWidth = Math.max(1.2, r * 0.07);
+  for (const [x, y, cr] of [[-0.30, -0.20, 0.22], [0.30, 0.25, 0.18], [0.10, -0.38, 0.12], [-0.15, 0.42, 0.14], [0.46, -0.12, 0.08]]) {
+    ctx.beginPath(); ctx.arc(x * r, y * r, cr * r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+};
+M1_PAT[10] = function (r, c) { // 10 지구 #2f74d0 — 극관(위 y < −0.74r) + 대륙 2(현행 타원 자리) + 섬 1 (#2e9e5b + 테 #005815). 반투명 구름은 뺐다
+  ctx.fillStyle = MON_HOT.ICE; ctx.fillRect(-r, -r, 2 * r, 0.26 * r);
+  ctx.fillStyle = MON_HOT.CONT; ctx.strokeStyle = MON_HOT.CONT_OUT; ctx.lineWidth = Math.max(1.2, r * 0.07);
+  ctx.beginPath(); ctx.ellipse(-0.22 * r, -0.08 * r, 0.40 * r, 0.28 * r, 0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0.36 * r, 0.32 * r, 0.27 * r, 0.19 * r, -0.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-0.44 * r, 0.50 * r, 0.10 * r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 1;
+};
+M1_PAT[11] = function (r, c) { // 11 목성 #cf9d6f — 밝은 띠(zone) 3줄 shade(c, +34): y −0.57r 높이 0.22r · +0.17r 높이 0.26r · +0.64r 높이 0.12r (몸색 = 어두운 belt, B안 띠가 비친다) + 대적점 (0.30, 0.30) 0.22×0.15 #c0392b + 테
+  ctx.fillStyle = shade(c, 34);
+  ctx.fillRect(-r, -0.57 * r, 2 * r, 0.22 * r);
+  ctx.fillRect(-r, 0.17 * r, 2 * r, 0.26 * r);
+  ctx.fillRect(-r, 0.64 * r, 2 * r, 0.12 * r);
+  ctx.fillStyle = MON_HOT.SPOT; ctx.strokeStyle = MON_HOT.SPOT_OUT; ctx.lineWidth = Math.max(1.2, r * 0.07);
+  ctx.beginPath(); ctx.ellipse(0.30 * r, 0.30 * r, 0.22 * r, 0.15 * r, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 1;
+};
+M1_PAT[12] = function (r, c) { // 12 태양 #ff8a1e — 뜨거운 핵: 원 (−0.06, −0.06) r 0.56r lighten(c, 0.30) (그라데 → 평면 2단). 코로나는 M1_PRE[12]
+  ctx.fillStyle = m1Lighten(c, 0.30); ctx.beginPath(); ctx.arc(-0.06 * r, -0.06 * r, 0.56 * r, 0, Math.PI * 2); ctx.fill();
+};
+M1_PAT[13] = function (r, c) { // 13 블랙홀 #0d0d14 — 강착 띠: 기울인 납작 타원(rot −0.55) 주황 rx .98 ry .30 lw .20r + 연노랑 중심선 → 중심 공 #000 r .46r → 띠 앞쪽 절반(매개각 0~π)을 공 위에 다시(토성형). 나선·눈처럼 보이던 1차 고리는 뺐다
+  const band = (a0, a1) => {
+    ctx.strokeStyle = MON_HOT.FLAME; ctx.lineWidth = Math.max(1.8, r * 0.20);
+    ctx.beginPath(); ctx.ellipse(0, 0, 0.98 * r, 0.30 * r, -0.55, a0, a1); ctx.stroke();
+    ctx.strokeStyle = MON_HOT.FLAME_CORE; ctx.lineWidth = Math.max(1.2, r * 0.06);
+    ctx.beginPath(); ctx.ellipse(0, 0, 0.86 * r, 0.25 * r, -0.55, a0, a1); ctx.stroke();
+  };
+  band(0, Math.PI * 2);
+  ctx.fillStyle = MON_HOT.VOID; ctx.beginPath(); ctx.arc(0, 0, 0.46 * r, 0, Math.PI * 2); ctx.fill();
+  band(0, Math.PI); // 앞쪽 절반
+  ctx.lineWidth = 1;
+};
+function m2RingBand(r, c) { // 블랙홀 B안 띠 = 중심 대칭 고리 (m1Band의 초승달 띠 대신 — 회전과 무관). 보스 블랙홀도 같은 함수
+  const [a, b] = MON_HOT.RING_BAND;
+  ctx.save(); m1Circle(r); ctx.clip();
+  ctx.fillStyle = shade(c, MON_LOOK.BAND_L); m1Circle(b * r); ctx.fill();
+  ctx.fillStyle = c; m1Circle(a * r); ctx.fill();
+  ctx.restore();
+}
+// --- 조립: 일반 몹 14종 스프라이트 몸통 (C1에서 drawMatStatic이 translate(x, y) 뒤 호출 — 시그니처·캐시 키·SPR 88·bbox 블릿은 그대로) ---
+// 레이어: (PRE 불꽃·코로나) → 몸통 단색 → (B안 띠 | 블랙홀 고리) → 패턴(clip) → 검댕(clip) → 외곽선 → 하이라이트 1줄(블랙홀 생략) → (물풍선 매듭)
+// esc = escB(bucket/7), c = 호출자가 그을림(shade −62·escB)/황금(#ffcf3a)을 섞어 넘기는 몸색 — 현행 매개 그대로
+function monFlat(sz, mat, esc, c) {
+  if (M1_PRE[mat]) M1_PRE[mat](sz, c);
+  m1Body(sz, c);
+  if (MON_LOOK.BAND) { if (mat === 13) m2RingBand(sz, c); else m1Band(sz, mat, c); }
+  ctx.save(); m1Circle(sz); ctx.clip(); (M1_PAT[mat] || M1_PAT[0])(sz, c); ctx.restore();
+  m1Soot(sz, mat, esc, c);
+  m1Outline(sz, mat, c);
+  if (!MON_HOT.NO_HI[mat]) m1Highlight(sz, c);
+  if (mat === 0) m1Knot(sz, c);
+}
+// --- 보스 헬퍼 (R = 몸통 반지름 = sz + PAD) ---
+function m3Juice(shape) { if (shape === 13) shape = 27; return shape === 21 ? MON_BOSS.LIT : shape === 15 ? MON_HOT.FLAME : (MON_BOSS.BODY[shape] || MON_BOSS.BODY[20]); } // 사망 즙·파편·바닥 얼룩 색(C4) = 몸색 (수성 햇볕면, 블랙홀은 검정 대신 강착 띠 주황 — 헬 바닥에서 검정 얼룩은 안 보임). 현행 = HP 사다리 파랑
+function m3OutW(r) { return Math.max(MON_BOSS.OUT_MIN, r * MON_BOSS.OUT_K); }
+function m3Base(shape) { return shape === 21 ? MON_BOSS.LIT : MON_BOSS.BODY[shape]; }                 // 외곽선·하이라이트·금 색의 기준색 (수성만 햇볕면)
+function m3OutCol(shape) { return MON_BOSS.DARK[shape] ? MON_HOT.FLAME : shade(m3Base(shape), MON_BOSS.OUT_D[shape] != null ? MON_BOSS.OUT_D[shape] : MON_LOOK.OUT_D); }
+function m3Outline(r, shape) { const w = m3OutW(r); ctx.strokeStyle = m3OutCol(shape); ctx.lineWidth = w; ctx.beginPath(); ctx.arc(0, 0, r - w / 2, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1; }
+function m3Band(r, c) { // = m1Band 밝은 재질식 (아래·오른쪽 어두운 띠 shade −38, 밀린 원 (−.10r, −.12r) .90r) — 보스는 재질 번호가 없어 따로
+  ctx.save(); m1Circle(r); ctx.clip();
+  ctx.fillStyle = shade(c, MON_LOOK.BAND_D); m1Circle(r); ctx.fill();
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(-MON_LOOK.BAND_OFF * r, -MON_LOOK.BAND_OFF_Y * r, MON_LOOK.BAND_R * r, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+function m3StarPath(n, rIn, rOut, rot) { // 별(톱니) 패스: 끝 n개(반지름 rOut(i))·골 n개(rIn) 번갈아 — 코로나·화염 갈래
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a = rot + i * Math.PI * 2 / n, b = a + Math.PI / n, ro = rOut(i);
+    const px = Math.cos(a) * ro, py = Math.sin(a) * ro;
+    if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+    ctx.lineTo(Math.cos(b) * rIn, Math.sin(b) * rIn);
+  }
+  ctx.closePath();
+}
+function m3StrokeOut(pathFn, col, w, outCol, ow) { // 외곽선 있는 굵은 선(고리·강착 띠): 같은 패스를 외곽선 색 w+2ow → 본색 w로 두 번 긋는다
+  pathFn(); ctx.strokeStyle = outCol; ctx.lineWidth = w + 2 * ow; ctx.stroke();
+  pathFn(); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+  ctx.lineWidth = 1;
+}
+// --- 보스 몸통 10종 M3_BOSS[shape] = { pre(몸통 뒤 바깥 요소), pat(몸통 원 clip 안), post(몸통 앞 바깥 요소) } (R, t = S.time, ph = m.phase, c = 몸색) ---
+const M3_BOSS = {};
+M3_BOSS[20] = { // 20 달 (R10) #fffdf0 — 달무리 3겹(반투명) 삭제. 분화구 6 불투명(속 −38 + 테 −86), 자리 = 얼굴 밖 둘레(현행 얼굴 뒤 자리는 눈·이빨과 겹쳐 해골로 읽혔다). 하이라이트는 밝기 252 → 자동 생략
+  pat(R, t, ph, c) {
+    ctx.fillStyle = shade(c, -38); ctx.strokeStyle = shade(c, -86); ctx.lineWidth = Math.max(1.4, R * 0.03);
+    for (const [x, y, r] of [[-0.64, -0.28, 0.15], [0.62, -0.36, 0.13], [-0.56, 0.5, 0.14], [0.55, 0.52, 0.12], [0.06, -0.68, 0.13], [-0.02, 0.76, 0.09]]) {
+      ctx.beginPath(); ctx.arc(x * R, y * R, r * R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.lineWidth = 1;
+  },
+};
+M3_BOSS[21] = { // 21 수성 (R20) — 몸통 = 어두운 면 #6b5c4e, 패턴 = 햇볕면 원 #d9a066 (중심 (−.35R, −.2R) r .95R, 현행 타원과 같음) + 분화구 6 #5c4432 불투명(현행 자리). 반투명 하이라이트 원은 m1Highlight 1줄로
+  pat(R, t, ph, c) {
+    ctx.fillStyle = MON_BOSS.LIT; ctx.beginPath(); ctx.arc(-0.35 * R, -0.2 * R, 0.95 * R, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#5c4432';
+    for (const [x, y, r] of [[-0.3, -0.3, 0.2], [0.3, 0.12, 0.24], [-0.08, 0.36, 0.16], [0.12, -0.2, 0.12], [0.45, -0.3, 0.1], [-0.45, 0.14, 0.11]]) {
+      ctx.beginPath(); ctx.arc(x * R, y * R, r * R, 0, Math.PI * 2); ctx.fill();
+    }
+  },
+};
+M3_BOSS[22] = { // 22 금성 (R30) #f4d78a — 대기 링(반투명) 삭제. 소용돌이 3겹 현행 기하(23점 나선, t×0.45 회전) 불투명 shade(c, −55), 선 max(2.4, .06R) 둥근 끝
+  pat(R, t, ph, c) {
+    ctx.strokeStyle = shade(c, -55); ctx.lineWidth = Math.max(2.4, R * 0.06); ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) {
+      const t0 = t * 0.45 + i * 2.1;
+      ctx.beginPath();
+      for (let k = 0; k <= 22; k++) { const th = t0 + k * 0.26, rr = R * (0.14 + k * 0.045); const px = Math.cos(th) * rr, py = Math.sin(th) * rr * 0.8; if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
+      ctx.stroke();
+    }
+    ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+  },
+};
+M3_BOSS[23] = { // 23 지구 (R40) #2f74d0 — 대기 글로우·방사 그라데 삭제. 대륙 3 현행 자리(몹 지구와 같은 색 + 테) + 만화 구름 3 불투명(t×0.12 흐름 유지, 줄 y −.62/+.64/−.60R — 가운데 줄은 얼굴을 가로질러 붕대처럼 보였다)
+  pat(R, t, ph, c) {
+    ctx.fillStyle = MON_HOT.CONT; ctx.strokeStyle = MON_HOT.CONT_OUT; ctx.lineWidth = Math.max(1.6, R * 0.035);
+    for (const [x, y, rx, ry, a] of [[-0.35, -0.25, 0.5, 0.34, 0.5], [0.42, 0.3, 0.34, 0.24, -0.4], [0.15, -0.55, 0.22, 0.13, 0.2]]) {
+      ctx.beginPath(); ctx.ellipse(x * R, y * R, rx * R, ry * R, a, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = MON_BOSS.CLOUD;
+    const rows = [-0.62, 0.64, -0.60];
+    for (let i = 0; i < 3; i++) {
+      const ca = t * 0.12 + i * 2.1, cx = Math.cos(ca) * R * 0.55, cy = rows[i] * R;
+      ctx.beginPath(); ctx.ellipse(cx, cy, R * 0.30, R * 0.085, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx - R * 0.09, cy - R * 0.05, R * 0.10, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + R * 0.09, cy - R * 0.04, R * 0.085, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.lineWidth = 1;
+  },
+};
+M3_BOSS[24] = { // 24 화성 (R50) #c1440e — 방사 그라데 삭제. 지형 얼룩 2 shade(c, −55) → 분화구 3 shade(c, −80) → 극관 타원 #f4ece2 (0, −.88R) .5×.22 (현행 자리). 하이라이트 생략(NO_HI)
+  pat(R, t, ph, c) {
+    ctx.fillStyle = shade(c, -55);
+    ctx.beginPath(); ctx.ellipse(0.25 * R, 0.05 * R, 0.42 * R, 0.22 * R, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-0.4 * R, 0.35 * R, 0.26 * R, 0.15 * R, 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = shade(c, -80);
+    for (const [x, y, r] of [[-0.2, -0.1, 0.11], [0.45, -0.3, 0.09], [0.05, 0.42, 0.08]]) { ctx.beginPath(); ctx.arc(x * R, y * R, r * R, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = MON_BOSS.ICE; ctx.beginPath(); ctx.ellipse(0, -0.88 * R, 0.5 * R, 0.22 * R, 0, 0, Math.PI * 2); ctx.fill();
+  },
+};
+M3_BOSS[25] = { // 25 목성 (R60) — 몸통 = belt #cf9a5f(현행 띠 1), 밝은 zone 3줄 #e8c39a(현행 띠 0·2·4 자리, 높이 R/3) + 어두운 belt 1줄 #c08748(띠 3) + 대적점 (.35R, .3R) .3×.18 + 테. 방사 음영 삭제 → B안 띠가 belt 줄에 비친다
+  pat(R, t, ph, c) {
+    ctx.fillStyle = '#e8c39a';
+    for (const i of [0, 2, 4]) ctx.fillRect(-R, -R + i * R / 3, 2 * R, R / 3);
+    ctx.fillStyle = '#c08748'; ctx.fillRect(-R, -R + 3 * R / 3, 2 * R, R / 3);
+    ctx.fillStyle = MON_BOSS.GRS; ctx.strokeStyle = MON_BOSS.GRS_OUT; ctx.lineWidth = Math.max(1.6, R * 0.035);
+    ctx.beginPath(); ctx.ellipse(0.35 * R, 0.3 * R, 0.3 * R, 0.18 * R, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 1;
+  },
+};
+M3_BOSS[26] = { // 26 토성 (R70) #e3c27a — 고리만 −0.32 rad 기울임(몸·하이라이트는 빛 방향 고정): 타원 1.85R×.52R 굵기 .09R(= 현행 5px@56) 뒤 반 #d9c08a · 앞 반 #e8cf99 + 테 #8a6a3a(m3OutW×.5), 카시니 간극 앞 반만. 줄무늬 3 불투명 shade(c, −40) 현행 기하
+  ring(R, half) { ctx.beginPath(); ctx.ellipse(0, 0, 1.85 * R, 0.52 * R, 0, half ? 0 : Math.PI, half ? Math.PI : Math.PI * 2); },
+  pre(R, t, ph, c) {
+    ctx.save(); ctx.rotate(-0.32);
+    m3StrokeOut(() => M3_BOSS[26].ring(R, 0), MON_BOSS.RING_BACK, R * 0.09, MON_BOSS.RING_OUT, m3OutW(R) * 0.5);
+    ctx.restore();
+  },
+  pat(R, t, ph, c) {
+    ctx.strokeStyle = shade(c, -40); ctx.lineWidth = Math.max(1.6, R * 0.035);
+    for (const yy of [-0.4, 0, 0.42]) { ctx.beginPath(); ctx.ellipse(0, yy * R, R * Math.sqrt(1 - yy * yy) * 0.96, R * 0.16, 0, 0, Math.PI); ctx.stroke(); }
+    ctx.lineWidth = 1;
+  },
+  post(R, t, ph, c) {
+    ctx.save(); ctx.rotate(-0.32);
+    m3StrokeOut(() => M3_BOSS[26].ring(R, 1), MON_BOSS.RING_FRONT, R * 0.09, MON_BOSS.RING_OUT, m3OutW(R) * 0.5);
+    ctx.strokeStyle = MON_BOSS.RING_OUT; ctx.lineWidth = Math.max(1.2, R * 0.025);
+    ctx.beginPath(); ctx.ellipse(0, 0, 1.55 * R, 0.43 * R, 0, 0, Math.PI); ctx.stroke();
+    ctx.restore(); ctx.lineWidth = 1;
+  },
+};
+M3_BOSS[27] = { // 27(=13) 태양 (R80) #ff8a1e — 광선 12갈래 조각 + 방사 그라데 → 몹 태양과 같은 12각 코로나 별: 골 .95R, 끝 1.22R + (짝수 .12R | 홀수 .06R)×flick(현행 일렁), 회전 ph + t×0.2(현행 m.rot). 핵 원 lighten(c, .30) (−.06R, −.06R) .56R
+  pre(R, t, ph, c) {
+    const flick = 0.7 + 0.3 * Math.sin(t * 7 + ph), rot = ph + t * 0.2;
+    ctx.lineJoin = 'round'; ctx.fillStyle = shade(c, -45); ctx.strokeStyle = shade(c, MON_LOOK.OUT_D); ctx.lineWidth = m3OutW(R) * 0.7;
+    m3StarPath(12, 0.95 * R, i => R * (1.22 + (i % 2 ? 0.06 : 0.12) * flick), rot); ctx.fill(); ctx.stroke();
+    ctx.lineJoin = 'miter'; ctx.lineWidth = 1;
+  },
+  pat(R, t, ph, c) { ctx.fillStyle = m1Lighten(c, 0.30); ctx.beginPath(); ctx.arc(-0.06 * R, -0.06 * R, 0.56 * R, 0, Math.PI * 2); ctx.fill(); },
+};
+M3_BOSS[15] = { // 15 블랙홀 (헬 보스) 몸통 #000 — 도플러 선형 그라데 → 주황 띠 + 연노랑 중심선 + 테(몹 블랙홀과 같은 3색). 기하 현행: rotate(0.10) · 윗 아치 r 1.18R .34R · 아래 렌즈 .16R · 원반 2.05R×.34R 뒤 .30R/앞 .36R · 입자 4. 광자 링 알파 맥동 → 굵기 맥동, 입자 알파 페이드 → 크기 페이드
+  band(R, a0, a1, w, rx, ry) {
+    const ow = m3OutW(R) * 0.5, path = () => { ctx.beginPath(); rx ? ctx.ellipse(0, 0, rx * R, ry * R, 0, a0, a1) : ctx.arc(0, 0, 1.18 * R, a0, a1); };
+    m3StrokeOut(path, MON_HOT.FLAME, w * R, MON_HOT.FLAME_OUT, ow);
+    path(); ctx.strokeStyle = MON_HOT.FLAME_CORE; ctx.lineWidth = Math.max(1.4, w * R * 0.24); ctx.stroke(); ctx.lineWidth = 1;
+  },
+  pre(R, t, ph, c) {
+    ctx.save(); ctx.rotate(0.10);
+    M3_BOSS[15].band(R, Math.PI * 1.02, Math.PI * 1.98, 0.34, 0, 0);   // 윗 아치(중력 렌즈)
+    M3_BOSS[15].band(R, Math.PI * 0.06, Math.PI * 0.94, 0.16, 0, 0);   // 아래 얇은 렌즈상
+    M3_BOSS[15].band(R, Math.PI, Math.PI * 2, 0.30, 2.05, 0.34);       // 수평 원반 뒤쪽
+    ctx.restore();
+  },
+  pat(R, t, ph, c) { },
+  post(R, t, ph, c) {
+    ctx.save(); ctx.rotate(0.10);
+    const w = m3OutW(R);
+    ctx.strokeStyle = MON_BOSS.PHOTON; ctx.lineWidth = Math.max(1.6, R * 0.035 * (0.8 + 0.2 * Math.sin(t * 4 + ph))); // 광자 링 (외곽선 바로 안쪽) — 굵기 맥동
+    ctx.beginPath(); ctx.arc(0, 0, R - w - ctx.lineWidth / 2, 0, Math.PI * 2); ctx.stroke();
+    M3_BOSS[15].band(R, 0, Math.PI, 0.36, 2.05, 0.34);                  // 수평 원반 앞쪽
+    ctx.fillStyle = MON_BOSS.PARTICLE;
+    for (let i = 0; i < 4; i++) {
+      const a = t * 1.6 + i * 1.57, rr = R * (2.0 - ((t * 0.5 + i * 0.25) % 1) * 0.95), pr = R * 0.045 * (1 - rr / (R * 2)) + 0.6;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr * 0.17, pr, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore(); ctx.lineWidth = 1;
+  },
+};
+// 28 아포칼립스 태양 (R150, sz 104 = r) #d84315 — drawApocSunBody 교체본(C3): 하늘의 태양(r 11→104)과 공유. 코로나 방사 그라데 → 14각 화염 별(골 .98r, 끝 1.16r + (짝수 .22r | 홀수 .10r)×fl_i 현행 일렁, 회전 t×0.25) #ff6a1e + 테.
+//    프로미넌스 3 현행 곡선(t×0.4 회전) 굵은 혀 #ffa040 max(2.4, .09r) 둥근 끝 + 테(가는 선을 그대로 불투명화하니 실처럼 보여 1.5배 + 테). 몸 #d84315 → 심장 #8a1f0e .72r → 핵 #57120b .42r (3단 평면). 흑점 3 (r > 30, 현행)
+function m3ApocBody(r, t, ph) {
+  ctx.lineJoin = 'round'; ctx.fillStyle = MON_BOSS.APOC.FLAME; ctx.strokeStyle = MON_HOT.FLAME_OUT; ctx.lineWidth = m3OutW(r) * 0.6;
+  m3StarPath(14, 0.98 * r, i => r * (1.16 + (i % 2 ? 0.10 : 0.22) * (0.65 + 0.35 * Math.sin(t * 6 + i * 2.4))), t * 0.25); ctx.fill(); ctx.stroke();
+  ctx.lineJoin = 'miter'; ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const a = t * 0.4 + i * 2.09, wob = Math.sin(t * 3 + i * 2);
+    const path = () => { ctx.beginPath(); ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      ctx.quadraticCurveTo(Math.cos(a + 0.45) * r * 1.42, Math.sin(a + 0.45) * r * 1.42, Math.cos(a + 0.75 + wob * 0.1) * r * 1.12, Math.sin(a + 0.75 + wob * 0.1) * r * 1.12); };
+    m3StrokeOut(path, MON_BOSS.APOC.PROM, Math.max(2.4, r * 0.09), MON_HOT.FLAME_OUT, m3OutW(r) * 0.5);
+  }
+  ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+  const c = MON_BOSS.BODY[28];
+  m1Body(r, c);
+  if (MON_LOOK.BAND) m3Band(r, c);
+  ctx.save(); m1Circle(r); ctx.clip();
+  ctx.fillStyle = MON_BOSS.APOC.HEART; ctx.beginPath(); ctx.arc(0, 0, 0.72 * r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = MON_BOSS.APOC.CORE; ctx.beginPath(); ctx.arc(0, 0, 0.42 * r, 0, Math.PI * 2); ctx.fill();
+  if (r > 30) { ctx.fillStyle = MON_BOSS.APOC.SPOT; for (const [x, y, rr] of [[-0.3, -0.2, 0.14], [0.25, 0.3, 0.1], [0.1, -0.35, 0.08]]) { ctx.beginPath(); ctx.arc(x * r, y * r, rr * r, 0, Math.PI * 2); ctx.fill(); } }
+  ctx.restore();
+  m3Outline(r, 28);
+  m1Highlight(r, c);
+}
+M3_BOSS[28] = { whole: m3ApocBody };
+// --- 표정 m3Face(sz, mood) — drawBossFace 교체본(C3): 좌표 전부 현행, 선 굵기만 비례 + 눈 흰자에 외곽선(진한 외곽선 규칙). 일반 몹엔 눈 없음 그대로 ---
+// mood: 0 순둥(볼터치·미소·눈 반짝) / 1 뚱(평평 눈썹·일자 입) / 2~3 성남(눈썹·이빨 4) / 4 극대노(가파른 눈썹·빨간 눈동자·이빨 6)
+function m3Mood(shape) { if (shape === 13) shape = 27; return MON_BOSS.MOOD_LADDER ? (MON_BOSS.MOOD[shape] != null ? MON_BOSS.MOOD[shape] : 4) : 4; }
+function m3Face(sz, mood) {
+  const ink = MON_BOSS.INK, lw = Math.max(1.4, sz * 0.035);          // 눈 테·이빨 테 (현행 1 고정 → 비례: 1.8px@52, 3.6@104)
+  ctx.save(); ctx.beginPath(); ctx.arc(0, 0, sz * 0.8, 0, Math.PI * 2); ctx.clip();
+  const ex = sz * 0.3, ey = -sz * 0.06, er = sz * 0.19;
+  for (const s of [-1, 1]) {
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = ink; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.arc(s * ex, ey, er, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = mood >= 4 ? MON_BOSS.EYE_RED : ink;
+    ctx.beginPath(); ctx.arc(s * ex, ey + er * 0.25, er * (mood === 0 ? 0.62 : 0.5), 0, Math.PI * 2); ctx.fill();
+    if (mood === 0) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s * ex - er * 0.18, ey, er * 0.2, 0, Math.PI * 2); ctx.fill(); }
+  }
+  if (mood === 0) {
+    ctx.fillStyle = MON_BOSS.BLUSH;
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * ex * 1.5, ey + er * 1.5, er * 0.7, er * 0.4, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.strokeStyle = ink; ctx.lineWidth = Math.max(1.4, sz * 0.07); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(0, sz * 0.18, sz * 0.22, 0.4, Math.PI - 0.4); ctx.stroke();
+    ctx.lineCap = 'butt'; ctx.lineWidth = 1; ctx.restore(); return;
+  }
+  const bs = mood === 1 ? 0.1 : mood >= 4 ? 1.1 : 0.8;
+  ctx.strokeStyle = ink; ctx.lineWidth = Math.max(1.6, sz * 0.1); ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-ex - er * 0.8, ey - er * (0.2 + bs * 0.8)); ctx.lineTo(-ex + er * 0.6, ey - er * 0.2);
+  ctx.moveTo(ex + er * 0.8, ey - er * (0.2 + bs * 0.8)); ctx.lineTo(ex - er * 0.6, ey - er * 0.2);
+  ctx.stroke(); ctx.lineCap = 'butt';
+  if (mood === 1) {
+    ctx.lineWidth = Math.max(1.6, sz * 0.08);
+    ctx.beginPath(); ctx.moveTo(-sz * 0.22, sz * 0.3); ctx.lineTo(sz * 0.22, sz * 0.3); ctx.stroke();
+  } else {
+    const mw = sz * 0.5, my = sz * 0.26, teeth = mood >= 4 ? 6 : 4;
+    ctx.fillStyle = '#fff'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(-mw / 2, my);
+    for (let i = 0; i < teeth; i++) { ctx.lineTo(-mw / 2 + mw * (i + 0.5) / teeth, my + sz * 0.15); ctx.lineTo(-mw / 2 + mw * (i + 1) / teeth, my); }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = lw; ctx.stroke(); ctx.lineJoin = 'miter';
+  }
+  ctx.lineWidth = 1; ctx.restore();
+}
+// --- 조립: 보스 (C3에서 drawMonster 보스 switch + 공통 후처리 + drawBossFace 자리에 ctx.translate(m.x, m.y) 뒤 m3Boss(0, 0, sz, m.shape, S.time, m.phase)) ---
+// 레이어: pre(고리 뒤·코로나·강착 아치) → 몸통 단색 → (B안 띠 | 블랙홀 고리 띠) → 패턴(clip) → 외곽선 → 하이라이트 1줄(블랙홀·화성 생략) → post(고리 앞·원반 앞·입자) → 표정. 멀티 미니보스는 바깥 ctx.scale(0.72) 그대로
+// shape 13(태양 별칭)은 입구에서 27로 — 블랙홀 재질 13과 번호가 겹쳐 그대로 두면 어두운 재질로 오판
+function m3Boss(x, y, sz, shape, t, ph) {
+  if (shape === 13) shape = 27;
+  const B = M3_BOSS[shape] || M3_BOSS[20], md = m3Mood(shape);
+  ctx.save(); ctx.translate(x, y);
+  if (B.whole) { B.whole(sz, t, ph); m3Face(sz, md); ctx.restore(); return; }  // 아포칼립스 태양 (하늘의 태양과 공유 함수)
+  const R = sz + (MON_BOSS.PAD[shape] || 0), c = MON_BOSS.BODY[shape];
+  if (B.pre) B.pre(R, t, ph, c);
+  m1Body(R, c);
+  if (MON_LOOK.BAND) { if (MON_BOSS.DARK[shape]) m2RingBand(R, c); else m3Band(R, c); }
+  ctx.save(); m1Circle(R); ctx.clip(); B.pat(R, t, ph, c); ctx.restore();
+  m3Outline(R, shape);
+  if (!MON_BOSS.NO_HI[shape]) m1Highlight(R, m3Base(shape));
+  if (B.post) B.post(R, t, ph, c);
+  m3Face(sz, md);
+  ctx.restore();
+}
+function m3CrackCol(shape) { const c = m3Base(shape === 13 ? 27 : shape); return m1Lum(c) > 150 ? shade(c, -90) : m1Lighten(c, 0.75); } // 보스 파손 금 색(C2): 기준색 밝기 > 150 → 진한 금 / 그 외 밝은 금 (현행 = HP 파랑 lighten ≈ 흰)
 // 재질 몹 정적 렌더 (스프라이트 캐시용 — 시간/개체 의존 없음). 몸통+패턴+테두리+하이라이트+보강밴드
 function drawMatStatic(x, y, sz, mat, esc, c, broken = 0) {
   const circle = () => { ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2); };
