@@ -10528,12 +10528,15 @@ function heroLook(u) { return isStdHero(u) ? (HERO_LOOK[u.tier] || null) : null;
 // ==================== 히든 영웅 9종 고유 디자인 (10-08) — 표 HIDDEN_LOOK · 판별 hiddenLook · 팔레트 hiddenPal · 몸통 경로 hiddenBodyPath · 공통 표시 hiddenMark · 머리 hiddenHead ====================
 // 설계 = Desktop\Claude Code\DPD\히든영웅_직접이식_2026-10-08 (10_검수·구현계획 §3-1·§3-3, spec_h1~h3 — 좌표 원본 spec_h*_draw.js). 좌표는 몸통 중심 원점·아래 +y·오른쪽 조준(faceX +1) 기준, heroG로 감싼다(히든은 super 없음 → s = 1).
 // 키 = 플래그명(= ascendKey(u) = HIDDEN_META 키). tier 키 금지 — 조커 tier 1(원페어)·길로틴/투석기 7(포카드)·콰르텟/시간술사 4(스트레이트)가 겹친다. 표에 없는 유닛(노말·에이스·슈퍼에이스·표준 영웅·광부·아직 안 옮긴 히든)은 hiddenLook null → 기존 경로 한 픽셀도 안 바뀜.
-// 행 = { w, h, shape:'rect'|'cab'|'hour', waist?, lobe?, legs:true|false, hat, shadowW?, back(u,P), inner(u,P), front(u,P), head(u,P) } — C1 h1(갬블러·슬롯머신·조커, spec_h1 H1_LOOK 값 그대로) · C2 h2(고물상·콰르텟·시간술사) · C3 h3(쇼군·길로틴·투석기)에서 3행씩 채운다.
-//   head = 유저 선택(10-08) B안 — 갬블러 주사위 모자 · 슬롯머신 전구 간판 · 조커 3갈래 모자. 어깨 = 기존 식 (W/2−2, −3)(drawUnitArm) — 셋 다 그 높이의 오른쪽 변이 직선(cab의 r10은 y −20~−10)이라 보정 없음
+// 행 = { w, h, shape:'rect'|'cab'|'hour', waist?, lobe?, legs:true|false, hat, shadowW?, back(u,P), inner(u,P), front(u,P), head(u,P) } — C1 h1(갬블러·슬롯머신·조커, spec_h1 H1_LOOK 값 그대로) · C2 h2(고물상·콰르텟·시간술사, spec_h2 H2_LOOK 값 그대로) · C3 h3(쇼군·길로틴·투석기)에서 3행씩 채운다.
+//   head = 유저 선택(10-08) B안 — 갬블러 주사위 모자 · 슬롯머신 전구 간판 · 조커 3갈래 모자 · 고물상 냄비 투구 · 콰르텟 8분음표 · 시간술사 시계 문자판. 어깨 = 기존 식 (W/2−2, −3)(drawUnitArm) — 그 높이의 오른쪽 변이 직선(cab의 r10은 y −20~−10)이거나 변 위(hour 허리 곡선 t 0.5 점 (14.25, −2))라 보정 없음
 const HIDDEN_LOOK = {
   gamble: { w: 34, h: 36, shape: 'rect', legs: true, hat: 40, back: h1GambleBack, inner: h1GambleInner, front: h1GambleFront, head: h1GambleHeadDie },   // 갬블러: 정사각에 가까운 카드, 큰 주사위(5눈) + 초록 딜러 조끼 깃 + 빨간 나비넥타이 + 등 뒤 칩 더미, 머리 = 주사위 모자(6눈)
   slot:   { w: 30, h: 40, shape: 'cab',  legs: true, hat: 40, back: h1SlotBack,   inner: h1SlotInner,   front: h1SlotFront,   head: h1SlotHeadSign },    // 슬롯머신: 위 둥근 캐비닛 몸통, 릴 창 3칸(★·체리·♦) + 동전받이·금화 + 등 쪽 빨간 공 레버, 머리 = 전구 간판
   joker:  { w: 30, h: 38, shape: 'rect', legs: true, hat: 40, back: h1JokerBack,  inner: h1JokerInner,  front: h1JokerFront,  head: h1JokerHeadTri },    // 조커: 광대 가면 1개(얼굴 예외) + 할리퀸 마름모 2 + 주름 깃 + 지그재그 밑단 망토, 머리 = 3갈래 모자
+  junk:    { w: 36, h: 34, shape: 'rect', legs: true, hat: 40, back: h2JunkBack,    inner: h2JunkInner,    front: h2JunkFront,    head: h2JunkHeadPot },     // 고물상: 짐에 눌린 넓고 낮은 카드, 등 뒤 큰 배낭(구리 파이프·톱니바퀴) + 가운데 돈 자루(금화) + 멜빵 2 + 공구 벨트, 머리 = 냄비 투구
+  quartet: { w: 28, h: 40, shape: 'rect', legs: true, hat: 40, back: h2QuartetBack, inner: h2QuartetInner, front: h2QuartetFront, head: h2QuartetHeadNote }, // 콰르텟: 홀쭉한 지휘자 카드, 가슴 오선 4줄 + 빔 음표 2 + 큰 나비넥타이 + 연미복 깃, 망토 대신 연미복 꼬리 2갈래, 머리 = 머리띠 위 8분음표
+  chrono:  { w: 32, h: 40, shape: 'hour', waist: [9, 3], lobe: [-9, 12], legs: true, hat: 40, back: h2ChronoBack, inner: h2ChronoInner, front: h2ChronoFront, head: h2ChronoHeadDial }, // 시간술사: 몸통 자체가 모래시계(허리 반폭 9 at y +3) — 위 모래·흐름·아래 더미 + 위·아래 쇠 판 + 로브 자락, 머리 = 쇠 기둥 위 시계 문자판(눈금 12·바늘 2, 숫자 없음)
 };
 function hiddenLook(u) { return isHiddenCombo(u) ? (HIDDEN_LOOK[ascendKey(u)] || null) : null; }
 // 고정색 — "히든 = 은·남색" 언어(영웅 금·에이스 핑크·슈퍼 무지개·포카드/로얄 흰 털과 안 겹침) + h3 옻칠·가죽·나무·쇠·돌 (spec_h1 H1 · spec_h3 H3 상수 그대로). 면 / 외곽 / 하이라이트
@@ -10746,6 +10749,136 @@ function h1JokerHeadTri(u, P) {
   ctx.fillStyle = '#2e3440'; ctx.fill(); hidOut('#15181f');
   ctx.beginPath(); ctx.moveTo(-2.0, -25.0); ctx.quadraticCurveTo(-1.0, -31.0, 0.5, -35.5); ctx.strokeStyle = '#5c6677'; ctx.lineWidth = 1.0; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
   h1Bell(-17.5, -15.5); h1Bell(17.5, -15.5); h1Bell(1.0, -39.5);
+}
+// ---------- h2 공통 도우미 (= spec_h2 h2Hl·h2Gear; h2Out·h2Line은 hidOut·hidLine과 같음) ----------
+function hidHl(x0, y0, cx, cy, x1, y1, col, w) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx, cy, x1, y1); ctx.strokeStyle = col; ctx.lineWidth = w || 1.0; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt'; } // 곡선 하이라이트 한 줄
+function hidGear(cx, cy, Ro, Ri, n) { // 톱니바퀴 경로 (n 이, 바깥 Ro·안 Ri) — 이 하나 = 4점(안→밖→밖→안)
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + i * Math.PI * 2 / n, tw = Math.PI / n * 0.42, g = Math.PI / n * 0.22;
+    const pts = [[a - tw - g, Ri], [a - tw, Ro], [a + tw, Ro], [a + tw + g, Ri]];
+    for (const [ang, rr] of pts) { const px = cx + Math.cos(ang) * rr, py = cy + Math.sin(ang) * rr; if (i === 0 && ang === a - tw - g) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+  }
+  ctx.closePath();
+}
+// ---------- h2 고물상 (junk) — 36×34 넓고 낮은 카드(짐에 눌린 몸). 능력 = 고철·돈 → 등 뒤 큰 배낭(파이프·톱니바퀴) + 가운데 돈 자루(금화) + 멜빵 2 + 공구 벨트 (spec_h2_draw.js §5 그대로) ----------
+function h2JunkBack(u, P) {
+  // 배낭 (몸 뒤 왼쪽, 위로 7 솟음) — 어두운 가죽 + 덮개 + 버클
+  roundRect(-29, -24, 22, 34, 4); ctx.fillStyle = '#6d4c41'; ctx.fill(); hidOut('#3e2723');
+  hidLine(-26.5, -15.5, -26.5, 5.0, '#9c7b6b', 1.0);                                                         // 바깥 변 하이라이트 한 줄
+  roundRect(-29, -24, 22, 7.5, 3); ctx.fillStyle = '#5d4037'; ctx.fill(); hidOut('#3e2723');               // 덮개
+  roundRect(-24.5, -19.5, 3, 4, 0.8); ctx.fillStyle = '#9aa3a8'; ctx.fill(); hidOut('#4d555a', 0.7);       // 버클
+  // 구리 파이프 (덮개 왼쪽 위로 비스듬히 삐죽) — 어두운 줄 위에 구리 줄 + 하이라이트
+  hidLine(-22, -23, -27.5, -33, '#7a4a1f', 4.4); hidLine(-22, -23, -27.5, -33, '#c47f3b', 2.8); hidLine(-23.4, -25.8, -26.2, -31.0, '#e3a86b', 0.8);
+  // 톱니바퀴 (배낭 왼쪽 변에 매달림, 8이) + 축 + 하이라이트 호
+  hidGear(-25.5, -8, 6.0, 4.6, 8); ctx.fillStyle = '#9aa3a8'; ctx.fill(); hidOut('#4d555a');
+  ctx.beginPath(); ctx.arc(-25.5, -8, 1.9, 0, Math.PI * 2); ctx.fillStyle = '#4d555a'; ctx.fill();
+  ctx.beginPath(); ctx.arc(-25.5, -8, 3.5, Math.PI * 1.1, Math.PI * 1.45); ctx.strokeStyle = '#cfd6da'; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+}
+function h2JunkInner(u, P) {
+  // 멜빵 2 (카드 윗변에서 내려오는 어두운 가죽 띠)
+  for (const x of [-10, 10]) {
+    roundRect(x - 1.7, -17.5, 3.4, 14, 1.2); ctx.fillStyle = '#4e342e'; ctx.fill(); hidOut('#2d1b16', 0.7);
+    hidLine(x - 0.6, -16, x - 0.6, -6, '#7a5a4e', 0.8);
+  }
+  // 돈 자루 (카드 가운데 큰 면) — 둥근 자루 + 귀 2 + 묶은 끈 + 금화
+  ctx.beginPath();
+  ctx.moveTo(-3.5, -4); ctx.lineTo(3.5, -4); ctx.quadraticCurveTo(9.5, 2, 8.5, 9); ctx.quadraticCurveTo(7.5, 14.5, 0, 14.5);
+  ctx.quadraticCurveTo(-7.5, 14.5, -8.5, 9); ctx.quadraticCurveTo(-9.5, 2, -3.5, -4); ctx.closePath();
+  ctx.fillStyle = '#d7b98a'; ctx.fill(); hidOut(P.ink, 1.1);
+  for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * 3, -5.5); ctx.lineTo(sx * 6, -10.5); ctx.lineTo(0, -6.5); ctx.closePath(); ctx.fillStyle = '#d7b98a'; ctx.fill(); hidOut(P.ink, 0.9); } // 귀
+  roundRect(-4.5, -6, 9, 3, 1.2); ctx.fillStyle = P.ink; ctx.fill();                                      // 끈
+  hidLine(-5.5, 1, -4.8, 8, '#f0dfc0', 1.0);                                                               // 자루 하이라이트 한 줄
+  ctx.beginPath(); ctx.arc(1.5, 6, 2.4, 0, Math.PI * 2); ctx.fillStyle = '#f2c14e'; ctx.fill(); hidOut('#9a7400', 0.8); // 금화
+}
+function h2JunkFront(u, P) {
+  // 공구 벨트 (카드 아래쪽 가로 띠 + 쇠 버클) — 자루 밑단이 벨트 뒤로 들어감
+  roundRect(-18.5, 8, 37, 4.2, 1.2); ctx.fillStyle = '#4e342e'; ctx.fill(); hidOut('#2d1b16', 0.8);
+  hidLine(-16, 9.2, -5, 9.2, '#7a5a4e', 0.8);
+  roundRect(-2.2, 7.4, 4.4, 5.4, 0.8); ctx.fillStyle = '#9aa3a8'; ctx.fill(); hidOut('#4d555a', 0.7);
+  hiddenMark(HIDDEN_LOOK.junk); // 공통 표시 (front 맨 끝)
+}
+// 머리 B안: 냄비 투구 — 뒤집어 쓴 쇠 냄비(평평한 윗면 24×12) + 테 + 뒤(−x)로 뻗은 손잡이. 높고 각진 실루엣(꼭대기 −31, 손잡이 끝 x −22)
+function h2JunkHeadPot(u, P) {
+  roundRect(-22, -28.5, 11, 3, 1.2); ctx.fillStyle = '#3f474d'; ctx.fill();                                                       // 손잡이 (뒤)
+  hidLine(-20.5, -27.6, -13, -27.6, '#6b747b', 0.8);
+  ctx.beginPath(); ctx.moveTo(-12, -19); ctx.lineTo(-12, -27); ctx.quadraticCurveTo(-12, -31, -7, -31); ctx.lineTo(7, -31); ctx.quadraticCurveTo(12, -31, 12, -27); ctx.lineTo(12, -19); ctx.closePath();
+  ctx.fillStyle = '#8a949c'; ctx.fill(); hidOut('#3f474d');
+  hidLine(-9.5, -27.5, -9.5, -22, '#c5cdd3', 1.0); hidLine(-6, -29.4, 2, -29.4, '#c5cdd3', 1.0);                                 // 하이라이트 (왼 변 + 윗면)
+  roundRect(-13.5, -21, 27, 3.2, 1.0); ctx.fillStyle = '#6b747b'; ctx.fill(); hidOut('#3f474d');                                 // 테
+}
+// ---------- h2 콰르텟 (quartet) — 28×40 홀쭉한 카드(지휘자). 능력 = 음악 → 가슴 오선 4줄 + 큰 빔 음표 2 + 큰 나비넥타이 + 검정 연미복 깃, 망토 대신 연미복 꼬리 2갈래 (spec_h2_draw.js §6 그대로) ----------
+function h2QuartetBack(u, P) {
+  // 연미복 꼬리 ① 바깥 (뒤·왼쪽으로 휘어 내려감) + 하이라이트
+  ctx.beginPath(); ctx.moveTo(-5, 2); ctx.quadraticCurveTo(-22, 6, -25, 24); ctx.lineTo(-18, 27); ctx.quadraticCurveTo(-14, 14, -7, 10); ctx.closePath();
+  ctx.fillStyle = '#23243a'; ctx.fill(); hidOut('#0f1020');
+  hidHl(-12, 6, -20, 10, -22, 20, '#43456a', 1.0);
+  // 꼬리 ② 안쪽 (몸 바로 아래로)
+  ctx.beginPath(); ctx.moveTo(-3, 8); ctx.quadraticCurveTo(-12, 14, -12, 27); ctx.lineTo(-5, 27); ctx.quadraticCurveTo(-4, 18, 0, 12); ctx.closePath();
+  ctx.fillStyle = '#23243a'; ctx.fill(); hidOut('#0f1020');
+}
+function h2QuartetInner(u, P) {
+  // 연미복 깃 2 (좁은 검정 삼각)
+  for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * 13.5, -19.5); ctx.lineTo(sx * 8, -19.5); ctx.lineTo(sx * 13.5, -8); ctx.closePath(); ctx.fillStyle = '#23243a'; ctx.fill(); hidOut('#0f1020'); }
+  // 오선 4줄 (= 4중주)
+  for (const y of [1, 4.5, 8, 11.5]) hidLine(-11, y, 11, y, P.ink, 0.7);
+  // 빔 음표 2 — 기둥(어두운 줄 위 테마색 줄) → 빔 → 머리 타원
+  for (const [x0, y0, y1] of [[-2.4, 11.5, -4], [6.6, 9.5, -6]]) { hidLine(x0, y0, x0, y1, P.ink, 2.4); hidLine(x0, y0, x0, y1, P.edge, 1.3); }
+  ctx.beginPath(); ctx.moveTo(-3.5, -4.5); ctx.lineTo(7.7, -6.5); ctx.lineTo(7.7, -3.3); ctx.lineTo(-3.5, -1.3); ctx.closePath(); ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink, 0.8);
+  for (const [hx, hy] of [[-5, 12], [4, 10]]) {
+    ctx.beginPath(); ctx.ellipse(hx, hy, 3.3, 2.3, -0.35, 0, Math.PI * 2); ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink, 0.8);
+    hidLine(hx - 1.6, hy - 1.2, hx - 0.2, hy - 1.6, '#9c8cf0', 0.9);
+  }
+  // 큰 나비넥타이 (폭 16, 깃 바로 아래)
+  for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * 1, -14); ctx.lineTo(sx * 8, -18.2); ctx.lineTo(sx * 8, -9.8); ctx.closePath(); ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink, 0.9); }
+  ctx.beginPath(); ctx.arc(0, -14, 1.8, 0, Math.PI * 2); ctx.fillStyle = P.ink; ctx.fill();
+}
+function h2QuartetFront(u, P) { hiddenMark(HIDDEN_LOOK.quartet); } // 공통 표시만
+// 머리 B안: 음표 머리 장식 — 검정 머리띠 위에 큰 8분음표(머리 타원 + 기둥 + 깃발)가 섬. 높고 가는 실루엣(꼭대기 −41.5)
+function h2QuartetHeadNote(u, P) {
+  roundRect(-9, -22.5, 18, 3, 1.2); ctx.fillStyle = '#23243a'; ctx.fill(); hidOut('#0f1020');                                   // 머리띠
+  roundRect(2.2, -41, 2.4, 15.5, 0.9); ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink, 0.7);                                   // 기둥
+  ctx.beginPath(); ctx.moveTo(4.6, -41); ctx.quadraticCurveTo(12, -37.5, 9, -30.5); ctx.quadraticCurveTo(9.5, -35, 4.6, -36); ctx.closePath(); // 깃발
+  ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink, 0.8);
+  ctx.beginPath(); ctx.ellipse(-0.5, -25.5, 4.8, 3.4, -0.4, 0, Math.PI * 2); ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink, 0.9); // 머리
+  hidLine(-2.8, -27.2, -0.8, -27.8, '#9c8cf0', 0.9);
+}
+// ---------- h2 시간술사 (chrono) — 32×40 모래시계형 카드('hour': 허리 반폭 9 at y +3). 능력 = 시간 → 몸통 = 모래시계(위 모래·흐름·아래 모래 더미 + 위·아래 쇠 판) + 긴 로브 자락 (spec_h2_draw.js §7 그대로) ----------
+function h2ChronoBack(u, P) {
+  // 로브 자락 (아래 몸통 왼쪽 밑에서 뒤로 늘어짐 — 허리 홈은 가리지 않음)
+  ctx.beginPath(); ctx.moveTo(-8, 10); ctx.lineTo(-16, 14); ctx.quadraticCurveTo(-27, 18, -25, 27); ctx.lineTo(-17, 27); ctx.lineTo(-9, 24); ctx.closePath();
+  ctx.fillStyle = '#1b3f7a'; ctx.fill(); hidOut('#0d2448');
+  hidHl(-17, 15.5, -24, 19, -23, 25, '#2f63b0', 1.0);
+}
+function h2ChronoInner(u, P) {
+  // 위 모래 (윗방 아래쪽에 고인 모래 — 평평한 윗면 + 허리로 모이는 바닥)
+  ctx.beginPath(); ctx.moveTo(-12, -13); ctx.lineTo(12, -13); ctx.quadraticCurveTo(10, -4, 0, 1.5); ctx.quadraticCurveTo(-10, -4, -12, -13); ctx.closePath();
+  ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink, 0.9);
+  hidLine(-9, -11, -2, -11, '#a8d8ff', 1.0);
+  // 흐르는 모래 줄기
+  hidLine(0, 1.5, 0, 10, P.edge, 1.4);
+  // 아래 모래 더미
+  ctx.beginPath(); ctx.moveTo(-12.5, 17); ctx.quadraticCurveTo(-5, 8.5, 0, 8.5); ctx.quadraticCurveTo(5, 8.5, 12.5, 17); ctx.lineTo(12.5, 17.5); ctx.lineTo(-12.5, 17.5); ctx.closePath();
+  ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink, 0.9);
+  hidHl(-7, 13.5, -3, 10.5, 0.5, 10.3, '#a8d8ff', 1.0);
+}
+function h2ChronoFront(u, P) {
+  // 모래시계 위·아래 쇠 판 (카드 폭보다 2 넓게)
+  for (const y of [-20.5, 16.5]) { roundRect(-18, y, 36, 4, 1.4); ctx.fillStyle = '#37474f'; ctx.fill(); hidOut('#1c262b'); hidLine(-16, y + 1.2, -6, y + 1.2, '#78909c', 0.9); }
+  hiddenMark(HIDDEN_LOOK.chrono); // 공통 표시 (front 맨 끝)
+}
+// 머리 B안: 시계 문자판 — 짧은 쇠 기둥 위 둥근 문자판(테마색 테 + 흰 판 + 눈금 12 + 바늘 2, 숫자 없음). 둥근 원판 실루엣(꼭대기 −40.3)
+function h2ChronoHeadDial(u, P) {
+  roundRect(-5, -23, 10, 3, 1.0); ctx.fillStyle = '#37474f'; ctx.fill(); hidOut('#1c262b');                                      // 기둥
+  ctx.beginPath(); ctx.arc(0, -31, 9.3, 0, Math.PI * 2); ctx.fillStyle = P.ink; ctx.fill(); hidOut('#1c262b', 1.0);               // 테(베젤)
+  ctx.beginPath(); ctx.arc(0, -31, 7.4, 0, Math.PI * 2); ctx.fillStyle = '#f6f8f9'; ctx.fill();                                   // 흰 판
+  for (let i = 0; i < 12; i++) {                                                                                                  // 눈금 12 (4개 굵게)
+    const a = i * Math.PI / 6, big = i % 3 === 0, r0 = big ? 5.2 : 6.1, r1 = 7.0;
+    hidLine(Math.cos(a) * r0, -31 + Math.sin(a) * r0, Math.cos(a) * r1, -31 + Math.sin(a) * r1, '#1c262b', big ? 1.0 : 0.6);
+  }
+  hidLine(0, -31, -3.3, -32.9, '#1c262b', 1.3); hidLine(0, -31, 4.85, -33.8, '#1c262b', 1.1);                                       // 시침(10시)·분침(2시)
+  ctx.beginPath(); ctx.arc(0, -31, 0.9, 0, Math.PI * 2); ctx.fillStyle = P.ink; ctx.fill();                                       // 중심 핀
+  ctx.beginPath(); ctx.arc(0, -31, 8.4, Math.PI * 1.1, Math.PI * 1.45); ctx.strokeStyle = '#8ec8ff'; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt'; // 베젤 하이라이트
 }
 // 고정색 (금 + 로얄 보라 · 스트레이트 플러쉬 안감) — 에이스여도 금은 그대로
 const HERO_C = {
