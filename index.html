@@ -6187,7 +6187,7 @@ function spawnShards(p) {
 }
 // 코믹 팝 사망: 0.11초 부풀었다가 → 팡! (즙 + 조각 + 바닥 얼룩). 실제 팡은 이펙트 루프에서 burst 시점에
 function deathPop(m) {
-  const c = monColor(m);
+  const c = m.boss ? m3Juice(m.shape) : monColor(m); // C4 보스 즙·파편·바닥 얼룩 = 몸색(m3Juice — 수성 햇볕면·블랙홀 강착 띠 주황). 전엔 HP 사다리 파랑이라 달 보스가 파란 즙을 튀겼다. HP바(monColor)·개수·크기·사운드·히트스톱 그대로
   const sz = monSize(m);
   S.effects.push({ type: 'pop', x: m.x, y: m.y, r: Math.max(8, sz), c, t: 0.13, dur: 0.13, burst: false,
     boss: m.boss, dk: m.boss ? 'boss' : MATERIALS[m.mat || 0].death, golden: m.golden });
@@ -12756,7 +12756,7 @@ const MAT_DESC = [
   '검은 오각이 매력인 축구공. 슛, 골인!',
   '통통 튀는 주황 농구공. 드리블 조심!',
   '빨간 실밥의 야구공. 홈런볼 조심!',
-  '반질반질 8번 당구공. 딱!',
+  '반질반질 줄무늬 당구공. 딱!',
   '묵직한 검은 볼링공. 스트라이크!',
   '차갑고 단단한 쇠구슬. 잘 안 부서져요.',
   '지옥에서 온 이글이글 뜨거운 쇳덩이!',
