@@ -3870,7 +3870,7 @@ function reset() {
     hunt: null, items: { reroll: 0, copier: 0 }, groups: {},
     upg: [0,0,0], upgCost: [50,50,50],
     units: [], monsters: [], effects: [], floats: [], parts: [], projs: [],
-    timer: 0, pokerTimer: POKER_TIME, spawnQueue: null,
+    timer: 0, waveT: 0, swarmCue: -1, pokerTimer: POKER_TIME, spawnQueue: null,
     mineLayer: 1, mineHp: 0, mineMax: 0, mineBonus: 0,
     roomVirgin: true, hiAceGiven: false, // 🥚 이스터에그: 라운드 첫 광석방 입장이 하이카드 단독이면 하이카드 에이스
 
@@ -4672,11 +4672,33 @@ function useAcid() { // 소환장 중앙에 염산 장판 (5초 도트)
   S.acidPools.push({ x: PEN.x, y: PEN.y, r: 95, t: 5, dps: 70 });
   addFloat(PEN.x, PEN.y - 60, '염산 장판!', '#7cb342', 2); sfx('slash'); logMsg('염산병 — 5초간 장판 도트 데미지!');
 }
+// ==================== 몬스터 등장 패턴 1단계 (2026-10-09, Desktop\Claude Code\DPD\몬스터등장규칙_제안_2026-10-08\50_구현설계_1단계.md) ====================
+// 노브는 전부 여기 한 곳. 수치·%는 화면에 절대 노출하지 않는다(UI 미니멀). 멀티(S.multi)·레인 개체(m.lane)는 전부 제외.
+const BIGBANG = { MIN: 12, PARTS: 40, STOP: 0.05, RING: [40, 95], FLOAT: 1.1 };       // A1 빅팡: 한 프레임 사망 ≥ MIN → 큰 폭발 1 + 멈칫 STOP(보스 킬 0.08 아래) + 금색 ×N
+const SWARM = { START: 10, PERIOD: 25, CUE: 12, BALL: 13, WHIRL: 17, RING: 19, FADE: 23, // A2 스웜 리듬: 전투 START초 뒤부터 PERIOD초 주기. 주기 안 u: [0,CUE) 보통 · [CUE,BALL) 예고(모임) · [BALL,WHIRL) 볼 · [WHIRL,RING) 휘몰이 · [RING,FADE) 링 · [FADE,PERIOD) 풀림
+                BALL_R0: 14, BALL_K: 0.32, RING_K: 1.25, SPIN_K: 3 };                     // 볼 반지름 = BALL_R0 + baseR·BALL_K (18~36px) · 링 = 20 + baseR·RING_K(클램프가 울타리 안에 가둠) · 휘몰이 회전 배율
+const SWARM_FREE = { wb: 0, wr: 0, spinK: 1, cyc: -1 };                                  // 리듬 없음(멀티·태양전·전투 10초 전)
+const BOSS_ABILITY = {};                                                                  // 보스 모양 → 고유 능력 1개 (카탈로그 D축). C0 = 빈 표(어느 보스도 능력 없음 → 배너·정보창 힌트 0). C3에서 25: 'gravity'(목성), 2단계 C2에서 20·21·22·23·24·26 추가
+function bossHint(sh) { return BOSS_ABILITY[sh] && BOSS_INFO[sh] && BOSS_INFO[sh][2] || ''; } // 포커 배너·정보창 한 구절 (수치 없음). 능력이 있는 모양만 — 힌트 문자열은 BOSS_INFO 셋째 원소(함수 안에서만 읽으므로 선언 순서 무관)
+const GRAV = { FIRST: 6, PERIOD: 18, TELE: 0.6, PULL_T: 1.0, LINES: 40, MOB_HP_MUL: 1.0 }; // 목성 중력(= 1단계 A3 포효): 등장 +FIRST초 첫 발동, PERIOD초마다, TELE초 예고(부풀기+링+sfx), PULL_T초 견인(220px/s 조커 값), 사슬 선은 가까운 LINES마리만. MOB_HP_MUL = 보정 노브(유저 확정 (가) 보정 0 → 1.0)
+const WEAK = { MUL: 1.5, T: 1.0, SHAPES: { 24: true, 26: true } };                        // 약점 창 틀: 능력 발동 T초 동안 피해 ×MUL — 화성(24)·토성(26)만(유저 확정). 1단계엔 두 보스의 능력이 없어 발동 경로 0 = 수치 영향 0
+function bossShapeFor(n) { return n > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(n / 10)); } // spawnMonster의 보스 shape 식과 동일(그 줄은 그대로 둔다) — 배너·노브가 보스 생성 전에 모양을 알아야 해서
+function swarmParams(t) { // 전투 경과 t(초, S.waveT) → { wb 볼 가중 0~1, wr 링 가중 0~1, spinK 회전 배율, cyc 주기 번호(-1 = 리듬 전) }. 조각 함수라 모든 경계에서 연속(위치 점프 없음)
+  if (t < SWARM.START) return SWARM_FREE;
+  const u = (t - SWARM.START) % SWARM.PERIOD, cyc = Math.floor((t - SWARM.START) / SWARM.PERIOD);
+  if (u < SWARM.CUE) return { wb: 0, wr: 0, spinK: 1, cyc };
+  if (u < SWARM.BALL) return { wb: (u - SWARM.CUE) / (SWARM.BALL - SWARM.CUE), wr: 0, spinK: 1, cyc };
+  if (u < SWARM.WHIRL) return { wb: 1, wr: 0, spinK: 1, cyc };
+  if (u < SWARM.RING) { const k = (u - SWARM.WHIRL) / (SWARM.RING - SWARM.WHIRL); return { wb: 1 - k, wr: k, spinK: SWARM.SPIN_K, cyc }; }
+  if (u < SWARM.FADE) return { wb: 0, wr: 1, spinK: 1, cyc };
+  return { wb: 0, wr: 1 - (u - SWARM.FADE) / (SWARM.PERIOD - SWARM.FADE), spinK: 1, cyc };
+}
 // ==================== 웨이브 ====================
 function startWave() {
   S.phase = 'wave';
   // ⏱️ 포커 중에 산 시간의 모래는 이 전투에 실린다 (전투 중 구매는 즉시 S.timer에 더해진다)
   S.timer = WAVE_TIME + 15 * S.pendSand;
+  S.waveT = 0; S.swarmCue = -1; // 패턴 1단계: 전투 경과 시계·스웜 예고 주기 번호 (태양전 분기보다 앞 — 모든 전투 공통)
   if (S.pendSand) { addFloat(CX, 130, `+${15 * S.pendSand}초!`, '#7ec8ff', 2); S.pendSand = 0; }
   S.feverUsed = false;
   // 🌞 최종장: 하늘의 태양이 강림한다 — 잡몹 없는 독대.
@@ -4733,7 +4755,7 @@ function spawnMonster(hp, isBoss, opt) {
     // 보스 사다리(태양계 여행): R10 달(20) → R20 수성(21) → R30 금성(22) → R40 지구(23) → R50 화성(24) → R60 목성(25) → R70 토성(26) → R80 태양(27) → 헬 블랙홀(15) → R150 아포칼립스 태양(28)
     shape: isBoss ? (S.round > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(S.round / 10))) : (opt.shape != null ? opt.shape : stageInfo(S.round).si),
     boss: isBoss, born: opt.child ? 0.35 : 0, hell: opt.hell != null ? opt.hell : S.round > FINAL_ROUND,
-    small: !!opt.child, shield: 0, shieldMax: 0, split: false,
+    small: !!opt.child, shield: 0, shieldMax: 0, split: false, weakT: 0, puffT: 0, pullQuiet: false, // 패턴 1단계: 약점 창 / 능력 예고 부풀기 / 견인 사슬 생략
     bobP: Math.random() * 6.28, // 공별 바운스 위상 (전원 동기화되면 어색해서 랜덤)
   };
   // 재질 배정: 밴드 후반엔 다음 재질을 한둘씩 섞어 부드럽게 전환 (10라운드마다 확 바뀌지 않게)
@@ -5321,7 +5343,7 @@ function update(dt) {
   }
   S.effects = S.effects.filter(e => {
     e.t -= dt;
-    if (e.type === 'pop' && !e.burst && e.t <= 0.02) { e.burst = true; burstJuice(e); } // 부풀기 끝 → 팡!
+    if (e.type === 'pop' && !e.burst && e.t <= 0.02) { e.burst = true; if (e.quiet) splat(e.x, e.y, e.c, false); else burstJuice(e); } // 부풀기 끝 → 팡! (A1 빅팡에 묶인 팡은 바닥 얼룩만)
     return e.t > 0;
   });
   S.floats = S.floats.filter(f => { f.t -= dt; f.y -= 26 * dt; return f.t > 0; });
@@ -5572,6 +5594,7 @@ function update(dt) {
     if (S.multi) mpLaneFreeze(dt); // 🤖 습격대·보스도 얼어붙는다 (출발 시각을 미룬다)
   } else {
     S.timer -= dt;
+    S.waveT += dt; // 패턴 1단계: 시간정지(freezeT) 분기엔 없으므로 자동 동결
     tenseTick(dt / S.speed); // 💓 막판 심장·시계·BGM 먹먹함 (시계가 흐를 때만 — 시간정지 중엔 이 분기를 안 탄다 · 배속은 실시간 박자 유지)
     // 몬스터 스폰
     if (q.left > 0) {
@@ -5849,6 +5872,7 @@ function update(dt) {
   // 사망 처리 + 폭발 (몹 보상: 기존의 1/10로 축소)
   const killGold = killGoldNow();
   const newborns = [];
+  const died = [], pop0 = S.effects.length; // A1 빅팡: 이번 프레임 사망(잡몹·조각) 집계 + 이 프레임에 생긴 pop 이펙트 시작 인덱스
   S.monsters = S.monsters.filter(m => {
     if (m.lane) return mpLaneZero(m); // 🤖 레인 프록시: 0이 돼도 '확인 대기'(보상 없음) — 처치·보상은 mpLaneTick이 1회
     if (m.hp <= 0) {
@@ -5857,6 +5881,7 @@ function update(dt) {
       if (m.lastHitBy && m.lastHitBy.weapon && S.stats[m.lastHitBy.weapon]) S.stats[m.lastHitBy.weapon].kills++;
       if (!m.boss && markMon(m.mat)) addFloat(m.x, m.y - 30, '도감 등록!', '#7ec8ff', 1.5);
       deathPop(m);
+      if (!m.boss) died.push(m); // A1 빅팡 집계 (보스 제외)
       // 연쇄킬 콤보: 1.5초 내 연속 킬 → 카운트 + 사운드 피치 상승 + 소량 보너스 골드
       S.combo.t = 1.5; S.combo.n++; S.combo.pop = 0.18; if (S.combo.n > S.maxCombo) S.maxCombo = S.combo.n;
       if (S.combo.n >= 30 && !S.feverUsed) {
@@ -5912,6 +5937,7 @@ function update(dt) {
     return true;
   });
   if (newborns.length) S.monsters = S.monsters.concat(newborns);
+  if (!S.multi && died.length >= BIGBANG.MIN) bigBang(died, pop0); // A1 빅팡 (멀티 제외 — 레인 개체는 필터 첫 줄에서 빠지지만 규칙상 가드)
   // 💣 예약된 긴급 폭격: 소환이 끝나 몹이 전부 나온 뒤에 떨어진다.
   // (몹이 보이자마자 터뜨리면 2초에 걸쳐 나오는 뒷줄이 통째로 폭격을 피한다 — 예약분이 손해가 되면 안 된다)
   const sq = S.spawnQueue;
@@ -5928,6 +5954,7 @@ function killGoldNow() { return Math.max(1, Math.round(S.round * 0.042)) * ((S.e
 // 데미지 적용: 쉴드가 있으면 쉴드부터 깎고, 넘치면 체력으로 (모든 공격이 이 함수를 거침)
 function dealDamage(m, dmg, owner) {
   if (m.entering) return; // 🌞 강림 중엔 무적 (연출 보호 — 염산·폭격 포함 전 데미지가 이 함수를 거친다)
+  if (m.weakT > 0) dmg *= WEAK.MUL; // 약점 창(받침 A 분기 순서: entering 무적 → [2단계 공중 return 자리] → 보스 배수(약점·토성·화성) → [장갑] → [금성 lastHitAt] → 쉴드 → 체력)
   if (owner) m.lastHitBy = owner;
   if (owner && owner.weapon) { const st = S.stats[owner.weapon] = S.stats[owner.weapon] || { dmg: 0, kills: 0 }; st.dmg += dmg; }
   m.hitT = 0.09; // 피격 리액션 (스쿼시 + 놀란 표정)
@@ -6183,6 +6210,21 @@ function spawnShards(p) {
     S.effects.push({ type:'line', x1: p.x, y1: p.y, x2: m.x, y2: m.y, t: 0.16, color: '#8d6e63', w: 2.5 });
     S.effects.push({ type:'boom', x: m.x, y: m.y, r: 6, t: 0.14 });
   }
+}
+// A1 빅팡 (2026-10-09, 50_구현설계_1단계.md §2): 한 프레임에 BIGBANG.MIN 마리 이상 터지면 작은 폭발 N개 대신 큰 폭발 1개.
+//    파편 총량 ↓(144 → 40), 링 N → 1, 멈칫 0.05(보스 킬 0.08 아래), 금색 ×N. 화면 흔들림 없음(제거 이력). 개별 pop은 quiet로 바닥 얼룩만 남긴다.
+function bigBang(died, pop0) {
+  const n = died.length; let cx = 0, cy = 0;
+  for (const m of died) { cx += m.x; cy += m.y; } cx /= n; cy /= n;
+  let spread = 0; for (const m of died) spread = Math.max(spread, Math.hypot(m.x - cx, m.y - cy));
+  for (let i = pop0; i < S.effects.length; i++) { const e = S.effects[i]; if (e.type === 'pop' && !e.boss) e.quiet = true; }
+  S.effects.push({ type: 'boom', x: cx, y: cy, r: Math.max(BIGBANG.RING[0], Math.min(BIGBANG.RING[1], spread + 24)), t: 0.3 });
+  for (let i = 0; i < BIGBANG.PARTS; i++) { const m = died[i % n], a = Math.random() * 6.28, v = 110 + Math.random() * 230;
+    S.parts.push({ x: cx + (m.x - cx) * 0.5, y: cy + (m.y - cy) * 0.5, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 70, g: true, frag: i % 3 === 0, t: 0.45 + Math.random() * 0.3, c: i % 5 ? monColor(m) : '#ffffff', r: 2 + Math.random() * 3.2, spin: Math.random() * 6.28 }); }
+  if (S.parts.length > 500) S.parts.splice(0, S.parts.length - 500);
+  S.hitstop = Math.max(S.hitstop, BIGBANG.STOP);
+  addFloat(cx, cy - 34, `×${n}`, '#ffd54f', BIGBANG.FLOAT);
+  sfx('bigboom');
 }
 // 코믹 팝 사망: 0.11초 부풀었다가 → 팡! (즙 + 조각 + 바닥 얼룩). 실제 팡은 이펙트 루프에서 burst 시점에
 function deathPop(m) {
@@ -8280,6 +8322,10 @@ function draw() {
       ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(e.x, e.y, br, 0, Math.PI*2); ctx.stroke();
       ctx.lineWidth = 1;
+    } else if (e.type === 'cue') { // 패턴 1단계 바닥 링 예고 (A2 뭉침 1초 전 = 바깥으로 / 목성 중력 0.6초 전 = 안으로) — 타원 1개, 흔들림·글자 없음
+      const k = 1 - e.t / e.dur, rr = Math.max(0, e.r0 + (e.r1 - e.r0) * k);
+      ctx.strokeStyle = `rgba(${e.col},${(0.12 + 0.7 * e.t / e.dur).toFixed(2)})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(e.x, e.y, rr, rr * 0.62, 0, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1;
     } else if (e.type === 'fireball') { // 🔥 뭉게뭉게 화염: 구름처럼 겹친 화구 덩어리 (흰 코어→주황→붉은 가장자리)
       const pr = 1 - e.t / e.dur, al = e.t / e.dur;
       const R = e.r * (0.4 + 0.6 * Math.min(1, pr * 2.2)); // 초반에 확 부풀었다 머문다
@@ -12782,7 +12828,7 @@ const BOSS_INFO = {
   22: ['금성', '샛별이라고 예쁘게 불러줘도, 실은 태양계에서 제일 뜨거운 성격이다.'],
   23: ['지구', '환경 파괴 청구서를 직접 들고 왔다. 연체료 포함이다.'],
   24: ['화성', '이주 온다는 소문을 듣고 마중 나왔다. 편도였길 바란다.'],
-  25: ['목성', '태양계 최대 몸집. 다이어트는 4억 년 전에 포기했다.'],
+  25: ['목성', '태양계 최대 몸집. 다이어트는 4억 년 전에 포기했다.', '잡몹을 끌어모은다'], // 셋째 원소 = 능력 힌트(bossHint — BOSS_ABILITY에 25가 들어오는 C3부터 표시)
   26: ['토성', '고리는 무기가 아니라 장식이다. …아직까지는.'],
   27: ['태양', '지금 보이는 건 8분 전의 나다. 즉, 이미 늦었다.'],
   15: ['블랙홀', '들어온 손님은 많은데 후기가 하나도 없다. 이유는 묻지 마라.'],
@@ -12794,7 +12840,7 @@ function showMonsterInfo(m) {
   const mat = MATERIALS[m.mat] || { name: '수수께끼 공' };
   const bi = m.boss ? (BOSS_INFO[m.shape] || ['보스', '정체불명. 아무튼 세다.']) : null;
   const name = m.boss ? bi[0] + ' (보스)' : mat.name + (m.golden ? ' (황금)' : '');
-  const desc = m.boss ? `<i class="oi-quote">“${bi[1]}”</i><br><span class="oi-warn">시간 내에 못 잡으면 즉사</span>` : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…');
+  const desc = m.boss ? `<i class="oi-quote">“${bi[1]}”</i>${bossHint(m.shape) ? '<br><span class="tip">' + bossHint(m.shape) + '</span>' : ''}<br><span class="oi-warn">시간 내에 못 잡으면 즉사</span>` : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…'); // 10-09: 능력 힌트 줄(bossHint, 능력 있는 보스만)
   const hp = Math.max(0, Math.ceil(m.hp)), max = Math.max(1, Math.ceil(m.max));
   const pct = Math.max(0, Math.min(1, m.hp / m.max));
   const col = pct > 0.5 ? '#43a047' : pct > 0.25 ? '#ff9800' : '#e53935';
@@ -14364,7 +14410,10 @@ function renderPoker(spin) {
   const tutLine = tutPokerLine(ranks); // 🧭 첫 판 안내: 배너 첫 줄을 한 줄 안내로 (보스·이벤트 줄은 그대로 뒤에 붙는다)
   if (tutLine) banner.innerHTML = tutLine;
   if (S.multi) { const w = mpPokerWarn(); if (w) banner.innerHTML += `<br><span class="poker-boss-warning">${w}</span>`; } // 🤖 멀티: 게이트 앞 레인 개체 예고 (보스·습격대)
-  else if (S.round % 10 === 0 || (S.round >= SUN_ROUND && !S.hellCleared)) banner.innerHTML += `<br><span class="poker-boss-warning">${S.round >= SUN_ROUND && !S.hellCleared ? '태양 강림' : '보스 라운드'} — 시간 안에 못 잡으면 끝</span>`; // 09-08: 즉사 룰이 보스 클릭 팝업에만 있었다 (수치 없음, 미니멀 원칙 내)
+  else if (S.round % 10 === 0 || (S.round >= SUN_ROUND && !S.hellCleared)) { // 09-08: 즉사 룰이 보스 클릭 팝업에만 있었다 (수치 없음, 미니멀 원칙 내) · 10-09: 보스 이름 + 능력 한 구절(bossHint, 능력 있는 보스만)
+    const sun = S.round >= SUN_ROUND && !S.hellCleared, sh = bossShapeFor(S.round), bi = BOSS_INFO[sh], h = sun ? '' : bossHint(sh);
+    banner.innerHTML += `<br><span class="poker-boss-warning">${sun ? '태양 강림' : '보스 라운드 — ' + bi[0] + (h ? ': ' + h : '')} · 시간 안에 못 잡으면 끝</span>`;
+  }
   if (S.event) banner.innerHTML += `<br><span class="poker-event-notice">다음 전투 이벤트: ${S.event.name} — ${S.event.desc}</span>`;
   btn.textContent = double ? '유닛 2기 동시 소환!' : '유닛 소환!';
   cardsEl.innerHTML = '';
