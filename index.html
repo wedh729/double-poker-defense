@@ -4530,7 +4530,7 @@ function effDmgBase(u, splashPer) {
 function isHiddenCombo(u) { return !!(u.gamble || u.junk || u.quartet || u.execute || u.shogun || u.chrono || u.slot || u.joker || u.catapult); } // 히든 조합 유닛 판별
 // 히든 유닛 표기 메타: [아이콘, 이름, 테마색] — 종족(하트/다이아)이 아니라 자기 정체성으로 표기
 const HIDDEN_META = { gamble:['gambler','갬블러','#c9a227'], junk:['junk','고물상','#8d6e63'], quartet:['quartet','콰르텟','#5b48d0'], execute:['guillotine','길로틴','#c62828'], shogun:['shogun','쇼군','#ff6d1f'], chrono:['chrono','시간술사','#42a5f5'], slot:['slot','슬롯머신','#c9a227'], joker:['joker','조커','#8c5bff'], catapult:['catapult','투석기','#78909c'] }; // [0] = 단색 아이콘 이름(DPD_ICONS)
-const HIDDEN_INK = { gambler: '#9a7400', junk: '#5d4037', slot: '#9a7400', quartet: '#3b2c9e', chrono: '#1d6fb8', shogun: '#b23c00', guillotine: '#7f1010', catapult: '#455a64' }; // 몸통 문양만 진하게 (흰 카드 위 금·갈색 선이 연했다 — 10-07 리뷰). 테두리·이름 색은 HIDDEN_META[2] 그대로. 10-08 히든 고유 디자인: 콰르텟·시간술사·쇼군·길로틴·투석기 5종 추가(spec_h2·h3 제안값 — 밝은 테마색의 문양 외곽선이 연해지지 않게. 키 = 아이콘명, 길로틴 = guillotine). 읽는 곳 = hiddenPal + 아직 안 옮긴 히든의 옛 선 아이콘(drawUnitCore hm 분기)
+const HIDDEN_INK = { gambler: '#9a7400', junk: '#5d4037', slot: '#9a7400', quartet: '#3b2c9e', chrono: '#1d6fb8', shogun: '#b23c00', guillotine: '#7f1010', catapult: '#455a64' }; // 몸통 문양만 진하게 (흰 카드 위 금·갈색 선이 연했다 — 10-07 리뷰). 테두리·이름 색은 HIDDEN_META[2] 그대로. 10-08 히든 고유 디자인: 콰르텟·시간술사·쇼군·길로틴·투석기 5종 추가(spec_h2·h3 제안값 — 밝은 테마색의 문양 외곽선이 연해지지 않게. 키 = 아이콘명, 길로틴 = guillotine). 읽는 곳 = hiddenPal 한 곳(C3에서 9종 전부 고유 디자인으로 옮겨 옛 선 아이콘(drawUnitCore hm 분기)은 삭제)
 function hiddenMeta(u) { for (const k in HIDDEN_META) if (u[k]) return HIDDEN_META[k]; return null; }
 function effCd(u) { return u.cd * (u.spdBuff || 1) * (S.stimT > 0 ? 0.5 : 1) * (isHiddenCombo(u) ? 1.4286 : 1); } // 히든 조합 유닛 공속 30%↓
 
@@ -10368,12 +10368,10 @@ function drawUnitCore(u, lw, faceX) {
   // 몸통 안: 무늬 + 라벨 (광부는 표기 없음 — 곡괭이만)
   ctx.textAlign = 'center';
   if (L) { heroG(u, faceX, g1Inner, P); heroG(u, faceX, L.front, P); } // 표준 영웅: 금선+테+큰 문양(에이스 = 흰 ♠) → 어깨판(슈퍼 = 가슴판+어깨 갑옷). 에이스 영웅이 아래 ♠ 분기를 타지 않게 먼저 검사
-  else if (HL) { heroG(u, faceX, HL.inner, P); heroG(u, faceX, HL.front, P); } // 히든 고유 디자인: 가운데 문양·소품(inner) → 어깨·가슴 장식 + 공통 표시 모서리 쇠(front 맨 끝). 아래 hm 아이콘 분기보다 앞. (10-08 C1) 조커 코어 얼굴 전체(뿔+방울+마스크+미소) 블록은 조커가 HIDDEN_LOOK 표에 들어가 도달 불가 → 삭제, 가면 1개는 h1JokerInner
+  else if (HL) { heroG(u, faceX, HL.inner, P); heroG(u, faceX, HL.front, P); } // 히든 고유 디자인: 가운데 문양·소품(inner) → 어깨·가슴 장식 + 공통 표시 모서리 쇠(front 맨 끝). (10-08 C1) 조커 코어 얼굴 전체(뿔+방울+마스크+미소) 블록은 조커가 HIDDEN_LOOK 표에 들어가 도달 불가 → 삭제, 가면 1개는 h1JokerInner. (C3) 히든 9종 전부 표에 들어가 옛 `else if (hm)` 선 아이콘(dpdDrawIcon 13px) 분기도 도달 불가(hm은 히든 9종에서만 non-null) → 삭제
   else if (u.hidden || u.ace) { // 에이스·에이스 영웅: ♠ 유지
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
     drawSuit('♠', u.x, u.y - 1, 5.6, '#fff'); // 벡터 ♠ (정중앙)
-  } else if (hm) { // 히든 유닛: 종족 무늬 대신 자기 문양 (단색 선 아이콘 — 흰 몸통 위라 테두리와 같은 영웅 색)
-    ctx.font = '13px sans-serif'; dpdDrawIcon(ctx, hm[0], u.x, u.y - 0.5, 13, HIDDEN_INK[hm[0]] || hm[2]);
   } else if (!u.miner) {
     ctx.fillStyle = raceC; ctx.font = 'bold 10px sans-serif';
     drawSuit(RACES[u.race].suit, u.x, u.y - 4.6, 4.4, raceC); // 벡터 문양 — 정중앙 보장 (구 fillText는 기기 폰트에 따라 쏠렸다)
@@ -10529,7 +10527,7 @@ function heroLook(u) { return isStdHero(u) ? (HERO_LOOK[u.tier] || null) : null;
 // 설계 = Desktop\Claude Code\DPD\히든영웅_직접이식_2026-10-08 (10_검수·구현계획 §3-1·§3-3, spec_h1~h3 — 좌표 원본 spec_h*_draw.js). 좌표는 몸통 중심 원점·아래 +y·오른쪽 조준(faceX +1) 기준, heroG로 감싼다(히든은 super 없음 → s = 1).
 // 키 = 플래그명(= ascendKey(u) = HIDDEN_META 키). tier 키 금지 — 조커 tier 1(원페어)·길로틴/투석기 7(포카드)·콰르텟/시간술사 4(스트레이트)가 겹친다. 표에 없는 유닛(노말·에이스·슈퍼에이스·표준 영웅·광부·아직 안 옮긴 히든)은 hiddenLook null → 기존 경로 한 픽셀도 안 바뀜.
 // 행 = { w, h, shape:'rect'|'cab'|'hour', waist?, lobe?, legs:true|false, hat, shadowW?, back(u,P), inner(u,P), front(u,P), head(u,P) } — C1 h1(갬블러·슬롯머신·조커, spec_h1 H1_LOOK 값 그대로) · C2 h2(고물상·콰르텟·시간술사, spec_h2 H2_LOOK 값 그대로) · C3 h3(쇼군·길로틴·투석기)에서 3행씩 채운다.
-//   head = 유저 선택(10-08) B안 — 갬블러 주사위 모자 · 슬롯머신 전구 간판 · 조커 3갈래 모자 · 고물상 냄비 투구 · 콰르텟 8분음표 · 시간술사 시계 문자판. 어깨 = 기존 식 (W/2−2, −3)(drawUnitArm) — 그 높이의 오른쪽 변이 직선(cab의 r10은 y −20~−10)이거나 변 위(hour 허리 곡선 t 0.5 점 (14.25, −2))라 보정 없음
+//   head = 유저 선택(10-08) B안 — 갬블러 주사위 모자 · 슬롯머신 전구 간판 · 조커 3갈래 모자 · 고물상 냄비 투구 · 콰르텟 8분음표 · 시간술사 시계 문자판 · 쇼군 진가사 삿갓 · 길로틴 처형대 틀 · 투석기 나무 방패 지붕. 어깨 = 기존 식 (W/2−2, −3)(drawUnitArm) — 그 높이의 오른쪽 변이 직선(cab의 r10은 y −20~−10)이거나 변 위(hour 허리 곡선 t 0.5 점 (14.25, −2))라 보정 없음
 const HIDDEN_LOOK = {
   gamble: { w: 34, h: 36, shape: 'rect', legs: true, hat: 40, back: h1GambleBack, inner: h1GambleInner, front: h1GambleFront, head: h1GambleHeadDie },   // 갬블러: 정사각에 가까운 카드, 큰 주사위(5눈) + 초록 딜러 조끼 깃 + 빨간 나비넥타이 + 등 뒤 칩 더미, 머리 = 주사위 모자(6눈)
   slot:   { w: 30, h: 40, shape: 'cab',  legs: true, hat: 40, back: h1SlotBack,   inner: h1SlotInner,   front: h1SlotFront,   head: h1SlotHeadSign },    // 슬롯머신: 위 둥근 캐비닛 몸통, 릴 창 3칸(★·체리·♦) + 동전받이·금화 + 등 쪽 빨간 공 레버, 머리 = 전구 간판
@@ -10537,6 +10535,9 @@ const HIDDEN_LOOK = {
   junk:    { w: 36, h: 34, shape: 'rect', legs: true, hat: 40, back: h2JunkBack,    inner: h2JunkInner,    front: h2JunkFront,    head: h2JunkHeadPot },     // 고물상: 짐에 눌린 넓고 낮은 카드, 등 뒤 큰 배낭(구리 파이프·톱니바퀴) + 가운데 돈 자루(금화) + 멜빵 2 + 공구 벨트, 머리 = 냄비 투구
   quartet: { w: 28, h: 40, shape: 'rect', legs: true, hat: 40, back: h2QuartetBack, inner: h2QuartetInner, front: h2QuartetFront, head: h2QuartetHeadNote }, // 콰르텟: 홀쭉한 지휘자 카드, 가슴 오선 4줄 + 빔 음표 2 + 큰 나비넥타이 + 연미복 깃, 망토 대신 연미복 꼬리 2갈래, 머리 = 머리띠 위 8분음표
   chrono:  { w: 32, h: 40, shape: 'hour', waist: [9, 3], lobe: [-9, 12], legs: true, hat: 40, back: h2ChronoBack, inner: h2ChronoInner, front: h2ChronoFront, head: h2ChronoHeadDial }, // 시간술사: 몸통 자체가 모래시계(허리 반폭 9 at y +3) — 위 모래·흐름·아래 더미 + 위·아래 쇠 판 + 로브 자락, 머리 = 쇠 기둥 위 시계 문자판(눈금 12·바늘 2, 숫자 없음)
+  shogun:   { w: 34, h: 38, shape: 'rect', legs: true,  hat: 40, back: h3ShogunBack,   inner: h3ShogunInner,   front: h3ShogunFront,   head: h3ShogunHeadJingasa }, // 쇼군: 넓은 무사 카드, 가슴 큰 불꽃 문장 + 오비 + 옻칠 어깨 판갑 2(검붉은 옻칠 + 주황 끈 — 영웅 금 어깨판 아님) + 등 뒤 사시모노 깃발(해 원판) + 진홍 하오리, 머리 = 진가사(전립 삿갓)
+  execute:  { w: 30, h: 40, shape: 'rect', legs: true,  hat: 40, back: h3ExecuteBack,  inner: h3ExecuteInner,  front: h3ExecuteFront,  head: h3ExecuteHeadFrame },  // 길로틴: 키 큰 처형인 카드, 가운데 큰 처형대(쇠 기둥 2 + 비스듬한 강철 날 + 목판·구멍 + 받침) + 가죽 어깨띠 + 벨트 + 암적색 긴 망토, 머리 = 머리띠 위 처형대 틀
+  catapult: { w: 32, h: 36, shape: 'rect', legs: false, hat: 40, shadowW: 21, back: h3CatapultBack, inner: h3CatapultInner, front: h3CatapultFront, head: h3CatapultHeadRoof }, // 투석기: 다리 없는 설치형(legs:false) — 카드가 나무 받침틀(가로대 2 + 기둥 2 + 바퀴 2) 위, 가운데 X 버팀목 + 큰 바위, 왼쪽 탄약 더미, 오른쪽 어깨 쇠 팔 축 원판(피벗 (23,−3)을 품음), 그림자 반폭 21(받침 폭 42), 머리 = 나무 방패 지붕
 };
 function hiddenLook(u) { return isHiddenCombo(u) ? (HIDDEN_LOOK[ascendKey(u)] || null) : null; }
 // 고정색 — "히든 = 은·남색" 언어(영웅 금·에이스 핑크·슈퍼 무지개·포카드/로얄 흰 털과 안 겹침) + h3 옻칠·가죽·나무·쇠·돌 (spec_h1 H1 · spec_h3 H3 상수 그대로). 면 / 외곽 / 하이라이트
@@ -10879,6 +10880,141 @@ function h2ChronoHeadDial(u, P) {
   hidLine(0, -31, -3.3, -32.9, '#1c262b', 1.3); hidLine(0, -31, 4.85, -33.8, '#1c262b', 1.1);                                       // 시침(10시)·분침(2시)
   ctx.beginPath(); ctx.arc(0, -31, 0.9, 0, Math.PI * 2); ctx.fillStyle = P.ink; ctx.fill();                                       // 중심 핀
   ctx.beginPath(); ctx.arc(0, -31, 8.4, Math.PI * 1.1, Math.PI * 1.45); ctx.strokeStyle = '#8ec8ff'; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt'; // 베젤 하이라이트
+}
+// ---------- h3 공통 도우미 (= spec_h3 h3Poly·h3Wheel·h3Stone; h3Out·h3Line·h3Hl은 hidOut·hidLine·hidHl과 같음) ----------
+function hidPoly(pts) { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); }
+function hidWheel(cx, cy, r) { // 나무 바퀴: 테 + 살 2줄(4방향) + 쇠 축 + 하이라이트 호
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fillStyle = HID_C.WOOD_D; ctx.fill(); hidOut(HID_C.WOOD_OUT, 1.0);
+  for (const a of [0.4, 0.4 + Math.PI / 2]) hidLine(cx - Math.cos(a) * (r - 1.2), cy - Math.sin(a) * (r - 1.2), cx + Math.cos(a) * (r - 1.2), cy + Math.sin(a) * (r - 1.2), HID_C.WOOD_OUT, 0.9);
+  ctx.beginPath(); ctx.arc(cx, cy, 1.6, 0, Math.PI * 2); ctx.fillStyle = HID_C.METAL; ctx.fill(); hidOut(HID_C.METAL_OUT, 0.6);
+  ctx.beginPath(); ctx.arc(cx, cy, r - 1.4, Math.PI * 1.1, Math.PI * 1.45); ctx.strokeStyle = HID_C.WOOD_HL; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+}
+function hidStone(cx, cy, r, rot) { // 각진 바위 (7각) + 하이라이트 한 줄
+  ctx.beginPath();
+  const k = [[0, -1.2], [0.87, -0.73], [1.0, 0.2], [0.4, 0.93], [-0.53, 0.87], [-1.07, 0.13], [-0.8, -0.8]];
+  k.forEach(([px, py], i) => { const c = Math.cos(rot), s = Math.sin(rot), x = cx + (px * c - py * s) * r, y = cy + (px * s + py * c) * r; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+  ctx.closePath(); ctx.fillStyle = HID_C.STONE; ctx.fill(); hidOut(HID_C.STONE_OUT, r > 5 ? 1.1 : 0.8);
+  hidLine(cx - r * 0.55, cy - r * 0.35, cx - r * 0.2, cy - r * 0.75, HID_C.STONE_HL, r > 5 ? 1.0 : 0.8);
+}
+// ---------- h3 쇼군 (shogun) — 34×38 넓은 무사 카드. 능력 = 불꽃 카타나 → 가슴 큰 불꽃 문장 + 옻칠 어깨 판갑 2 + 오비 + 등 뒤 사시모노 깃발 + 진홍 하오리 (spec_h3_draw.js §5 그대로) ----------
+function h3ShogunBack(u, P) {
+  // 사시모노(등 깃발): 기둥 (몸 뒤 왼쪽, 위로 솟음) + 깃발(뒤 −x 로 펄럭) + 해 원판 문양 + 하이라이트
+  hidLine(-13, 12, -13, -39, HID_C.WOOD_OUT, 1.8);
+  ctx.beginPath(); ctx.arc(-13, -39.8, 1.4, 0, Math.PI * 2); ctx.fillStyle = P.ink; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-13, -38); ctx.lineTo(-28, -36.5); ctx.quadraticCurveTo(-25, -31, -26.5, -25); ctx.lineTo(-13, -25.5); ctx.closePath();
+  ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink);
+  ctx.beginPath(); ctx.arc(-20.5, -31.3, 2.8, 0, Math.PI * 2); ctx.fillStyle = P.ink; ctx.fill();
+  hidLine(-15, -36.3, -24, -35.3, P.edgeL, 1.0);
+  // 진홍 하오리(망토) — 몸 뒤 왼쪽, 밑단 직선
+  ctx.beginPath(); ctx.moveTo(-8, -16); ctx.lineTo(-14, -12); ctx.quadraticCurveTo(-27, -1, -24, 16); ctx.lineTo(-16, 19); ctx.lineTo(-8, 14); ctx.closePath();
+  ctx.fillStyle = HID_C.MAROON; ctx.fill(); hidOut(HID_C.MAROON_OUT);
+  hidHl(-15, -10, -24, -1, -22.5, 10, HID_C.MAROON_HL, 1.0);
+}
+function h3ShogunInner(u, P) {
+  // 큰 불꽃 문장 (카드 가운데 위, 높이 22) — 테마색 면 + 안쪽 노란 혀 + 하이라이트
+  ctx.beginPath();
+  ctx.moveTo(0, -14); ctx.quadraticCurveTo(8, -7, 6, 2); ctx.quadraticCurveTo(5, 7, 0, 8); ctx.quadraticCurveTo(-5, 7, -6, 2);
+  ctx.quadraticCurveTo(-7, -2, -4, -5); ctx.quadraticCurveTo(-8, -6, -6, -10); ctx.quadraticCurveTo(-4, -7, -2, -8); ctx.quadraticCurveTo(-3, -11, 0, -14); ctx.closePath();
+  ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink, 1.0);
+  ctx.beginPath(); ctx.moveTo(1, -8); ctx.quadraticCurveTo(4.5, -3, 3, 2); ctx.quadraticCurveTo(2, 4.5, 0, 5); ctx.quadraticCurveTo(-2, 4.5, -2.5, 1.5); ctx.quadraticCurveTo(-3, -3, 1, -8); ctx.closePath();
+  ctx.fillStyle = '#ffb300'; ctx.fill();
+  hidLine(-1.2, -1.5, -1.6, 2.2, '#fff3c4', 0.9);
+  // 오비(띠): 어두운 가로 띠 + 하이라이트 + 테마색 매듭
+  roundRect(-15, 9.5, 30, 4.6, 1.2); ctx.fillStyle = '#2b1b1b'; ctx.fill(); hidOut('#120909', 0.8);
+  hidLine(-13, 10.8, -4, 10.8, '#5a3f3f', 0.8);
+  roundRect(-3.2, 8.6, 6.4, 6.4, 1.0); ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink, 0.8);
+}
+function h3ShogunFront(u, P) {
+  // 옻칠 어깨 판갑(소데) 2 — 몸통 양옆 변에 걸쳐 어깨 높이(−3)까지 내려옴. 테마색 끈 2줄 + 하이라이트. (금 아님 — 영웅 금 어깨판과 색·위치 다름)
+  for (const x of [-22, 12]) {
+    roundRect(x, -14, 10, 12, 2); ctx.fillStyle = HID_C.LACQ; ctx.fill(); hidOut(HID_C.LACQ_OUT);
+    for (const y of [-10, -6]) hidLine(x + 1.6, y, x + 8.4, y, P.edge, 1.0);
+    hidLine(x + 1.8, -12.4, x + 5.5, -12.4, HID_C.LACQ_HL, 0.8);
+  }
+  hiddenMark(HIDDEN_LOOK.shogun); // 공통 표시 (front 맨 끝)
+}
+// 머리 B안: 진가사(전립 삿갓) — 넓고 납작한 옻칠 원뿔 + 테마색 테 + 앞면 줄 + 꼭지 못. 넓은 삼각 실루엣(꼭대기 −35.8, 폭 ±21.9). 깃발은 코어(뒤)라 삿갓 왼쪽 비탈 뒤에서 솟음
+function h3ShogunHeadJingasa(u, P) {
+  ctx.beginPath(); ctx.moveTo(-21, -21); ctx.quadraticCurveTo(-12, -23.5, 0, -34); ctx.quadraticCurveTo(12, -23.5, 21, -21); ctx.closePath();
+  ctx.fillStyle = HID_C.LACQ; ctx.fill(); hidOut(HID_C.LACQ_OUT, 1.0);
+  hidHl(-15, -22.5, -9, -25, -3, -30.5, HID_C.LACQ_HL, 1.0);
+  roundRect(-21.5, -22.4, 43, 2.8, 1.2); ctx.fillStyle = P.edge; ctx.fill(); hidOut(P.ink);                                      // 테
+  hidLine(-7, -27, 0, -33, P.edge, 1.3);                                                                                      // 앞면 테마색 줄 (문장 대신 단순 줄)
+  ctx.beginPath(); ctx.arc(0, -34.3, 1.5, 0, Math.PI * 2); ctx.fillStyle = P.ink; ctx.fill();                                   // 꼭지 못
+}
+// ---------- h3 길로틴 (execute) — 30×40 키 큰 처형인 카드. 능력 = 칼날·처형 → 카드 가운데 큰 처형대(기둥 2 + 가로대 + 비스듬한 강철 날 + 목판 + 받침) + 왼쪽 가죽 어깨띠 + 벨트 + 암적색 망토 (spec_h3_draw.js §6 그대로) ----------
+function h3ExecuteBack(u, P) {
+  // 암적색 망토 (몸 뒤 왼쪽, 길고 무겁게 — 밑단이 몸통 아래 22까지). 두건(검정)과 색을 달리해 실루엣이 갈라지게
+  ctx.beginPath(); ctx.moveTo(-8, -18); ctx.lineTo(-14, -14); ctx.quadraticCurveTo(-29, 0, -26, 17); ctx.lineTo(-18, 22); ctx.lineTo(-10, 18); ctx.closePath();
+  ctx.fillStyle = HID_C.CRIMSON; ctx.fill(); hidOut(HID_C.CRIMSON_OUT);
+  hidHl(-15, -12, -25, -2, -24, 10, HID_C.CRIMSON_HL, 1.0);
+}
+function h3ExecuteInner(u, P) {
+  // 처형대 — 가로대 → 기둥 2 → 강철 날(비스듬) → 목판(구멍) → 받침
+  roundRect(-10.5, -18, 21, 3, 0.8); ctx.fillStyle = HID_C.IRON; ctx.fill(); hidOut(HID_C.IRON_OUT, 0.7);
+  for (const x of [-9, 6]) { roundRect(x, -17, 3, 29, 0.8); ctx.fillStyle = HID_C.IRON; ctx.fill(); hidOut(HID_C.IRON_OUT, 0.7); hidLine(x + 0.8, -15, x + 0.8, 8, '#4a4a56', 0.7); }
+  hidPoly([[-6, -13], [6, -13], [6, -3], [-6, -7.5]]); ctx.fillStyle = HID_C.STEEL; ctx.fill(); hidOut(HID_C.STEEL_OUT, 0.8);   // 날 (아래 변이 비스듬 = 길로틴 날)
+  hidLine(-5.5, -7.2, 5.5, -2.8, P.edge, 1.2);                                                                              // 날의 날카로운 변 (테마색)
+  hidLine(-4.5, -11.5, 2.5, -11.5, HID_C.STEEL_HL, 0.9);
+  roundRect(-7, 3, 14, 3.2, 0.8); ctx.fillStyle = HID_C.LEATHER; ctx.fill(); hidOut(HID_C.LEATHER_OUT, 0.7);                   // 목판
+  ctx.beginPath(); ctx.arc(0, 4.6, 1.7, 0, Math.PI * 2); ctx.fillStyle = '#fffdf5'; ctx.fill();                             // 목 구멍 (흰 원 1개 — 얼굴 아님)
+  roundRect(-10.5, 9, 21, 3, 0.8); ctx.fillStyle = HID_C.IRON; ctx.fill(); hidOut(HID_C.IRON_OUT, 0.7);                        // 받침
+}
+function h3ExecuteFront(u, P) {
+  // 가죽 어깨띠 (왼쪽 −x 세로, 어두운 줄 위 가죽 줄 + 하이라이트) + 징 2
+  hidLine(-12.5, -19, -12.5, 13, HID_C.LEATHER_OUT, 4.6); hidLine(-12.5, -19, -12.5, 13, HID_C.LEATHER, 3.2); hidLine(-13.3, -17, -13.3, -1, HID_C.LEATHER_HL, 0.8);
+  for (const y of [-12, -2]) { ctx.beginPath(); ctx.arc(-12.5, y, 1.1, 0, Math.PI * 2); ctx.fillStyle = HID_C.METAL; ctx.fill(); }
+  // 벨트 + 쇠 버클
+  roundRect(-15.5, 13, 31, 4.4, 1.2); ctx.fillStyle = HID_C.LEATHER; ctx.fill(); hidOut(HID_C.LEATHER_OUT, 0.8);
+  hidLine(-13, 14.2, -3, 14.2, HID_C.LEATHER_HL, 0.8);
+  roundRect(-2.4, 12.3, 4.8, 5.8, 0.8); ctx.fillStyle = HID_C.METAL; ctx.fill(); hidOut(HID_C.METAL_OUT, 0.7);
+  hiddenMark(HIDDEN_LOOK.execute); // 공통 표시 (front 맨 끝)
+}
+// 머리 B안: 처형대 머리 장식 — 머리띠 위 나무 기둥 2 + 가로대 + 비스듬한 강철 날. 위가 트인 ㅍ 실루엣(꼭대기 −43.9, 폭 ±9.9 — roomSnap hat 40(−44.7) 안)
+function h3ExecuteHeadFrame(u, P) {
+  roundRect(-9, -22.5, 18, 3, 1.2); ctx.fillStyle = HID_C.IRON; ctx.fill(); hidOut(HID_C.IRON_OUT);                                     // 머리띠
+  for (const x of [-8, 5]) { roundRect(x, -42, 3, 20, 0.8); ctx.fillStyle = HID_C.LEATHER; ctx.fill(); hidOut(HID_C.LEATHER_OUT, 0.8); hidLine(x + 0.8, -40, x + 0.8, -26, HID_C.LEATHER_HL, 0.7); }
+  roundRect(-9.5, -43.5, 19, 3, 0.8); ctx.fillStyle = HID_C.LEATHER; ctx.fill(); hidOut(HID_C.LEATHER_OUT, 0.8);                       // 가로대
+  hidPoly([[-5, -39], [5, -39], [5, -29.5], [-5, -34]]); ctx.fillStyle = HID_C.STEEL; ctx.fill(); hidOut(HID_C.STEEL_OUT, 0.8);         // 날
+  hidLine(-4.5, -33.7, 4.5, -29.8, P.edge, 1.2);
+  hidLine(-3.5, -37.5, 2.5, -37.5, HID_C.STEEL_HL, 0.9);
+}
+// ---------- h3 투석기 (catapult) — 32×36 카드가 나무 받침틀 위에 고정된 설치형 공성 무기, 다리 없음(legs:false). back = 뒤 가로대 + 왼쪽 기둥 + 왼쪽(뒤) 바퀴 / inner = X 버팀목 + 큰 바위 / front = 오른쪽 기둥·앞 가로대·오른쪽 바퀴·탄약 더미·팔 축 원판 (spec_h3_draw.js §7 그대로) ----------
+//   팔 축: 무기 피벗 = (W/2+7, −3) = (23, −3). front의 축 원판 arc(19,−3,4.5)가 x 14.5~23.5를 덮어 피벗을 품는다(좌우 조준용 정지 그림). 상·하 조준은 drawWeapon 투석기 분기의 라이브 허브(H11b)가 8방향으로 받침
+function h3CatapultBack(u, P) {
+  roundRect(-21, 16.5, 42, 5, 1.2); ctx.fillStyle = HID_C.WOOD; ctx.fill(); hidOut(HID_C.WOOD_OUT);                                     // 뒤 가로대
+  hidLine(-19, 17.8, -8, 17.8, HID_C.WOOD_HL, 0.9);
+  roundRect(-20.5, -8, 5, 26, 1.0); ctx.fillStyle = HID_C.WOOD; ctx.fill(); hidOut(HID_C.WOOD_OUT);                                      // 왼쪽 기둥 (뒤)
+  hidLine(-19.3, -6, -19.3, 8, HID_C.WOOD_HL, 0.8);
+  roundRect(-21, 2, 6, 2.2, 0.5); ctx.fillStyle = HID_C.METAL_OUT; ctx.fill();                                                       // 쇠 띠
+  hidWheel(-15, 23, 5.5);                                                                                                           // 왼쪽 바퀴 (뒤)
+}
+function h3CatapultInner(u, P) {
+  // X 버팀목 (카드 가운데 대각 2줄: 어두운 줄 위 나무 줄)
+  for (const [x0, y0, x1, y1] of [[-11, -12, 11, 10], [11, -12, -11, 10]]) { hidLine(x0, y0, x1, y1, HID_C.WOOD_OUT, 4.6); hidLine(x0, y0, x1, y1, HID_C.WOOD, 3.2); }
+  hidLine(-9.5, -10.5, -4, -5, HID_C.WOOD_HL, 0.8);
+  hidStone(0, -1, 8.2, 0.15);                                                                                                       // 큰 바위 (탄환) — 가운데
+}
+function h3CatapultFront(u, P) {
+  roundRect(15.5, -8, 5, 28.5, 1.0); ctx.fillStyle = HID_C.WOOD; ctx.fill(); hidOut(HID_C.WOOD_OUT);                                     // 오른쪽 기둥 (앞) — 카드 오른쪽 변 바깥에 서서 팔 축을 받침
+  hidLine(16.7, -6, 16.7, 8, HID_C.WOOD_HL, 0.8);
+  roundRect(15, 2, 6, 2.2, 0.5); ctx.fillStyle = HID_C.METAL_OUT; ctx.fill();
+  roundRect(-21, 19.5, 42, 4.5, 1.2); ctx.fillStyle = HID_C.WOOD_D; ctx.fill(); hidOut(HID_C.WOOD_OUT);                                   // 앞 가로대
+  hidLine(-19, 20.7, -10, 20.7, HID_C.WOOD_HL, 0.9);
+  hidWheel(15, 23, 5.5);                                                                                                            // 오른쪽 바퀴 (앞)
+  hidStone(-22, 12, 3.8, 0.6); hidStone(-16.5, 13.5, 3.3, 2.1); hidStone(-19.5, 7.5, 3.1, 1.2);                                       // 탄약 바위 더미 (왼쪽, 가로대 위)
+  ctx.beginPath(); ctx.arc(19, -3, 4.5, 0, Math.PI * 2); ctx.fillStyle = HID_C.METAL; ctx.fill(); hidOut(HID_C.METAL_OUT, 1.0);           // 팔 축 원판 (오른쪽 어깨) — 피벗 (23,−3) 을 품음
+  ctx.beginPath(); ctx.arc(19, -3, 1.5, 0, Math.PI * 2); ctx.fillStyle = HID_C.METAL_OUT; ctx.fill();                                 // 볼트
+  ctx.beginPath(); ctx.arc(19, -3, 3.2, Math.PI * 1.1, Math.PI * 1.45); ctx.strokeStyle = HID_C.METAL_HL; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  hiddenMark(HIDDEN_LOOK.catapult); // 공통 표시 (front 맨 끝 — 오른쪽 아래는 기둥 위에 얹힘)
+}
+// 머리 B안: 나무 방패 지붕(만틀렛) — 카드 위 작은 기둥 2 위에 박공 지붕 + 쇠 띠 2 + 마루 덮개. 집 지붕 삼각 실루엣(꼭대기 −35.5, 폭 ±20.5). 쇼군 삿갓(옻칠 + 주황 테)과 색·테가 달라 혼동 없음
+function h3CatapultHeadRoof(u, P) {
+  for (const x of [-13, 10]) { roundRect(x, -21.5, 3, 4.5, 0.5); ctx.fillStyle = HID_C.WOOD; ctx.fill(); hidOut(HID_C.WOOD_OUT, 0.8); }
+  hidPoly([[-20, -20], [0, -34], [20, -20]]); ctx.fillStyle = HID_C.WOOD_L; ctx.fill(); hidOut(HID_C.WOOD_OUT, 1.0);                       // 지붕
+  for (const sx of [-1, 1]) hidLine(sx * 15, -22.5, sx * 3, -31, HID_C.METAL_OUT, 1.0);                                              // 쇠 띠
+  hidLine(-16.5, -21.5, -7, -28.2, HID_C.WOOD_HL, 1.0);
+  roundRect(-2.6, -35.5, 5.2, 3, 1.0); ctx.fillStyle = HID_C.METAL_OUT; ctx.fill();                                                   // 마루 덮개
 }
 // 고정색 (금 + 로얄 보라 · 스트레이트 플러쉬 안감) — 에이스여도 금은 그대로
 const HERO_C = {
@@ -11929,7 +12065,7 @@ function drawHeadgear(u, topY, faceX) { // faceX = 바라보는 쪽(±1) — dra
   }
   // (10-08) 풀하우스 해적모·플러쉬 가스버너 분기(hero && tier && !isHiddenCombo = 표준 영웅)는 위 HERO_LOOK[4~6].head가 대신하므로 삭제.
   //   슈퍼영웅 무지개 보석 대관(u.super) 분기도 삭제 — 슈퍼는 spawnHero(…, sup)로만 생기는 표준 영웅이라 위 HERO_LOOK[0~9].head가 전부 받고, 히든 영웅 9종은 슈퍼가 되는 경로가 없으며 슈퍼에이스는 위 superAce 분기에서 걸린다 (도달 불가)
-  if (u.hero) { drawCrown(cx, topY, { col:'#ffd54f', points:5, h:11, gem:'#e91e8c', band:'#c9a227', dome:true }); return; }
+  //   (10-08 히든 C3) `if (u.hero) drawCrown(금왕관)` 줄도 삭제 — 유일한 도달 경로였던 히든 9종이 전부 HIDDEN_LOOK 표(맨 위 hiddenLook 분기)에 들어갔고, 표준 영웅은 heroLook 분기, 슈퍼에이스·에이스는 그 앞 분기에서 return
   switch (t) {
     case 9: { // 로얄: 임페리얼 대관 (아치 + 벨벳 + 대형 루비 + 광채)
       drawCrown(cx, topY, { col:'#ffd54f', points:5, h:11, gem:'#e53935', band:'#c9a227', velvet:'#5e2b8a', arch:true });
@@ -12136,6 +12272,8 @@ function drawWeapon(u, x, y) {
     let ang = -0.15 + 1.05 * wind;                                  // 천천히 뒤로 젖힘
     if (wind >= 1) ang += Math.sin(S.time * 34) * 0.025;            // 완전 장전 — 긴장 미세 떨림
     if (u.atkAnim) ang = -0.15 - 0.75 * u.atkAnim;                  // 발사 순간 앞으로 스냅 (atkAnim 감쇠)
+    // (10-08 히든 고유 디자인 H11b) 팔 피벗 위 쇠 허브 — 코어 front의 축 원판(arc(19,−3,4.5), 정지 그림)은 좌우 조준에서만 팔 밑동과 맞물리므로, 8방향(위·아래 조준 포함)을 따라오는 작은 허브를 팔 밑에 라이브로 1개. 팔 회전식·돌·u.stone은 그대로
+    ctx.beginPath(); ctx.arc(x + 1, y, 2.2, 0, Math.PI * 2); ctx.fillStyle = '#4d555a'; ctx.fill(); ctx.strokeStyle = '#9aa3a8'; ctx.lineWidth = 0.9; ctx.stroke();
     ctx.save(); ctx.translate(x + 1, y); ctx.rotate(ang);
     ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 2.5; // 팔
     ctx.beginPath(); ctx.moveTo(-4, 6); ctx.lineTo(6, -8); ctx.stroke();
