@@ -4678,9 +4678,9 @@ const BIGBANG = { MIN: 12, PARTS: 40, STOP: 0.05, RING: [40, 95], FLOAT: 1.1 }; 
 const SWARM = { START: 10, PERIOD: 25, CUE: 12, BALL: 13, WHIRL: 17, RING: 19, FADE: 23, // A2 스웜 리듬: 전투 START초 뒤부터 PERIOD초 주기. 주기 안 u: [0,CUE) 보통 · [CUE,BALL) 예고(모임) · [BALL,WHIRL) 볼 · [WHIRL,RING) 휘몰이 · [RING,FADE) 링 · [FADE,PERIOD) 풀림
                 BALL_R0: 14, BALL_K: 0.32, RING_K: 1.25, SPIN_K: 3 };                     // 볼 반지름 = BALL_R0 + baseR·BALL_K (18~36px) · 링 = 20 + baseR·RING_K(클램프가 울타리 안에 가둠) · 휘몰이 회전 배율
 const SWARM_FREE = { wb: 0, wr: 0, spinK: 1, cyc: -1 };                                  // 리듬 없음(멀티·태양전·전투 10초 전)
-const BOSS_ABILITY = {};                                                                  // 보스 모양 → 고유 능력 1개 (카탈로그 D축). C0 = 빈 표(어느 보스도 능력 없음 → 배너·정보창 힌트 0). C3에서 25: 'gravity'(목성), 2단계 C2에서 20·21·22·23·24·26 추가
+const BOSS_ABILITY = { 25: 'gravity' };                                                   // 보스 모양 → 고유 능력 1개 (카탈로그 D축). 1단계 C3 = 목성(25)만 'gravity'(유저 확정: A3 포효는 목성 R60 전용) → 배너·정보창 힌트는 이 보스만. 2단계 C2에서 20·21·22·23·24·26 추가
 function bossHint(sh) { return BOSS_ABILITY[sh] && BOSS_INFO[sh] && BOSS_INFO[sh][2] || ''; } // 포커 배너·정보창 한 구절 (수치 없음). 능력이 있는 모양만 — 힌트 문자열은 BOSS_INFO 셋째 원소(함수 안에서만 읽으므로 선언 순서 무관)
-const GRAV = { FIRST: 6, PERIOD: 18, TELE: 0.6, PULL_T: 1.0, LINES: 40, MOB_HP_MUL: 1.0 }; // 목성 중력(= 1단계 A3 포효): 등장 +FIRST초 첫 발동, PERIOD초마다, TELE초 예고(부풀기+링+sfx), PULL_T초 견인(220px/s 조커 값), 사슬 선은 가까운 LINES마리만. MOB_HP_MUL = 보정 노브(유저 확정 (가) 보정 0 → 1.0)
+const GRAV = { FIRST: 6, PERIOD: 18, TELE: 0.6, PULL_T: 1.0, LINES: 40, PILE_R: 60, MOB_HP_MUL: 1.0 }; // 목성 중력(= 1단계 A3 포효): 등장 +FIRST초 첫 발동, PERIOD초마다, TELE초 예고(부풀기+링+sfx), PULL_T초 견인(220px/s 조커 값), 사슬 선은 가까운 LINES마리만. PILE_R = 더미 반지름(보스 중심→몹 중심, 보스 r 52 + 8 = 몹이 목성 테두리에 매달린 더미. 0이면 보스 중심 = 보스 그림 아래 숨음). MOB_HP_MUL = 보정 노브(유저 확정 (가) 보정 0 → 1.0)
 const WEAK = { MUL: 1.5, T: 1.0, SHAPES: { 24: true, 26: true } };                        // 약점 창 틀: 능력 발동 T초 동안 피해 ×MUL — 화성(24)·토성(26)만(유저 확정). 1단계엔 두 보스의 능력이 없어 발동 경로 0 = 수치 영향 0
 function bossShapeFor(n) { return n > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(n / 10)); } // spawnMonster의 보스 shape 식과 동일(그 줄은 그대로 둔다) — 배너·노브가 보스 생성 전에 모양을 알아야 해서
 function swarmParams(t) { // 전투 경과 t(초, S.waveT) → { wb 볼 가중 0~1, wr 링 가중 0~1, spinK 회전 배율, cyc 주기 번호(-1 = 리듬 전) }. 조각 함수라 모든 경계에서 연속(위치 점프 없음)
@@ -4723,7 +4723,7 @@ function startWave() {
   const boss = (S.round % 10 === 0);
   if (em.instantGold) { const g = S.round * 30; S.gold += g; addFloat(HOUSE.x, HOUSE.y - 40, `+${g}G`, '#ffd54f', 2); }
   // 소환장 가운데에서 우르르 쏟아지듯 (약 2초 안에 전부 등장)
-  S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0 };
+  S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0, mobMul: !S.multi && boss && BOSS_ABILITY[bossShapeFor(S.round)] === 'gravity' ? GRAV.MOB_HP_MUL : 1 }; // 패턴 1단계: 목성 라운드 잡몹 보정 노브(기본 1.0 = 무변경, 보스 HP는 건드리지 않음)
   if (S.multi) mpWaveStart(); // 🤖 멀티: 레인 개체 출발 + 프록시 투입 · 보스 라운드 bossLeft 0
   if (S.duel) { // 연장전(포커)까지 못 잡았으면 새 웨이브 시작에 퇴장 — 챔피언이 잠겨 있었으면 대신 사망
     if (S.champion && S.champion.duelOk) duelChampionDeath();
@@ -5601,13 +5601,14 @@ function update(dt) {
       q.acc += dt;
       while (q.acc >= q.interval && q.left > 0) {
         q.acc -= q.interval; q.left--;
-        spawnMonster(q.hp, false);
+        spawnMonster(Math.floor(q.hp * (q.mobMul || 1)), false); // 패턴 1단계: 잡몹만 mobMul(목성 라운드 노브, 기본 1 → 값 동일). 멀티·태양전 큐엔 mobMul 없음 → || 1
       }
     }
     if (q.bossLeft > 0 && S.timer < WAVE_TIME - 5) {
       q.bossLeft = 0;
       // 보스 계수: 기본 9.4 / R40+는 mobHP ×1.45(분열 제거 보정)를 상쇄해 6.5 / R80+ 분열 보스는 본체 2.8 (조각 5×30% 포함 실효 ≈ 기존 수준)
-      spawnMonster(q.hp * (S.round >= FINAL_ROUND ? 2.8 : 9.4 / splitComp(S.round)), true); // 보스는 분열 제거 보정 대상이 아니므로 splitComp를 나눠 상쇄
+      const bz = spawnMonster(q.hp * (S.round >= FINAL_ROUND ? 2.8 : 9.4 / splitComp(S.round)), true); // 보스는 분열 제거 보정 대상이 아니므로 splitComp를 나눠 상쇄
+      if (!S.multi && BOSS_ABILITY[bz.shape]) { bz.abil = BOSS_ABILITY[bz.shape]; bz.abilT = GRAV.FIRST; bz.abilCued = false; } // 보스 고유 능력 (1단계 = 목성 중력) — 멀티 보스는 레인 개체라 여기 안 옴
       logMsg('보스 등장!', true);
       sfx('boss');
     }
@@ -5646,12 +5647,20 @@ function update(dt) {
       continue;
     }
     if (S.freezeT > 0) continue; // 시간 정지 중엔 위치 갱신 없이 제자리
+    if (m.weakT > 0) m.weakT -= dt; // 약점 창(틀) — freezeT continue 아래 = 시간정지 중 동결 (열린 채 멈춤, 토성 규칙과 동일)
+    if (m.puffT > 0) m.puffT -= dt; // 능력 예고 부풀기
+    if (m.abil === 'gravity' && !m.small && !m.entering && m.hp > m.max * 0.2) { // 목성 중력 (받침 A: 보스 HP 20% 아래면 능력 정지)
+      m.abilT -= dt;
+      if (m.abilT <= GRAV.TELE && !m.abilCued) { m.abilCued = true; m.puffT = GRAV.TELE; sfx('boss');
+        S.effects.push({ type: 'cue', x: m.x, y: m.y, r0: 96, r1: monSize(m), t: GRAV.TELE, dur: GRAV.TELE, col: '232,195,154' }); } // 예고: 링이 안으로 (목성 띠색)
+      if (m.abilT <= 0) { m.abilT = GRAV.PERIOD; m.abilCued = false; bossGravity(m); }
+    }
     m.born = Math.min(1, m.born + dt * 2.5);
     m.ang += m.spin * dt * sp.spinK; // A2 휘몰이 ×3
     if (m.pullT > 0) {
       // 🃏 조커: 낫에 맞아 끌려가는 중 — 오빗 대신 조커 쪽으로 직행
       m.pullT -= dt;
-      if (m.pullT <= 0) m.returnT = 6; // 견인 끝 → 복귀 시작 (도착하면 자동 종료되므로 넉넉히)
+      if (m.pullT <= 0) { m.returnT = 6; m.pullQuiet = false; } // 견인 끝 → 복귀 시작 (도착하면 자동 종료되므로 넉넉히) · 중력 사슬 생략 해제
       const pdx = m.pullX - m.x, pdy = m.pullY - m.y, pd = Math.hypot(pdx, pdy) || 1;
       const pstep = Math.min(pd, 220 * dt);
       m.x += pdx / pd * pstep; m.y += pdy / pd * pstep;
@@ -6195,7 +6204,7 @@ function areaHit(u, x, y, dmg) {
       if (d2 <= pr2) inR.push([d2, m]);
     }
     if (inR.length > cap) inR.sort((a, b) => a[0] - b[0]);
-    for (let i = 0; i < Math.min(cap, inR.length); i++) { const m = inR[i][1]; m.pullT = pt; m.pullX = u.x; m.pullY = u.y; }
+    for (let i = 0; i < Math.min(cap, inR.length); i++) { const m = inR[i][1]; m.pullT = pt; m.pullX = u.x; m.pullY = u.y; m.pullQuiet = false; }
   }
 }
 // 파편: 명중 지점에서 돌조각이 사방으로 튀며 주변 몹에 소량 데미지
@@ -6230,6 +6239,16 @@ function bigBang(died, pop0) {
   S.hitstop = Math.max(S.hitstop, BIGBANG.STOP);
   addFloat(cx, cy - 34, `×${n}`, '#ffd54f', BIGBANG.FLOAT);
   sfx('bigboom');
+}
+// 목성 중력 (= 1단계 A3 보스 포효를 목성 R60 전용으로, 카탈로그 P5 · 50_구현설계_1단계.md §4): 잡몹 전부를 PULL_T초 동안 보스 쪽으로 — 조커 낫 견인(pullT/pullX/pullY, 220px/s)을 그대로 재사용.
+//    끝나면 기존 분기(pullT ≤ 0 → returnT 6)가 복귀시킨다. 사슬 선은 가까운 GRAV.LINES마리만(pullQuiet). 조커가 이미 끌고 있는 몹은 건너뜀. 약점 창은 WEAK.SHAPES 보스만.
+function bossGravity(b) {
+  const list = [];
+  for (const o of S.monsters) if (o !== b && !o.boss && !o.lane && !o.entering && !(o.pullT > 0)) list.push(o);
+  list.sort((p, q) => (p.x - b.x) ** 2 + (p.y - b.y) ** 2 - (q.x - b.x) ** 2 - (q.y - b.y) ** 2);
+  for (let i = 0; i < list.length; i++) { const o = list[i], dx = o.x - b.x, dy = o.y - b.y, d = Math.hypot(dx, dy), k = d > 1 ? GRAV.PILE_R / d : 0; // 목표 = 보스 중심에서 그 몹 방향으로 PILE_R (220px/s 는 소환장 어디서든 1초 안에 닿아, 중심을 목표로 두면 전부 보스 그림 아래로 들어가 더미가 안 보인다)
+    o.pullT = GRAV.PULL_T; o.pullX = b.x + dx * k; o.pullY = b.y + dy * k; o.pullQuiet = i >= GRAV.LINES; }
+  if (WEAK.SHAPES[b.shape]) b.weakT = WEAK.T; // 약점 창(화성·토성만 — 목성은 해당 없음 = 1단계 발동 0)
 }
 // 코믹 팝 사망: 0.11초 부풀었다가 → 팡! (즙 + 조각 + 바닥 얼룩). 실제 팡은 이펙트 루프에서 burst 시점에
 function deathPop(m) {
@@ -8245,7 +8264,8 @@ function draw() {
     if (m.lane) continue; // 🤖 레인 개체는 mpDraw 월드 패스가 그린다 (다리 상판 가림 순서)
     const bb = (!m.boss && m.mat < 8) ? MAT_BOB[m.mat] : null;
     const bob = bb && bb[0] ? Math.abs(Math.sin(S.time * bb[1] + m.bobP)) * bb[0] * m.born : 0;
-    if (bob > 0.3) { ctx.save(); ctx.translate(0, -bob); drawMonster(m); ctx.restore(); }
+    const puff = m.puffT > 0 ? 1 + 0.15 * Math.sin(Math.PI * Math.min(1, m.puffT / GRAV.TELE)) : 1; // 보스 능력 예고 0.6초 부풀기 (호출처 스케일 — 체력바도 같이 커지는 0.6초, 의도)
+    if (bob > 0.3 || puff !== 1) { ctx.save(); ctx.translate(m.x, m.y - bob); ctx.scale(puff, puff); ctx.translate(-m.x, -m.y); drawMonster(m); ctx.restore(); }
     else drawMonster(m);
   }
   // ⏳ 시간 정지: 소환장 위 얼음 틴트 오버레이
@@ -10135,7 +10155,7 @@ function drawFlameStream(u, fade) {
   ctx.restore();
 }
 function drawMonster(m) {
-  if (m.pullT > 0) { // 🃏 조커 시그니처: 낫에 걸린 몹을 조커 쪽으로 잇는 보라 사슬 (지그재그, shadowBlur 대신 2겹 스트로크로 광 표현)
+  if (m.pullT > 0 && !m.pullQuiet) { // 🃏 조커 시그니처: 낫에 걸린 몹을 조커 쪽으로 잇는 보라 사슬 (지그재그, shadowBlur 대신 2겹 스트로크로 광 표현) · 목성 중력은 가까운 GRAV.LINES마리만(pullQuiet)
     const dx = m.pullX - m.x, dy = m.pullY - m.y, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
     const seg = 6, sw = 4 * Math.sin(S.time * 18);
     ctx.beginPath(); ctx.moveTo(m.x, m.y);
