@@ -4530,7 +4530,7 @@ function effDmgBase(u, splashPer) {
 function isHiddenCombo(u) { return !!(u.gamble || u.junk || u.quartet || u.execute || u.shogun || u.chrono || u.slot || u.joker || u.catapult); } // 히든 조합 유닛 판별
 // 히든 유닛 표기 메타: [아이콘, 이름, 테마색] — 종족(하트/다이아)이 아니라 자기 정체성으로 표기
 const HIDDEN_META = { gamble:['gambler','갬블러','#c9a227'], junk:['junk','고물상','#8d6e63'], quartet:['quartet','콰르텟','#5b48d0'], execute:['guillotine','길로틴','#c62828'], shogun:['shogun','쇼군','#ff6d1f'], chrono:['chrono','시간술사','#42a5f5'], slot:['slot','슬롯머신','#c9a227'], joker:['joker','조커','#8c5bff'], catapult:['catapult','투석기','#78909c'] }; // [0] = 단색 아이콘 이름(DPD_ICONS)
-const HIDDEN_INK = { gambler: '#9a7400', junk: '#5d4037', slot: '#9a7400' }; // 몸통 문양만 진하게 (흰 카드 위 금·갈색 선이 연했다 — 10-07 리뷰). 테두리·이름 색은 HIDDEN_META[2] 그대로
+const HIDDEN_INK = { gambler: '#9a7400', junk: '#5d4037', slot: '#9a7400', quartet: '#3b2c9e', chrono: '#1d6fb8', shogun: '#b23c00', guillotine: '#7f1010', catapult: '#455a64' }; // 몸통 문양만 진하게 (흰 카드 위 금·갈색 선이 연했다 — 10-07 리뷰). 테두리·이름 색은 HIDDEN_META[2] 그대로. 10-08 히든 고유 디자인: 콰르텟·시간술사·쇼군·길로틴·투석기 5종 추가(spec_h2·h3 제안값 — 밝은 테마색의 문양 외곽선이 연해지지 않게. 키 = 아이콘명, 길로틴 = guillotine). 읽는 곳 = hiddenPal + 아직 안 옮긴 히든의 옛 선 아이콘(drawUnitCore hm 분기)
 function hiddenMeta(u) { for (const k in HIDDEN_META) if (u[k]) return HIDDEN_META[k]; return null; }
 function effCd(u) { return u.cd * (u.spdBuff || 1) * (S.stimT > 0 ? 0.5 : 1) * (isHiddenCombo(u) ? 1.4286 : 1); } // 히든 조합 유닛 공속 30%↓
 
@@ -10368,27 +10368,10 @@ function drawUnitCore(u, lw, faceX) {
   // 몸통 안: 무늬 + 라벨 (광부는 표기 없음 — 곡괭이만)
   ctx.textAlign = 'center';
   if (L) { heroG(u, faceX, g1Inner, P); heroG(u, faceX, L.front, P); } // 표준 영웅: 금선+테+큰 문양(에이스 = 흰 ♠) → 어깨판(슈퍼 = 가슴판+어깨 갑옷). 에이스 영웅이 아래 ♠ 분기를 타지 않게 먼저 검사
-  else if (HL) { heroG(u, faceX, HL.inner, P); heroG(u, faceX, HL.front, P); } // 히든 고유 디자인: 가운데 문양·소품(inner) → 어깨·가슴 장식 + 공통 표시 모서리 쇠(front 맨 끝). 아래 조커 얼굴·hm 아이콘 분기보다 앞
+  else if (HL) { heroG(u, faceX, HL.inner, P); heroG(u, faceX, HL.front, P); } // 히든 고유 디자인: 가운데 문양·소품(inner) → 어깨·가슴 장식 + 공통 표시 모서리 쇠(front 맨 끝). 아래 hm 아이콘 분기보다 앞. (10-08 C1) 조커 코어 얼굴 전체(뿔+방울+마스크+미소) 블록은 조커가 HIDDEN_LOOK 표에 들어가 도달 불가 → 삭제, 가면 1개는 h1JokerInner
   else if (u.hidden || u.ace) { // 에이스·에이스 영웅: ♠ 유지
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
     drawSuit('♠', u.x, u.y - 1, 5.6, '#fff'); // 벡터 ♠ (정중앙)
-  } else if (u.joker) { // 🃏 조커: 카드 안에 레퍼런스 얼굴 전체 (모자+방울+마스크+미소) — 머리 위 장식 모자는 별도(drawHeadgear)
-    const jx = u.x, jy = u.y + 1;
-    ctx.fillStyle = '#d92b2b'; // 왼쪽 뿔 (빨강)
-    ctx.beginPath(); ctx.moveTo(jx, jy - 3.5); ctx.quadraticCurveTo(jx - 4, jy - 11.5, jx - 8.5, jy - 8); ctx.quadraticCurveTo(jx - 4.5, jy - 4.5, jx - 4, jy - 2.5); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#2e3440'; // 오른쪽 뿔 (검정)
-    ctx.beginPath(); ctx.moveTo(jx, jy - 3.5); ctx.quadraticCurveTo(jx + 4, jy - 11.5, jx + 8.5, jy - 8); ctx.quadraticCurveTo(jx + 4.5, jy - 4.5, jx + 4, jy - 2.5); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#f39c12'; // 방울 2개
-    ctx.beginPath(); ctx.arc(jx - 8.5, jy - 8.5, 1.5, 0, 6.28); ctx.fill();
-    ctx.beginPath(); ctx.arc(jx + 8.5, jy - 8.5, 1.5, 0, 6.28); ctx.fill();
-    ctx.fillStyle = '#2e3440'; // 아이마스크
-    ctx.beginPath(); ctx.ellipse(jx, jy + 1, 6, 2.8, 0, 0, 6.28); ctx.fill();
-    ctx.fillStyle = '#fff'; // 눈구멍
-    ctx.beginPath(); ctx.ellipse(jx - 2.6, jy + 1, 1.6, 1, 0, 0, 6.28); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(jx + 2.6, jy + 1, 1.6, 1, 0, 0, 6.28); ctx.fill();
-    ctx.strokeStyle = '#d92b2b'; ctx.lineWidth = 1.4; ctx.lineCap = 'round'; // 미소
-    ctx.beginPath(); ctx.arc(jx, jy + 4, 2.8, 0.35, Math.PI - 0.35); ctx.stroke();
-    ctx.lineCap = 'butt'; ctx.lineWidth = 1;
   } else if (hm) { // 히든 유닛: 종족 무늬 대신 자기 문양 (단색 선 아이콘 — 흰 몸통 위라 테두리와 같은 영웅 색)
     ctx.font = '13px sans-serif'; dpdDrawIcon(ctx, hm[0], u.x, u.y - 0.5, 13, HIDDEN_INK[hm[0]] || hm[2]);
   } else if (!u.miner) {
@@ -10545,8 +10528,13 @@ function heroLook(u) { return isStdHero(u) ? (HERO_LOOK[u.tier] || null) : null;
 // ==================== 히든 영웅 9종 고유 디자인 (10-08) — 표 HIDDEN_LOOK · 판별 hiddenLook · 팔레트 hiddenPal · 몸통 경로 hiddenBodyPath · 공통 표시 hiddenMark · 머리 hiddenHead ====================
 // 설계 = Desktop\Claude Code\DPD\히든영웅_직접이식_2026-10-08 (10_검수·구현계획 §3-1·§3-3, spec_h1~h3 — 좌표 원본 spec_h*_draw.js). 좌표는 몸통 중심 원점·아래 +y·오른쪽 조준(faceX +1) 기준, heroG로 감싼다(히든은 super 없음 → s = 1).
 // 키 = 플래그명(= ascendKey(u) = HIDDEN_META 키). tier 키 금지 — 조커 tier 1(원페어)·길로틴/투석기 7(포카드)·콰르텟/시간술사 4(스트레이트)가 겹친다. 표에 없는 유닛(노말·에이스·슈퍼에이스·표준 영웅·광부·아직 안 옮긴 히든)은 hiddenLook null → 기존 경로 한 픽셀도 안 바뀜.
-// 행 = { w, h, shape:'rect'|'cab'|'hour', waist?, lobe?, legs:true|false, hat, shadowW?, back(u,P), inner(u,P), front(u,P), head(u,P) } — C0 = 빈 표(인프라만), C1 h1(갬블러·슬롯머신·조커) · C2 h2(고물상·콰르텟·시간술사) · C3 h3(쇼군·길로틴·투석기)에서 3행씩 채운다.
-const HIDDEN_LOOK = {};
+// 행 = { w, h, shape:'rect'|'cab'|'hour', waist?, lobe?, legs:true|false, hat, shadowW?, back(u,P), inner(u,P), front(u,P), head(u,P) } — C1 h1(갬블러·슬롯머신·조커, spec_h1 H1_LOOK 값 그대로) · C2 h2(고물상·콰르텟·시간술사) · C3 h3(쇼군·길로틴·투석기)에서 3행씩 채운다.
+//   head = 유저 선택(10-08) B안 — 갬블러 주사위 모자 · 슬롯머신 전구 간판 · 조커 3갈래 모자. 어깨 = 기존 식 (W/2−2, −3)(drawUnitArm) — 셋 다 그 높이의 오른쪽 변이 직선(cab의 r10은 y −20~−10)이라 보정 없음
+const HIDDEN_LOOK = {
+  gamble: { w: 34, h: 36, shape: 'rect', legs: true, hat: 40, back: h1GambleBack, inner: h1GambleInner, front: h1GambleFront, head: h1GambleHeadDie },   // 갬블러: 정사각에 가까운 카드, 큰 주사위(5눈) + 초록 딜러 조끼 깃 + 빨간 나비넥타이 + 등 뒤 칩 더미, 머리 = 주사위 모자(6눈)
+  slot:   { w: 30, h: 40, shape: 'cab',  legs: true, hat: 40, back: h1SlotBack,   inner: h1SlotInner,   front: h1SlotFront,   head: h1SlotHeadSign },    // 슬롯머신: 위 둥근 캐비닛 몸통, 릴 창 3칸(★·체리·♦) + 동전받이·금화 + 등 쪽 빨간 공 레버, 머리 = 전구 간판
+  joker:  { w: 30, h: 38, shape: 'rect', legs: true, hat: 40, back: h1JokerBack,  inner: h1JokerInner,  front: h1JokerFront,  head: h1JokerHeadTri },    // 조커: 광대 가면 1개(얼굴 예외) + 할리퀸 마름모 2 + 주름 깃 + 지그재그 밑단 망토, 머리 = 3갈래 모자
+};
 function hiddenLook(u) { return isHiddenCombo(u) ? (HIDDEN_LOOK[ascendKey(u)] || null) : null; }
 // 고정색 — "히든 = 은·남색" 언어(영웅 금·에이스 핑크·슈퍼 무지개·포카드/로얄 흰 털과 안 겹침) + h3 옻칠·가죽·나무·쇠·돌 (spec_h1 H1 · spec_h3 H3 상수 그대로). 면 / 외곽 / 하이라이트
 const HID_C = {
@@ -10619,6 +10607,146 @@ function hiddenMark(L) {
 }
 // 머리 장식 — heroG 안에서 호출. 히든 머리는 전부 정지 그림(S.time·u.jx 안 읽음) → heroHeadSprite 1장. 캐시 키 'tier|super|ace|race|i|k'의 i 자리에 'h:'+id 문자열 → 표준 영웅 키(숫자 i)와 절대 안 겹침(tier 공유 함정 회피). heroHeadSprite 수정 0
 function hiddenHead(u, P) { ctx.drawImage(heroHeadSprite(u, P, 'h:' + P.id, hiddenLook(u).head), HH.X0, HH.Y0, HH.W, HH.H); }
+// ---------- 히든 공통 그리기 도우미 (히든 좌표 — heroG 안에서만 부른다; = spec_h1 h1Out·h1Line·h1Star) ----------
+function hidOut(col, w) { ctx.strokeStyle = col; ctx.lineWidth = w || HID_C.OUT_W; ctx.lineJoin = 'round'; ctx.stroke(); } // 장식 외곽선 (기본 0.9 — 작은 기호 0.6~0.7, 큰 면 1.0~1.3)
+function hidLine(x0, y0, x1, y1, col, w) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt'; }
+function hidStar(cx, cy, R, r) { // 5각 별 경로 (슬롯 릴 ★·간판 ★)
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = (i % 2 === 0) ? R : r; const px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+  ctx.closePath();
+}
+// ---------- h1 갬블러 (gamble) — 34×36 카드. 능력 = 주사위 → 가운데 큰 주사위(5눈) + 머리 주사위 모자(6눈). 딜러 = 초록 조끼 깃 + 빨간 나비넥타이 + 등 뒤 칩 더미 (spec_h1_draw.js §5 그대로) ----------
+function h1GambleBack(u, P) {
+  // 칩 더미 3장 (몸 뒤 왼쪽 아래, 옆에서 본 납작 타원 3단: 빨강 → 파랑 → 초록) — 위 칩만 밝은 윗면
+  const chips = [[13.0, '#d93b3b', '#8e1b1a'], [10.2, '#2f6fd6', '#17407f'], [7.4, '#2e9e5b', '#1d5c3a']];
+  for (const [cy, col, out] of chips) {
+    ctx.beginPath(); ctx.ellipse(-19.5, cy, 5.2, 2.1, 0, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill(); hidOut(out);
+    ctx.beginPath(); ctx.rect(-24.7, cy - 1.4, 10.4, 1.4); ctx.fillStyle = col; ctx.fill();   // 칩 두께(옆면)
+  }
+  ctx.beginPath(); ctx.ellipse(-19.5, 6.0, 5.2, 2.1, 0, 0, Math.PI * 2); ctx.fillStyle = '#5fcb8a'; ctx.fill(); hidOut('#1d5c3a');   // 맨 위 칩 윗면
+  for (const a of [0.0, Math.PI * 0.5, Math.PI, Math.PI * 1.5]) {                                                                // 칩 가장자리 흰 줄 4개
+    ctx.beginPath(); ctx.moveTo(-19.5 + Math.cos(a) * 3.2, 6.0 + Math.sin(a) * 1.3); ctx.lineTo(-19.5 + Math.cos(a) * 5.0, 6.0 + Math.sin(a) * 2.0);
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.9; ctx.stroke();
+  }
+}
+function h1GambleInner(u, P) {
+  // 조끼 깃 2장 (위 모서리에서 가슴 가운데로 내려오는 초록 삼각형, V넥)
+  for (const sx of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(sx * 15.5, -16.5); ctx.lineTo(sx * 4.0, -16.5); ctx.lineTo(sx * 15.5, -1.0); ctx.closePath();
+    ctx.fillStyle = '#1f6b45'; ctx.fill(); hidOut('#0f3d27');
+    ctx.beginPath(); ctx.moveTo(sx * 13.5, -14.5); ctx.lineTo(sx * 7.0, -14.5);                                                   // 하이라이트 한 줄
+    ctx.strokeStyle = '#4fb07a'; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  }
+  // 가운데 큰 주사위 (14×14, −0.2 rad 기울임, 5눈 빨강) — 옛 13px 선 아이콘을 면으로 키움
+  ctx.save(); ctx.translate(0, 3.0); ctx.rotate(-0.2);
+  roundRect(-7, -7, 14, 14, 2.5); ctx.fillStyle = '#fffdf5'; ctx.fill(); hidOut(P.ink, 1.3);
+  ctx.beginPath(); ctx.moveTo(-5.5, -5.2); ctx.lineTo(1.0, -5.2); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.0; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt'; // 윗면 하이라이트
+  ctx.fillStyle = '#c0392b';
+  for (const [px, py] of [[-3.6, -3.6], [3.6, 3.6], [3.6, -3.6], [-3.6, 3.6], [0, 0]]) { ctx.beginPath(); ctx.arc(px, py, 1.35, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+function h1GambleFront(u, P) {
+  // 빨간 나비넥타이 (조끼 V넥 꼭짓점 위, y −13.5)
+  for (const sx of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(sx * 0.6, -13.5); ctx.lineTo(sx * 5.0, -16.2); ctx.lineTo(sx * 5.0, -10.8); ctx.closePath();
+    ctx.fillStyle = '#d93b3b'; ctx.fill(); hidOut('#8e1b1a');
+  }
+  ctx.beginPath(); ctx.arc(0, -13.5, 1.3, 0, Math.PI * 2); ctx.fillStyle = '#8e1b1a'; ctx.fill();
+  hiddenMark(HIDDEN_LOOK.gamble); // 공통 표시 (front 맨 끝)
+}
+// 머리 B안: 주사위 모자 — 검은 고무줄 띠 위에 13×13 주사위(6눈)가 −0.25 rad 기울어 얹힘. 네모난 혹 실루엣(꼭대기 −33.9)
+function h1GambleHeadDie(u, P) {
+  roundRect(-9, -21.0, 18, 2.6, 1.0); ctx.fillStyle = '#2b2b2b'; ctx.fill(); hidOut('#111111');                                       // 띠
+  ctx.save(); ctx.translate(0.5, -26.0); ctx.rotate(-0.25);
+  roundRect(-6.5, -6.5, 13, 13, 2.6); ctx.fillStyle = '#fffdf5'; ctx.fill(); hidOut(P.ink, 1.2);
+  ctx.beginPath(); ctx.moveTo(-5.0, -4.8); ctx.lineTo(0.5, -4.8); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.0; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.fillStyle = '#c0392b';
+  for (const px of [-2.9, 2.9]) for (const py of [-3.6, 0, 3.6]) { ctx.beginPath(); ctx.arc(px, py, 1.2, 0, Math.PI * 2); ctx.fill(); }   // 6눈
+  ctx.restore();
+}
+// ---------- h1 슬롯머신 (slot) — 몸통 자체가 캐비닛 30×40(위 모서리 r10). 가슴 = 릴 창 3칸(★·체리·♦ — 숫자 없음) + 아래 동전받이, 등 쪽(−x) 빨간 공 레버 (spec_h1_draw.js §6 그대로) ----------
+function h1SlotBack(u, P) {
+  // 레버: 몸통 왼쪽 변의 쇠 받침(절반이 밖으로 보임) + 비스듬히 위로 뻗는 막대 + 빨간 공
+  roundRect(-17.6, -11.5, 4.2, 6.5, 1.0); ctx.fillStyle = '#5a6670'; ctx.fill(); hidOut('#2b333a');
+  hidLine(-15.0, -8.5, -20.8, -16.5, '#2b333a', 3.6); hidLine(-15.0, -8.5, -20.8, -16.5, '#9fabb4', 2.0);
+  ctx.beginPath(); ctx.arc(-21.6, -18.0, 3.4, 0, Math.PI * 2); ctx.fillStyle = '#e53935'; ctx.fill(); hidOut('#8e1b1a');
+  ctx.beginPath(); ctx.arc(-22.6, -19.1, 1.0, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();                                 // 공 하이라이트
+}
+function h1SlotInner(u, P) {
+  // 릴 창: 남색 틀 23×12 + 흰 칸 3개 (6.6×10)
+  roundRect(-11.5, -9.0, 23, 12, 1.5); ctx.fillStyle = HID_C.NAVY; ctx.fill(); hidOut(HID_C.NAVY_OUT);
+  const cx = [-7.2, 0.1, 7.4];
+  for (const x of cx) { roundRect(x - 3.3, -8.0, 6.6, 10, 1.0); ctx.fillStyle = '#fffdf5'; ctx.fill(); }
+  // 기호 1 ★ 금
+  hidStar(cx[0], -3.0, 3.0, 1.35); ctx.fillStyle = '#f2c14e'; ctx.fill(); hidOut(P.ink, 0.7);
+  // 기호 2 체리 (빨간 열매 2 + 초록 꼭지)
+  hidLine(cx[1] - 1.2, -2.2, cx[1] + 0.5, -6.0, '#2e9e5b', 0.9); hidLine(cx[1] + 1.5, -1.8, cx[1] + 0.5, -6.0, '#2e9e5b', 0.9);
+  for (const [dx, dy] of [[-1.3, -0.4], [1.5, 0.0]]) { ctx.beginPath(); ctx.arc(cx[1] + dx, -3.0 + dy + 1.0, 1.45, 0, Math.PI * 2); ctx.fillStyle = '#e53935'; ctx.fill(); hidOut('#8e1b1a', 0.7); }
+  // 기호 3 ♦ 하늘 (게임 drawSuit)
+  drawSuit('♦', cx[2], -3.0, 2.7, '#29b6f6');
+  // 동전받이 (아래): 남색 홈 + 안쪽 밝은 틈
+  roundRect(-8, 8.5, 16, 4.2, 1.5); ctx.fillStyle = HID_C.NAVY; ctx.fill(); hidOut(HID_C.NAVY_OUT);
+  roundRect(-6.5, 9.6, 13, 1.6, 0.8); ctx.fillStyle = '#4a5080'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 15.5, 1.9, 0, Math.PI * 2); ctx.fillStyle = '#f2c14e'; ctx.fill(); hidOut(P.ink, 0.7);                  // 받이 아래 금화 1개
+}
+function h1SlotFront(u, P) { hiddenMark(HIDDEN_LOOK.slot); } // 공통 표시만 — 위 두 모서리는 r10 호 가운데 37°, 아래는 r4 전체
+// 머리 B안: 전구 간판 — 캐비닛 위에 쇠 기둥으로 선 남색 간판(26×9) + 금 전구 4개 + 가운데 금 ★. 넓고 납작한 판 실루엣(꼭대기 −31.4)
+function h1SlotHeadSign(u, P) {
+  ctx.beginPath(); ctx.rect(-3.0, -22.6, 6.0, 3.0); ctx.fillStyle = '#5a6670'; ctx.fill(); hidOut('#2b333a');                          // 기둥
+  roundRect(-13, -31, 26, 9, 2); ctx.fillStyle = HID_C.NAVY; ctx.fill(); hidOut(HID_C.NAVY_OUT);
+  ctx.beginPath(); ctx.moveTo(-11.5, -29.6); ctx.lineTo(-3.0, -29.6); ctx.strokeStyle = '#4a5080'; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';   // 하이라이트
+  for (const x of [-10.5, -6.0, 6.0, 10.5]) { ctx.beginPath(); ctx.arc(x, -26.5, 1.4, 0, Math.PI * 2); ctx.fillStyle = '#ffd54f'; ctx.fill(); hidOut(P.ink, 0.6); }   // 전구 4
+  hidStar(0, -26.4, 3.4, 1.5); ctx.fillStyle = '#f2c14e'; ctx.fill(); hidOut(P.ink, 0.7);                                             // 가운데 ★
+}
+// ---------- h1 조커 (joker) — 30×38 카드. 가운데 광대 가면 1개(눈구멍·미소 = 얼굴 예외) + 할리퀸 큰 마름모 2개 + 주름 깃 + 지그재그 밑단 어두운 망토 (spec_h1_draw.js §7 그대로) ----------
+function h1JokerBack(u, P) {
+  // 어두운 광대 망토 (몸 뒤 왼쪽, 지그재그 밑단 4봉우리) — 바깥 변 살짝 볼록
+  ctx.beginPath();
+  ctx.moveTo(-9, -17); ctx.lineTo(-15.5, -13.5);
+  ctx.quadraticCurveTo(-29.5, -2.0, -27.5, 12.5);
+  ctx.lineTo(-23.5, 8.5); ctx.lineTo(-20.0, 14.5); ctx.lineTo(-16.0, 10.0); ctx.lineTo(-12.5, 16.0); ctx.lineTo(-9.0, 11.5);
+  ctx.closePath();
+  ctx.fillStyle = '#2a1f4d'; ctx.fill(); hidOut('#150d2b');
+  ctx.beginPath(); ctx.moveTo(-16.0, -11.5); ctx.quadraticCurveTo(-26.5, -2.5, -25.8, 7.5);                                          // 바깥 변 하이라이트 한 줄
+  ctx.strokeStyle = '#4a3a80'; ctx.lineWidth = 1.0; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+}
+function h1JokerInner(u, P) {
+  // 할리퀸 마름모 2개 (아래쪽, 왼 빨강 · 오른 검정) — 반폭 4, 반높이 5.5
+  for (const [x, col, out] of [[-6.5, '#d92b2b', '#8e1b1a'], [6.5, '#2e3440', '#15181f']]) {
+    ctx.beginPath(); ctx.moveTo(x, 5.5); ctx.lineTo(x + 4, 11); ctx.lineTo(x, 16.5); ctx.lineTo(x - 4, 11); ctx.closePath();
+    ctx.fillStyle = col; ctx.fill(); hidOut(out, 0.7);
+  }
+  // 광대 가면 (검은 도미노 마스크, 양끝이 위로 솟음) + 흰 눈구멍 2 + 빨간 미소 — 얼굴 예외 1개
+  ctx.beginPath();
+  ctx.moveTo(-9.5, -5.5); ctx.quadraticCurveTo(-4.0, -9.5, 0, -6.0); ctx.quadraticCurveTo(4.0, -9.5, 9.5, -5.5);
+  ctx.quadraticCurveTo(5.0, -0.5, 0, -1.8); ctx.quadraticCurveTo(-5.0, -0.5, -9.5, -5.5); ctx.closePath();
+  ctx.fillStyle = '#2e3440'; ctx.fill(); hidOut('#15181f');
+  for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sx * 3.6, -5.0, 2.0, 1.2, 0, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill(); }
+  ctx.beginPath(); ctx.arc(0, 0.3, 3.6, 0.3, Math.PI - 0.3); ctx.strokeStyle = '#d92b2b'; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+}
+function h1JokerFront(u, P) {
+  // 주름 깃 (러프): 카드 윗변을 따라 진보라 반원 5개 (r3.3) — 흰 털로 보이지 않게 보라 계열
+  for (const x of [-11, -5.5, 0, 5.5, 11]) {
+    ctx.beginPath(); ctx.arc(x, -18.5, 3.3, 0, Math.PI * 2); ctx.fillStyle = '#4a2c8a'; ctx.fill(); hidOut('#2a1a52');
+    ctx.beginPath(); ctx.arc(x, -18.5, 2.0, Math.PI * 1.15, Math.PI * 1.55); ctx.strokeStyle = '#9d7ff0'; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  }
+  hiddenMark(HIDDEN_LOOK.joker); // 공통 표시 (front 맨 끝)
+}
+function h1JokerBand() { roundRect(-8, -22.6, 16, 3.2, 1.2); ctx.fillStyle = '#2e3440'; ctx.fill(); hidOut('#15181f'); } // 모자 띠
+function h1Bell(x, y) { ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fillStyle = '#f39c12'; ctx.fill(); hidOut('#a05a0a'); ctx.beginPath(); ctx.arc(x - 0.7, y - 0.7, 0.7, 0, Math.PI * 2); ctx.fillStyle = '#ffe0a8'; ctx.fill(); } // 방울 + 반짝 점
+// 머리 B안: 3갈래 광대 모자 — 가운데 검정 뿔이 높이 솟고(−39.5) 양옆 빨간 뿔은 카드 옆으로 축 처짐(끝 방울 y −15.5). 세로로 긴 삼지창 실루엣(꼭대기 −42.2)
+function h1JokerHeadTri(u, P) {
+  h1JokerBand();
+  for (const sx of [-1, 1]) {                                                                                                        // 옆 뿔 (처짐)
+    ctx.beginPath(); ctx.moveTo(sx * 3.5, -22.0); ctx.quadraticCurveTo(sx * 13.0, -27.0, sx * 17.5, -16.0); ctx.quadraticCurveTo(sx * 11.5, -19.5, sx * 7.0, -21.0); ctx.closePath();
+    ctx.fillStyle = '#d92b2b'; ctx.fill(); hidOut('#8e1b1a');
+    ctx.beginPath(); ctx.moveTo(sx * 6.0, -23.0); ctx.quadraticCurveTo(sx * 11.0, -24.5, sx * 14.5, -19.5); ctx.strokeStyle = '#ef6b68'; ctx.lineWidth = 1.0; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  }
+  ctx.beginPath(); ctx.moveTo(-4.0, -22.0); ctx.quadraticCurveTo(-2.5, -32.0, 1.0, -39.0); ctx.quadraticCurveTo(3.5, -32.0, 4.5, -22.0); ctx.closePath();   // 가운데 뿔
+  ctx.fillStyle = '#2e3440'; ctx.fill(); hidOut('#15181f');
+  ctx.beginPath(); ctx.moveTo(-2.0, -25.0); ctx.quadraticCurveTo(-1.0, -31.0, 0.5, -35.5); ctx.strokeStyle = '#5c6677'; ctx.lineWidth = 1.0; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  h1Bell(-17.5, -15.5); h1Bell(17.5, -15.5); h1Bell(1.0, -39.5);
+}
 // 고정색 (금 + 로얄 보라 · 스트레이트 플러쉬 안감) — 에이스여도 금은 그대로
 const HERO_C = {
   GOLD: '#f2c14e', GOLD_D: '#d39a22', GOLD_HL: '#fff1bf', GOLD_OUT: '#8a5a10', // 금 밝은 면 · 그늘 면 · 하이라이트 한 줄 · 외곽선
@@ -11610,20 +11738,9 @@ function drawCrown(cx, topY, o) {
 }
 function drawHeadgear(u, topY, faceX) { // faceX = 바라보는 쪽(±1) — drawUnit·유령·멀티 고스트가 넘긴다. 없으면(굴착기 탑승자) 표준 영웅 분기에서 drawUnit과 같은 식으로 계산
   const cx = u.x;
-  { // 히든 영웅 9종 고유 머리 장식 (10-08, HIDDEN_LOOK[id].head — 정지 그림 1장 스프라이트). 조커 모자·u.hero 왕관 분기보다 앞. 표에 없는 히든은 아래 기존 분기
+  { // 히든 영웅 9종 고유 머리 장식 (10-08, HIDDEN_LOOK[id].head — 정지 그림 1장 스프라이트). u.hero 왕관 분기보다 앞. 표에 없는 히든은 아래 기존 분기. (C1) 조커 광대 모자 블록(옛 2갈래 뿔)은 조커가 표에 들어가 도달 불가 → 삭제, 3갈래 모자는 h1JokerHeadTri
     const HL = hiddenLook(u);
     if (HL) { if (faceX == null) faceX = ((u.moving ? u.tx : (u.aimX != null ? u.aimX : CX)) >= u.x) ? 1 : -1; heroG(u, faceX, hiddenHead, hiddenPal(u)); return; }
-  }
-  if (u.joker) { // 🃏 조커: 광대 모자 (좌빨강·우검정 뿔 + 주황 방울 + 흰 띠)
-    ctx.fillStyle = '#f5f0e8'; roundRect(cx - 7, topY - 2, 14, 3, 1.2); ctx.fill(); // 모자 띠
-    ctx.fillStyle = '#d92b2b'; // 왼쪽 뿔
-    ctx.beginPath(); ctx.moveTo(cx, topY - 2); ctx.quadraticCurveTo(cx - 5, topY - 13, cx - 11, topY - 9); ctx.quadraticCurveTo(cx - 6, topY - 5, cx - 5.5, topY - 1.5); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#2e3440'; // 오른쪽 뿔
-    ctx.beginPath(); ctx.moveTo(cx, topY - 2); ctx.quadraticCurveTo(cx + 5, topY - 13, cx + 11, topY - 9); ctx.quadraticCurveTo(cx + 6, topY - 5, cx + 5.5, topY - 1.5); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#f39c12'; // 방울
-    ctx.beginPath(); ctx.arc(cx - 11, topY - 9.5, 1.8, 0, 6.28); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx + 11, topY - 9.5, 1.8, 0, 6.28); ctx.fill();
-    return;
   }
   if (u.miner) { // 안전모 (돔 + 챙 + 세로 줄) — 슈퍼 광부는 헤드램프 달린 황금 안전모
     if (u.sminer) {
