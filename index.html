@@ -6392,14 +6392,16 @@ function isInRoom(u) { return Math.abs(u.x - ROOM.cx) <= ROOM.w/2 && Math.abs(u.
 const ROOM_GATE = 40; // 🧱 입구 반높이 (왼쪽 벽 가운데) — 담장 통과는 여기로만
 // 🧱 광석방 경계 스냅 (10-04 유저: "울타리에 애매하게 걸쳐 보이는데 판정상 밖이라 안 캐는 경우 — 경계만 확실하게")
 //    '안' = isInRoom(유닛 중심이 안뜰 사각형 안) — assignOreSlots의 유일한 공간 조건(정원·사거리 규칙은 그대로). 돌담 아트는 사각형 바깥으로 돌출(WALLART 실측 좌23·위21·우27·아래27).
-//    착지·이동 목표 칸 중 하나라도 애매한 띠(안쪽 = 몸 절반 / 바깥 = 돌담 + 몸 절반, 위·아래는 머리 장식까지 · 결투장 링 안은 제외)에 걸리면, 부대 중심이 놓인 쪽으로 부대째 최소 평행이동 (한 번 결정 — 부대가 갈라지지 않게).
+//    착지·이동 목표 칸 중 하나라도 애매한 띠(안쪽 = 몸 절반 / 바깥 = 돌담 + 몸 절반 · 10-11부터 머리 장식은 안 셈 · 결투장 링 안은 제외)에 걸리면, 부대 중심이 놓인 쪽으로 부대째 최소 평행이동 (한 번 결정 — 부대가 갈라지지 않게).
 //    위쪽 바깥은 맵 끝(설 땅 없음), 아래쪽 바깥 오른편은 결투장 링이 돌담에 붙어 있어 → 그 경우는 '안'으로. 광석 쪽으로 당기지는 않는다(사거리 규칙 그대로).
 const ROOM_ART = { l: 23, t: 21, r: 27, b: 27 };
 function roomSnap(pts, units, c, pad = 0) { // pts = [{x,y}] 격자 칸 (제자리 수정), units = 같은 순서의 유닛, c = 부대 중심, pad = 걸어가는 목표의 도착 오차 여유
   const x0 = ROOM.cx - ROOM.w / 2, x1 = ROOM.cx + ROOM.w / 2, y0 = ROOM.cy - ROOM.h / 2, y1 = ROOM.cy + ROOM.h / 2;
-  const half = pts.map((p, i) => { const u = units[i], B = bodyShape(u); return { w: B.w * 0.75 + 2 + pad, h: B.h * 0.75 + 2 + pad, hat: hatH(u) }; }); // hat 식 = hatH (10-11 버프 마커와 공유로 함수화 — 값 동일) // 본체 1.5배 그림의 반폭·반높이 + 2 (+ 도착 오차) · hat = 머리 장식(drawHeadgear, 1.5배 ≈ 24) — 하이카드·원페어·아이템은 없음. 10-08 영웅 고유 디자인: 표준 영웅 왕관·깃털은 더 높다(실측 최대 35.5 · 슈퍼 44) → 36/44 — 아래 돌담 띠에 얹히지 않게. 히든 영웅 고유 디자인(HIDDEN_LOOK 표에 있는 유닛)은 표의 hat(40 — 머리 꼭대기 최대 −43.9 논리). 그 외 유닛 판정 무변경
-  const inZ = pts.map((p, i) => ({ xa: x0 + half[i].w, xb: ORE_LINE, ya: y0 + half[i].h + half[i].hat, yb: y1 - half[i].h - 6 })); // 확실히 안 (위는 머리 장식까지, 아래는 발 6px 더)
-  const outL = i => x0 - ROOM_ART.l - half[i].w, outR = i => x1 + ROOM_ART.r + half[i].w, outB = i => y1 + ROOM_ART.b + half[i].h + half[i].hat; // 확실히 밖 (아래는 몸 반높이 + 머리 장식까지 — 모자·왕관이 돌담에 안 얹히게)
+  const half = pts.map((p, i) => { const u = units[i], B = bodyShape(u); return { w: B.w * 0.75 + 2 + pad, h: B.h * 0.75 + 2 + pad }; }); // 본체 1.5배 그림의 반폭·반높이 + 2 (+ 도착 오차). 머리 장식 높이(hatH)는 10-11부터 판정에서 뺌(아래)
+  // 10-11 유저: "경계가 너무 극단적 — 맵을 낭비한다, 돌울타리 부분에만 안 겹치면 충분" → 위·아래 판정에서 머리 장식(hat, 영웅 36~44)을 뺐다.
+  //   돌담은 유닛 뒤(배경)라 모자·왕관이 담 그림에 걸쳐 보이는 건 앞에 선 모습으로 자연스럽다 — 몸통만 담에 안 겹치게. 되돌리려면 half에 hat: hatH(u)를 넣고 아래 ya·outB에 + half[i].hat
+  const inZ = pts.map((p, i) => ({ xa: x0 + half[i].w, xb: ORE_LINE, ya: y0 + half[i].h, yb: y1 - half[i].h - 6 })); // 확실히 안 (아래는 발 6px 더 — 앞쪽 담 위에 발이 얹히지 않게)
+  const outL = i => x0 - ROOM_ART.l - half[i].w, outR = i => x1 + ROOM_ART.r + half[i].w, outB = i => y1 + ROOM_ART.b + half[i].h; // 확실히 밖 (몸통이 돌담 그림 밖)
   const inArena = p => Math.hypot(p.x - ARENA.x, p.y - ARENA.y) < ARENA.r; // 결투장 링 안은 광석방 기준 확실히 밖 — 스냅 안 함 (링 윗부분이 아래 돌담 그림과 겹친다)
   const band = (p, i) => !inArena(p) && p.x > outL(i) && p.x < outR(i) && p.y < outB(i) && !(p.x >= inZ[i].xa && p.x <= inZ[i].xb && p.y >= inZ[i].ya && p.y <= inZ[i].yb);
   if (!pts.some(band)) return pts;
