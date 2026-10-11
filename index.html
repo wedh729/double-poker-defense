@@ -4155,9 +4155,11 @@ function crownGuideLines() { // 안내 팝업·왕관 상태창 공용 문구
 }
 function openCrownGuide() {
   if (S.phase === 'gameover' || S.crownRace >= 0 || !S.units.some(u => u.item === 'crown')) return;
+  try { if (localStorage.getItem('dpd_crown_guide')) return; } catch (e) {}
+  const busy = ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal'].some(gameDialogVisible) || gbOv || document.querySelector('#cvWrap .gbxStage.ovl'); // 개장 토스트와 같은 판정
+  if (busy) { casTimeout(openCrownGuide, 1000); return; } // 다른 창·뽑기 연출 중엔 겹쳐 열지 않고 1초 뒤 다시 (대관식을 먼저 하면 위 crownRace 가드로 끝)
+  try { localStorage.setItem('dpd_crown_guide', '1'); } catch (e) {}
   const m = document.getElementById('crownModal');
-  if (m.style.display === 'block') return; // 이미 대관식 창이 열려 있으면 생략 (다음 판에 다시)
-  try { if (localStorage.getItem('dpd_crown_guide')) return; localStorage.setItem('dpd_crown_guide', '1'); } catch (e) {}
   const t = m.querySelector('.dcTitle'), b = m.querySelector('.dcBody');
   crownGuideOrig = [t.innerHTML, b.innerHTML]; crownGuideOn = true;
   t.innerHTML = `${dpdIconSVG('crown')} 왕관을 얻었습니다!`;
@@ -4192,6 +4194,7 @@ function crownCancel() { // 회수: 왕관을 다시 소환 — 선택 강요 �
 // 👑 기한 소멸 (10-04 유저): CROWN_DEADLINE 전투가 끝나 다음 라운드로 넘어갈 때까지 대관식을 안 했으면
 //    필드의 왕관과 아직 안 깐 석탄 보상 광석(왕관이 들어 있다)을 거둔다. 집힌 채여도 손에서 빼고, 상태창은 S.units 기준이라 갱신만.
 function crownExpire() {
+  if (S.crownRace < 0 && S.round <= CROWN_DEADLINE && S.units.some(u => u.item === 'crown' && u.selected)) updateInfoPanel(); // 👑 10-11: 라운드가 넘어가면 왕관 상태창의 '남은 라운드' 갱신
   if (S.round <= CROWN_DEADLINE || S.crownRace >= 0) return;
   if (document.getElementById('crownModal').style.display === 'block' && !S.crownForced && !crownGuideOn) { // 기한 마지막 틱에 제물대에 올린 왕관 — 창은 그대로, 회수만 막는다 (회수하면 기한 뒤 왕관이 되살아남)
     S.crownForced = true;
@@ -4777,7 +4780,7 @@ function startWave() {
   S.timer = WAVE_TIME + 15 * S.pendSand;
   S.waveT = 0; S.swarmCue = -1; // 패턴 1단계: 전투 경과 시계·스웜 예고 주기 번호 (태양전 분기보다 앞 — 모든 전투 공통)
   S.statsBase = Object.fromEntries(Object.entries(S.stats).map(([k, v]) => [k, { dmg: v.dmg, kills: v.kills }])); // 📊 딜 순위 = 이 판부터 (결산은 S.stats 누적 그대로)
-  if (S.crownAge >= 0 && S.crownRace < 0) S.crownAge++; // 👑 10-11: 대관식 전 왕관은 전투가 시작될 때마다 한 칸 약해진다 (crownMulNow)
+  if (S.crownAge >= 0 && S.crownRace < 0) { S.crownAge++; if (S.units.some(u => u.item === 'crown' && u.selected)) updateInfoPanel(); } // 👑 10-11: 대관식 전 왕관은 전투가 시작될 때마다 한 칸 약해진다 (crownMulNow) — 왕관 상태창이 열려 있으면 배수 갱신
   if (S.pendSand) { addFloat(CX, 130, `+${15 * S.pendSand}초!`, '#7ec8ff', 2); S.pendSand = 0; }
   S.feverUsed = false;
   // 🌞 최종장: 하늘의 태양이 강림한다 — 잡몹 없는 독대.
@@ -13559,7 +13562,7 @@ function updateSkillBar() {
 document.getElementById('skillBar').addEventListener('click', e => {
   const b = e.target.closest('.skB'); if (!b || !S || S.paused) return;
   const K = SKILL_KINDS.find(x => x.k === b.dataset.k); if (!K) return;
-  const u = skillUnits(K).find(K.ready); if (!u) return; // 준비된 유닛이 없으면 아무 일 없음 (충전 중)
+  const u = skillUnits(K).find(v => K.ready(v) && !v.grabbed); if (!u) return; // 준비된 유닛이 없으면 아무 일 없음 (충전 중) · 🖐️ 집힌 유닛 제외(암살·분신술이 공중 좌표를 복귀 지점으로 저장한다 — 09-20 교훈)
   K.act(u); b._sig = ''; updateSkillBar(); updateInfoPanel();
 });
 // 공격 우선순위 버튼 UI — 선택 1개만 aria-pressed="true" (부대에 공통값이 없으면 cur='' → 전부 false)
