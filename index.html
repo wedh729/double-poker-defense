@@ -224,6 +224,24 @@
   #crownModal .dcBtns button { padding: 8px 14px; font-size: 12px; border: 1px solid rgba(255,215,120,0.35); border-radius: 8px;
     background: rgba(60,48,18,0.9); color: #d8c48e; cursor: pointer; }
   #crownModal .dcBtns button:hover { background: rgba(84,66,24,0.95); }
+  /* ⚡ 스킬 버튼 바 (10-11 유저 — 풍선 타워 디펜스처럼 스킬만 따로): 데스크톱 = 캔버스 아래 가운데, 모바일 = 오른쪽 아래(왼쪽 아래는 상태창 44vw) */
+  #skillBar { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 8px; z-index: 6; }
+  #skillBar:empty { display: none; }
+  .skB { position: relative; width: 46px; height: 46px; padding: 0; border: none; border-radius: 50%; background: #183552e6; color: #fff3cf; cursor: pointer; box-shadow: 0 2px 6px #0006; }
+  .skB .skRing { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .skB .skTrack { fill: none; stroke: #ffffff2e; stroke-width: 3; }
+  .skB .skProg { fill: none; stroke: #7ec8ff; stroke-width: 3; stroke-linecap: round; }
+  .skB[data-st="ready"] .skProg { stroke: #ffd166; }
+  .skB[data-st="active"] .skProg { stroke: #9cf29c; }
+  .skB .skIco { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; transform: translate(-50%, -50%); }
+  .skB[data-st="ready"] { background: #24507ae6; }
+  .skB[data-st="cooldown"] .skIco, .skB[data-st="active"] .skIco { opacity: 0.45; }
+  .skB .skN { position: absolute; right: -3px; top: -3px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: #c8372d; color: #fff; font: bold 10px/16px sans-serif; text-align: center; box-sizing: border-box; }
+  .skB .skN:empty { display: none; }
+  .mobile #skillBar { left: auto; right: 6px; bottom: 6px; transform: none; gap: 6px; }
+  .mobile #skillBar.skLeft { right: auto; left: 15%; } /* 상태창이 오른쪽일 때 (placeInfoPanel) — 왼쪽 끝은 성(클릭해 강화)이라 15%부터 */
+  .mobile .skB { width: 42px; height: 42px; }
+  .mobile[data-tab="poker"] #skillBar { display: none !important; }
   /* 👑 왕관 안내 모드 닫기 X (10-11 — 이걸 눌러야만 닫힌다) */
   #crGuideX { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; padding: 0; border: 1px solid #b18951; border-radius: 50%;
     background: #efd29e; color: #654625; font: bold 17px/32px sans-serif; text-align: center; cursor: pointer; z-index: 1; }
@@ -3212,6 +3230,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
       <button class="chipStation" id="stCasino" title="자금 운영 — 뽑기·광부·투자·비상 물자"><span class="ci"><i class="dpdIc" data-icon="coin"></i></span><span class="cl">자금운영</span></button>
       <div id="dpsRank"><div id="dpsHead" title="이번 라운드 딜 (포커 중엔 직전 라운드)">▼ 딜 순위</div><div id="dpsBody"></div></div>
     </div>
+    <div id="skillBar" role="toolbar" aria-label="스킬"></div>
     <!-- 포커 패널: 캔버스 위로 '샥' 오르내리는 오버레이 (평소엔 캔버스가 이 공간을 전부 쓴다) -->
     <div id="pokerPanel">
       <div id="pokerMain">
@@ -13166,7 +13185,8 @@ cv.addEventListener('touchcancel', e => {
 function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 않게 좌/우로 자동 전환
   const el = document.getElementById('unitInfo'), dps = document.getElementById('dpsRank');
   const sel = (el && el.style.display !== 'none') ? S.units.filter(u => u.selected) : [];
-  if (!sel.length) { if (dps.style.visibility) dps.style.visibility = ''; if (el) { el.classList.remove('uiNoRoom'); if (el.style.maxHeight) el.style.maxHeight = ''; } return; }
+  const skb = document.getElementById('skillBar'); // ⚡ 10-11: 모바일 스킬 바(오른쪽 아래)는 상태창이 오른쪽에 뜨면 왼쪽(성 옆)으로 비킨다 — toggle은 같은 상태면 DOM을 안 건드림
+  if (!sel.length) { skb.classList.toggle('skLeft', false); if (dps.style.visibility) dps.style.visibility = ''; if (el) { el.classList.remove('uiNoRoom'); if (el.style.maxHeight) el.style.maxHeight = ''; } return; }
   const PC_MAX = 220, MIN_ROOM = 48; // 원문 PC 상한(unitinfo.css max-height) · 제목 줄(위 여백 12 + 21)+아래 여백 12 실측 = 45 → 48
   const cv = document.getElementById('cv');
   const sx = cv.getBoundingClientRect().width / 940;              // 캔버스 좌표 → 화면 배율
@@ -13184,6 +13204,7 @@ function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 
   const wantRight = nearLeft;
   if (wantRight) { el.style.left = 'auto'; el.style.right = '10px'; }
   else { el.style.right = 'auto'; el.style.left = (10 + shift) + 'px'; }
+  skb.classList.toggle('skLeft', IS_MOBILE && wantRight);
   fitInfoRoom(el, f);
   const x0 = wantRight ? pL + cw.clientWidth - 10 - W : L0 + shift;
   const v = (!noRoom && dR.width && hit(x0, x0 + W, dR.left, dR.right) && hit(top, bot, dR.top + dy, dR.bottom + dy)) ? 'hidden' : '';
@@ -13494,6 +13515,53 @@ function slotRow(u) {
   const label = cd > 0 ? `대박 폭격 (재사용 ${cd.toFixed(0)}초)` : '대박 폭격 스킬 (쿨 75초)';
   return `<button type="button" id="slotSkillBtn" class="shopBtn ui-skill" data-skill="slot" ${skillAttrs(cd > 0 ? 'cooldown' : 'ready', cd > 0)}>${label}</button>`; // 슬롯은 발동 중 개념 없음 (쿨만)
 }
+// ⚡ 스킬 버튼 바 (10-11 유저: "뭉쳐 두면 특정 유닛을 클릭하기 어려워 스킬 활용도가 떨어진다 — 풍선 타워 디펜스처럼 스킬만 빼놓고 누르면 사용")
+//   스킬 종류마다 버튼 1개(그 유닛 상징 단색 아이콘). 누르면 준비된 유닛 1기가 발동(정보창 버튼과 같은 activate*), 빨간 숫자 = 준비된 수(2기 이상),
+//   테두리 원 = 가장 빨리 돌아오는 쿨(금색 꽉 참 = 준비 · 초록 = 발동 중 · 파랑 = 충전 중). ready = 각 activate*의 가드와 같은 조건.
+//   버튼 요소는 유지하고 속성만 고친다(60칸 양자화 시그니처가 바뀔 때만) — 통째로 다시 만들면 누르는 사이 요소가 바뀌어 클릭이 씹힌다. updateHUD(20Hz)에서 불림
+const SKILL_KINDS = [
+  { k: 'assassin', icon: 'sword',  name: '암살',      has: u => u.tier === 6 && !u.hero, ready: u => !(u.skillCd > 0) && !(u.skillT > 0), rem: u => u.skillT > 0 ? u.skillT + 150 : u.skillCd || 0, tot: () => 155, on: u => u.skillT > 0, act: activateSkill },
+  { k: 'clone',    icon: 'copy',   name: '분신술',    has: u => u.tier === 6 && u.hero,  ready: u => !(u.skillCd > 0) && !(u.skillT > 0), rem: u => u.skillT > 0 ? u.skillT + 150 : u.skillCd || 0, tot: () => 155, on: u => u.skillT > 0, act: activateSkill },
+  { k: 'chrono',   icon: 'chrono', name: '시간 정지', has: u => !!u.chrono, ready: u => !(u.chronoCd > 0), rem: u => u.chronoCd || 0, tot: u => (u.ascend || 0) >= 2 ? 110 : 150, on: () => S.freezeT > 0, act: activateChrono },
+  { k: 'joker',    icon: 'joker',  name: '견인',      has: u => !!u.joker,  ready: u => !(u.jokerCd > 0) && !(u.jokerT > 0), rem: u => u.jokerCd || 0, tot: () => 60, on: u => u.jokerT > 0, act: activateJoker },
+  { k: 'slot',     icon: 'slot',   name: '대박 폭격', has: u => !!u.slot,   ready: u => !(u.slotCd > 0), rem: u => u.slotCd || 0, tot: u => (u.ascend || 0) >= 2 ? 55 : 75, on: () => false, act: activateSlot },
+];
+const skillBtns = {}; // k → 버튼 요소 (판이 바뀌어도 유닛이 없으면 아래에서 지워진다)
+function skillUnits(K) { return S.phase === 'gameover' ? [] : S.units.filter(u => !u.clone && !u.item && !u.miner && K.has(u)); }
+function updateSkillBar() {
+  const bar = document.getElementById('skillBar'); if (!bar || !S) return;
+  for (const K of SKILL_KINDS) {
+    const us = skillUnits(K);
+    let b = skillBtns[K.k];
+    if (!us.length) { if (b) { b.remove(); delete skillBtns[K.k]; } continue; }
+    if (!b) {
+      b = skillBtns[K.k] = document.createElement('button');
+      b.type = 'button'; b.className = 'skB'; b.dataset.k = K.k; b.title = K.name; b.setAttribute('aria-label', K.name);
+      b.innerHTML = `<svg class="skRing" viewBox="0 0 44 44" aria-hidden="true"><circle class="skTrack" cx="22" cy="22" r="20"/><circle class="skProg" cx="22" cy="22" r="20" pathLength="100" stroke-dasharray="100" stroke-dashoffset="0" transform="rotate(-90 22 22)"/></svg>${dpdIconSVG(K.icon, 'dpd-icon skIco')}<b class="skN"></b>`;
+      const next = SKILL_KINDS.slice(SKILL_KINDS.indexOf(K) + 1).map(x => skillBtns[x.k]).find(Boolean); // 표 순서 유지
+      bar.insertBefore(b, next || null);
+    }
+    const nReady = us.filter(K.ready).length;
+    let st = 'ready', q = 60;
+    if (!nReady) {
+      const s = us.reduce((a, u) => K.rem(u) < K.rem(a) ? u : a);
+      q = Math.round(60 * Math.max(0, Math.min(1, 1 - K.rem(s) / K.tot(s))));
+      st = us.some(K.on) ? 'active' : 'cooldown';
+    }
+    const sig = st + '|' + nReady + '|' + q;
+    if (b._sig === sig) continue;
+    b._sig = sig;
+    b.dataset.st = st;
+    b.querySelector('.skProg').setAttribute('stroke-dashoffset', (100 * (1 - q / 60)).toFixed(1));
+    b.querySelector('.skN').textContent = nReady >= 2 ? nReady : '';
+  }
+}
+document.getElementById('skillBar').addEventListener('click', e => {
+  const b = e.target.closest('.skB'); if (!b || !S || S.paused) return;
+  const K = SKILL_KINDS.find(x => x.k === b.dataset.k); if (!K) return;
+  const u = skillUnits(K).find(K.ready); if (!u) return; // 준비된 유닛이 없으면 아무 일 없음 (충전 중)
+  K.act(u); b._sig = ''; updateSkillBar(); updateInfoPanel();
+});
 // 공격 우선순위 버튼 UI — 선택 1개만 aria-pressed="true" (부대에 공통값이 없으면 cur='' → 전부 false)
 function priorityRow(cur) {
   const b = (v, label) => `<button type="button" class="priBtn" data-pri="${v}" aria-pressed="${cur === v}">${label}</button>`;
@@ -14680,6 +14748,7 @@ function hudSetHtml(id, html) { const el = document.getElementById(id); if (el &
 function updateHUD() {
   syncPokerPanel(); // 포커 페이즈에만 패널이 올라와 있게 (모든 전환 경로를 한 곳에서 보장)
   updateGoPoker();  // 🃏 포커장 이동 버튼도 같은 자리에서 (판 내림·탭 전환·전투 시작 모든 경로)
+  updateSkillBar(); // ⚡ 스킬 버튼 바 (10-11)
   tutTick();        // 🧭 첫 판 안내 말풍선
   refreshInfoOnBuffChange();
   placeInfoPanel(); // 유닛이 카드 쪽으로 이동하면 반대편으로 비켜준다
