@@ -10390,7 +10390,7 @@ function drawUnit(u, sq) { // sq: 🖐️ 착지 스쿼시(0~0.22) — 몸통 �
   }
   drawUnitBody(u, faceX); // 망토→다리→몸통→라벨 (베이크 가능 코어 — 아래 함수)
   // 🌈 영웅 홀로그램: 시간 애니메이션이라 베이크 불가 — 코어 위에 라이브로 (원래는 몸통과 라벨 사이였으나 위로 올라온 차이는 미세)
-  if (u.hero || u.superAce) drawHeroHolo(u);
+  if (u.super || u.superAce) drawHeroHolo(u); // 10-11 유저: 일반 영웅(히든 포함)은 빼고 슈퍼영웅·슈퍼에이스만
   drawHeadgear(u, u.y - bodyShape(u).h / 2 - 1, faceX); // 모자도 라이브 — 횃불·왕관 반짝이 애니메이션 유지 (faceX = 비대칭 장식 좌우 반전)
   // 팔 + 무기 (4방향: 좌/우/상/하) — 상완만 몸에 고정, 하완+주먹은 무기 변환을 따라 움직인다
   drawUnitArm(u);
