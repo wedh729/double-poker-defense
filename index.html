@@ -4141,7 +4141,7 @@ function crownChoose(r) {
   logMsg(`<b>${rc.suit} ${rc.name}</b> 종족에 왕관을 씌웠다 — 공격력 <b>×${S.crownMul.toFixed(2)}</b> (영웅·에이스 포함, 히든 제외)`);
   updateInfoPanel();
 }
-// 👑 왕관 안내 (10-11 유저: 처음 얻었을 때 팝업 — X를 눌러야만 닫혀 설명을 충분히 읽게). 브라우저당 1번(dpd_crown_guide) — 그 뒤엔 왕관 상태창에 같은 안내.
+// 👑 왕관 안내 (10-11 유저: 처음 얻었을 때 팝업 — X를 눌러야만 닫혀 설명을 충분히 읽게). 10-12 유저: 매 판 띄움(왕관은 판당 1개 — 회수 후 재소환은 이 경로를 안 탐). 왕관 상태창에도 같은 안내.
 //    대관식 창(#crownModal)을 안내 모드로 빌려 쓴다 — 일시정지(syncGamePause)·디자인·포커스 관리가 그대로 따라온다. ESC·회수 버튼은 안내 모드에서 안 먹는다(crownCancel 가드)
 function crownLeftRounds() { return Math.max(0, CROWN_DEADLINE - S.round + 1); } // 사라지기까지 남은 라운드 (이번 라운드 포함 — R20 전투가 끝나면 사라짐)
 function crownGuideLines() { // 안내 팝업·왕관 상태창 공용 문구
@@ -4155,10 +4155,8 @@ function crownGuideLines() { // 안내 팝업·왕관 상태창 공용 문구
 }
 function openCrownGuide() {
   if (S.phase === 'gameover' || S.crownRace >= 0 || !S.units.some(u => u.item === 'crown')) return;
-  try { if (localStorage.getItem('dpd_crown_guide')) return; } catch (e) {}
   const busy = ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal'].some(gameDialogVisible) || gbOv || document.querySelector('#cvWrap .gbxStage.ovl'); // 개장 토스트와 같은 판정
   if (busy) { casTimeout(openCrownGuide, 1000); return; } // 다른 창·뽑기 연출 중엔 겹쳐 열지 않고 1초 뒤 다시 (대관식을 먼저 하면 위 crownRace 가드로 끝)
-  try { localStorage.setItem('dpd_crown_guide', '1'); } catch (e) {}
   const m = document.getElementById('crownModal');
   const t = m.querySelector('.dcTitle'), b = m.querySelector('.dcBody');
   crownGuideOrig = [t.innerHTML, b.innerHTML]; crownGuideOn = true;
@@ -5195,7 +5193,7 @@ function spawnCatapult(x, y) {
     keyRank: 14, keyLabel: '', kills: 0,
     jx: 0, jy: 0,
     forceTarget: null, attackMine: false, amove: false, priority: 'near',
-    dmg: 50, cd: 1.75, range: 999, splash: 130, bounce: 0, atk: 'area', proj: null, vis: 'bomb', // 08-15 유저: "너무 사기" — dmg 300→150·cd 4→10 (실주기 = ×1.4286 히든 페널티로 ~14.3s) · 10-07 유저: 1/3 너프 150→50 (단련·물/용암 ×1.1·파편·화상이 전부 dmg 곱셈이라 모든 레벨·변형이 정확히 1/3) · 10-11 유저: "너무 안 좋아짐" → 상태창 공속 0.4/초 = 실주기 2.5s(cd 1.75 × 1.4286) — 화력 ×5.7
+    dmg: 50, cd: 3.5, range: 999, splash: 130, bounce: 0, atk: 'area', proj: null, vis: 'bomb', // 08-15 유저: "너무 사기" — dmg 300→150·cd 4→10 (실주기 = ×1.4286 히든 페널티로 ~14.3s) · 10-07 유저: 1/3 너프 150→50 (단련·물/용암 ×1.1·파편·화상이 전부 dmg 곱셈이라 모든 레벨·변형이 정확히 1/3) · 10-11 유저: "너무 안 좋아짐" → 상태창 공속 0.4/초 · 10-12 유저: 0.2/초로 = 실주기 5s(cd 3.5 × 1.4286) — 10-07 대비 화력 ×2.86
     pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 공성 투석기', cool: 0, selected: true, walk: 0, speed: 0,
   });
   addFloat(x, y - 30, '공성 투석기 완성!!', '#78909c', 2.8);
@@ -10830,7 +10828,7 @@ function isStdHero(u) { return !!u.hero && !isHiddenCombo(u); }
 // 값 = spec_g1_draw.js G1.SIZE·G1_LOOK 그대로 (영웅 좌표). cape = 망토(ay 나오는 높이·tip 끝·hemEnd 밑단 끝·hemT 밑단 두께·foldX 접힌 면 x·tail 원페어 꼬리), pad = 어깨판(k 크기·face 안쪽 면 금/종족색), suitY·suitS = 큰 가운데 문양,
 // chest = 슈퍼 가슴판(없으면 기본값 y0 −H/2+0.6·hw 0.30W·dep 0.17H(tri 0.15H), gem:false = 보석 생략, null = 가슴판 없음 — P3)
 const HERO_LOOK = {
-  0: { w: 30, h: 38, shape: 'rect', cape: { ay: -13.0, tip: [-30.5, 9.5], hemEnd: [-13.5, 16.8], hemT: 2.6, foldX: -21.0 }, pad: { k: 1.15, face: 'gold' }, suitY: 0, suitS: 7.5, back: g1Back, front: g1Front, head: g1HeadAviator },            // 하이카드: 고글 비행모
+  0: { w: 30, h: 38, shape: 'rect', cape: { ay: -13.0, tip: [-30.5, 9.5], hemEnd: [-13.5, 16.8], hemT: 2.6, foldX: -21.0 }, pad: { k: 1.15, face: 'gold' }, suitY: 0, suitS: 7.5, back: g1Back, front: g1Front, head: null },                     // 하이카드: 머리 장식 없음 (10-12 유저 — 고글 비행모 삭제)
   1: { w: 31, h: 38, shape: 'rect', cape: { ay: -13.0, tip: [-30.5, 8.0], hemEnd: [-14.0, 15.6], hemT: 2.6, foldX: -21.5, tail: true }, pad: { k: 1.2, face: 'race' }, suitY: 0, suitS: 6.2, back: g1Back, front: g1Front, head: g1HeadRobin },   // 원페어: 초록 로빈후드 모자
   2: { w: 24, h: 39, shape: 'rect', cape: { ay: -14.0, tip: [-29.5, 10.8], hemEnd: [-10.5, 18.0], hemT: 2.6, foldX: -18.5 }, pad: { k: 1.15, face: 'gold' }, suitY: -2.4, suitS: 6.5, back: g1Back, front: g1Front, head: g1HeadTopHat },       // 투페어: 큰 톱햇
   3: { w: 35, h: 35, shape: 'tri', cape: { ay: -12.5, tip: [-30.5, 3.5], hemEnd: [-8.5, 15.4], hemT: 2.8, foldX: -19.0 }, pad: { k: 1.3, face: 'gold' }, suitY: -3.0, suitS: 5.8, chest: { gem: false }, back: g1Back, front: g1Front, head: g1HeadKnight }, // 트리플: 깃털 기사 투구, 역삼각 몸 (가슴 보석 = 투구 턱 구슬)
@@ -11388,8 +11386,6 @@ function heroPal(u) {
     capeBack: ace ? shade('#e91e8c', -95) : shade(edge, -100),      // 슈퍼 뒤 겹 망토
     capeOut: ace ? shade('#e91e8c', -110) : shade(edge, -120),      // 망토 외곽선
     suit: ace ? '♠' : RACES[u.race].suit, suitCol: ace ? '#ffffff' : edge,
-    deep: ace ? shade('#e91e8c', -30) : shade(edge, -25),           // 종족색에서 나온 장식 (하이카드 비행모)
-    deepOut: shade(edge, -120),
     padFace: ace ? '#e91e8c' : edge,                                // 어깨판 안쪽 면이 종족색인 족보
     gem: (ace || u.race !== 1) ? HERO_C.GEM : HERO_C.GEM_H,
   };
@@ -11425,7 +11421,7 @@ function heroHeadSprite(u, P, i, fn) {
 }
 function heroHead(u, P) { // heroG 안에서 호출 — 라이브 부분은 그대로, 정지 부분은 스프라이트 1장
   const parts = HERO_HEAD_PARTS[u.tier];
-  if (!parts) { ctx.drawImage(heroHeadSprite(u, P, 0, HERO_LOOK[u.tier].head), HH.X0, HH.Y0, HH.W, HH.H); return; }
+  if (!parts) { if (HERO_LOOK[u.tier].head) ctx.drawImage(heroHeadSprite(u, P, 0, HERO_LOOK[u.tier].head), HH.X0, HH.Y0, HH.W, HH.H); return; } // head null = 머리 장식 없음 (하이카드 10-12)
   for (let i = 0; i < parts.length; i++) { const p = parts[i]; if (p.live) p.fn(u, P); else ctx.drawImage(heroHeadSprite(u, P, i, p.fn), HH.X0, HH.Y0, HH.W, HH.H); }
 }
 // ---------- 공통 부품 (영웅 좌표 — heroG 안에서만 부른다) ----------
@@ -11581,28 +11577,7 @@ function g1Front(u, P) {
   ctx.save(); ctx.translate(W / 2, -H / 2); ctx.scale(-1, 1); g1Pad(P, pd.k, face); ctx.restore(); // 앞쪽(무기 쪽) 어깨
 }
 // head (라이브 drawHeadgear) — 단색 fill/stroke만 (그라데·shadowBlur·fillText 없음). 좌표는 몸통 중심 원점, 몸통 위 변 = −H/2
-// 하이카드: 고글 비행모 (몸통 위를 덮는 둥근 가죽모 + 갈색 띠 + 금테 고글 2개, 고글은 앞쪽으로 쏠림)
-// 10-11 유저 "추천대로" (spec_g3 결정 6 — 10종 중 머리가 가장 낮고 작았다): 돔 높이 11.8→17.5(꼭대기 −29.4→−35.1)·폭 15.3→15.6, 띠·고글·슈퍼 날개 휘장 4 위로, 고글 +0.4
-function g1HeadAviator(u, P) {
-  ctx.beginPath(); // 모자 돔: 반타원 + 아래 변 살짝 볼록 (테 윗부분을 덮음)
-  ctx.moveTo(-15.6, -16.0);
-  ctx.ellipse(-0.5, -17.6, 15.6, 17.5, 0, Math.PI * 1.03, Math.PI * 1.97);
-  ctx.lineTo(14.9, -16.2);
-  ctx.quadraticCurveTo(0, -17.6, -15.6, -16.0);
-  ctx.closePath();
-  ctx.fillStyle = P.deep; ctx.fill(); heroOut(P.deepOut);
-  ctx.beginPath(); ctx.ellipse(-0.5, -17.6, 12.2, 13.3, 0, Math.PI * 1.12, Math.PI * 1.42); // 하이라이트 한 줄
-  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.1; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
-  ctx.beginPath(); ctx.moveTo(-14.6, -25.2); ctx.lineTo(12.6, -28.0); ctx.lineTo(12.0, -31.3); ctx.lineTo(-14.2, -28.6); ctx.closePath(); // 갈색 띠 (앞으로 살짝 올라감)
-  ctx.fillStyle = '#5e3727'; ctx.fill(); heroOut('#2e1a10');
-  for (const [gx, gy, r] of [[-2.5, -27.0, 5.1], [9.0, -28.6, 4.9]]) { // 고글 2개: 금테 + 파란 렌즈 + 반짝 한 점
-    ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
-    ctx.beginPath(); ctx.arc(gx, gy, r - 1.6, 0, Math.PI * 2); ctx.fillStyle = '#3f7fe8'; ctx.fill();
-    ctx.strokeStyle = '#1d3f8a'; ctx.lineWidth = 0.6; ctx.stroke();
-    ctx.beginPath(); ctx.arc(gx - 0.9, gy - 0.9, 1.0, 0, Math.PI * 2); ctx.fillStyle = '#cfe8ff'; ctx.fill();
-  }
-  if (u.super) g1SuperHead0(u, P);
-}
+// 하이카드: 머리 장식 없음 — 10-12 유저 "모자는 그냥 없애줘" (고글 비행모 g1HeadAviator·슈퍼 금테·날개 휘장 g1SuperHead0 삭제. HERO_LOOK[0].head = null → heroHead가 건너뜀)
 // 원페어: 초록 로빈후드 모자 (뒤가 둥글고 앞으로 뾰족) + 빨간 깃털(뒤로 기움) + 금 단추
 function g1HeadRobin(u, P) {
   if (u.super) g1SuperFeather2(u, P); // 슈퍼: 금 깃털 하나 더 (맨 뒤)
@@ -11702,19 +11677,7 @@ function g1HeadKnight(u, P) {
   }
   if (u.super) { ctx.beginPath(); ctx.arc(1.0, -15.8, 1.3, 0, Math.PI * 2); ctx.fillStyle = P.gem; ctx.fill(); } // 슈퍼: 턱 구슬 = 보석
 }
-// 슈퍼 머리 추가 부품 (영웅 좌표, 바깥에서 ×1.2 이미 걸림) — 금·보석만, 왕관·흰 털은 포카드·로얄 전용이라 쓰지 않음
-function g1SuperHead0(u, P) { // 하이카드 슈퍼: 모자 아래 금테 + 뒤쪽 금 날개 휘장(깃 3단) + 날개 뿌리 보석
-  ctx.beginPath(); ctx.moveTo(-15.4, -16.4); ctx.quadraticCurveTo(0, -18.0, 14.8, -16.6);
-  ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
-  ctx.beginPath(); // 날개 휘장 — 10-11 비행모 키움에 맞춰 4 위로
-  ctx.moveTo(-11.0, -26.4);
-  ctx.quadraticCurveTo(-15.6, -32.6, -21.2, -32.4);
-  ctx.lineTo(-18.6, -30.2); ctx.lineTo(-21.4, -29.4); ctx.lineTo(-18.4, -27.6); ctx.lineTo(-20.2, -26.2);
-  ctx.quadraticCurveTo(-15.4, -24.6, -11.0, -24.4);
-  ctx.closePath();
-  ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
-  ctx.beginPath(); ctx.arc(-11.0, -25.4, 1.5, 0, Math.PI * 2); ctx.fillStyle = P.gem; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
-}
+// 슈퍼 머리 추가 부품 (영웅 좌표, 바깥에서 ×1.2 이미 걸림) — 금·보석만, 왕관·흰 털은 포카드·로얄 전용이라 쓰지 않음 (하이카드 g1SuperHead0은 10-12 모자 삭제와 함께 삭제)
 function g1SuperFeather2(u, P) { // 원페어 슈퍼: 금 깃털 (빨간 깃털 뒤, 더 뒤로 기움)
   ctx.beginPath();
   ctx.moveTo(-3.8, -25.0);
