@@ -3205,7 +3205,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
     <!-- 좌측 카지노: 칩(보스·결투)으로 룰렛·슬롯·광부, 골드로 비상 물자 -->
     <div id="chipBar">
       <button class="chipStation" id="stCasino" title="자금 운영 — 뽑기·광부·투자·비상 물자"><span class="ci"><i class="dpdIc" data-icon="coin"></i></span><span class="cl">자금운영</span></button>
-      <div id="dpsRank"><div id="dpsHead" title="이번 판 누적 딜 1~3위">▼ 딜 순위</div><div id="dpsBody"></div></div>
+      <div id="dpsRank"><div id="dpsHead" title="이번 라운드 딜 (포커 중엔 직전 라운드)">▼ 딜 순위</div><div id="dpsBody"></div></div>
     </div>
     <!-- 포커 패널: 캔버스 위로 '샥' 오르내리는 오버레이 (평소엔 캔버스가 이 공간을 전부 쓴다) -->
     <div id="pokerPanel">
@@ -3890,6 +3890,7 @@ function reset() {
     goldFlash: 0, // 🎲 갬블러 6 잭팟 골드 화면 플래시 타이머
     goldWhy: '', goldWhyT: 0, // ✨ 대박 배너 밑 '왜 대박인지' 한 줄 + 표시 시간 (10-05 유저: 모바일에서 이유가 안 보임)
     stats: {}, // 🏆 무기별 딜/킬 통계 (게임오버 화면용)
+    statsBase: {}, // 📊 10-11 유저: 딜 순위 위젯 = 직전 판 딜(누적 X) — 전투 시작 때 찍은 S.stats 사본. 위젯은 (지금 − 사본)이라 전투 중엔 이번 판, 포커 중엔 방금 끝난 판
     tribute: 0, // 🪨 투석기 제물 카운터 (하이카드 20기 → 완성, 라운드 재시작 시 리셋)
     bird: null, birdTimer: 250 + Math.random() * 200, // 🐦 힌트 새 / 다음 스폰까지 남은 초
     hellCleared: false, hellClearT: 0, // 🌞 아포칼립스 태양 격파 여부 / 클리어 화면까지 여운 타이머
@@ -4699,6 +4700,7 @@ function startWave() {
   // ⏱️ 포커 중에 산 시간의 모래는 이 전투에 실린다 (전투 중 구매는 즉시 S.timer에 더해진다)
   S.timer = WAVE_TIME + 15 * S.pendSand;
   S.waveT = 0; S.swarmCue = -1; // 패턴 1단계: 전투 경과 시계·스웜 예고 주기 번호 (태양전 분기보다 앞 — 모든 전투 공통)
+  S.statsBase = Object.fromEntries(Object.entries(S.stats).map(([k, v]) => [k, { dmg: v.dmg, kills: v.kills }])); // 📊 딜 순위 = 이 판부터 (결산은 S.stats 누적 그대로)
   if (S.pendSand) { addFloat(CX, 130, `+${15 * S.pendSand}초!`, '#7ec8ff', 2); S.pendSand = 0; }
   S.feverUsed = false;
   // 🌞 최종장: 하늘의 태양이 강림한다 — 잡몹 없는 독대.
@@ -14291,7 +14293,7 @@ function updateDpsRank() {
   body.style.display = dpsMode === 2 ? 'none' : '';
   if (dpsMode === 2) return;
   const fmt = v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'k' : Math.round(v);
-  const all = dpsGroups();
+  const all = dpsGroups(S.statsBase || {}); // 10-11 유저: 직전 판 딜 (누적 X)
   const top = dpsMode === 1 ? all : all.slice(0, 5);
   const maxD = top.length ? top[0][1].dmg : 1;
   const html = top.length
@@ -14303,12 +14305,14 @@ function updateDpsRank() {
 }
 // 족보로 묶어 집계 (08-16 유저): "원페어"·"영웅 원페어"·"슈퍼영웅 투페어"… — S.stats 키(무기명)는 그대로, 표시만 묶는다
 // 10-06 유저: 딜 순위 표기 통일 — 위젯(상위 5·전체)과 결산(MVP·목록)이 이 한 목록을 쓴다 (08-16의 '결산은 무기명 유지'는 대체됨)
-function dpsGroups() {
+function dpsGroups(base) { // base 있으면 그 사본 이후 몫만 (딜 순위 위젯 = S.statsBase) · 없으면 누적 (결산)
   const agg = {};
   for (const [nm, st] of Object.entries(S.stats)) {
+    const b = base && base[nm], d = st.dmg - (b ? b.dmg : 0), k = st.kills - (b ? b.kills : 0);
+    if (base && d <= 0 && k <= 0) continue; // 이 판에 안 싸운 무기는 목록에서 빠짐
     const L = dpsGroupLabel(nm);
     const a = agg[L] || (agg[L] = { dmg: 0, kills: 0 });
-    a.dmg += st.dmg; a.kills += st.kills;
+    a.dmg += d; a.kills += k;
   }
   return Object.entries(agg).sort((a, b) => b[1].dmg - a[1].dmg);
 }
