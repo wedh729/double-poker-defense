@@ -14745,6 +14745,19 @@ function popSound(big) {
   o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 0.28);
   noiseBurst(big ? 0.12 : 0.05, big ? 0.26 : 0.13, 2300, 'bandpass');
 }
+// 🎯 SF 유탄 '보' (10-11 유저: 펑이 커서 "포보보보봉" 정도로) — 고음 크랙 없는 작고 둥근 사인 + 먹먹한 저역 숨. 연사로 이어지면 포보보보로 들리게 매번 음높이 살짝 다름
+//    230Hz 출발 = 폰 스피커(저역 ~150Hz↓ 안 나옴)에서도 몸통이 들리게 (comboHit과 같은 이유)
+function gboomSound() {
+  if (!AC) return;
+  const t = AC.currentTime, j = 0.92 + Math.random() * 0.16;
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(230 * j, t); o.frequency.exponentialRampToValueAtTime(105 * j, t + 0.07);
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.12, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+  o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 0.12);
+  noiseBurst(0.04, 0.035, 650, 'lowpass');
+}
 // 🥊 콤보 타격 악센트: 멜로디(음계)가 없는 '퍽' — 낮은 사인 펀치(피치가 뚝 떨어져 음정이 안 들림) + 짧은 크랙 노이즈.
 //    콤보가 쌓일수록 펀치가 묵직해지고 크랙이 밝아진다(음높이가 아니라 무게로 고조). 10콤보마다 한 번 더 깊은 '쿵'.
 function comboHit(n) {
@@ -14768,7 +14781,8 @@ function sfx(type, arg) {
   lastSfx[type] = now;
   if (type === 'shoot') noiseBurst(0.045, 0.17, 2600 + Math.random() * 900, 'bandpass'); // 착! (찰진 슬라이스)
   else if (type === 'slash') { noiseBurst(0.1, 0.2, 1800, 'bandpass'); tone(230, 0.09, 'sawtooth', sfxGain, 0.07); } // 촤악 (썰림)
-  else if (type === 'boom' || type === 'gboom') popSound(false); // 팡! (gboom = SF 유탄, 소리 같고 연타 제한만 따로)
+  else if (type === 'boom') popSound(false); // 팡!
+  else if (type === 'gboom') gboomSound(); // 보 (SF 유탄 — 10-11부터 작고 둥근 전용 소리, 연타 제한도 따로)
   else if (type === 'bigboom') popSound(true); // 퍼-엉!! (보스)
   else if (type === 'jackpot') [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'triangle', sfxGain, 0.18, AC.currentTime + i * 0.09));
   else if (type === 'pick') { noiseBurst(0.04, 0.10); tone(190 + Math.random() * 50, 0.05, 'triangle', sfxGain, 0.09); } // ⛏️ 곡괭이 톡톡
