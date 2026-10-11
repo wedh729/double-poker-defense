@@ -4343,7 +4343,7 @@ function spawnUnit(rank, race, hidden, keyRank, superAce) {
     keyRank: kr, keyLabel: rankLabel(kr), kills: 0,
     jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
     forceTarget: null, attackMine: false, amove: false, priority: 'near',
-    // 에이스(히든): 기본 1.5배 / 슈퍼에이스(족보+숫자 일치): 기본 3.0배. 둘 다 + 상위 2종족 업그레이드 합산
+    // 에이스(히든): 기본 1.5배 / 슈퍼에이스(족보+숫자 일치): 기본 3.0배. + 업그레이드 합산 (에이스 상위 2종족 · 슈퍼에이스 3종족 — 10-11)
     dmg: w.dmg * (hidden ? (ACE_MUL[rank] || 1.5) * (superAce ? 3 : 1) : keyMul(kr)), // 에이스: 티어별 배수, 슈퍼에이스 ×2→×3 (뽑기 난도 반영 상향)
     cd: w.cd / (superAce ? 1.5 : 1), range: w.range, splash: w.splash, bounce: w.bounce, // 슈퍼에이스: 공속도 1.5배
     atk: w.atk, proj: w.proj || null, vis: w.vis || null, pierce: 0, shards: 0, shardFrac: 0,
@@ -4523,7 +4523,7 @@ function effDmgBase(u, splashPer) {
   if (isHiddenCombo(u)) return u.dmg * heroUp; // 히든 영웅은 종족이 없다 — 종족 업글 미적용, 단련(+제물 승급)으로만 성장 (08-13 유저: 투석기 ♦ 다이아 중복 특례 제거 — 단련으로 통일. 👑 왕관도 미적용 — 조커 t1·투석기 t7 공유 함정)
   const crown = (S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? CROWN_RACE_MUL[S.crownRace] : 1; // 👑 왕관 종족 강화 (최종 배수). ⚠️ ♦ 다이아 = race 0도 유효 선택이라 가드는 >= 0 (광부 race null은 불일치)
   const per = (splashPer ? 0.55 * u.cd : upgPer(u)) * fuseCount(u);
-  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return (u.dmg + per * (upgEff(s[0]) + upgEff(s[1]))) * crown; } // 에이스: 상위 2종족 합산 (가속 반영)
+  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return (u.dmg + per * (upgEff(s[0]) + upgEff(s[1]) + (u.superAce ? upgEff(s[2]) : 0))) * crown; } // 에이스: 상위 2종족 합산 (가속 반영) · 슈퍼에이스: 3종족 전부 (10-11 유저 — 압도적 버프)
   return (u.dmg + per * upgEff(S.upg[u.race])) * crown;
 }
 // 📯 콰르텟 공속 오라 적용된 실제 쿨다운 (spdBuff는 update()에서 매 프레임 갱신)
@@ -13239,14 +13239,14 @@ function updateInfoPanel() {
   else if (u.stone === 'wet') badges.push('<span class="ui-badge" data-badge="stone" title="물먹은 돌">물</span>');
   if (u.forceTarget) badges.push('<b class="ui-badge" data-badge="focus">집중</b>');
   const nm = unitShortName(u); // 10-06: 괄호 = 일반은 키 카드 'K' · 히든 영웅은 '히든 영웅' · 등급 유닛은 이름 앞에 등급이 붙어 괄호 없음 (광부는 위에서 따로 return)
-  const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = upgEff(top2[0]) + upgEff(top2[1]);
+  const top2 = [...S.upg].sort((a, b) => b - a); const aceUp = upgEff(top2[0]) + upgEff(top2[1]) + (u.superAce ? upgEff(top2[2]) : 0); // 슈퍼에이스 = 3종족 (effDmgBase와 같게)
   const upFlat = isHiddenCombo(u) ? 0 : +(((u.hidden || u.ace) ? aceUp : upgEff(S.upg[u.race])) * upgPer(u) * fuseCount(u)).toFixed(1); // 히든 영웅은 종족 업글 미적용 (⭐ 단련으로 성장)
   const hmI = hiddenMeta(u);
   const hmK = hmI ? Object.keys(HIDDEN_META).find(k => u[k]) : ''; // hiddenMeta와 같은 순서로 찾은 키 → data-hidden (색은 CSS 토큰)
   const raceLine = hmI // 투석기도 히든 영웅 — 08-14부터 다이아 업글 미적용(단련만)이라 예전 '다이아 업그레이드 적용' 문구는 틀린 안내였다
     ? `<div class="ui-race" data-race="hidden" data-hidden="${hmK}"><span class="ui-suit">${dpdIconSVG(hmI[0])} ${hmI[1]}</span> · <span class="ui-race-note">단련·승급은 성에서</span></div>` // 히든: 종족 없음 — 예전 별도 안내 줄을 여기로 합침
     : (u.hidden || u.ace)
-    ? `<div class="ui-race" data-race="ace" data-hidden=""><span class="ui-suit">♠ 에이스</span> · <span class="ui-race-note">상위 2종족 강화 +${upFlat}</span></div>`
+    ? `<div class="ui-race" data-race="ace" data-hidden=""><span class="ui-suit">♠ 에이스</span> · <span class="ui-race-note">${u.superAce ? '3종족' : '상위 2종족'} 강화 +${upFlat}</span></div>`
     : `<div class="ui-race" data-race="${['dia', 'heart', 'club'][u.race]}" data-hidden=""><span class="ui-suit">${RACES[u.race].suit} ${RACES[u.race].name}</span> · <span class="ui-race-note">강화 Lv.${S.upg[u.race]}</span></div>`;
   // 10-06 특성 칩은 가장 짧은 줄(공속·킬) 끝에 붙인다 — 따로 한 줄을 두면 모바일 풀하우스·스킬 버튼 유닛이 높이 상한(176)을 넘어 스크롤이 새로 생겼고,
   //   종족 줄 끝은 히든 영웅 안내 문구가 길어 칩이 다음 줄로 밀렸다. 좁으면 칩 묶음째 다음 줄로
@@ -17312,7 +17312,7 @@ function mpBotWaveNew(b, r, laneBoss) { // laneBoss = 🤖 멀티 보스 라운�
     boss: bhp ? { hp: bhp, max: bhp, on: false } : null, clearT: 0 };
 }
 // 봇 화력 = 유닛별 (WEAPONS 기본 + 업글 곡선) / cd × 동시 타격 수 × BOT_EFF × BOT_SKILL. 일반 몹은 앞에서부터 차례로 쓰러진다(누적 피해 / 몹 HP — 스텝 크기 무관)
-function mpBotUnitDps(u, ue) { return (u.dmg + upgPer(u) * fuseCount(u) * (u.hidden ? 2 * ue : ue)) / u.cd; } // 단일 대상 DPS — 에이스 = 상위 2종족 합산 (봇은 전 종족 같은 레벨) · 소환장(mpBotStep)·레인 사격(mpLaneTick) 공용
+function mpBotUnitDps(u, ue) { return (u.dmg + upgPer(u) * fuseCount(u) * (u.superAce ? 3 * ue : u.hidden ? 2 * ue : ue)) / u.cd; } // 단일 대상 DPS — 에이스 = 상위 2종족 합산 · 슈퍼에이스 = 3종족 (봇은 전 종족 같은 레벨) · 소환장(mpBotStep)·레인 사격(mpLaneTick) 공용
 function mpBotStep(b, w, dt) {
   if (w.clearT || w.t >= WAVE_TIME) return;
   w.t += dt;
