@@ -6397,7 +6397,7 @@ const ROOM_GATE = 40; // 🧱 입구 반높이 (왼쪽 벽 가운데) — 담장
 const ROOM_ART = { l: 23, t: 21, r: 27, b: 27 };
 function roomSnap(pts, units, c, pad = 0) { // pts = [{x,y}] 격자 칸 (제자리 수정), units = 같은 순서의 유닛, c = 부대 중심, pad = 걸어가는 목표의 도착 오차 여유
   const x0 = ROOM.cx - ROOM.w / 2, x1 = ROOM.cx + ROOM.w / 2, y0 = ROOM.cy - ROOM.h / 2, y1 = ROOM.cy + ROOM.h / 2;
-  const half = pts.map((p, i) => { const u = units[i], B = bodyShape(u), HL = hiddenLook(u); return { w: B.w * 0.75 + 2 + pad, h: B.h * 0.75 + 2 + pad, hat: u.item || (u.tier <= 1 && !u.hero && !u.hidden && !u.joker && !u.superAce && !u.miner) ? 0 : isStdHero(u) ? (u.super ? 44 : 36) : HL ? HL.hat : 24 }; }); // 본체 1.5배 그림의 반폭·반높이 + 2 (+ 도착 오차) · hat = 머리 장식(drawHeadgear, 1.5배 ≈ 24) — 하이카드·원페어·아이템은 없음. 10-08 영웅 고유 디자인: 표준 영웅 왕관·깃털은 더 높다(실측 최대 35.5 · 슈퍼 44) → 36/44 — 아래 돌담 띠에 얹히지 않게. 히든 영웅 고유 디자인(HIDDEN_LOOK 표에 있는 유닛)은 표의 hat(40 — 머리 꼭대기 최대 −43.9 논리). 그 외 유닛 판정 무변경
+  const half = pts.map((p, i) => { const u = units[i], B = bodyShape(u); return { w: B.w * 0.75 + 2 + pad, h: B.h * 0.75 + 2 + pad, hat: hatH(u) }; }); // hat 식 = hatH (10-11 버프 마커와 공유로 함수화 — 값 동일) // 본체 1.5배 그림의 반폭·반높이 + 2 (+ 도착 오차) · hat = 머리 장식(drawHeadgear, 1.5배 ≈ 24) — 하이카드·원페어·아이템은 없음. 10-08 영웅 고유 디자인: 표준 영웅 왕관·깃털은 더 높다(실측 최대 35.5 · 슈퍼 44) → 36/44 — 아래 돌담 띠에 얹히지 않게. 히든 영웅 고유 디자인(HIDDEN_LOOK 표에 있는 유닛)은 표의 hat(40 — 머리 꼭대기 최대 −43.9 논리). 그 외 유닛 판정 무변경
   const inZ = pts.map((p, i) => ({ xa: x0 + half[i].w, xb: ORE_LINE, ya: y0 + half[i].h + half[i].hat, yb: y1 - half[i].h - 6 })); // 확실히 안 (위는 머리 장식까지, 아래는 발 6px 더)
   const outL = i => x0 - ROOM_ART.l - half[i].w, outR = i => x1 + ROOM_ART.r + half[i].w, outB = i => y1 + ROOM_ART.b + half[i].h + half[i].hat; // 확실히 밖 (아래는 몸 반높이 + 머리 장식까지 — 모자·왕관이 돌담에 안 얹히게)
   const inArena = p => Math.hypot(p.x - ARENA.x, p.y - ARENA.y) < ARENA.r; // 결투장 링 안은 광석방 기준 확실히 밖 — 스냅 안 함 (링 윗부분이 아래 돌담 그림과 겹친다)
@@ -8306,6 +8306,7 @@ function draw() {
   }
   drawBarrackCap(); // 🪵 울타리 윗변을 유닛 위에 재그림 — 뒤에 선 유닛 반쯤 가림 (오클루전)
   for (const u of S.units) if (u.grabbed) drawGrabbedUnit(u); // 🖐️ 공중에 매달린 유닛 — 울타리보다도 위
+  for (const u of S.units) drawBuffMark(u); // 💰📯 버프 마커 — 모든 유닛 위에 (10-11)
   drawMutter(); // 💬 히든 혼잣말 말풍선
   if (S.bird) drawBird(S.bird); // 🐦 힌트 새 (유닛 위에 그려짐)
   // 이펙트
@@ -10366,26 +10367,7 @@ function drawUnit(u, sq) { // sq: 🖐️ 착지 스쿼시(0~0.22) — 몸통 �
     ctx.textAlign = 'left';
   }
   // 오라: 상시 오라는 최종 등급(슈퍼영웅/슈퍼에이스)만. 일반 유닛·영웅·에이스는 5기 합성 대기(fusable) 주황 오라만
-  {  // 버프 마커: 머리 위에 둥실 (둘 다 받으면 좌우로 나눠 겹치지 않게)
-    const qBuff = (u.spdBuff || 1) < 1, jBuff = !!u.junkBuff, both = qBuff && jBuff;
-    const bob = Math.sin(S.time * 3 + (u.jx || 0)) * 1.6, my = u.y - 30 + bob;
-    if (jBuff) { // 💰 고물상: 금화 (킬 골드 ↑)
-      const mx = both ? u.x - 6 : u.x;
-      ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(mx, my, 4, 0, 6.28); ctx.fill();
-      ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.lineWidth = 1;
-      ctx.fillStyle = '#8d6e2f'; ctx.font = 'bold 6px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('₩', mx, my + 2.2); ctx.textAlign = 'left';
-    }
-    if (qBuff) { // 📯 콰르텟: 쨍한 파란 음표 (공속 ↑)
-      const mx = both ? u.x + 6 : u.x;
-      ctx.fillStyle = 'rgba(0,176,255,0.9)'; ctx.beginPath(); ctx.arc(mx - 1.4, my + 2.4, 2.3, 0, 6.28); ctx.fill(); // 음표 머리
-      ctx.strokeStyle = '#00b0ff'; ctx.lineWidth = 1.5; // 기둥
-      ctx.beginPath(); ctx.moveTo(mx + 0.7, my + 2.4); ctx.lineTo(mx + 0.7, my - 3.6); ctx.stroke();
-      ctx.lineWidth = 1.8; // 깃발
-      ctx.beginPath(); ctx.moveTo(mx + 0.7, my - 3.6); ctx.quadraticCurveTo(mx + 4.2, my - 2.6, mx + 3, my + 0.2); ctx.stroke();
-      ctx.lineWidth = 1;
-    }
-  }
+  // (버프 마커는 10-11부터 drawBuffMark — 모든 유닛을 그린 뒤 머리 장식 위에)
   if (u.super || u.superAce) { // 슈퍼영웅/슈퍼에이스: 발밑에서 무지개 연기가 스멀스멀 피어오르는 오라 (원형 링 대체)
     const fy = u.y + 15, seed = (u.jx || 0) * 7; // 발 위치 기준, 유닛별 위상
     for (let si = 0; si < 5; si++) {
@@ -10612,6 +10594,33 @@ function drawUnitCore(u, lw, faceX) {
   // 모자는 여기 넣지 않는다 — 횃불 불꽃·왕관 반짝이 등 S.time 애니메이션이 많아 베이크하면 얼어붙는다 (drawUnit에서 라이브)
 }
 // 🖐️ 공중에 매달려 바둥바둥: 지면엔 작은 그림자, 몸은 위로 띄워 좌우로 흔들 (다리 버둥은 drawUnitBody의 lw)
+// 머리 장식 높이(화면 px, 본체 위 변부터) — roomSnap 반높이 판정과 버프 마커가 같이 쓴다. 하이카드·원페어·아이템은 없음, 표준 영웅 36(슈퍼 44), 히든 고유 디자인 = 표의 hat, 그 외 24
+function hatH(u) { const HL = hiddenLook(u); return (u.item || (u.tier <= 1 && !u.hero && !u.hidden && !u.joker && !u.superAce && !u.miner)) ? 0 : isStdHero(u) ? (u.super ? 44 : 36) : HL ? HL.hat : 24; }
+// 버프 마커: 머리 위에 둥실 (둘 다 받으면 좌우로 나눠 겹치지 않게). 10-11 유저: 영웅·히든이 커져 머리 장식에 가려졌다 →
+//   drawUnit 밖으로 빼서 모든 유닛을 그린 뒤 그리고(앞 유닛에도 안 가림), 높이 = max(예전 30, 머리 꼭대기 + 14)(본체와 같은 1.5배 좌표). 머리 장식 없는 유닛은 예전 자리 그대로
+function drawBuffMark(u) {
+  const qBuff = (u.spdBuff || 1) < 1, jBuff = !!u.junkBuff, both = qBuff && jBuff;
+  if ((!qBuff && !jBuff) || u.exc || u.grabbed) return;
+  ctx.save(); ctx.translate(u.x, u.y); ctx.scale(1.5, 1.5); ctx.translate(-u.x, -u.y);
+  const bob = Math.sin(S.time * 3 + (u.jx || 0)) * 1.6, my = u.y - Math.max(30, (bodyShape(u).h * 0.75 + hatH(u) + 14) / 1.5) + bob; // +14 = 마커 반지름 4 + 출렁임 1.6 + 여유 (슈퍼 왕관 끝에도 안 닿게)
+  if (jBuff) { // 💰 고물상: 금화 (킬 골드 ↑)
+    const mx = both ? u.x - 6 : u.x;
+    ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(mx, my, 4, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.lineWidth = 1;
+    ctx.fillStyle = '#8d6e2f'; ctx.font = 'bold 6px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('₩', mx, my + 2.2); ctx.textAlign = 'left';
+  }
+  if (qBuff) { // 📯 콰르텟: 쨍한 파란 음표 (공속 ↑)
+    const mx = both ? u.x + 6 : u.x;
+    ctx.fillStyle = 'rgba(0,176,255,0.9)'; ctx.beginPath(); ctx.arc(mx - 1.4, my + 2.4, 2.3, 0, 6.28); ctx.fill(); // 음표 머리
+    ctx.strokeStyle = '#00b0ff'; ctx.lineWidth = 1.5; // 기둥
+    ctx.beginPath(); ctx.moveTo(mx + 0.7, my + 2.4); ctx.lineTo(mx + 0.7, my - 3.6); ctx.stroke();
+    ctx.lineWidth = 1.8; // 깃발
+    ctx.beginPath(); ctx.moveTo(mx + 0.7, my - 3.6); ctx.quadraticCurveTo(mx + 4.2, my - 2.6, mx + 3, my + 0.2); ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+  ctx.restore();
+}
 function drawGrabbedUnit(u) {
   const B = bodyShape(u), t = S.time;
   ctx.fillStyle = 'rgba(0,0,0,0.10)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + B.h / 2 + 6, B.w * 0.4, 3, 0, 0, Math.PI * 2); ctx.fill();
@@ -16582,7 +16591,7 @@ function drawMapTest() {
       ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 13, 13, 5, 0, 0, 6.28); ctx.fill();
       ctx.save(); ctx.translate(0, -lift);
     }
-    drawUnit(u);
+    drawUnit(u); drawBuffMark(u); // 버프 마커는 10-11부터 drawUnit 밖 (월드맵은 그리는 수가 적어 유닛마다 바로)
     if (lift > 0) ctx.restore();
   }
   for (const e of MT.effects) { // 사격 빔·명중 링·텍스트 플로트
