@@ -3678,8 +3678,8 @@ function duelHP(n) {
 function duelRound(r) { return r % DUEL_EVERY === 0 && r % 10 !== 0 && !(r >= SUN_ROUND && !S.hellCleared && !S.multi); } // 🤖 멀티 = 태양전 없음 → R190 이후 휴장도 없음
 // ==================== 몬스터 등장 패턴 받침 (2026-10-12, 몬스터등장규칙_제안_2026-10-08\51_구현설계_받침.md §B-3 · 59_구현설계_검수.md §2-2) ====================
 // 스케줄 = 라운드 끝자리 고정(10-09 유저: 랜덤 아님): x1 공중(R21~) · x3 울타리 행진(R13~) · x6 두 무리(R16~) · x8 방패병(R38~) · R71~79는 공중 R71만 · 보스(x0)·R1~9·태양전 없음.
-// PAT_ON = 구현된 패턴만 켠다(받침 B0 = 전부 false → 라이브 변화 0). 태그·힌트는 수치·% 없이(UI 미니멀). 멀티(S.multi)는 curPattern이 항상 '없음'.
-const PAT_ON = { fly: false, ward: false, conga: false, two: false };
+// PAT_ON = 구현된 패턴만 켠다(받침 B0 = 전부 false → 라이브 변화 0 · B-1 공중 켬). 태그·힌트는 수치·% 없이(UI 미니멀). 멀티(S.multi)는 curPattern이 항상 '없음'.
+const PAT_ON = { fly: true, ward: false, conga: false, two: false };
 const PAT_TAG = { fly: ['공중', '활·총·포가 닿아요'], ward: ['방패병', '잡으면 주위 보호막이 깨져요'], conga: ['울타리 행진', '울타리를 따라 한 줄로'], two: ['두 무리', '양쪽에 나눠 두세요'] };
 const PAT_HP_KNOB = 1.0, FLY_HP = 0.8; // 패턴 라운드 HP 노브(유저 확정 (가) 보정 0 = 1.0) · 공중 몹 HP 배수(지상 몹은 plainMul로 올려 라운드 총 HP 보존)
 const FORM_GLYPH_A = 0.18;            // 진형 바닥 문양 알파 (포커 중 + 전투 첫 2초)
@@ -3872,7 +3872,7 @@ function syncGamePause() {
 let gameGen = 0, casTimers = [];
 let duelToastTimer = null, mktToastTimer = null; // 🏛️ 결투 예고 / 📈 개장 토스트 (resetTransientUI가 먼저 참조하므로 여기서 선언 — TDZ 방지)
 let mktToastPend = null; // 📈 개장 알림이 떠 있는 동안 미뤄 둔 일반 토스트 [제목, 줄] (마지막 1건)
-let duelAskU = null, duelLockFloatT = -10; // 🏛️ 결투 입장 확인 팝업 대상 유닛 / 🔒 락인 경고 플로트 스로틀
+let duelAskU = null, duelLockFloatT = -10, airFloatT = -10; // 🏛️ 결투 입장 확인 팝업 대상 유닛 / 🔒 락인 경고 플로트 스로틀 / 공중 지정 거부 플로트 스로틀
 let crownGuideOn = false, crownGuideOrig = null, crownGuideAt = 0; // 👑 왕관 안내 모드(대관식 창 빌림) / 원래 제목·본문 (resetTransientUI가 참조 — TDZ 방지로 여기) / 연 시각(X 0.6초 잠금)
 function casTimeout(fn, ms) {
   const gen = gameGen;
@@ -3906,7 +3906,7 @@ function resetTransientUI() {
   const cm = document.getElementById('crownModal'); if (cm) cm.style.display = 'none'; // 👑 왕관 모달도 동일 (새 S가 paused/crown 상태를 리셋)
   const rv = document.getElementById('reviveModal'); if (rv) rv.style.display = 'none'; // ❤️‍🩹 부활 제안 창도 동일
   tutTipHide(); // 🧭 첫 판 안내 말풍선
-  duelAskU = null; duelLockFloatT = -10;
+  duelAskU = null; duelLockFloatT = -10; airFloatT = -10;
   window.dispatchEvent(new Event('dpd:resetui'));
 }
 function reset() {
@@ -3938,7 +3938,7 @@ function reset() {
     crownForced: false, // 👑 기한 뒤 강제 대관식 창(취소 불가)이 열려 있음
     crownRace: -1, crownDropped: false, // 👑 왕관: 선택한 종족 (-1 = 미선택 — ⚠️ null 금지: 광부 race가 null이라 일치해 버린다) / 석탄 보상 왕관 지급 여부 (잭팟 2배 중복 방지)
     crownAge: -1, crownMul: 1, // 👑 10-11: 왕관을 얻은 뒤 시작된 전투 수(-1 = 아직 없음, 대관식 전까지만 셈) / 대관식 때 정해진 배수 (crownMulNow)
-    pat: patNone(), formBall: false, // 몬스터 등장 패턴 받침: 이번 라운드 패턴(startPoker에서 curPattern) / 진형이 스웜 볼에 자리를 내준 상태
+    pat: patNone(), formBall: false, air: null, // 몬스터 등장 패턴 받침: 이번 라운드 패턴(startPoker에서 curPattern) / 진형이 스웜 볼에 자리를 내준 상태 / 공중 착지 시계 {on, up, t, k, upT, downT}
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
     stimT: 0, acidPools: [],  // 💉 스팀팩 남은시간 / 🧪 염산 장판
     reviveArmed: false, // 🔄 부활권 봉인 여부
@@ -4137,6 +4137,11 @@ function duelLockFloat(u) {
   if (S.time - duelLockFloatT < 0.8) return; // 도배 방지 스로틀
   duelLockFloatT = S.time;
   addFloat(u.x, u.y - 30, '결투 중!', '#ff6b6b', 0.9);
+}
+function airFloat(u) { // A+클릭으로 떠 있는 몹을 못 치는 무기에 지정하면 (52 §1-③ (c)) — 수치 없음. 스로틀 airFloatT는 duelLockFloatT 옆 선언(resetTransientUI가 되돌림)
+  if (S.time - airFloatT < 0.8) return;
+  airFloatT = S.time;
+  addFloat(u.x, u.y - 30, '닿지 않아요', '#90caf9', 0.9);
 }
 // 👑 왕관 종족 선택 (08-22 족보 → 10-01 유저: 종족을 정하는 것으로) — 카지노·결투 팝업 관례: 모달 중 S.paused (고민 시간 보장)
 function openCrownModal(forced) {
@@ -4811,6 +4816,7 @@ function startWave() {
   if (S.crownAge >= 0 && S.crownRace < 0) { S.crownAge++; if (S.units.some(u => u.item === 'crown' && u.selected)) updateInfoPanel(); } // 👑 10-11: 대관식 전 왕관은 전투가 시작될 때마다 한 칸 약해진다 (crownMulNow) — 왕관 상태창이 열려 있으면 배수 갱신
   if (S.pendSand) { addFloat(CX, 130, `+${15 * S.pendSand}초!`, '#7ec8ff', 2); S.pendSand = 0; }
   S.feverUsed = false;
+  S.air = null; // 공중 착지 시계는 여기서 먼저 끊는다 — 태양전 분기(아래 return)보다 앞이어야 이전 라운드 시계가 태양전에 남지 않는다 (59 §3-3 결함 ③)
   // 🌞 최종장: 하늘의 태양이 강림한다 — 잡몹 없는 독대.
   // >= 인 이유: === 이면 태양을 못 잡고 부활권으로 살아남는 순간 라운드가 151로 넘어가
   // 태양이 영영 다시 안 나오고 hellOverlay(엔딩)도 도달 불가인 무한 헬모드가 된다.
@@ -4839,6 +4845,7 @@ function startWave() {
   // 소환장 가운데에서 우르르 쏟아지듯 (약 2초 안에 전부 등장)
   S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0, mobMul: !S.multi && boss && BOSS_ABILITY[bossShapeFor(S.round)] === 'gravity' ? GRAV.MOB_HP_MUL : 1, // 패턴 1단계: 목성 라운드 잡몹 보정 노브(기본 1.0 = 무변경, 보스 HP는 건드리지 않음)
     count, hp0, nFly, nWard, hpFly: Math.max(1, Math.floor(hp0 * FLY_HP)), hpWard: hp0 * 2, shWard: hp0 * 2, flyDone: 0, wardDone: 0 }; // 받침: 스폰 순번·어픽스 분산(스폰 틱) · 방패병 = HP 2h0 + 보호막 2h0
+  S.air = nFly ? { on: true, up: true, t: 0, k: 0, upT: pat.upT, downT: pat.downT } : null; // 공중 라운드 착지 시계: 체공 upT초 / 착지 downT초 반복 (k = 이착륙 0~1, WING.EASE초)
   if (S.multi) mpWaveStart(); // 🤖 멀티: 레인 개체 출발 + 프록시 투입 · 보스 라운드 bossLeft 0
   if (S.duel) { // 연장전(포커)까지 못 잡았으면 새 웨이브 시작에 퇴장 — 챔피언이 잠겨 있었으면 대신 사망
     if (S.champion && S.champion.duelOk) duelChampionDeath();
@@ -4886,6 +4893,7 @@ function spawnMonster(hp, isBoss, opt) {
     if (Math.random() < 0.003) m.golden = true; // ✨ 황금 레어 (0.3% — 희귀할수록 값지다)
   }
   m.slot = opt.slot != null ? opt.slot : null; m.slotN = opt.slotN || 0; // 받침: 진형 자리 = 스폰 순번 (조각·보스·레인 null)
+  if (!isBoss && !opt.child && opt.affix === 'fly') { m.fly = true; m.flapT = m.phase; m.lift = 0; } // 공중 몹 (B-1): 날개 위상은 개체마다 phase로 · 부양은 이동 루프가 flyLift로 (보스·조각·레인은 절대 안 세움)
   if (m.slot != null && S.pat && S.pat.form) m.returnT = 6; // 진형: 가운데서 제자리로 미끄러져 나감 (조커 복귀 값 6 — 도착하면 rd ≤ 2에서 자동 종료)
   m._brk = 0; // 🪖 장비 파괴 단계 추적 (마지막으로 그린 broken — 증가 감지용)
   // 난이도 모디파이어 — 쉴드는 일반 몹 50라운드+, 분열은 최종 보스(R80)부터 보스 전용
@@ -5647,7 +5655,7 @@ function update(dt) {
       u.skillT -= dt;
       u.inPen = true; // 단검 암살·분신술 모두 소환장 안에서 싸운다
       let tgt = u.assassinTgt;
-      if (!tgt || tgt.hp <= 0) tgt = u.assassinTgt = strongestMonster();
+      if (!tgt || tgt.hp <= 0 || (airborne(tgt) && !canHitAir(u))) tgt = u.assassinTgt = strongestMonster(); // 공중: 대상이 떠오르면 다시 고름
       if (tgt) { const d = Math.hypot(tgt.x - u.x, tgt.y - u.y); if (d > effRange(u) * 0.7) { u.tx = tgt.x; u.ty = tgt.y; } else { u.tx = u.x; u.ty = u.y; } }
       if (u.skillT <= 0) { // 종료 → 원래 자리로 복귀
         u.skillT = 0; u.skillCd = 150; u.inPen = false; u.assassinTgt = null;
@@ -5704,7 +5712,7 @@ function update(dt) {
   if (S.goldFlash > 0) S.goldFlash -= dt;
   if (S.acidPools.length) S.acidPools = S.acidPools.filter(p => {
     p.t -= dt;
-    if (S.freezeT <= 0) for (const m of S.monsters) { if (!m.lane && Math.hypot(m.x - p.x, m.y - p.y) <= p.r) dealDamage(m, p.dps * dt, null); } // 시간정지 중엔 도트도 멈춤 · 🤖 레인 프록시 제외
+    if (S.freezeT <= 0) for (const m of S.monsters) { if (!m.lane && !airborne(m) && Math.hypot(m.x - p.x, m.y - p.y) <= p.r) dealDamage(m, p.dps * dt, null); } // 시간정지 중엔 도트도 멈춤 · 🤖 레인 프록시 제외 · 공중: 바닥 장판이라 떠 있는 몹 제외(owner null 규칙의 예외)
     return p.t > 0;
   });
   const q = S.spawnQueue;
@@ -5735,6 +5743,10 @@ function update(dt) {
       logMsg('보스 등장!', true);
       sfx('boss');
     }
+    if (S.air && S.air.on) { const a = S.air; a.t += dt; // 공중 착지 시계 (freezeT 분기 밖 = 시간정지 동결) — 착지 창엔 모든 무기가 닿는다
+      if (a.up && a.t >= a.upT) { a.up = false; a.t = 0; if (S.monsters.some(m => m.fly)) { addFloat(CX, CY - 72, '착지!', '#ffe082', 1.4); sfx('thud'); } } // 남은 공중 몹이 있을 때만 알림 (수치 없음)
+      else if (!a.up && a.t >= a.downT) { a.up = true; a.t = 0; }
+      a.k = Math.max(0, Math.min(1, a.k + (a.up ? dt : -dt) / WING.EASE)); }
   }
   // 몬스터 스웜: 울타리 안에서 파도처럼 뭉쳤다 퍼지며 서로 비벼진다
   const gw = 0.5 + 0.5 * Math.sin(S.time * 0.55); // 0(뭉침)~1(퍼짐), 주기 ~11초
@@ -5779,6 +5791,7 @@ function update(dt) {
       if (m.abilT <= 0) { m.abilT = GRAV.PERIOD; m.abilCued = false; bossGravity(m); }
     }
     m.born = Math.min(1, m.born + dt * 2.5);
+    if (m.fly) { m.flapT += dt; m.lift = flyLift(m.flapT, m.phase, S.air ? S.air.k : 0); } // 공중: 날개 위상·부양 (freezeT continue 아래 = 시간정지 동결) — 논리 lift = 궤도점을 들어 올림(투사체·클릭이 몸에 맞음)
     m.ang += m.spin * dt * sp.spinK; // A2 휘몰이 ×3
     if (m.pullT > 0) {
       // 🃏 조커: 낫에 맞아 끌려가는 중 — 오빗 대신 조커 쪽으로 직행
@@ -5792,7 +5805,7 @@ function update(dt) {
       const r = (sp.wb || sp.wr ? rFree * (1 - sp.wb - sp.wr) + (SWARM.BALL_R0 + m.baseR * SWARM.BALL_K) * sp.wb + (20 + m.baseR * SWARM.RING_K) * sp.wr : rFree) * m.born; // A2: 보통↔볼↔링 선형 혼합 (wb+wr ≤ 1)
       const fp = (S.pat && S.pat.form && m.slot != null && !S.formBall) ? formPos(m, S.waveT, r) : null; // 받침: 진형 자리 (form null·스웜 볼 중 = 기존 궤도식)
       const ox = fp ? fp.x : CX + r * Math.cos(m.ang) + 5 * Math.sin(S.time * 2.3 + m.phase);
-      const oy = fp ? fp.y : CY + r * Math.sin(m.ang) + 5 * Math.cos(S.time * 2.1 + m.phase * 1.3);
+      const oy = (fp ? fp.y : CY + r * Math.sin(m.ang) + 5 * Math.cos(S.time * 2.1 + m.phase * 1.3)) - (m.lift || 0); // 공중 논리 lift (지상 몹 m.lift 없음 = 0)
       if (m.returnT > 0) { // 견인 후 복귀 — 공이 평소 굴러가는 속도로 느긋하게 (예전 지수 보간은 확 빨려가듯 부자연스러웠음)
         m.returnT -= dt;
         const rdx = ox - m.x, rdy = oy - m.y, rd = Math.hypot(rdx, rdy);
@@ -5802,7 +5815,7 @@ function update(dt) {
     }
     // 울타리 밖으로 못 나간다 → 가장자리에서 서로 겹치고 밀린다 (풀 중에는 조커 쪽 가장자리로 뭉침)
     m.x = Math.max(CX - hw, Math.min(CX + hw, m.x));
-    m.y = Math.max(CY - hh, Math.min(CY + hh, m.y));
+    m.y = Math.max(CY - hh - (m.lift || 0), Math.min(CY + hh, m.y)); // 위쪽만 공중 lift만큼 완화 (떠 있는 몸이 위 울타리에 눌리지 않게)
   }
   // 유닛 명령/공격 처리 (이동 중엔 발사 불가)
   for (const u of S.units) {
@@ -5824,7 +5837,7 @@ function update(dt) {
       continue;
     }
     if (updateDuelFight(u)) continue; // 🏛️ 결투: 챔피언은 도전자에게만 집중 (웨이브·포커 공용)
-    if (u.forceTarget && (u.forceTarget.dead || u.forceTarget.hp <= 0 || (u.forceTarget.lane && mpNoAim(u, u.forceTarget)))) u.forceTarget = null; // 🤖 다리 밑에 가린 레인 표적(펜 포탄 유닛은 레인 전부)은 고정 해제
+    if (u.forceTarget && (u.forceTarget.dead || u.forceTarget.hp <= 0 || (u.forceTarget.lane && mpNoAim(u, u.forceTarget)) || (airborne(u.forceTarget) && !canHitAir(u)))) u.forceTarget = null; // 🤖 다리 밑에 가린 레인 표적(펜 포탄 유닛은 레인 전부)은 고정 해제 · 공중: 지정 뒤 이륙하면 해제(못 치는 무기)
     // A명령: 대상 집중 공격 (보스 저격용)
     if (u.forceTarget) {
       const ft = u.forceTarget;
@@ -5840,7 +5853,7 @@ function update(dt) {
     let best = null, bestScore = Infinity, anyInRange = false;
     const r2 = effRange(u) * effRange(u);
     for (const m of S.monsters) {
-      if (m.entering || m.hp + m.shield - m.inc <= 0 || (m.lane && mpNoAim(u, m))) continue; // 강림 중인 태양은 조준 불가 · 🤖 다리 밑 레인 개체도 (펜 포탄 유닛은 레인 전부)
+      if (m.entering || m.hp + m.shield - m.inc <= 0 || (m.lane && mpNoAim(u, m)) || (airborne(m) && !canHitAir(u))) continue; // 강림 중인 태양은 조준 불가 · 🤖 다리 밑 레인 개체도 (펜 포탄 유닛은 레인 전부) · 못 치는 공중 몹엔 탄 낭비 0
       const ddx = m.x - u.x, ddy = m.y - u.y, d2 = ddx * ddx + ddy * ddy;
       if (d2 > r2) continue;
       anyInRange = true;
@@ -5924,7 +5937,7 @@ function update(dt) {
           }
           const r2 = p.splash * p.splash;
           const lava = p.boulder && p.owner && p.owner.stone === 'lava'; // 🥚 용암 묻은 돌 — 착탄 화상 도트 (쇼군 화상 재사용)
-          for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y - p.ey; if (ddx*ddx + ddy*ddy <= r2) { dealDamage(m, p.dmg, p.owner); if (lava) { m.burnT = Math.max(m.burnT || 0, 2.5); m.burnDmg = Math.max(m.burnDmg || 0, p.dmg * 0.2); } } }
+          for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y - p.ey; if (ddx*ddx + ddy*ddy <= r2) { dealDamage(m, p.dmg, p.owner); if (lava && !airborne(m)) { m.burnT = Math.max(m.burnT || 0, 2.5); m.burnDmg = Math.max(m.burnDmg || 0, p.dmg * 0.2); } } }
         }
         return false;
       }
@@ -5960,7 +5973,7 @@ function update(dt) {
       t.inc -= p.dmg;
       if (p.kind !== 'brg') return false;
       // 부메랑은 목표가 사라지면 근처의 다른 몹으로 방향을 튼다
-      const nt = nearestMob(p.x, p.y, p.hitList, 240);
+      const nt = nearestMob(p.x, p.y, p.hitList, 240, !canHitAir(p.owner)); // 공중: 못 치는 무기(부메랑·표창·주사위)는 떠 있는 몹으로 안 꺾는다
       if (!nt) { // 몹이 아예 없으면 — 부메랑은 주인에게 복귀, 표창은 소멸
         if (!p.dice && !p.star && p.owner && S.units.includes(p.owner)) { p.kind = 'brgret'; p.speed = 480; p.trail = null; p.hopY = 0; return true; }
         return false;
@@ -5990,7 +6003,7 @@ function update(dt) {
       }
       if (p.onHit === 'shards') spawnShards(p);   // 대왕새총: 파편 튐
       if (p.kind === 'brg' && p.left > 0) {
-        const nt = p.star ? farthestMob(t.x, t.y, p.hitList, 260) : nearestMob(t.x, t.y, p.hitList, 180); // 대형 표창: 멀리멀리 — 7번 팅기는 게 눈에 보이게
+        const sa = !canHitAir(p.owner), nt = p.star ? farthestMob(t.x, t.y, p.hitList, 260, sa) : nearestMob(t.x, t.y, p.hitList, 180, sa); // 대형 표창: 멀리멀리 — 7번 팅기는 게 눈에 보이게 · 공중: 못 치는 무기는 떠 있는 몹으로 안 팅김
         if (nt) { p.left--; p.tgt = nt; nt.inc += p.dmg; p.hitList.push(nt); p.pause = 0.06; p.hopD0 = Math.hypot(nt.x - t.x, nt.y - t.y); p.speed = Math.min(520, p.speed + 70); return true; } // 짧게 끊어 탕-탕-탕 (머무름 X, 튕길수록 가속)
       }
       if (p.kind === 'brg' && !p.dice && !p.star && p.owner && S.units.includes(p.owner)) { // 🪃 팅김 끝 → 주인 손으로 (부메랑만 — 표창은 소모품)
@@ -6092,6 +6105,7 @@ function killGoldNow() { return Math.max(1, Math.round(S.round * 0.042)) * ((S.e
 // 데미지 적용: 쉴드가 있으면 쉴드부터 깎고, 넘치면 체력으로 (모든 공격이 이 함수를 거침)
 function dealDamage(m, dmg, owner) {
   if (m.entering) return; // 🌞 강림 중엔 무적 (연출 보호 — 염산·폭격 포함 전 데미지가 이 함수를 거친다)
+  if (airborne(m) && !canHitAir(owner)) return; // 공중: 떠 있는 몹은 쏘는 무기만 (스플래시·전체 타격·파편·착탄 반경·슬롯 폭격 전부 이 한 줄 — 통계도 안 쌓임)
   if (m.weakT > 0) dmg *= WEAK.MUL; // 약점 창(받침 A 분기 순서: entering 무적 → [2단계 공중 return 자리] → 보스 배수(약점·토성·화성) → [장갑] → [금성 lastHitAt] → 쉴드 → 체력)
   if (owner) m.lastHitBy = owner;
   if (owner && owner.weapon) { const st = S.stats[owner.weapon] = S.stats[owner.weapon] || { dmg: 0, kills: 0 }; st.dmg += dmg; }
@@ -6103,19 +6117,19 @@ function dealDamage(m, dmg, owner) {
     m.hp -= dmg;
   }
 }
-function farthestMob(x, y, exclude, rad) { // 반경 안에서 가장 먼 몹 — 대형 표창이 시원하게 가로지르며 팅긴다
+function farthestMob(x, y, exclude, rad, skipAir) { // 반경 안에서 가장 먼 몹 — 대형 표창이 시원하게 가로지르며 팅긴다 · skipAir = 떠 있는 몹 제외(못 치는 무기의 팅김)
   let best = null, bd = -1;
   for (const m of S.monsters) {
-    if (m.hp <= 0 || m.dead || (exclude && exclude.includes(m)) || (m.lane && m.lane.occl)) continue; // 🤖 다리 밑 레인 개체로는 안 튕긴다
+    if (m.hp <= 0 || m.dead || (exclude && exclude.includes(m)) || (m.lane && m.lane.occl) || (skipAir && airborne(m))) continue; // 🤖 다리 밑 레인 개체로는 안 튕긴다
     const d = Math.hypot(m.x - x, m.y - y);
     if (d <= rad && d > bd) { bd = d; best = m; }
   }
   return best;
 }
-function nearestMob(x, y, exclude, rad) {
+function nearestMob(x, y, exclude, rad, skipAir) { // skipAir = 떠 있는 몹 제외(못 치는 무기의 팅김·파편)
   let best = null, bd = rad;
   for (const m of S.monsters) {
-    if (m.hp <= 0 || m.dead || (exclude && exclude.includes(m)) || (m.lane && m.lane.occl)) continue; // 🤖 다리 밑 레인 개체로는 안 튕긴다
+    if (m.hp <= 0 || m.dead || (exclude && exclude.includes(m)) || (m.lane && m.lane.occl) || (skipAir && airborne(m))) continue; // 🤖 다리 밑 레인 개체로는 안 튕긴다
     const d = Math.hypot(m.x - x, m.y - y);
     if (d < bd) { bd = d; best = m; }
   }
@@ -6239,7 +6253,7 @@ function areaHit(u, x, y, dmg) {
     for (let i = 0; i < 10; i++) { const v = 90 + Math.random()*160, aa = ang0 + (Math.random()-0.5)*1.8;
       S.parts.push({ x: u.x, y: u.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 30, g: true, t: 0.4, r: 1.5 + Math.random()*2.2, c: i%3 ? '#ff8a3d' : '#ffd54f' }); }
     for (const m of S.monsters) { const dx2 = m.x - u.x, dy2 = m.y - u.y;
-      if (dx2*dx2 + dy2*dy2 <= R2) { dealDamage(m, dmg, u); m.burnT = burnT; m.burnDmg = dmg * (asc >= 1 ? 0.4 : 0.2); } }
+      if (dx2*dx2 + dy2*dy2 <= R2) { dealDamage(m, dmg, u); if (!airborne(m)) { m.burnT = burnT; m.burnDmg = dmg * (asc >= 1 ? 0.4 : 0.2); } } } // 공중: 떠 있는 몹엔 화상도 안 붙음 (쇼군 ✕)
     if (asc >= 2) { // 🗡️ 승급2 이단 베기: 우로 벤 칼이 좌로 되돌아온다 — 2타는 공격력 50%
       S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.96, a: ang0 + 0.25, t: 0.30 + 0.16, dur: 0.30, fire: true, rev: true }); // 0.16초 늦게 시작(t>dur 동안 대기), 반대 스윕
       for (const m of S.monsters) { const dx2 = m.x - u.x, dy2 = m.y - u.y;
@@ -6260,7 +6274,7 @@ function areaHit(u, x, y, dmg) {
     for (let i = 0; i < 5; i++) { const v = 60 + Math.random()*100, aa = a + (Math.random()-0.5)*1.4;
       S.parts.push({ x, y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.2, r: 1.1 + Math.random()*1.5, c: '#dbe9ff' }); }
     let best = null, bd = 1e12;
-    for (const m2 of S.monsters) { const ddx = m2.x - x, ddy = m2.y - y, dd = ddx * ddx + ddy * ddy;
+    for (const m2 of S.monsters) { if (airborne(m2) && !canHitAir(u)) continue; const ddx = m2.x - x, ddy = m2.y - y, dd = ddx * ddx + ddy * ddy; // 공중: 못 치는 쌍단검은 떠 있는 몹을 고르지 않음(공격 소모 방지)
       if (dd < bd) { bd = dd; best = m2; } }
     if (best) {
       dealDamage(best, dmg * (best.boss ? 2 : 1), u);
@@ -6303,6 +6317,7 @@ function areaHit(u, x, y, dmg) {
     // 💎 풀하우스(대검): 단일 타겟 보석 브레이커 — 착탄점 최근접 1마리만, 보스에겐 대미지 2배
     let best = null, bd = r2;
     for (const m of S.monsters) {
+      if (airborne(m) && !canHitAir(u)) continue; // 공중: 못 치는 대검·단검은 떠 있는 몹을 고르지 않음(공격 소모 방지)
       const ddx = m.x - x, ddy = m.y - y, d2 = ddx * ddx + ddy * ddy;
       if (d2 <= bd) { bd = d2; best = m; }
     }
@@ -6316,7 +6331,7 @@ function areaHit(u, x, y, dmg) {
     const ddx = m.x - x, ddy = m.y - y;
     if (ddx * ddx + ddy * ddy <= r2) {
       dealDamage(m, dmg, u);
-      if (u.shogun) { m.burnT = 1.5; m.burnDmg = dmg * ((u.ascend || 0) >= 1 ? 0.4 : 0.2); } // 🔥 화상 도트 (승급1: 2배)
+      if (u.shogun && !airborne(m)) { m.burnT = 1.5; m.burnDmg = dmg * ((u.ascend || 0) >= 1 ? 0.4 : 0.2); } // 🔥 화상 도트 (승급1: 2배) · 공중엔 안 붙음
     }
   }
   if (u.joker && (u.jokerT || 0) > 0) { // 🃏 견인은 이제 액티브 스킬 중에만 (2026-08-08 유저: 상시 패시브는 사기 — 쿨 60초·지속 15초)
@@ -6324,6 +6339,7 @@ function areaHit(u, x, y, dmg) {
     const pt = asc >= 2 ? 0.7 : 0.45, cap = asc >= 2 ? 280 : asc >= 1 ? 140 : 70;
     const inR = [];
     for (const m of S.monsters) {
+      if (airborne(m)) continue; // 공중: 조커 낫 ✕ = 견인도 ✕
       const jx = m.x - u.x, jy = m.y - u.y, d2 = jx * jx + jy * jy;
       if (d2 <= pr2) inR.push([d2, m]);
     }
@@ -6342,7 +6358,7 @@ function spawnShards(p) {
   // 데미지: 주변 몹에 파편 명중
   const exclude = [p.tgt];
   for (let i = 0; i < p.shards; i++) {
-    const m = nearestMob(p.x, p.y, exclude, 120);
+    const m = nearestMob(p.x, p.y, exclude, 120, !canHitAir(p.owner)); // 공중: 대왕새총 파편(✕)은 떠 있는 몹으로 안 튄다
     if (!m) break;
     dealDamage(m, p.shardDmg, p.owner); exclude.push(m);
     S.effects.push({ type:'line', x1: p.x, y1: p.y, x2: m.x, y2: m.y, t: 0.16, color: '#8d6e63', w: 2.5 });
@@ -7042,7 +7058,7 @@ function airborne(m) { return !!(m.fly && S.air && S.air.up); } // 지금 떠 �
 function strongestMonster() {
   let best = null, bv = -1;
   for (const m of S.monsters) {
-    if (m.hp <= 0 || m.entering || m.lane) continue; // 🤖 사거리 무관 전역 선택 — 레인 프록시 제외 (단검 급습이 수로로 뛰어들지 않게)
+    if (m.hp <= 0 || m.entering || m.lane || airborne(m)) continue; // 🤖 사거리 무관 전역 선택 — 레인 프록시 제외 (단검 급습이 수로로 뛰어들지 않게) · 공중: 호출처(암살 — 정보창·스킬 바 공용)가 단검(✕)뿐이라 떠 있는 몹 제외(허공 돌격 방지)
     const v = (m.boss ? 1e9 : 0) + m.hp + (m.shield || 0);
     if (v > bv) { bv = v; best = m; }
   }
@@ -10191,6 +10207,26 @@ function matSprite(mat, bucket, golden, broken) {
   }
   return matSprites[key];
 }
+// ==================== 공중 몹 천사 날개 (2026-10-12 · 52_구현설계_씨앗셋.md §1-④ · 59 §4 s3 채택) ====================
+// 좌표·색의 원본 = 몬스터등장규칙_제안_2026-10-08\_work\wings\wing_s3_draw.js — WING 부터 flyLift 까지 그 파일 그대로(module.exports 줄만 제외). B-1은 이동 루프가 쓰는 WING·flyLift만, B-2가 그림 함수 셋을 그 사이에 넣는다
+const WING = {
+  FILL: '#fff6e3',       // 크림 면 (황금 몸 #ffcf3a 와 구분되게 거의 흰색)
+  OUT: '#c99a2e',        // 금빛 테 — 공통 고정색 (shade(FILL, −80) 은 회베이지라 "천사" 느낌이 안 남 → 고정)
+  HI: '#ffffff',         // 하이라이트 한 줄 (위 깃 왼쪽 위)
+  BAND: '#e6d9bd',       // B안 띠: 맨 아래 깃 아래쪽만 살짝 (= shade(FILL, −25))
+  ROOT: [0.60, -0.08],   // 날개 뿌리(몸 뒤, 몸이 덮어 안 보임) — 양옆 위
+  // 깃 3장 = 타원 (cx, cy, rx, ry, 기울기 rad) — 뿌리 기준이 아니라 몸 중심 기준 좌표. 위가 크고 아래로 갈수록 작아 "둥근 스캘럽" 실루엣
+  LOBES: [[1.00, -0.30, 0.40, 0.25, -0.50], [0.95, -0.03, 0.31, 0.19, -0.30], [0.86, 0.19, 0.22, 0.13, -0.12]],
+  ANG: [0.44, 0, -0.44], // 프레임 0 위(+25°) / 1 중간 / 2 아래(−25°) — 뿌리 기준 회전
+  SEQ: [0, 1, 2, 1],     // 파닥 순서 (위→중→아래→중) · FLAP_HZ 6 = 초당 6번 파닥(스텝 24/s, 60fps 에서 스텝당 2.5프레임)
+  FLAP_HZ: 6,
+  LIFT: 14, BOB: 5, BOB_HZ: 3.2, EASE: 0.4, // 부양 px · 바운스 진폭 px · 바운스 각속도(rad/s) · 이착륙 0.4초
+  SHADOW: 'rgba(20,30,20,0.20)', SHADOW_RX: 0.75, SHADOW_RY: 0.27, SHADOW_DY: 0.85, // 땅 그림자 타원 (반투명은 UI 신호 — 쉴드 링과 같은 예외)
+  OUT_W: r => Math.max(1.3, 0.11 * r),  // 테 굵기 (몸 외곽선 0.13r 보다 조금 가늘게 — 날개가 몸보다 가벼워 보이게)
+  HI_W: r => Math.max(1.0, 0.07 * r),
+};
+// 부양 높이 (라이브, 이동 루프): k = S.air.k (0~1 이착륙 완충), 바운스는 flapT 기준
+function flyLift(flapT, phase, k) { return k * (WING.LIFT + WING.BOB * Math.sin(flapT * WING.BOB_HZ + phase)); }
 // 재질 몹 렌더: 캐시된 스프라이트 + 라이브 오버레이(출렁/회전/화염 펄스/황금 반짝)만
 function drawMatMob(m, sz, c) {
   const x = m.x, y = m.y, mat = m.mat || 0, esc = m.esc || 0, t = S.time;
@@ -12886,8 +12922,8 @@ function issueAttack(px, py) {
   }
   if (hitM) {
     let nCmd = 0; // 🤖 실제로 명령을 받은 유닛 수 (레인 개체 로그용)
-    sel.forEach(u => { if (u.miner || (hitM.lane && mpNoAim(u, hitM))) return; if (duelLocked(u)) { duelLockFloat(u); return; } u.forceTarget = hitM; u.attackMine = false; u.amove = false; nCmd++; });
-    if (hitM.lane && !nCmd) return; // 🤖 레인 개체인데 받은 유닛이 없으면(탱크·핵폭탄만 선택 등) 이펙트·로그 생략 — 싱글(레인 없음)은 그대로
+    sel.forEach(u => { if (u.miner || (hitM.lane && mpNoAim(u, hitM))) return; if (duelLocked(u)) { duelLockFloat(u); return; } if (airborne(hitM) && !canHitAir(u)) { airFloat(u); return; } u.forceTarget = hitM; u.attackMine = false; u.amove = false; nCmd++; }); // 공중: 못 치는 무기는 지정 거부 + '닿지 않아요'
+    if ((hitM.lane || airborne(hitM)) && !nCmd) return; // 🤖 레인 개체인데 받은 유닛이 없으면(탱크·핵폭탄만 선택 등) 이펙트·로그 생략 — 싱글(레인 없음)은 그대로
     S.effects.push({ type:'boom', x: hitM.x, y: hitM.y, r: 18, t: 0.25 });
     logMsg(`집중 공격 명령! (${hitM.lane ? nCmd : sel.length}기)`);
     return;
