@@ -10828,7 +10828,7 @@ function isStdHero(u) { return !!u.hero && !isHiddenCombo(u); }
 // 값 = spec_g1_draw.js G1.SIZE·G1_LOOK 그대로 (영웅 좌표). cape = 망토(ay 나오는 높이·tip 끝·hemEnd 밑단 끝·hemT 밑단 두께·foldX 접힌 면 x·tail 원페어 꼬리), pad = 어깨판(k 크기·face 안쪽 면 금/종족색), suitY·suitS = 큰 가운데 문양,
 // chest = 슈퍼 가슴판(없으면 기본값 y0 −H/2+0.6·hw 0.30W·dep 0.17H(tri 0.15H), gem:false = 보석 생략, null = 가슴판 없음 — P3)
 const HERO_LOOK = {
-  0: { w: 30, h: 38, shape: 'rect', cape: { ay: -13.0, tip: [-30.5, 9.5], hemEnd: [-13.5, 16.8], hemT: 2.6, foldX: -21.0 }, pad: { k: 1.15, face: 'gold' }, suitY: 0, suitS: 7.5, back: g1Back, front: g1Front, head: null },                     // 하이카드: 머리 장식 없음 (10-12 유저 — 고글 비행모 삭제)
+  0: { w: 30, h: 38, shape: 'rect', cape: { ay: -13.0, tip: [-30.5, 9.5], hemEnd: [-13.5, 16.8], hemT: 2.6, foldX: -21.0 }, pad: { k: 1.15, face: 'gold' }, suitY: 0, suitS: 7.5, back: g1Back, front: g1Front, head: g1HeadAviator },            // 하이카드: 고글 비행모
   1: { w: 31, h: 38, shape: 'rect', cape: { ay: -13.0, tip: [-30.5, 8.0], hemEnd: [-14.0, 15.6], hemT: 2.6, foldX: -21.5, tail: true }, pad: { k: 1.2, face: 'race' }, suitY: 0, suitS: 6.2, back: g1Back, front: g1Front, head: g1HeadRobin },   // 원페어: 초록 로빈후드 모자
   2: { w: 24, h: 39, shape: 'rect', cape: { ay: -14.0, tip: [-29.5, 10.8], hemEnd: [-10.5, 18.0], hemT: 2.6, foldX: -18.5 }, pad: { k: 1.15, face: 'gold' }, suitY: -2.4, suitS: 6.5, back: g1Back, front: g1Front, head: g1HeadTopHat },       // 투페어: 큰 톱햇
   3: { w: 35, h: 35, shape: 'tri', cape: { ay: -12.5, tip: [-30.5, 3.5], hemEnd: [-8.5, 15.4], hemT: 2.8, foldX: -19.0 }, pad: { k: 1.3, face: 'gold' }, suitY: -3.0, suitS: 5.8, chest: { gem: false }, back: g1Back, front: g1Front, head: g1HeadKnight }, // 트리플: 깃털 기사 투구, 역삼각 몸 (가슴 보석 = 투구 턱 구슬)
@@ -10856,7 +10856,7 @@ const HIDDEN_LOOK = {
   chrono:  { w: 32, h: 40, shape: 'hour', waist: [9, 3], lobe: [-9, 12], legs: true, hat: 40, back: h2ChronoBack, inner: h2ChronoInner, front: h2ChronoFront, head: h2ChronoHeadDial }, // 시간술사: 몸통 자체가 모래시계(허리 반폭 9 at y +3) — 위 모래·흐름·아래 더미 + 위·아래 쇠 판 + 로브 자락, 머리 = 쇠 기둥 위 시계 문자판(눈금 12·바늘 2, 숫자 없음)
   shogun:   { w: 34, h: 38, shape: 'rect', legs: true,  hat: 40, back: h3ShogunBack,   inner: h3ShogunInner,   front: h3ShogunFront,   head: h3ShogunHeadJingasa }, // 쇼군: 넓은 무사 카드, 가슴 큰 불꽃 문장 + 오비 + 옻칠 어깨 판갑 2(검붉은 옻칠 + 주황 끈 — 영웅 금 어깨판 아님) + 등 뒤 사시모노 깃발(해 원판) + 진홍 하오리, 머리 = 진가사(전립 삿갓)
   execute:  { w: 30, h: 40, shape: 'rect', legs: true,  hat: 40, back: h3ExecuteBack,  inner: h3ExecuteInner,  front: h3ExecuteFront,  head: h3ExecuteHeadFrame },  // 길로틴: 키 큰 처형인 카드, 가운데 큰 처형대(쇠 기둥 2 + 비스듬한 강철 날 + 목판·구멍 + 받침) + 가죽 어깨띠 + 벨트 + 암적색 긴 망토, 머리 = 머리띠 위 처형대 틀
-  catapult: { w: 32, h: 36, shape: 'rect', legs: false, hat: 40, shadowW: 21, back: h3CatapultBack, inner: h3CatapultInner, front: h3CatapultFront, head: h3CatapultHeadRoof }, // 투석기: 다리 없는 설치형(legs:false) — 카드가 나무 받침틀(가로대 2 + 기둥 2 + 바퀴 2) 위, 가운데 X 버팀목 + 큰 바위, 왼쪽 탄약 더미, 오른쪽 어깨 쇠 팔 축 원판(피벗 (23,−3)을 품음), 그림자 반폭 21(받침 폭 42), 머리 = 나무 방패 지붕
+  catapult: { w: 32, h: 36, shape: 'rect', legs: false, hat: 0, shadowW: 21, back: h3CatapultBack, inner: h3CatapultInner, front: h3CatapultFront, head: null }, // 투석기: 다리 없는 설치형(legs:false) — 카드가 나무 받침틀(가로대 2 + 기둥 2 + 바퀴 2) 위, 가운데 X 버팀목 + 큰 바위, 왼쪽 탄약 더미, 오른쪽 어깨 쇠 팔 축 원판(피벗 (23,−3)을 품음), 그림자 반폭 21(받침 폭 42), 머리 = 없음(10-12 유저: 나무 방패 지붕 삭제 — hat 0 = 버프 마커 높이)
 };
 function hiddenLook(u) { return isHiddenCombo(u) ? (HIDDEN_LOOK[ascendKey(u)] || null) : null; }
 // 고정색 — "히든 = 은·남색" 언어(영웅 금·에이스 핑크·슈퍼 무지개·포카드/로얄 흰 털과 안 겹침) + h3 옻칠·가죽·나무·쇠·돌 (spec_h1 H1 · spec_h3 H3 상수 그대로). 면 / 외곽 / 하이라이트
@@ -10929,7 +10929,7 @@ function hiddenMark(L) {
   }
 }
 // 머리 장식 — heroG 안에서 호출. 히든 머리는 전부 정지 그림(S.time·u.jx 안 읽음) → heroHeadSprite 1장. 캐시 키 'tier|super|ace|race|i|k'의 i 자리에 'h:'+id 문자열 → 표준 영웅 키(숫자 i)와 절대 안 겹침(tier 공유 함정 회피). heroHeadSprite 수정 0
-function hiddenHead(u, P) { ctx.drawImage(heroHeadSprite(u, P, 'h:' + P.id, hiddenLook(u).head), HH.X0, HH.Y0, HH.W, HH.H); }
+function hiddenHead(u, P) { const h = hiddenLook(u).head; if (h) ctx.drawImage(heroHeadSprite(u, P, 'h:' + P.id, h), HH.X0, HH.Y0, HH.W, HH.H); } // head null = 머리 장식 없음 (투석기 10-12)
 // ---------- 히든 공통 그리기 도우미 (히든 좌표 — heroG 안에서만 부른다; = spec_h1 h1Out·h1Line·h1Star) ----------
 function hidOut(col, w) { ctx.strokeStyle = col; ctx.lineWidth = w || HID_C.OUT_W; ctx.lineJoin = 'round'; ctx.stroke(); } // 장식 외곽선 (기본 0.9 — 작은 기호 0.6~0.7, 큰 면 1.0~1.3)
 function hidLine(x0, y0, x1, y1, col, w) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt'; }
@@ -11327,14 +11327,7 @@ function h3CatapultFront(u, P) {
   ctx.beginPath(); ctx.arc(19, -3, 3.2, Math.PI * 1.1, Math.PI * 1.45); ctx.strokeStyle = HID_C.METAL_HL; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
   hiddenMark(HIDDEN_LOOK.catapult); // 공통 표시 (front 맨 끝 — 오른쪽 아래는 기둥 위에 얹힘)
 }
-// 머리 B안: 나무 방패 지붕(만틀렛) — 카드 위 작은 기둥 2 위에 박공 지붕 + 쇠 띠 2 + 마루 덮개. 집 지붕 삼각 실루엣(꼭대기 −35.5, 폭 ±20.5). 쇼군 삿갓(옻칠 + 주황 테)과 색·테가 달라 혼동 없음
-function h3CatapultHeadRoof(u, P) {
-  for (const x of [-13, 10]) { roundRect(x, -21.5, 3, 4.5, 0.5); ctx.fillStyle = HID_C.WOOD; ctx.fill(); hidOut(HID_C.WOOD_OUT, 0.8); }
-  hidPoly([[-20, -20], [0, -34], [20, -20]]); ctx.fillStyle = HID_C.WOOD_L; ctx.fill(); hidOut(HID_C.WOOD_OUT, 1.0);                       // 지붕
-  for (const sx of [-1, 1]) hidLine(sx * 15, -22.5, sx * 3, -31, HID_C.METAL_OUT, 1.0);                                              // 쇠 띠
-  hidLine(-16.5, -21.5, -7, -28.2, HID_C.WOOD_HL, 1.0);
-  roundRect(-2.6, -35.5, 5.2, 3, 1.0); ctx.fillStyle = HID_C.METAL_OUT; ctx.fill();                                                   // 마루 덮개
-}
+// 머리: 없음 — 10-12 유저 "투석기 모자 없애줘" (B안 나무 방패 지붕 h3CatapultHeadRoof 삭제. HIDDEN_LOOK.catapult.head = null → hiddenHead가 건너뜀)
 // 고정색 (금 + 로얄 보라 · 스트레이트 플러쉬 안감) — 에이스여도 금은 그대로
 const HERO_C = {
   GOLD: '#f2c14e', GOLD_D: '#d39a22', GOLD_HL: '#fff1bf', GOLD_OUT: '#8a5a10', // 금 밝은 면 · 그늘 면 · 하이라이트 한 줄 · 외곽선
@@ -11386,6 +11379,8 @@ function heroPal(u) {
     capeBack: ace ? shade('#e91e8c', -95) : shade(edge, -100),      // 슈퍼 뒤 겹 망토
     capeOut: ace ? shade('#e91e8c', -110) : shade(edge, -120),      // 망토 외곽선
     suit: ace ? '♠' : RACES[u.race].suit, suitCol: ace ? '#ffffff' : edge,
+    deep: ace ? shade('#e91e8c', -30) : shade(edge, -25),           // 종족색에서 나온 장식 (하이카드 비행모)
+    deepOut: shade(edge, -120),
     padFace: ace ? '#e91e8c' : edge,                                // 어깨판 안쪽 면이 종족색인 족보
     gem: (ace || u.race !== 1) ? HERO_C.GEM : HERO_C.GEM_H,
   };
@@ -11421,7 +11416,7 @@ function heroHeadSprite(u, P, i, fn) {
 }
 function heroHead(u, P) { // heroG 안에서 호출 — 라이브 부분은 그대로, 정지 부분은 스프라이트 1장
   const parts = HERO_HEAD_PARTS[u.tier];
-  if (!parts) { if (HERO_LOOK[u.tier].head) ctx.drawImage(heroHeadSprite(u, P, 0, HERO_LOOK[u.tier].head), HH.X0, HH.Y0, HH.W, HH.H); return; } // head null = 머리 장식 없음 (하이카드 10-12)
+  if (!parts) { ctx.drawImage(heroHeadSprite(u, P, 0, HERO_LOOK[u.tier].head), HH.X0, HH.Y0, HH.W, HH.H); return; }
   for (let i = 0; i < parts.length; i++) { const p = parts[i]; if (p.live) p.fn(u, P); else ctx.drawImage(heroHeadSprite(u, P, i, p.fn), HH.X0, HH.Y0, HH.W, HH.H); }
 }
 // ---------- 공통 부품 (영웅 좌표 — heroG 안에서만 부른다) ----------
@@ -11577,7 +11572,29 @@ function g1Front(u, P) {
   ctx.save(); ctx.translate(W / 2, -H / 2); ctx.scale(-1, 1); g1Pad(P, pd.k, face); ctx.restore(); // 앞쪽(무기 쪽) 어깨
 }
 // head (라이브 drawHeadgear) — 단색 fill/stroke만 (그라데·shadowBlur·fillText 없음). 좌표는 몸통 중심 원점, 몸통 위 변 = −H/2
-// 하이카드: 머리 장식 없음 — 10-12 유저 "모자는 그냥 없애줘" (고글 비행모 g1HeadAviator·슈퍼 금테·날개 휘장 g1SuperHead0 삭제. HERO_LOOK[0].head = null → heroHead가 건너뜀)
+// 하이카드: 고글 비행모 (몸통 위를 덮는 둥근 가죽모 + 갈색 띠 + 금테 고글 2개, 고글은 앞쪽으로 쏠림)
+// 10-11 유저 "추천대로" (spec_g3 결정 6 — 10종 중 머리가 가장 낮고 작았다): 돔 높이 11.8→17.5(꼭대기 −29.4→−35.1)·폭 15.3→15.6, 띠·고글·슈퍼 날개 휘장 4 위로, 고글 +0.4
+//   (10-12에 '모자 없애줘'를 비행모로 오해해 지웠다가 되살림 — 유저가 말한 건 투석기 지붕. 키운 버전 유지 확정)
+function g1HeadAviator(u, P) {
+  ctx.beginPath(); // 모자 돔: 반타원 + 아래 변 살짝 볼록 (테 윗부분을 덮음)
+  ctx.moveTo(-15.6, -16.0);
+  ctx.ellipse(-0.5, -17.6, 15.6, 17.5, 0, Math.PI * 1.03, Math.PI * 1.97);
+  ctx.lineTo(14.9, -16.2);
+  ctx.quadraticCurveTo(0, -17.6, -15.6, -16.0);
+  ctx.closePath();
+  ctx.fillStyle = P.deep; ctx.fill(); heroOut(P.deepOut);
+  ctx.beginPath(); ctx.ellipse(-0.5, -17.6, 12.2, 13.3, 0, Math.PI * 1.12, Math.PI * 1.42); // 하이라이트 한 줄
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.1; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.beginPath(); ctx.moveTo(-14.6, -25.2); ctx.lineTo(12.6, -28.0); ctx.lineTo(12.0, -31.3); ctx.lineTo(-14.2, -28.6); ctx.closePath(); // 갈색 띠 (앞으로 살짝 올라감)
+  ctx.fillStyle = '#5e3727'; ctx.fill(); heroOut('#2e1a10');
+  for (const [gx, gy, r] of [[-2.5, -27.0, 5.1], [9.0, -28.6, 4.9]]) { // 고글 2개: 금테 + 파란 렌즈 + 반짝 한 점
+    ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+    ctx.beginPath(); ctx.arc(gx, gy, r - 1.6, 0, Math.PI * 2); ctx.fillStyle = '#3f7fe8'; ctx.fill();
+    ctx.strokeStyle = '#1d3f8a'; ctx.lineWidth = 0.6; ctx.stroke();
+    ctx.beginPath(); ctx.arc(gx - 0.9, gy - 0.9, 1.0, 0, Math.PI * 2); ctx.fillStyle = '#cfe8ff'; ctx.fill();
+  }
+  if (u.super) g1SuperHead0(u, P);
+}
 // 원페어: 초록 로빈후드 모자 (뒤가 둥글고 앞으로 뾰족) + 빨간 깃털(뒤로 기움) + 금 단추
 function g1HeadRobin(u, P) {
   if (u.super) g1SuperFeather2(u, P); // 슈퍼: 금 깃털 하나 더 (맨 뒤)
@@ -11677,7 +11694,19 @@ function g1HeadKnight(u, P) {
   }
   if (u.super) { ctx.beginPath(); ctx.arc(1.0, -15.8, 1.3, 0, Math.PI * 2); ctx.fillStyle = P.gem; ctx.fill(); } // 슈퍼: 턱 구슬 = 보석
 }
-// 슈퍼 머리 추가 부품 (영웅 좌표, 바깥에서 ×1.2 이미 걸림) — 금·보석만, 왕관·흰 털은 포카드·로얄 전용이라 쓰지 않음 (하이카드 g1SuperHead0은 10-12 모자 삭제와 함께 삭제)
+// 슈퍼 머리 추가 부품 (영웅 좌표, 바깥에서 ×1.2 이미 걸림) — 금·보석만, 왕관·흰 털은 포카드·로얄 전용이라 쓰지 않음
+function g1SuperHead0(u, P) { // 하이카드 슈퍼: 모자 아래 금테 + 뒤쪽 금 날개 휘장(깃 3단) + 날개 뿌리 보석
+  ctx.beginPath(); ctx.moveTo(-15.4, -16.4); ctx.quadraticCurveTo(0, -18.0, 14.8, -16.6);
+  ctx.strokeStyle = HERO_C.GOLD; ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.beginPath(); // 날개 휘장 — 10-11 비행모 키움에 맞춰 4 위로
+  ctx.moveTo(-11.0, -26.4);
+  ctx.quadraticCurveTo(-15.6, -32.6, -21.2, -32.4);
+  ctx.lineTo(-18.6, -30.2); ctx.lineTo(-21.4, -29.4); ctx.lineTo(-18.4, -27.6); ctx.lineTo(-20.2, -26.2);
+  ctx.quadraticCurveTo(-15.4, -24.6, -11.0, -24.4);
+  ctx.closePath();
+  ctx.fillStyle = HERO_C.GOLD; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+  ctx.beginPath(); ctx.arc(-11.0, -25.4, 1.5, 0, Math.PI * 2); ctx.fillStyle = P.gem; ctx.fill(); heroOut(HERO_C.GOLD_OUT);
+}
 function g1SuperFeather2(u, P) { // 원페어 슈퍼: 금 깃털 (빨간 깃털 뒤, 더 뒤로 기움)
   ctx.beginPath();
   ctx.moveTo(-3.8, -25.0);
