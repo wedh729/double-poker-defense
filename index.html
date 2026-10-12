@@ -5759,7 +5759,7 @@ function update(dt) {
   for (const m of S.monsters) {
     m.hitT = Math.max(0, (m.hitT || 0) - dt);
     if (m.lane) { mpLanePos(m); continue; } // 🤖 레인 프록시: 위치는 결정론 경로가 덮어쓴다 (배회·펜 클램프·견인·화상 면역)
-    if (m.burnT > 0) { m.burnT -= dt; m.hp -= m.burnDmg * dt; } // 🔥 쇼군 화상 도트 (얼어붙어도 계속 탄다)
+    if (m.burnT > 0) { m.burnT -= dt; if (!airborne(m)) m.hp -= m.burnDmg * dt; } // 🔥 쇼군 화상 도트 (얼어붙어도 계속 탄다) · 공중: 착지 창에 붙은 화상은 날아오른 동안엔 안 깎임(시간은 흐름 — 쇼군·용암 ✕ 체감, pat2 크로스체크 P2)
     if (!m.boss) { // 🪖 장비 파괴 감지: 단계가 늘어난 프레임에만 1회성 이펙트
       const brk = monBroken(m);
       if (brk > m._brk) { monGearBreakFx(m.x, m.y, monSize(m)); m._brk = brk; }
@@ -5816,7 +5816,7 @@ function update(dt) {
     }
     // 울타리 밖으로 못 나간다 → 가장자리에서 서로 겹치고 밀린다 (풀 중에는 조커 쪽 가장자리로 뭉침)
     m.x = Math.max(CX - hw, Math.min(CX + hw, m.x));
-    m.y = Math.max(CY - hh, Math.min(CY + hh, m.y)); // 공중도 위쪽 완화 없음(B-2 10-12): 완화하면 떠 있는 몸 위쪽이 drawBarrackCap(울타리 윗변 재그림)에 잘린다 — 위 벽에선 몸이 클램프에 서고 그림자가 lift만큼 아래로
+    m.y = Math.max(CY - hh, Math.min(CY + hh - (m.lift || 0), m.y)); // 공중도 위쪽 완화 없음(B-2 10-12): 완화하면 떠 있는 몸 위쪽이 drawBarrackCap(울타리 윗변 재그림)에 잘린다 — 위 벽에선 몸이 클램프에 서고 그림자가 lift만큼 아래로 · 아래쪽은 땅(몸 + lift) 기준: 아래 벽 공중 몹 그림자가 울타리 밖 풀밭에 찍히던 것(pat2 크로스체크 P2 — 지상 몹 lift 0 = 무변경)
   }
   // 유닛 명령/공격 처리 (이동 중엔 발사 불가)
   for (const u of S.units) {
@@ -7081,6 +7081,7 @@ function spawnClones(u, count) {
 // 🗡️ 풀하우스 스킬: 단검=최강 몹 급습 암살 / 영웅·슈퍼=분신술
 function activateSkill(u) {
   if (u.tier !== 6 || u.clone || (u.skillCd || 0) > 0 || (u.skillT || 0) > 0) return;
+  if (!u.hero && !strongestMonster() && S.monsters.some(airborne)) { airFloat(u); return; } // 공중: 떠 있는 몹만 남았으면 단검 암살은 쿨을 쓰지 않고 거부(정보창·스킬 바 공용 — pat2 크로스체크 P2). 몹이 아예 없을 때는 예전 그대로
   u.homeX = u.x; u.homeY = u.y; // 끝나면 원래 자리로 복귀
   u.skillT = 5;
   if (u.hero) { // 🌀 영웅(전기톱)·슈퍼: 분신술
@@ -12974,14 +12975,14 @@ function issueAttack(px, py) {
   let hitM = null;
   for (const m of S.monsters) {
     if (m.entering || (m.lane && m.lane.occl)) continue; // 강림 중엔 지정 불가 · 🤖 다리 밑 레인 개체도
-    if (Math.hypot(m.x - px, m.y - py) < (m.sunBoss ? 95 : m.boss ? (IS_MOBILE ? 48 : 32) : (IS_MOBILE ? 30 : 15))) { hitM = m; break; }
+    if (Math.hypot(m.x - px, m.y - py) < (m.sunBoss ? 95 : m.boss ? (IS_MOBILE ? 48 : 32) : (IS_MOBILE ? 30 : 15))) { if (!hitM || (m.fly && !hitM.fly)) hitM = m; if (m.fly) break; } // 공중 몹은 지상 몹 위 패스에 그려진다 — 겹친 자리면 보이는 쪽(공중) 우선 (pat2 크로스체크 P2)
   }
   if (hitM) {
     let nCmd = 0; // 🤖 실제로 명령을 받은 유닛 수 (레인 개체 로그용)
     sel.forEach(u => { if (u.miner || (hitM.lane && mpNoAim(u, hitM))) return; if (duelLocked(u)) { duelLockFloat(u); return; } if (airborne(hitM) && !canHitAir(u)) { airFloat(u); return; } u.forceTarget = hitM; u.attackMine = false; u.amove = false; nCmd++; }); // 공중: 못 치는 무기는 지정 거부 + '닿지 않아요'
     if ((hitM.lane || airborne(hitM)) && !nCmd) return; // 🤖 레인 개체인데 받은 유닛이 없으면(탱크·핵폭탄만 선택 등) 이펙트·로그 생략 — 싱글(레인 없음)은 그대로
     S.effects.push({ type:'boom', x: hitM.x, y: hitM.y, r: 18, t: 0.25 });
-    logMsg(`집중 공격 명령! (${hitM.lane ? nCmd : sel.length}기)`);
+    logMsg(`집중 공격 명령! (${(hitM.lane || airborne(hitM)) ? nCmd : sel.length}기)`); // 공중: 거부된 유닛은 빼고 센다
     return;
   }
   // 빈 땅 클릭 → 어택땅 (이동하다 적 만나면 교전)
