@@ -3676,6 +3676,33 @@ function duelHP(n) {
 // 🏛️ 결투 라운드 판정: 7의 배수·보스 주 휴장·태양 강림(R190+ 미클리어) 휴장 — startWave가 태양에서 조기 return해
 // 도전자를 안 만들므로, 예고(startPoker)·결투창(duelWindowActive)도 같은 조건을 공유해야 한다 (한 곳만 어긋나면 빈 링에 팝업·락인이 생긴다)
 function duelRound(r) { return r % DUEL_EVERY === 0 && r % 10 !== 0 && !(r >= SUN_ROUND && !S.hellCleared && !S.multi); } // 🤖 멀티 = 태양전 없음 → R190 이후 휴장도 없음
+// ==================== 몬스터 등장 패턴 받침 (2026-10-12, 몬스터등장규칙_제안_2026-10-08\51_구현설계_받침.md §B-3 · 59_구현설계_검수.md §2-2) ====================
+// 스케줄 = 라운드 끝자리 고정(10-09 유저: 랜덤 아님): x1 공중(R21~) · x3 울타리 행진(R13~) · x6 두 무리(R16~) · x8 방패병(R38~) · R71~79는 공중 R71만 · 보스(x0)·R1~9·태양전 없음.
+// PAT_ON = 구현된 패턴만 켠다(받침 B0 = 전부 false → 라이브 변화 0). 태그·힌트는 수치·% 없이(UI 미니멀). 멀티(S.multi)는 curPattern이 항상 '없음'.
+const PAT_ON = { fly: false, ward: false, conga: false, two: false };
+const PAT_TAG = { fly: ['공중', '활·총·포가 닿아요'], ward: ['방패병', '잡으면 주위 보호막이 깨져요'], conga: ['울타리 행진', '울타리를 따라 한 줄로'], two: ['두 무리', '양쪽에 나눠 두세요'] };
+const PAT_HP_KNOB = 1.0, FLY_HP = 0.8; // 패턴 라운드 HP 노브(유저 확정 (가) 보정 0 = 1.0) · 공중 몹 HP 배수(지상 몹은 plainMul로 올려 라운드 총 HP 보존)
+const FORM_GLYPH_A = 0.18;            // 진형 바닥 문양 알파 (포커 중 + 전투 첫 2초)
+function patNone() { return { form: null, affix: null, n: 0, ratio: 0, affix2: null, n2: 0, upT: 0, downT: 0, tag: '', hint: '' }; }
+function roundPattern(r) { // 순수 함수(S 무관): 라운드 번호 → 패턴. upT/downT = 공중 체공/착지 초(30초 주기 — R21~39 22/8 · R41~ 24/6, 헬 포함)
+  const p = patNone(); if (r <= 9 || r >= SUN_ROUND || r % 10 === 0) return p;
+  const d = r % 10, hell = r > FINAL_ROUND, gap = r >= 71 && r <= 79;
+  if (d === 1 && r >= 21) { p.affix = 'fly'; p.ratio = r >= 81 ? 0.25 : r >= 41 ? 0.15 : 0.08; p.upT = r >= 41 ? 24 : 22; p.downT = r >= 41 ? 6 : 8; if (hell) { p.affix2 = 'ward'; p.n2 = 4; } } // 헬 x1 = 공중 + 방패병 4
+  else if (d === 3 && r >= 13 && !gap) p.form = 'conga';
+  else if (d === 6 && r >= 16 && !gap) p.form = 'two';
+  else if (d === 8 && r >= 38 && !gap) { p.affix = 'ward'; p.n = hell ? 4 : r >= 41 ? 3 : 2; if (hell) p.form = 'two'; } // 헬 x8 = 방패병 4 + 두 무리
+  return p;
+}
+function curPattern() { // 이번 라운드 실제 적용값: 멀티면 없음 · 꺼진 패턴(PAT_ON false)은 떼어냄 · 태그는 어픽스 우선
+  if (S.multi) return patNone();
+  const p = roundPattern(S.round);
+  if (p.affix && !PAT_ON[p.affix]) { p.affix = null; p.n = 0; p.ratio = 0; p.upT = p.downT = 0; }
+  if (p.affix2 && !PAT_ON[p.affix2]) { p.affix2 = null; p.n2 = 0; }
+  if (p.form && !PAT_ON[p.form]) p.form = null;
+  const k = p.affix || p.affix2 || p.form; if (k) { p.tag = PAT_TAG[k][0]; p.hint = PAT_TAG[k][1]; }
+  return p;
+}
+function plainMul(N, Nf, W) { return (N - FLY_HP * Nf - 4 * W) / (N - Nf - W); } // 지상 몹 HP 환산(52 §5): Nf·0.8h + W·4h(방패병 HP 2h + 보호막 2h) + (N−Nf−W)·g·h = N·h
 // 🏛️ 결투 창(window): 팝업·락인이 활성인 구간 — 도전자가 있거나, 결투 라운드 포커 중 아직 결판나지 않았을 때
 function duelWindowActive() { return !!S.duel || (S.phase === 'poker' && duelRound(S.round) && !S.duelEnded); }
 
@@ -3911,6 +3938,7 @@ function reset() {
     crownForced: false, // 👑 기한 뒤 강제 대관식 창(취소 불가)이 열려 있음
     crownRace: -1, crownDropped: false, // 👑 왕관: 선택한 종족 (-1 = 미선택 — ⚠️ null 금지: 광부 race가 null이라 일치해 버린다) / 석탄 보상 왕관 지급 여부 (잭팟 2배 중복 방지)
     crownAge: -1, crownMul: 1, // 👑 10-11: 왕관을 얻은 뒤 시작된 전투 수(-1 = 아직 없음, 대관식 전까지만 셈) / 대관식 때 정해진 배수 (crownMulNow)
+    pat: patNone(), formBall: false, // 몬스터 등장 패턴 받침: 이번 라운드 패턴(startPoker에서 curPattern) / 진형이 스웜 볼에 자리를 내준 상태
     freezeT: 0, slotBombs: [], // ⏳ 시간술사 정지 타이머 / 🎰 슬롯머신 지연 폭탄 큐
     stimT: 0, acidPools: [],  // 💉 스팀팩 남은시간 / 🧪 염산 장판
     reviveArmed: false, // 🔄 부활권 봉인 여부
@@ -4220,6 +4248,7 @@ function startPoker(fromWave) {
   S.pokerTimer = POKER_TIME;
   S.roomVirgin = true; // 🥚 라운드마다 광석방 첫 입장 기록 리셋
   rollEvent(); // 다음 전투 이벤트를 포커 시간에 미리 알린다
+  S.pat = curPattern(); // 몬스터 등장 패턴(받침): 이 라운드 패턴 — 배너가 미리 알리고 startWave는 읽기만
   const double = (S.round % 5 === 0);
   // 더블 포커: 두 패를 동시에 펼쳐놓고 서로 비교하며 교환
   S.poker = { hands: [] };
@@ -4799,12 +4828,17 @@ function startWave() {
     return;
   }
   const em = S.eventMods || {};
-  const hp = Math.max(1, Math.floor(monsterHP(S.round) * (em.hpMul || 1)));
+  const pat = S.pat && !S.multi ? S.pat : patNone(); S.formBall = false; // 몬스터 등장 패턴(받침): startPoker가 세운 이 라운드 패턴 (읽기만)
+  const knob = (pat.affix || pat.affix2 || pat.form) ? PAT_HP_KNOB : 1;
+  const hp0 = Math.max(1, Math.floor(monsterHP(S.round) * (em.hpMul || 1) * knob)); // 환산 전 몹 HP (보스·공중·방패병의 기준)
   const count = S.multi && S.round % 10 === 0 ? 0 : Math.max(1, Math.floor(mobCount(S.round) * (em.countMul || 1))); // 🤖 멀티 보스 라운드 = 소환장 스폰 0 (보스는 수로로)
   const boss = (S.round % 10 === 0);
+  const nFly = pat.affix === 'fly' ? Math.round(count * pat.ratio) : 0, nWard = pat.affix === 'ward' ? pat.n : pat.n2 || 0; // 정확히 N마리 (비율이 아니라 마릿수)
+  const hp = nFly || nWard ? Math.max(1, Math.floor(hp0 * plainMul(count, nFly, nWard))) : hp0; // 지상 잡몹 HP = 총 HP 보존 환산 (어픽스 없으면 hp0 그대로)
   if (em.instantGold) { const g = S.round * 30; S.gold += g; addFloat(HOUSE.x, HOUSE.y - 40, `+${g}G`, '#ffd54f', 2); }
   // 소환장 가운데에서 우르르 쏟아지듯 (약 2초 안에 전부 등장)
-  S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0, mobMul: !S.multi && boss && BOSS_ABILITY[bossShapeFor(S.round)] === 'gravity' ? GRAV.MOB_HP_MUL : 1 }; // 패턴 1단계: 목성 라운드 잡몹 보정 노브(기본 1.0 = 무변경, 보스 HP는 건드리지 않음)
+  S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0, mobMul: !S.multi && boss && BOSS_ABILITY[bossShapeFor(S.round)] === 'gravity' ? GRAV.MOB_HP_MUL : 1, // 패턴 1단계: 목성 라운드 잡몹 보정 노브(기본 1.0 = 무변경, 보스 HP는 건드리지 않음)
+    count, hp0, nFly, nWard, hpFly: Math.max(1, Math.floor(hp0 * FLY_HP)), hpWard: hp0 * 2, shWard: hp0 * 2, flyDone: 0, wardDone: 0 }; // 받침: 스폰 순번·어픽스 분산(스폰 틱) · 방패병 = HP 2h0 + 보호막 2h0
   if (S.multi) mpWaveStart(); // 🤖 멀티: 레인 개체 출발 + 프록시 투입 · 보스 라운드 bossLeft 0
   if (S.duel) { // 연장전(포커)까지 못 잡았으면 새 웨이브 시작에 퇴장 — 챔피언이 잠겨 있었으면 대신 사망
     if (S.champion && S.champion.duelOk) duelChampionDeath();
@@ -4823,6 +4857,8 @@ function startWave() {
   if (S.multi && !count) logMsg(`스테이지 ${S.round} — 보스가 수로로! 둑에서 막아라${S.event ? ' · ' + S.event.name : ''}`, true); // 🤖 멀티 보스 라운드 (소환장 0 — 'HP 112' 같은 무관한 수치 대신 한 줄)
   else logMsg(`스테이지 ${S.round} [${info.name}] — ${count}마리 (HP ${hp})${boss ? ' + 보스!' : ''}${S.event ? ' · ' + S.event.name : ''}`, true);
 }
+// 진형 자리 (받침 C0-d): S.pat.form → 이 몹의 목표 위치 {x, y} 또는 null(= 기존 궤도식). 콩가 congaPos·두 무리 twoPos는 씨앗셋에서 case로 추가
+function formPos(m, t, r) { switch (S.pat.form) { default: return null; } }
 function spawnMonster(hp, isBoss, opt) {
   opt = opt || {};
   const { ci } = stageInfo(S.round);
@@ -4849,6 +4885,8 @@ function spawnMonster(hp, isBoss, opt) {
     else { m.mat = mi.idx; m.esc = mi.p; }                            // 이번 재질(밴드 진행만큼 험악)
     if (Math.random() < 0.003) m.golden = true; // ✨ 황금 레어 (0.3% — 희귀할수록 값지다)
   }
+  m.slot = opt.slot != null ? opt.slot : null; m.slotN = opt.slotN || 0; // 받침: 진형 자리 = 스폰 순번 (조각·보스·레인 null)
+  if (m.slot != null && S.pat && S.pat.form) m.returnT = 6; // 진형: 가운데서 제자리로 미끄러져 나감 (조커 복귀 값 6 — 도착하면 rd ≤ 2에서 자동 종료)
   m._brk = 0; // 🪖 장비 파괴 단계 추적 (마지막으로 그린 broken — 증가 감지용)
   // 난이도 모디파이어 — 쉴드는 일반 몹 50라운드+, 분열은 최종 보스(R80)부터 보스 전용
   if (!isBoss && !opt.child) {
@@ -5682,13 +5720,17 @@ function update(dt) {
       q.acc += dt;
       while (q.acc >= q.interval && q.left > 0) {
         q.acc -= q.interval; q.left--;
-        spawnMonster(Math.floor(q.hp * (q.mobMul || 1)), false); // 패턴 1단계: 잡몹만 mobMul(목성 라운드 노브, 기본 1 → 값 동일). 멀티·태양전 큐엔 mobMul 없음 → || 1
+        const i = (q.count || 0) - q.left - 1, N = q.count || 1;                                   // 받침: 스폰 순번 0..N−1 (멀티·태양전 큐엔 count 없음 → 어픽스 0)
+        const step = (j, n, M) => n > 0 && Math.floor((j + 1) * n / M) > Math.floor(j * n / M);      // 정확히 n번 참, 균등 분산 (난수 없음)
+        const fly = step(i, q.nFly || 0, N); if (fly) q.flyDone++;
+        const ward = !fly && step(i - (q.flyDone || 0), q.nWard || 0, N - (q.nFly || 0)); if (ward) q.wardDone++; // 공중을 뺀 순번 위에서 세어 헬 x1(공중+방패병)도 정확히 nWard
+        spawnMonster(Math.floor((fly ? q.hpFly : ward ? q.hpWard : q.hp) * (q.mobMul || 1)), false, { slot: i, slotN: N, affix: fly ? 'fly' : ward ? 'ward' : null, shield: ward ? q.shWard : 0 }); // 패턴 1단계: 잡몹만 mobMul(목성 라운드 노브, 기본 1 → 값 동일). 멀티·태양전 큐엔 mobMul 없음 → || 1
       }
     }
     if (q.bossLeft > 0 && S.timer < WAVE_TIME - 5) {
       q.bossLeft = 0;
       // 보스 계수: 기본 9.4 / R40+는 mobHP ×1.45(분열 제거 보정)를 상쇄해 6.5 / R80+ 분열 보스는 본체 2.8 (조각 5×30% 포함 실효 ≈ 기존 수준)
-      const bz = spawnMonster(q.hp * (S.round >= FINAL_ROUND ? 2.8 : 9.4 / splitComp(S.round)), true); // 보스는 분열 제거 보정 대상이 아니므로 splitComp를 나눠 상쇄
+      const bz = spawnMonster((q.hp0 || q.hp) * (S.round >= FINAL_ROUND ? 2.8 : 9.4 / splitComp(S.round)), true); // 보스는 분열 제거 보정 대상이 아니므로 splitComp를 나눠 상쇄 · 받침: 보스는 환산 전 hp0 기준(어픽스 환산 무관)
       if (!S.multi && BOSS_ABILITY[bz.shape]) { bz.abil = BOSS_ABILITY[bz.shape]; bz.abilT = GRAV.FIRST; bz.abilCued = false; } // 보스 고유 능력 (1단계 = 목성 중력) — 멀티 보스는 레인 개체라 여기 안 옴
       logMsg('보스 등장!', true);
       sfx('boss');
@@ -5748,8 +5790,9 @@ function update(dt) {
     } else {
       const rFree = 20 + m.baseR * (0.15 + 0.85 * gw);
       const r = (sp.wb || sp.wr ? rFree * (1 - sp.wb - sp.wr) + (SWARM.BALL_R0 + m.baseR * SWARM.BALL_K) * sp.wb + (20 + m.baseR * SWARM.RING_K) * sp.wr : rFree) * m.born; // A2: 보통↔볼↔링 선형 혼합 (wb+wr ≤ 1)
-      const ox = CX + r * Math.cos(m.ang) + 5 * Math.sin(S.time * 2.3 + m.phase);
-      const oy = CY + r * Math.sin(m.ang) + 5 * Math.cos(S.time * 2.1 + m.phase * 1.3);
+      const fp = (S.pat && S.pat.form && m.slot != null && !S.formBall) ? formPos(m, S.waveT, r) : null; // 받침: 진형 자리 (form null·스웜 볼 중 = 기존 궤도식)
+      const ox = fp ? fp.x : CX + r * Math.cos(m.ang) + 5 * Math.sin(S.time * 2.3 + m.phase);
+      const oy = fp ? fp.y : CY + r * Math.sin(m.ang) + 5 * Math.cos(S.time * 2.1 + m.phase * 1.3);
       if (m.returnT > 0) { // 견인 후 복귀 — 공이 평소 굴러가는 속도로 느긋하게 (예전 지수 보간은 확 빨려가듯 부자연스러웠음)
         m.returnT -= dt;
         const rdx = ox - m.x, rdy = oy - m.y, rd = Math.hypot(rdx, rdy);
@@ -6986,6 +7029,15 @@ function drawMutter() {
   ctx.fillText(txt, bx + w / 2, by + 12.5);
   ctx.textAlign = 'left'; ctx.restore();
 }
+// 공중 몹 판정 (받침 · 52_구현설계_씨앗셋.md §1-③ (a) — 10-09 유저: 족보 단위 상속, 영웅·슈퍼·에이스는 기본 족보를 따른다. 히든 9종만 개별)
+//   히든 분기를 먼저: 조커 tier 1·슬롯 3·투석기 7·갬블러 2라 tier만 보면 표와 어긋난다. owner null(융단·긴급 폭격) = 하늘에서 → 닿음. 분신은 본체 복사라 tier 그대로
+function canHitAir(u) {
+  if (!u) return true;
+  if (isHiddenCombo(u)) return !(u.gamble || u.junk || u.shogun || u.joker || u.catapult); // 주사위·고물상 돌·카타나(화상)·낫(견인)·돌덩이 ✕ / 콰르텟·길로틴·시간술사·슬롯 ○
+  const t = u.tier;
+  return !(t === 0 || t === 3 || t === 5 || t === 6); // 하이카드(새총) · 트리플(부메랑·표창) · 플러쉬(화염) · 풀하우스(단검·전기톱) ✕
+}
+function airborne(m) { return !!(m.fly && S.air && S.air.up); } // 지금 떠 있나 — 착지 창엔 모든 무기가 닿는다. 판정 지점은 m.fly가 아니라 전부 이 함수
 // 가장 강한 몬스터 (보스 최우선, 그다음 현재 체력 최대)
 function strongestMonster() {
   let best = null, bv = -1;
@@ -8342,6 +8394,7 @@ function draw() {
   drawGraves(); // 🪦 결투 전사자 비석 (계속 쌓인다)
   if (S.plank) drawPlank();
   drawEnemyPortal(); // 소환장 안 적 포탈 (몹보다 뒤)
+  drawFormGlyph(); // 받침: 진형 바닥 문양 (포커 중 + 전투 첫 2초, 진형 라운드만)
   for (const p of S.acidPools) {
     const al = Math.min(1, p.t) * (0.28 + 0.1*Math.sin(S.time*6));
     ctx.fillStyle = `rgba(124,179,66,${al.toFixed(2)})`;
@@ -9154,6 +9207,15 @@ function drawCastleRaw() {
   ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
   dpdDrawIcon(ctx, 'sword', x, y - 44.5, 13, '#fff');
   ctx.textAlign = 'left';
+}
+// 진형 바닥 문양 (받침 C0-d, 51 §C-3): 포커 중 + 전투 첫 2초만 · 글자 없음 · 콩가 = 클램프 상자 점선 / 두 무리 = 점 2개. 모바일 포커 탭은 캔버스가 숨겨져 생략
+function drawFormGlyph() {
+  if (S.multi || !S.pat || !S.pat.form || (S.phase === 'wave' && S.waveT >= 2) || (IS_MOBILE && S.phase === 'poker')) return;
+  const a = S.phase === 'wave' ? FORM_GLYPH_A * (1 - S.waveT / 2) : FORM_GLYPH_A;
+  ctx.strokeStyle = `rgba(255,255,255,${a.toFixed(2)})`; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 2;
+  if (S.pat.form === 'conga') { const hw = PEN.w / 2 - 12, hh = PEN.h / 2 - 12; ctx.setLineDash([6, 5]); ctx.strokeRect(CX - hw, CY - hh, hw * 2, hh * 2); ctx.setLineDash([]); }
+  else if (S.pat.form === 'two') for (const sx of [-60, 60]) { ctx.beginPath(); ctx.arc(CX + sx, CY, 6, 0, 6.28); ctx.fill(); }
+  ctx.lineWidth = 1;
 }
 // 적 소환 포탈: 소환장 안에 생겨 몹이 우르르 쏟아진다 (10-07 저녁 유저: 05338fc 시절 프로시저럴 붉은 포털 복원 — 쏟아지는 동안만, 끝나면 페이드아웃)
 function drawEnemyPortal() {
@@ -12957,13 +13019,13 @@ function monsterAt(x, y) {
 }
 // 👹 보스 도감: shape별 이름 + 위트 한 줄
 const BOSS_INFO = {
-  20: ['달', '소원을 빌어도 소용없다. 오늘은 근무일이라서.'],
-  21: ['수성', '태양 바로 옆집에 살다 보니 성격이 좀 많이 탔다.'],
-  22: ['금성', '샛별이라고 예쁘게 불러줘도, 실은 태양계에서 제일 뜨거운 성격이다.'],
-  23: ['지구', '환경 파괴 청구서를 직접 들고 왔다. 연체료 포함이다.'],
-  24: ['화성', '이주 온다는 소문을 듣고 마중 나왔다. 편도였길 바란다.'],
+  20: ['달', '소원을 빌어도 소용없다. 오늘은 근무일이라서.', '주위 잡몹에 보호막을 두른다'], // 셋째 원소 = 능력 힌트(받침 B0 — BOSS_ABILITY에 들어오는 2단계 C2부터 표시, 그 전엔 bossHint가 숨김)
+  21: ['수성', '태양 바로 옆집에 살다 보니 성격이 좀 많이 탔다.', '유닛 반대편으로 숨는다'],
+  22: ['금성', '샛별이라고 예쁘게 불러줘도, 실은 태양계에서 제일 뜨거운 성격이다.', '열 방어막 — 쉬지 않고 때려야'],
+  23: ['지구', '환경 파괴 청구서를 직접 들고 왔다. 연체료 포함이다.', '자전 — 잡몹이 잠깐 질주한다'],
+  24: ['화성', '이주 온다는 소문을 듣고 마중 나왔다. 편도였길 바란다.', '호위가 많으면 단단하다'],
   25: ['목성', '태양계 최대 몸집. 다이어트는 4억 년 전에 포기했다.', '잡몹을 끌어모은다'], // 셋째 원소 = 능력 힌트(bossHint — BOSS_ABILITY에 25가 들어오는 C3부터 표시)
-  26: ['토성', '고리는 무기가 아니라 장식이다. …아직까지는.'],
+  26: ['토성', '고리는 무기가 아니라 장식이다. …아직까지는.', '고리가 열릴 때만 제대로 맞는다'],
   27: ['태양', '지금 보이는 건 8분 전의 나다. 즉, 이미 늦었다.'],
   15: ['블랙홀', '들어온 손님은 많은데 후기가 하나도 없다. 이유는 묻지 마라.'],
   28: ['아포칼립스 태양', '80라운드에 본 그 태양? 내 그림자였다. 이제 진짜가 왔다.'],
@@ -12982,6 +13044,9 @@ function showMonsterInfo(m) {
   if (m.golden) tags.push('황금 레어! 잡으면 보너스 골드');
   if (m.shield > 0) tags.push('보호막 ' + Math.ceil(m.shield));
   if (m.split) tags.push('분열 보스 — 잡으면 5조각으로 갈라져요!');
+  if (m.fly) tags.push(airborne(m) ? '공중 — 활·총·포만 닿아요' : '착지 중 — 지금은 다 닿아요'); // 몬스터 등장 패턴(받침): 수치 없음
+  if (m.ward) tags.push('방패병 — 잡으면 주위 보호막이 깨져요');
+  if (S.pat && S.pat.form && m.slot != null) tags.push(S.pat.form === 'conga' ? '울타리를 따라 행진 중' : '두 무리로 오가는 중');
   el.innerHTML = `<b>${name}</b><br>${desc}` +
     `<div class="oi-hp">${dpdIconSVG('heart')} <b>${hp}</b> / ${max}` + // 🎨 10-05 인디고: 인라인 색 → 클래스 (체력 3색 채움은 의미 색이라 인라인 유지)
     `<div class="oi-track oi-hp-track"><div style="height:100%;width:${(pct*100).toFixed(0)}%;background:${col}"></div></div></div>` +
@@ -14603,6 +14668,7 @@ function renderPoker(spin) {
     const sun = S.round >= SUN_ROUND && !S.hellCleared, sh = bossShapeFor(S.round), bi = BOSS_INFO[sh], h = sun ? '' : bossHint(sh);
     banner.innerHTML += `<br><span class="poker-boss-warning">${sun ? '태양 강림' : '보스 라운드 — ' + bi[0] + (h ? ': ' + h : '')} · 시간 안에 못 잡으면 끝</span>`;
   }
+  if (!S.multi && S.pat && S.pat.tag) banner.innerHTML += `<br><span class="poker-event-notice">다음 전투: ${S.pat.tag} — ${S.pat.hint}</span>`; // 몬스터 등장 패턴(받침): 태그 한 단어 + 힌트 반 줄 (수치 없음)
   if (S.event) banner.innerHTML += `<br><span class="poker-event-notice">다음 전투 이벤트: ${S.event.name} — ${S.event.desc}</span>`;
   btn.textContent = double ? '유닛 2기 동시 소환!' : '유닛 소환!';
   cardsEl.innerHTML = '';
