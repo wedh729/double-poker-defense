@@ -3058,11 +3058,14 @@ html body.mobile #unitInfo.ui-panel .ui-head + * { padding-right: 28px; }
 html body.mobile #unitInfo.ui-panel .priBtn { flex: 1 0 auto; min-width: 49px; padding-left: 7px; padding-right: 7px; }
 /* 10-12 공중 우선(대공 유닛만 4번째 '공중' 버튼): 4버튼 줄은 폰 640폭 상태창(내용 253px)에서 5px 넘쳤다 → 그 줄만 최소 폭 45·좌우 5 (가장 긴 '가까운' 33px + 5 + 5 + 테두리) */
 html body.mobile #unitInfo.ui-panel .ui-pri4 .priBtn { min-width: 45px; padding-left: 5px; padding-right: 5px; }
+/* 10-12 밤 리뷰: 주소창·툴바가 높이를 먹은 가로 화면(svh ≲ 324 → #cvWrap·상태창이 좁아짐)에선 4버튼(242px)이 넘쳐 '공중'이 overflow-x:hidden 에 잘렸다 → 넘칠 때만 다음 줄로 (들어가는 폭에선 배치 그대로) */
+html body.mobile #unitInfo.ui-panel .ui-pri4 { flex-wrap: wrap; row-gap: 4px; }
 @media (max-width: 900px) and (max-height: 500px) {
 html body #unitInfo.ui-panel { width: auto; min-width: 145px; max-width: min(44vw, calc(47% - 6px)); }
 html body #unitInfo.ui-panel .ui-head + * { padding-right: 28px; }
 html body #unitInfo.ui-panel .priBtn { flex: 1 0 auto; min-width: 49px; padding-left: 7px; padding-right: 7px; }
 html body #unitInfo.ui-panel .ui-pri4 .priBtn { min-width: 45px; padding-left: 5px; padding-right: 5px; }
+html body #unitInfo.ui-panel .ui-pri4 { flex-wrap: wrap; row-gap: 4px; }
 }
 /* ④ 리뷰 F2: PC도 배지를 제목 줄에 (10-01 컴팩트 결정 — 원문은 모바일만 inline-flex) */
 html body #unitInfo.ui-panel .ui-badges { display: inline-flex; width: auto; vertical-align: middle; margin: 0 0 0 2px; gap: 2px; }
@@ -8450,7 +8453,7 @@ function draw() {
     if (m.fly) { flyN++; continue; } // 공중 몹은 아래 별도 패스(지상 몹 위)
     const bb = (!m.boss && m.mat < 8) ? MAT_BOB[m.mat] : null;
     const bob = bb && bb[0] ? Math.abs(Math.sin(S.time * bb[1] + m.bobP)) * bb[0] * m.born : 0;
-    const puff = m.puffT > 0 ? 1 + 0.15 * Math.sin(Math.PI * Math.min(1, m.puffT / GRAV.TELE)) : 1; // 보스 능력 예고 0.6초 부풀기 (호출처 스케일 — 체력바도 같이 커지는 0.6초, 의도)
+    const puff = monPuff(m); // 보스 능력 예고 0.6초 부풀기 (호출처 스케일 — 체력바도 같이 커지는 0.6초, 의도)
     if (puff !== 1) { ctx.save(); ctx.translate(m.x, m.y - bob); ctx.scale(puff, puff); ctx.translate(-m.x, -m.y); drawMonster(m); ctx.restore(); }
     else if (bob > 0.3) { ctx.save(); ctx.translate(0, -bob); drawMonster(m); ctx.restore(); } // 부풀기 없을 땐 옛 줄 그대로 (3단 변환은 소수점 반올림으로 출렁이는 잡몹 테두리 픽셀이 달라짐 — 10-09 리뷰)
     else drawMonster(m);
@@ -8486,6 +8489,12 @@ function draw() {
   if (flyN) for (const m of S.monsters) if (m.fly && !m.lane && m.lift > 0.5) { // ☁️ 하늘 패스(10-12 유저 ② ALT-56): 떠 있는 공중 몹 = 울타리·유닛 위 (날개 → 몸). 그림자는 위 그림자 패스(모든 몸 아래)
     drawFlyMob(m);
     if (S.freezeT > 0) { ctx.fillStyle = 'rgba(140,200,255,0.18)'; ctx.beginPath(); ctx.arc(m.x, m.y, monSize(m) * m.born, 0, Math.PI * 2); ctx.fill(); } // ⏳ 시간정지 틴트를 떠 있는 몸 원에도 (안뜰 사각형 틴트는 이 패스보다 먼저라 안 덮임)
+  }
+  if (flyN) for (const m of S.monsters) if (m.boss && !m.entering && !m.lane) { // 보스 체력바 재그림(10-12 리뷰): 보스전에도 공중이 나오며(R40+) 낮은 공중·하늘 패스가 지상 패스의 바를 덮음 → 공중 몹 위에 한 번 더 (같은 부풀기 변환 · 공중 없으면 안 돎)
+    const puff = monPuff(m);
+    if (puff !== 1) { ctx.save(); ctx.translate(m.x, m.y); ctx.scale(puff, puff); ctx.translate(-m.x, -m.y); }
+    drawBossBar(m, monSize(m) * m.born, monColor(m));
+    if (puff !== 1) ctx.restore();
   }
   for (const u of S.units) if (u.grabbed) drawGrabbedUnit(u); // 🖐️ 공중에 매달린 유닛 — 울타리보다도 위
   for (const u of S.units) drawBuffMark(u); // 💰📯 버프 마커 — 모든 유닛 위에 (10-11)
@@ -10587,8 +10596,10 @@ function drawMonster(m) {
     ctx.fillStyle = 'rgba(150,220,255,0.12)'; ctx.beginPath(); ctx.arc(m.x, m.y, sr, 0, Math.PI*2); ctx.fill();
     ctx.lineWidth = 1;
   }
-  if (m.boss && !m.entering) drawBar(m.x - (m.sunBoss ? 76 : 38), m.y - sz - 18, m.sunBoss ? 152 : 76, m.hp / m.max, c); // 태양은 체력바도 2배 (강림 중엔 숨김)
+  if (m.boss && !m.entering) drawBossBar(m, sz, c); // (강림 중엔 숨김)
 }
+function drawBossBar(m, sz, c) { drawBar(m.x - (m.sunBoss ? 76 : 38), m.y - sz - 18, m.sunBoss ? 152 : 76, m.hp / m.max, c); } // 태양은 체력바도 2배 · draw()의 공중 라운드 재그림과 공용
+function monPuff(m) { return m.puffT > 0 ? 1 + 0.15 * Math.sin(Math.PI * Math.min(1, m.puffT / GRAV.TELE)) : 1; } // 보스 능력 예고 부풀기 배율 (지상 패스·보스 바 재그림 공용)
 function drawUnit(u, sq) { // sq: 🖐️ 착지 스쿼시(0~0.22) — 몸통 변환에만 건다 (사거리 링·선택 링·HP바는 안 찌그러지게)
   if (u.item) { if (sq) { ctx.save(); ctx.translate(u.x, u.y + 16); ctx.scale(1 + sq, 1 - sq); ctx.translate(-u.x, -u.y - 16); } drawItemUnit(u); if (sq) ctx.restore(); return; }
   const hm = (!u.miner && !u.hidden) ? hiddenMeta(u) : null; // 히든 유닛 테마
@@ -13479,7 +13490,7 @@ function updateInfoPanel() {
     const skHTML = skUnits.length === 0 ? '' :
       `<button type="button" id="skillAllBtn" class="shopBtn ui-skill" data-skill="fullhouse" ${skillAttrs(st6.state, !st6.allReady)}>${st6.label}</button>`;
     el.innerHTML = `<div class="ui-head"><b class="ui-name">부대 선택: ${sel.length}기</b></div><div class="ui-comp">${compStr}</div><div class="ui-help">${IS_MOBILE ? '유닛을 끌어 옮기기 · 빈 땅 탭 = 선택 해제 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}</div>` +
-      (sel.some(u => !u.miner) ? priorityRow(commonPri, airSel.length > 0) : '') +
+      (sel.some(u => !u.miner) ? priorityRow(commonPri, airSel.length > 0 && !S.multi) : '') + // 멀티 = 공중 몹 없음(결정 3) → '공중' 버튼 없음
       skHTML +
       (canFuse ? `<div class="ui-fuse">같은 유닛 5기! 좌측 포털로 이동시키면 강화!</div>` : '') +
       deselBtnHTML();
@@ -13540,7 +13551,7 @@ function updateInfoPanel() {
     `<div class="ui-stat ui-atk">공격력 <b class="ui-num">${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? ` <span class="ui-crown">${dpdIconSVG('crown')}×${S.crownMul.toFixed(2)}</span>` : ''}${isHiddenCombo(u) ? '' : ` <small class="ui-atk-base">(기본 ${(+u.dmg).toFixed(1)} +${upFlat})</small>`}</div>` +
     // 공속: 콰르텟 버프·히든 페널티 반영된 실제 값
     `<div class="ui-stat ui-spd">공속 <b${(u.spdBuff || 1) < 1 ? ' class="ui-spd-up"' : ''}>${(1/effCd(u)).toFixed(1)}/초</b>${(u.spdBuff || 1) < 1 ? ' <span class="ui-buff">합주 +20%</span>' : ''} · ${dpdIconSVG('skull')} <b id="ipKills">${u.kills || 0}</b>킬${trH}</div>` +
-    (u.miner ? '' : priorityRow(u.priority || 'near', airPriOk(u))) +
+    (u.miner ? '' : priorityRow(u.priority || 'near', airPriOk(u) && !S.multi)) + // 멀티 = 공중 없음 → '공중' 버튼 없음
     (u.tier === 6 ? skillRow(u) : '') +
     (u.chrono ? chronoRow(u) : '') +
     (u.joker ? jokerRow(u) : '') +
