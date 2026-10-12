@@ -5657,7 +5657,7 @@ function update(dt) {
       u.inPen = true; // 단검 암살·분신술 모두 소환장 안에서 싸운다
       let tgt = u.assassinTgt;
       if (!tgt || tgt.hp <= 0 || (airborne(tgt) && !canHitAir(u))) tgt = u.assassinTgt = strongestMonster(); // 공중: 대상이 떠오르면 다시 고름
-      if (tgt) { const d = Math.hypot(tgt.x - u.x, tgt.y - u.y); if (d > effRange(u) * 0.7) { u.tx = tgt.x; u.ty = tgt.y; } else { u.tx = u.x; u.ty = u.y; } }
+      if (tgt) { const d = Math.hypot(tgt.x - u.x, tgt.y + (tgt.lift || 0) - u.y); if (d > effRange(u) * 0.7) { u.tx = tgt.x; u.ty = tgt.y; } else { u.tx = u.x; u.ty = u.y; } } // 사거리 = 그림자(땅 지점 y + lift) 기준 (10-12 ② — 착지 하강 중 공중 대상, 지상 몹 lift 0 = 무변경)
       if (u.skillT <= 0) { // 종료 → 원래 자리로 복귀
         u.skillT = 0; u.skillCd = 150; u.inPen = false; u.assassinTgt = null;
         u.tx = u.homeX != null ? u.homeX : CX - 40; u.ty = u.homeY != null ? u.homeY : CY + 150;
@@ -5792,7 +5792,7 @@ function update(dt) {
       if (m.abilT <= 0) { m.abilT = GRAV.PERIOD; m.abilCued = false; bossGravity(m); }
     }
     m.born = Math.min(1, m.born + dt * 2.5);
-    if (m.fly) { m.flapT += dt; m.lift = flyLift(m.flapT, m.phase, S.air ? S.air.k : 0); } // 공중: 날개 위상·부양 (freezeT continue 아래 = 시간정지 동결) — 논리 lift = 궤도점을 들어 올림(투사체·클릭이 몸에 맞음)
+    if (m.fly) { m.flapT += dt; m.lift = flyLift(m.flapT, m.phase, S.air ? S.air.k : 0) * m.born; } // 공중: 날개 위상·부양 (freezeT continue 아래 = 시간정지 동결) — 논리 lift = 궤도점을 들어 올림(투사체·클릭이 몸에 맞음) · × m.born = 스폰 0.4초 동안 포털에서 떠오름(10-12 ②: 56px 위에 툭 나타나지 않게)
     m.ang += m.spin * dt * sp.spinK; // A2 휘몰이 ×3
     if (m.pullT > 0) {
       // 🃏 조커: 낫에 맞아 끌려가는 중 — 오빗 대신 조커 쪽으로 직행
@@ -5816,7 +5816,7 @@ function update(dt) {
     }
     // 울타리 밖으로 못 나간다 → 가장자리에서 서로 겹치고 밀린다 (풀 중에는 조커 쪽 가장자리로 뭉침)
     m.x = Math.max(CX - hw, Math.min(CX + hw, m.x));
-    m.y = Math.max(CY - hh, Math.min(CY + hh - (m.lift || 0), m.y)); // 공중도 위쪽 완화 없음(B-2 10-12): 완화하면 떠 있는 몸 위쪽이 drawBarrackCap(울타리 윗변 재그림)에 잘린다 — 위 벽에선 몸이 클램프에 서고 그림자가 lift만큼 아래로 · 아래쪽은 땅(몸 + lift) 기준: 아래 벽 공중 몹 그림자가 울타리 밖 풀밭에 찍히던 것(pat2 크로스체크 P2 — 지상 몹 lift 0 = 무변경)
+    m.y = Math.max(CY - hh - (m.lift || 0), Math.min(CY + hh - (m.lift || 0), m.y)); // 땅 지점(몸 + lift = 그림자) 기준 클램프 — 위·아래 모두 그림자가 안뜰 [CY−hh, CY+hh] 안 (지상 몹 lift 0 = 무변경). 10-12 유저 ②로 B-2 '위쪽 완화 없음'(울타리 윗변 재그림에 몸이 잘림)을 뒤집음: 떠 있는 몹은 draw()의 하늘 패스(drawBarrackCap 뒤)라 안 잘림 — 뒷줄 공중 몸은 울타리 너머 하늘에
   }
   // 유닛 명령/공격 처리 (이동 중엔 발사 불가)
   for (const u of S.units) {
@@ -5827,7 +5827,7 @@ function update(dt) {
     if (u.skillT > 0) {
       const tgt = u.assassinTgt;
       if (tgt && tgt.hp > 0 && u.cool <= 0 && !u.moving) {
-        const d = Math.hypot(tgt.x - u.x, tgt.y - u.y);
+        const d = Math.hypot(tgt.x - u.x, tgt.y + (tgt.lift || 0) - u.y); // 사거리 = 그림자 기준 (10-12 ②)
         if (d <= effRange(u) + 24) { u.cool = effCd(u); u.aimX = tgt.x; u.aimY = tgt.y; fireAt(u, tgt); }
       }
       continue;
@@ -5842,7 +5842,7 @@ function update(dt) {
     // A명령: 대상 집중 공격 (보스 저격용)
     if (u.forceTarget) {
       const ft = u.forceTarget;
-      const d = Math.hypot(ft.x - u.x, ft.y - u.y);
+      const d = Math.hypot(ft.x - u.x, ft.y + (ft.lift || 0) - u.y); // 사거리 = 그림자(땅 지점) 기준 — 떠 있는 몹은 '그림자가 사거리 안이면 닿음' (10-12 ②, 지상 몹 lift 0 = 무변경)
       if (d > effRange(u)) { const t = clampTargetPos(ft.x + u.jx, ft.y + u.jy); u.tx = t.x; u.ty = t.y; }
       else {
         u.tx = u.x; u.ty = u.y;
@@ -5855,7 +5855,7 @@ function update(dt) {
     const r2 = effRange(u) * effRange(u);
     for (const m of S.monsters) {
       if (m.entering || m.hp + m.shield - m.inc <= 0 || (m.lane && mpNoAim(u, m)) || (airborne(m) && !canHitAir(u))) continue; // 강림 중인 태양은 조준 불가 · 🤖 다리 밑 레인 개체도 (펜 포탄 유닛은 레인 전부) · 못 치는 공중 몹엔 탄 낭비 0
-      const ddx = m.x - u.x, ddy = m.y - u.y, d2 = ddx * ddx + ddy * ddy;
+      const ddx = m.x - u.x, ddy = m.y + (m.lift || 0) - u.y, d2 = ddx * ddx + ddy * ddy; // 사거리 = 그림자(땅 지점) 기준 (10-12 ②)
       if (d2 > r2) continue;
       anyInRange = true;
       const score = u.priority === 'far' ? -d2 : u.priority === 'strong' ? -(m.hp + m.shield) : d2;
@@ -6141,7 +6141,7 @@ function fireAt(u, target) {
   // 🏹💣 원페어(활·석궁)·포카드(바주카·탱크): 멀수록 아프다 — 사거리 끝에서 최대 ×1.1 (08-14 유저. 활·폭탄의 낙차 픽션)
   // isHiddenCombo 제외: 조커가 tier 1, 투석기가 tier 7을 공유한다
   if ((u.tier === 1 || u.tier === 7) && !isHiddenCombo(u))
-    dmg *= 1 + 0.1 * Math.min(1, Math.hypot(target.x - u.x, target.y - u.y) / effRange(u));
+    dmg *= 1 + 0.1 * Math.min(1, Math.hypot(target.x - u.x, target.y + (target.lift || 0) - u.y) / effRange(u)); // 거리 = 사거리와 같은 그림자 기준 (10-12 ②)
   let gambleBounce = 0;
   if (u.gamble) { // 🎲 갬블러: 주사위를 던져 1~6회 팅기는 공격 (6=잭팟 / 승급1: 최소2 / 승급2: 잭팟 8연타)
     gambleBounce = (u.ascend || 0) >= 1 ? 2 + Math.floor(Math.random() * 5) : 1 + Math.floor(Math.random() * 6);
@@ -8436,13 +8436,13 @@ function draw() {
     else if (bob > 0.3) { ctx.save(); ctx.translate(0, -bob); drawMonster(m); ctx.restore(); } // 부풀기 없을 땐 옛 줄 그대로 (3단 변환은 소수점 반올림으로 출렁이는 잡몹 테두리 픽셀이 달라짐 — 10-09 리뷰)
     else drawMonster(m);
   }
-  if (flyN) for (const m of S.monsters) if (m.fly && !m.lane) drawFlyMob(m); // 공중 몹: 날개(몸 뒤) → 몸, 모든 지상 몹 위 패스(뭉친 무리 속에서도 날개가 보이게 — 10-12 실제 화면 확인). MAT_BOB 바운스·부풀기 래퍼 없음 (보스는 fly 없음)
+  if (flyN) for (const m of S.monsters) if (m.fly && !m.lane && !(m.lift > 0.5)) drawFlyMob(m); // 낮은 공중 패스(착지했거나 막 뜨는 몹, lift ≤ 0.5): 날개(몸 뒤) → 몸, 모든 지상 몹 위(뭉친 무리 속에서도 날개가 보이게 — 10-12 실제 화면 확인). 떠 있는 몹은 아래 하늘 패스(drawBarrackCap 뒤). MAT_BOB 바운스·부풀기 래퍼 없음 (보스는 fly 없음)
   // ⏳ 시간 정지: 소환장 위 얼음 틴트 오버레이
   if (S.freezeT > 0) {
     ctx.fillStyle = 'rgba(140,200,255,0.18)';
     ctx.fillRect(PEN.x - PEN.w/2, PEN.y - PEN.h/2, PEN.w, PEN.h);
     ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    dpdDrawIcon(ctx, 'pause', PEN.x, PEN.y - PEN.h/2 - 16, 22, 'rgba(255,255,255,0.85)', { fill: true }); ctx.textAlign = 'left';
+    ctx.textAlign = 'left'; // 일시정지 아이콘은 하늘 패스 뒤로 옮김(아래 drawBarrackCap 다음 — 10-12 ②: 울타리 위 공중 몸에 안 가리게). 위 상태 줄은 뒤 그리기 상태 그대로 두려고 유지
   }
   if (S.stimT > 0) { ctx.fillStyle = '#43a047'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign='center'; ctx.fillText(`스팀팩 ${Math.ceil(S.stimT)}초`, CX, 20); ctx.textAlign='left'; }
   // 유닛 — 2번 돈다: 🚜 굴착기(몸 78px)를 먼저 깔고 나머지를 위에 (리뷰 EXC-1: 늦게 생긴 굴착기가 광산 앞 광부를 덮던 것). 굴착기가 없으면 그리는 순서는 예전과 같다
@@ -8464,6 +8464,11 @@ function draw() {
     } else drawUnit(u, sq);
   }
   drawBarrackCap(); // 🪵 울타리 윗변을 유닛 위에 재그림 — 뒤에 선 유닛 반쯤 가림 (오클루전)
+  if (flyN) for (const m of S.monsters) if (m.fly && !m.lane && m.lift > 0.5) { // ☁️ 하늘 패스(10-12 유저 ② ALT-56): 떠 있는 공중 몹 = 울타리·유닛 위 (날개 → 몸). 그림자는 위 그림자 패스(모든 몸 아래)
+    drawFlyMob(m);
+    if (S.freezeT > 0) { ctx.fillStyle = 'rgba(140,200,255,0.18)'; ctx.beginPath(); ctx.arc(m.x, m.y, monSize(m) * m.born, 0, Math.PI * 2); ctx.fill(); } // ⏳ 시간정지 틴트를 떠 있는 몸 원에도 (안뜰 사각형 틴트는 이 패스보다 먼저라 안 덮임)
+  }
+  if (S.freezeT > 0) dpdDrawIcon(ctx, 'pause', PEN.x, PEN.y - PEN.h/2 - 16, 22, 'rgba(255,255,255,0.85)', { fill: true }); // ⏳ 일시정지 아이콘 — 하늘 패스 뒤(떠 있는 몸에 안 가리게)
   for (const u of S.units) if (u.grabbed) drawGrabbedUnit(u); // 🖐️ 공중에 매달린 유닛 — 울타리보다도 위
   for (const u of S.units) drawBuffMark(u); // 💰📯 버프 마커 — 모든 유닛 위에 (10-11)
   drawMutter(); // 💬 히든 혼잣말 말풍선
@@ -10226,7 +10231,7 @@ const WING = {
   ANG: [0.44, 0, -0.44], // 프레임 0 위(+25°) / 1 중간 / 2 아래(−25°) — 뿌리 기준 회전
   SEQ: [0, 1, 2, 1],     // 파닥 순서 (위→중→아래→중) · FLAP_HZ 6 = 초당 6번 파닥(스텝 24/s, 60fps 에서 스텝당 2.5프레임)
   FLAP_HZ: 6,
-  LIFT: 14, BOB: 5, BOB_HZ: 3.2, EASE: 0.4, // 부양 px · 바운스 진폭 px · 바운스 각속도(rad/s) · 이착륙 0.4초
+  LIFT: 56, BOB: 5, BOB_HZ: 3.2, EASE: 0.4, // 부양 px · 바운스 진폭 px · 바운스 각속도(rad/s) · 이착륙 0.4초 — 10-12 유저 ② 높이 띄우기(ALT-56): 14 → 56 = 울타리 기둥(안뜰 윗변 42px 위)보다 높이, 뒷줄 공중 몸이 울타리 너머 하늘에 뜸
   SHADOW: 'rgba(20,30,20,0.20)', SHADOW_RX: 0.75, SHADOW_RY: 0.27, SHADOW_DY: 0.85, // 땅 그림자 타원 (반투명은 UI 신호 — 쉴드 링과 같은 예외)
   OUT_W: r => Math.max(1.3, 0.11 * r),  // 테 굵기 (몸 외곽선 0.13r 보다 조금 가늘게 — 날개가 몸보다 가벼워 보이게)
   HI_W: r => Math.max(1.0, 0.07 * r),
