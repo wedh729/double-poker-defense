@@ -3699,8 +3699,10 @@ function airRatio(r) { return r < AIR.R0 || r >= SUN_ROUND ? 0 : r >= AIR.R1 ? A
 //   측정(10-12 밤, t1012_airbal: 같은 페이지에서 공중만 끈 기준 ↔ 공중, 광역·단일·혼합 × 시드 3 중앙값, 결투 끔, K = 공중 없는 기준에서 클리어 ≤ 65초 되는 첫 2^n):
 //   클리어 비율(공중 / 없음, 3빌드 평균) R35 1.003 · R45 1.009 · R55 1.052 · R60 1.010 · R65 1.027 · R75 1.048 · R80 1.017 · R85 1.047 · R95 1.053 · R100 1.003 · R145 1.045 (빌드별 최대 = 광역 R85 1.109)
 //   → 3빌드 평균(구현자 해석)도 빌드별 최대도 1.10 ± 0.04 상한(1.14) 안이라 노브 1.0(HP 안 낮춤). 한계 화력(기준 클리어 68~90초 K, 10-12 밤 리뷰)도 평균 1.02~1.04·공중 팔만 2/3 시드 이상 시간 초과 0칸.
-//   단 대공 있는 빌드 기준 — 대공 0·약대공 덱(화염 위주)은 R45~65부터 공중 누수로 무너지고, 노브(라운드 잡몹 HP 전체 배수)로는 못 맞춤(59 문서 '10-12 밤 리뷰 보강 측정' · 유저 판단 거리).
-//   공중 비율·착지 창·대공 표를 바꾸면 이 측정을 다시 할 것. (10-13: 착지 창 24/6 → 20/10 — 유저 결정 2로 재측정 없이 노브 1.0 유지, 위 수치는 24/6 기준)
+//   (위 수치는 착지 창 24/6 때 측정) 10-13 착지 창 20/10 재측정(R55·R80·R95): 대공 3빌드 평균 1.051 · 1.029 · 1.053(24/6 대비 ±0.012 · 1.0 아래 0칸 · 누수 0) → 노브 1.0 그대로(유저 결정 2).
+//   단 대공 있는 빌드 기준 — 대공 0·약대공 덱(화염 위주)은 20/10에서도 공중 몹을 착지 창에만 칠 수 있어 라운드마다 목숨이 깎이고(여유 화력 약대공 R65~95 라운드당 시드 평균 1~5),
+//   보스 라운드는 보스 처치가 22~43초 늦어져 여유 화력 약대공 R60은 3시드 모두 보스 실패 즉사(공중 끈 기준 64~68초 처치) — 노브(라운드 잡몹 HP 전체 배수)로는 못 맞춤(59 문서 '10-13 착지 창 재측정' · 유저 판단 거리).
+//   공중 비율·착지 창·대공 표를 바꾸면 이 측정을 다시 할 것.
 const AIR_HP_KNOB = [[35, 1], [189, 1]];
 function airHpKnob(r) { const T = AIR_HP_KNOB; if (r <= T[0][0]) return T[0][1]; for (let i = 1; i < T.length; i++) if (r <= T[i][0]) { const [r0, k0] = T[i - 1], [r1, k1] = T[i]; return k0 + (k1 - k0) * (r - r0) / (r1 - r0); } return T[T.length - 1][1]; }
 const FORM_GLYPH_A = 0.18;            // 진형 바닥 문양 알파 (포커 중 + 전투 첫 2초)
@@ -5768,7 +5770,7 @@ function update(dt) {
       sfx('boss');
     }
     if (S.air && S.air.on) { const a = S.air; a.t += dt; // 공중 착지 시계 (freezeT 분기 밖 = 시간정지 동결) — 착지 창엔 모든 무기가 닿는다
-      if (a.up && a.t >= a.upT) { a.up = false; a.t = 0; if (S.monsters.some(m => m.fly)) sfx('thud'); } // 남은 공중 몹이 있을 때만 알림 — 소리만('착지!' 글자는 10-13 유저 결정 4로 삭제)
+      if (a.up && a.t >= a.upT) { a.up = false; a.t = 0; if (S.monsters.some(m => m.fly)) sfx('thud', 'land'); } // 남은 공중 몹이 있을 때만 알림 — 소리만('착지!' 글자는 10-13 유저 결정 4로 삭제) · 'land' = 스로틀 면제(sfx)
       else if (!a.up && a.t >= a.downT) { a.up = true; a.t = 0; }
       a.k = Math.max(0, Math.min(1, a.k + (a.up ? dt : -dt) / WING.EASE)); }
   }
@@ -15131,7 +15133,8 @@ function sfx(type, arg) {
   const now = performance.now(), gap = { shoot: 45, slash: 90, boom: 55, gboom: 150, bigboom: 300, jackpot: 400, combo: 70,
     splash: 70, glass: 70, metal: 65, thud: 80,
     pick: 200, coin: 220, boss: 1500, clear: 1500, leak: 800, reward: 500, hero: 800, chirp: 300, deal: 1500 }[type] || 60;
-  const mil = type === 'combo' && arg > 0 && arg % 10 === 0; // 10·20·30… 마디 쿵은 스로틀 면제 — 다중 처치 한 틱에선 첫 킬만 통과해 마디가 거의 안 울렸다 (10-02 크로스체크)
+  const mil = (type === 'combo' && arg > 0 && arg % 10 === 0) // 10·20·30… 마디 쿵은 스로틀 면제 — 다중 처치 한 틱에선 첫 킬만 통과해 마디가 거의 안 울렸다 (10-02 크로스체크)
+    || (type === 'thud' && arg === 'land'); // 공중 착지 쿵도 면제 — '착지!' 글자 삭제(10-13 결정 4) 뒤 유일한 착지 알림인데 투석기 착탄·rock 사망 thud와 80ms 키를 같이 써 묻혔다 (10-13 리뷰, 음색은 같은 thud)
   if (!mil && lastSfx[type] && now - lastSfx[type] < gap) return;
   lastSfx[type] = now;
   if (type === 'shoot') noiseBurst(0.045, 0.17, 2600 + Math.random() * 900, 'bandpass'); // 착! (찰진 슬라이스)
