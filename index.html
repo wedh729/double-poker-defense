@@ -5657,7 +5657,7 @@ function update(dt) {
       u.inPen = true; // 단검 암살·분신술 모두 소환장 안에서 싸운다
       let tgt = u.assassinTgt;
       if (!tgt || tgt.hp <= 0 || (airborne(tgt) && !canHitAir(u))) tgt = u.assassinTgt = strongestMonster(); // 공중: 대상이 떠오르면 다시 고름
-      if (tgt) { const d = Math.hypot(tgt.x - u.x, tgt.y + (tgt.lift || 0) - u.y); if (d > effRange(u) * 0.7) { u.tx = tgt.x; u.ty = tgt.y; } else { u.tx = u.x; u.ty = u.y; } } // 사거리 = 그림자(땅 지점 y + lift) 기준 (10-12 ② — 착지 하강 중 공중 대상, 지상 몹 lift 0 = 무변경)
+      if (tgt) { const d = Math.hypot(tgt.x - u.x, tgt.y + (tgt.lift || 0) - u.y); if (d > effRange(u) * 0.7) { u.tx = tgt.x; u.ty = tgt.y + (tgt.lift || 0); } else { u.tx = u.x; u.ty = u.y; } } // 사거리·목적지 = 그림자(땅 지점 y + lift) 기준 (10-12 ② — 착지 하강 중 공중 대상, 지상 몹 lift 0 = 무변경)
       if (u.skillT <= 0) { // 종료 → 원래 자리로 복귀
         u.skillT = 0; u.skillCd = 150; u.inPen = false; u.assassinTgt = null;
         u.tx = u.homeX != null ? u.homeX : CX - 40; u.ty = u.homeY != null ? u.homeY : CY + 150;
@@ -5713,7 +5713,7 @@ function update(dt) {
   if (S.goldFlash > 0) S.goldFlash -= dt;
   if (S.acidPools.length) S.acidPools = S.acidPools.filter(p => {
     p.t -= dt;
-    if (S.freezeT <= 0) for (const m of S.monsters) { if (!m.lane && !airborne(m) && Math.hypot(m.x - p.x, m.y - p.y) <= p.r) dealDamage(m, p.dps * dt, null); } // 시간정지 중엔 도트도 멈춤 · 🤖 레인 프록시 제외 · 공중: 바닥 장판이라 떠 있는 몹 제외(owner null 규칙의 예외)
+    if (S.freezeT <= 0) for (const m of S.monsters) { if (!m.lane && !airborne(m) && Math.hypot(m.x - p.x, m.y + (m.lift || 0) - p.y) <= p.r) dealDamage(m, p.dps * dt, null); } // 시간정지 중엔 도트도 멈춤 · 🤖 레인 프록시 제외 · 공중: 바닥 장판이라 떠 있는 몹 제외(owner null 규칙의 예외) · 거리 = 땅 지점(착지 하강 0.4초 동안 몸은 lift만큼 위 — 10-12 ②, 지상 몹 lift 0 = 무변경)
     return p.t > 0;
   });
   const q = S.spawnQueue;
@@ -5792,13 +5792,13 @@ function update(dt) {
       if (m.abilT <= 0) { m.abilT = GRAV.PERIOD; m.abilCued = false; bossGravity(m); }
     }
     m.born = Math.min(1, m.born + dt * 2.5);
-    if (m.fly) { m.flapT += dt; m.lift = flyLift(m.flapT, m.phase, S.air ? S.air.k : 0) * m.born; } // 공중: 날개 위상·부양 (freezeT continue 아래 = 시간정지 동결) — 논리 lift = 궤도점을 들어 올림(투사체·클릭이 몸에 맞음) · × m.born = 스폰 0.4초 동안 포털에서 떠오름(10-12 ②: 56px 위에 툭 나타나지 않게)
+    if (m.fly) { const l0 = m.lift || 0; m.flapT += dt; m.lift = flyLift(m.flapT, m.phase, S.air ? S.air.k : 0) * m.born; if (m.pullT > 0 || m.returnT > 0) m.y -= m.lift - l0; } // 공중: 날개 위상·부양 (freezeT continue 아래 = 시간정지 동결) — 논리 lift = 궤도점을 들어 올림(투사체·클릭이 몸에 맞음) · × m.born = 스폰 0.4초 동안 포털에서 떠오름(10-12 ②: 56px 위에 툭 나타나지 않게) · 견인·복귀 중 이착륙 = 몸도 lift만큼 같이 올림/내림(땅 지점 연속 — 궤도 경로는 oy가 이미 −lift, 10-12 ② 크로스체크)
     m.ang += m.spin * dt * sp.spinK; // A2 휘몰이 ×3
     if (m.pullT > 0) {
       // 🃏 조커: 낫에 맞아 끌려가는 중 — 오빗 대신 조커 쪽으로 직행
       m.pullT -= dt;
       if (m.pullT <= 0) { m.returnT = 6; m.pullQuiet = false; } // 견인 끝 → 복귀 시작 (도착하면 자동 종료되므로 넉넉히) · 중력 사슬 생략 해제
-      const pdx = m.pullX - m.x, pdy = m.pullY - m.y, pd = Math.hypot(pdx, pdy) || 1;
+      const pdx = m.pullX - m.x, pdy = m.pullY - (m.lift || 0) - m.y, pd = Math.hypot(pdx, pdy) || 1; // 견인점 = 땅 지점 기준 (공중 몹 몸은 lift만큼 위 — 지상 몹 lift 0 = 무변경)
       const pstep = Math.min(pd, 220 * dt);
       m.x += pdx / pd * pstep; m.y += pdy / pd * pstep;
     } else {
@@ -5843,7 +5843,7 @@ function update(dt) {
     if (u.forceTarget) {
       const ft = u.forceTarget;
       const d = Math.hypot(ft.x - u.x, ft.y + (ft.lift || 0) - u.y); // 사거리 = 그림자(땅 지점) 기준 — 떠 있는 몹은 '그림자가 사거리 안이면 닿음' (10-12 ②, 지상 몹 lift 0 = 무변경)
-      if (d > effRange(u)) { const t = clampTargetPos(ft.x + u.jx, ft.y + u.jy); u.tx = t.x; u.ty = t.y; }
+      if (d > effRange(u)) { const t = clampTargetPos(ft.x + u.jx, ft.y + (ft.lift || 0) + u.jy); u.tx = t.x; u.ty = t.y; } // 목적지도 그림자(땅 지점) — 몸으로 잡으면 뒷줄 하늘 몸 쪽 윗변에 붙어 그림자가 사거리 밖인 채 정지(단거리 ○: 길로틴·콰르텟 — 10-12 ② 크로스체크 P1)
       else {
         u.tx = u.x; u.ty = u.y;
         if (u.cool <= 0 && !u.moving) { u.cool = effCd(u); fireAt(u, ft); }
@@ -6178,7 +6178,7 @@ function fireAt(u, target) {
         S.projs.push({ kind: arc ? 'bombthrow' : 'missile', deliver: 'area', owner: u,
           mini: /바주카/.test(u.weapon), // 바주카포는 미니 미사일
           boulder: !!u.catapult, // 🪨 투석기: 폭탄 대신 돌덩이로 렌더
-          sx: m.x, sy: m.y, x: m.x, y: m.y, ex: target.x, ey: target.y,
+          sx: m.x, sy: m.y, x: m.x, y: m.y, ex: target.x, ey: target.y, gy: target.y + (target.lift || 0), // gy = 표적 땅 지점(투척 그림자 자리 — 착탄은 몸, 10-12 ②)
           t: 0, dur: arc ? 0.5 : Math.max(0.18, Math.hypot(target.x - m.x, target.y - m.y) / 640),
           dmg, splash: u.splash, spin: 0, ang: Math.atan2(target.y - m.y, target.x - m.x) });
         if (u.catapult && (u.ascend || 0) >= 2) { // 🪨 승급2: 돌덩이 2발 동시 포격 (두 번째는 랜덤 지점)
@@ -6398,7 +6398,7 @@ function bossGravity(b) {
 function deathPop(m) {
   const c = m.boss ? m3Juice(m.shape) : monColor(m); // C4 보스 즙·파편·바닥 얼룩 = 몸색(m3Juice — 수성 햇볕면·블랙홀 강착 띠 주황). 전엔 HP 사다리 파랑이라 달 보스가 파란 즙을 튀겼다. HP바(monColor)·개수·크기·사운드·히트스톱 그대로
   const sz = monSize(m);
-  S.effects.push({ type: 'pop', x: m.x, y: m.y, r: Math.max(8, sz), c, t: 0.13, dur: 0.13, burst: false,
+  S.effects.push({ type: 'pop', x: m.x, y: m.y, gy: m.y + (m.lift || 0), r: Math.max(8, sz), c, t: 0.13, dur: 0.13, burst: false, // gy = 땅 지점(바닥 얼룩 자리 — 공중 몹은 몸이 lift만큼 위, 10-12 ②)
     boss: m.boss, dk: m.boss ? 'boss' : MATERIALS[m.mat || 0].death, golden: m.golden });
   if (m.boss) S.hitstop = 0.08; // 보스 킬: 히트스톱만 (화면 흔들림은 울렁여서 제거)
 }
@@ -6426,7 +6426,7 @@ function burstJuice(e) {
     for (let i = 0; i < n; i++) { const a = Math.random()*6.28, v = 80 + Math.random()*(e.boss?240:140); S.parts.push({ x: e.x, y: e.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 60, g: true, t: 0.45 + Math.random()*0.3, c: Math.random()<0.8 ? e.c : '#ffffff', r: 1.8 + Math.random()*(e.boss?4:2.6) }); }
     for (let i = 0; i < (e.boss?5:3); i++) { const a = Math.random()*6.28, v = 120 + Math.random()*130; S.parts.push({ x: e.x, y: e.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 90, g: true, frag: true, t: 0.5, c: e.c, r: 3 + Math.random()*(e.boss?5:2.5), spin: Math.random()*6.28 }); }
   }
-  splat(e.x, e.y, e.c, e.boss);
+  splat(e.x, e.gy != null ? e.gy : e.y, e.c, e.boss); // 바닥 얼룩만 땅 지점 — 즙·조각·링은 몸에서 (하늘에서 죽은 공중 몹 얼룩이 울타리 위 풀밭에 찍히던 것, 10-12 ②)
   // 붐 링도 예산 적용 — 동시 폭발 100개면 링만 100개다 (보스는 항상)
   if (e.boss || S.effects.length < 90) S.effects.push({ type: 'boom', x: e.x, y: e.y, r: e.boss ? 46 : e.r * 1.6, t: 0.22 });
   if (e.golden) { // ✨ 황금 사망: 금화 폭죽
@@ -8708,7 +8708,7 @@ function draw() {
       ctx.restore(); ctx.lineWidth = 1;
     } else if (p.kind === 'bombthrow') { // 투척 폭탄 / 🪨 투석기는 돌덩이
       ctx.fillStyle = 'rgba(0,0,0,0.15)';
-      ctx.beginPath(); ctx.ellipse(p.x, p.ey + 2, 5, 2, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(p.x, (p.gy != null ? p.gy : p.ey) + 2, 5, 2, 0, 0, Math.PI*2); ctx.fill(); // 그림자 = 땅 지점 (공중 표적 — 10-12 ②)
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.spin || 0);
       if (p.boulder) {
         const st = p.owner && p.owner.stone; // 🥚 물먹은/용암 돌 색
