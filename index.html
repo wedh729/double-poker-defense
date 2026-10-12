@@ -225,9 +225,10 @@
     background: rgba(60,48,18,0.9); color: #d8c48e; cursor: pointer; }
   #crownModal .dcBtns button:hover { background: rgba(84,66,24,0.95); }
   /* ⚡ 스킬 버튼 바 (10-11 유저 — 풍선 타워 디펜스처럼 스킬만 따로): 데스크톱 = 캔버스 아래 가운데, 모바일 = 오른쪽 아래(왼쪽 아래는 상태창 44vw) */
-  #skillBar { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 8px; z-index: 6; }
+  #skillBar { position: absolute; left: 50%; bottom: calc(8px + var(--panelH, 0px)); transform: translateX(-50%); display: flex; gap: 8px; z-index: 6; pointer-events: none; transition: bottom 0.34s cubic-bezier(0.22, 0.9, 0.3, 1); } /* 포커판·손잡이(--panelH)만큼 위로 · 빈 틈은 클릭이 캔버스로 (크로스체크) */
+  body.mpMode:not(.mobile) #skillBar { bottom: calc(64px + var(--panelH, 0px)); } /* 🤖 멀티: 아래 가운데 포커장 버튼(#goPoker bottom 14) 위로 */
   #skillBar:empty { display: none; }
-  .skB { position: relative; width: 46px; height: 46px; padding: 0; border: none; border-radius: 50%; background: #183552e6; color: #fff3cf; cursor: pointer; box-shadow: 0 2px 6px #0006; }
+  .skB { pointer-events: auto; position: relative; width: 46px; height: 46px; padding: 0; border: none; border-radius: 50%; background: #183552e6; color: #fff3cf; cursor: pointer; box-shadow: 0 2px 6px #0006; }
   .skB .skRing { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
   .skB .skTrack { fill: none; stroke: #ffffff2e; stroke-width: 3; }
   .skB .skProg { fill: none; stroke: #7ec8ff; stroke-width: 3; stroke-linecap: round; }
@@ -238,8 +239,8 @@
   .skB[data-st="cooldown"] .skIco, .skB[data-st="active"] .skIco { opacity: 0.45; }
   .skB .skN { position: absolute; right: -3px; top: -3px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: #c8372d; color: #fff; font: bold 10px/16px sans-serif; text-align: center; box-sizing: border-box; }
   .skB .skN:empty { display: none; }
-  .mobile #skillBar { left: auto; right: 6px; bottom: 6px; transform: none; gap: 6px; }
-  .mobile #skillBar.skLeft { right: auto; left: 15%; } /* 상태창이 오른쪽일 때 (placeInfoPanel) — 왼쪽 끝은 성(클릭해 강화)이라 15%부터 */
+  .mobile #skillBar { left: auto; right: 14%; bottom: 6px; transform: none; gap: 6px; } /* 오른쪽 끝 14%는 광산(MINE_POS 880,458) */
+  .mobile #skillBar.skLeft { right: auto; left: 15%; } /* 건물 정보창·오른쪽 상태창이 뜰 때 (updateSkillBar) — 왼쪽 끝은 성(클릭해 강화)이라 15%부터 */
   .mobile .skB { width: 42px; height: 42px; }
   .mobile[data-tab="poker"] #skillBar { display: none !important; }
   /* 👑 왕관 안내 모드 닫기 X (10-11 — 이걸 눌러야만 닫힌다) */
@@ -3845,7 +3846,7 @@ let gameGen = 0, casTimers = [];
 let duelToastTimer = null, mktToastTimer = null; // 🏛️ 결투 예고 / 📈 개장 토스트 (resetTransientUI가 먼저 참조하므로 여기서 선언 — TDZ 방지)
 let mktToastPend = null; // 📈 개장 알림이 떠 있는 동안 미뤄 둔 일반 토스트 [제목, 줄] (마지막 1건)
 let duelAskU = null, duelLockFloatT = -10; // 🏛️ 결투 입장 확인 팝업 대상 유닛 / 🔒 락인 경고 플로트 스로틀
-let crownGuideOn = false, crownGuideOrig = null; // 👑 왕관 안내 모드(대관식 창 빌림) / 원래 제목·본문 (resetTransientUI가 참조 — TDZ 방지로 여기)
+let crownGuideOn = false, crownGuideOrig = null, crownGuideAt = 0; // 👑 왕관 안내 모드(대관식 창 빌림) / 원래 제목·본문 (resetTransientUI가 참조 — TDZ 방지로 여기) / 연 시각(X 0.6초 잠금)
 function casTimeout(fn, ms) {
   const gen = gameGen;
   const id = setTimeout(() => { if (gen === gameGen) fn(); }, ms);
@@ -4165,7 +4166,7 @@ function openCrownGuide() {
   document.getElementById('crGrid').style.display = 'none';
   m.querySelector('.dcBtns').style.display = 'none';
   document.getElementById('crGuideX').style.display = '';
-  m.style.display = 'block';
+  m.style.display = 'block'; crownGuideAt = performance.now();
   syncGamePause();
 }
 function crownGuideRestore() { // 안내 모드 → 대관식 창 원상태 (닫기·판 리셋 공용)
@@ -4178,7 +4179,7 @@ function crownGuideRestore() { // 안내 모드 → 대관식 창 원상태 (닫
   document.getElementById('crGuideX').style.display = 'none';
 }
 function closeCrownGuide() {
-  if (!crownGuideOn) return;
+  if (!crownGuideOn || performance.now() - crownGuideAt < 600) return; // 예고 없이 뜨는 창 — 열리자마자 포커스가 X로 가서, 그 순간 누르던 Enter·Space·탭에 바로 닫히지 않게 0.6초 잠금 (크로스체크 P2)
   crownGuideRestore();
   closeCrownModal();
 }
@@ -6307,7 +6308,8 @@ function spawnShards(p) {
 }
 // A1 빅팡 (2026-10-09, 50_구현설계_1단계.md §2): 한 프레임에 BIGBANG.MIN 마리 이상 터지면 작은 폭발 N개 대신 큰 폭발 1개.
 //    링 + 멈칫 0.05(보스 킬 0.08 아래) + 금색 ×N. 화면 흔들림 없음(제거 이력).
-//    10-12 유저: 예전 개별 즙(마리마다 팡)이 더 시원했다 → 개별 pop은 그대로 터지되 마리당 파편을 bbK로 줄여 총 BIGBANG.JUICE개 안 (pop 하나 ≈ 17개)
+//    10-12 유저: 예전 개별 즙(마리마다 팡)이 더 시원했다 → 개별 pop은 그대로 터지되 마리당 기본 파편을 bbK로 줄여 총 ≈ BIGBANG.JUICE개 목표 (pop 하나 ≈ 17개 —
+//    재질별 덧파편·조각 3개는 그대로라 마릿수가 많으면 넘는다. 실제 상한은 burstJuice의 crowd 계수 + S.parts 500 splice)
 function bigBang(died, pop0) {
   const n = died.length; let cx = 0, cy = 0;
   for (const m of died) { cx += m.x; cy += m.y; } cx /= n; cy /= n;
@@ -6344,7 +6346,7 @@ function burstJuice(e) {
   // 🚦 혼잡도 예산 (2026-08-08 최적화): 광역기로 몹 100마리가 한 프레임에 터지면 파편 1500개+붐 100개가 쏟아져
   // 17.8ms 스파이크(프레임 드랍 = 뚜두둑)가 났다. 파티클이 붐빌수록 마리당 파편을 줄인다 — 소수 킬은 원래 그대로.
   const crowd = S.parts.length <= 180 ? 1 : Math.max(0.25, 180 / S.parts.length);
-  const dk = e.dk, n = Math.max(3, Math.round((e.boss ? 26 : 12) * crowd * (e.bbK || 1))); // bbK = A1 빅팡에 묶인 팡의 마리당 축소 (10-12)
+  const dk = e.dk, n = Math.max(e.bbK ? 1 : 3, Math.round((e.boss ? 26 : 12) * crowd * (e.bbK || 1))); // bbK = A1 빅팡에 묶인 팡의 마리당 축소 (10-12 — 하한도 1로)
   // 재질별 사운드
   if (e.boss) sfx('bigboom');
   else if (dk === 'splash') sfx('splash');
@@ -10721,17 +10723,16 @@ function drawGrabbedUnit(u) {
   drawUnit(u);
   ctx.restore();
 }
-// 🌈 영웅 홀로그램: 종족색 위에 흐르는 무지개 + 하이라이트 밴드 (슈퍼는 더 진하고 빠르게) — 시간 애니메이션이라 라이브
+// 🌈 영웅 홀로그램: 종족색 위에 흐르는 무지개 + 하이라이트 밴드 — 시간 애니메이션이라 라이브. 10-11부터 슈퍼영웅·슈퍼에이스만 부른다(일반 영웅용 연한·느린 분기 0.22·55·42는 삭제)
 function drawHeroHolo(u) {
   const B = bodyShape(u);
-  const sup = u.super || u.superAce;
   ctx.save();
   bodyPath(u, B); ctx.clip();
-  const off = (S.time * (sup ? 95 : 55)) % 360;
+  const off = (S.time * 95) % 360;
   const hg = ctx.createLinearGradient(u.x - B.w/2, u.y - B.h/2, u.x + B.w/2, u.y + B.h/2);
-  for (let k = 0; k <= 3; k++) hg.addColorStop(k/3, `hsla(${(off + k*70)%360},90%,65%,${sup ? 0.42 : 0.22})`);
+  for (let k = 0; k <= 3; k++) hg.addColorStop(k/3, `hsla(${(off + k*70)%360},90%,65%,0.42)`);
   ctx.fillStyle = hg; bodyPath(u, B); ctx.fill();
-  const bx = u.x - B.w/2 + ((S.time * (sup ? 70 : 42)) % (B.w + 16));
+  const bx = u.x - B.w/2 + ((S.time * 70) % (B.w + 16));
   const bg = ctx.createLinearGradient(bx - 6, 0, bx + 6, 0);
   bg.addColorStop(0, 'rgba(255,255,255,0)'); bg.addColorStop(0.5, 'rgba(255,255,255,0.4)'); bg.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = bg; bodyPath(u, B); ctx.fill();
@@ -13192,8 +13193,7 @@ cv.addEventListener('touchcancel', e => {
 function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 않게 좌/우로 자동 전환
   const el = document.getElementById('unitInfo'), dps = document.getElementById('dpsRank');
   const sel = (el && el.style.display !== 'none') ? S.units.filter(u => u.selected) : [];
-  const skb = document.getElementById('skillBar'); // ⚡ 10-11: 모바일 스킬 바(오른쪽 아래)는 상태창이 오른쪽에 뜨면 왼쪽(성 옆)으로 비킨다 — toggle은 같은 상태면 DOM을 안 건드림
-  if (!sel.length) { skb.classList.toggle('skLeft', false); if (dps.style.visibility) dps.style.visibility = ''; if (el) { el.classList.remove('uiNoRoom'); if (el.style.maxHeight) el.style.maxHeight = ''; } return; }
+  if (!sel.length) { if (dps.style.visibility) dps.style.visibility = ''; if (el) { el.classList.remove('uiNoRoom'); if (el.style.maxHeight) el.style.maxHeight = ''; } return; }
   const PC_MAX = 220, MIN_ROOM = 48; // 원문 PC 상한(unitinfo.css max-height) · 제목 줄(위 여백 12 + 21)+아래 여백 12 실측 = 45 → 48
   const cv = document.getElementById('cv');
   const sx = cv.getBoundingClientRect().width / 940;              // 캔버스 좌표 → 화면 배율
@@ -13211,7 +13211,6 @@ function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 
   const wantRight = nearLeft;
   if (wantRight) { el.style.left = 'auto'; el.style.right = '10px'; }
   else { el.style.right = 'auto'; el.style.left = (10 + shift) + 'px'; }
-  skb.classList.toggle('skLeft', IS_MOBILE && wantRight);
   fitInfoRoom(el, f);
   const x0 = wantRight ? pL + cw.clientWidth - 10 - W : L0 + shift;
   const v = (!noRoom && dR.width && hit(x0, x0 + W, dR.left, dR.right) && hit(top, bot, dR.top + dy, dR.bottom + dy)) ? 'hidden' : '';
@@ -13325,7 +13324,7 @@ function updateInfoPanel() {
   if (u.item) { // 🎁 아이템 유닛: 전투 없음, 제물대로 옮기라는 안내만
     el.dataset.kind = 'item';
     el.innerHTML = `<div class="ui-head"><b class="ui-name">${dpdIconSVG(ITEM_META[u.item].icon) || ITEM_META[u.item].icon} ${ITEM_META[u.item].name}</b></div>` +
-      (u.item === 'crown' ? crownGuideLines().map(t => `<div class="ui-help">${t}</div>`).join('') : '') + // 👑 10-11 유저: 왕관 안내 문구 + 사라지기까지 남은 라운드 (UI 미니멀 원칙의 유저 지정 예외)
+      (u.item === 'crown' ? crownGuideLines().slice(IS_MOBILE ? 1 : 0).map(t => `<div class="ui-help">${t}</div>`).join('') : '') + // 모바일은 첫 설명 줄 생략(상태창 높이 168~176 — 크로스체크 P2) // 👑 10-11 유저: 왕관 안내 문구 + 사라지기까지 남은 라운드 (UI 미니멀 원칙의 유저 지정 예외)
       `<div class="ui-help">제물대로 옮기면 발동됩니다 (전투 불가)</div>` +
       `<div class="ui-help">이동속도: ${Math.round(u.speed)}</div>` +
       deselBtnHTML();
@@ -13535,8 +13534,13 @@ const SKILL_KINDS = [
 ];
 const skillBtns = {}; // k → 버튼 요소 (판이 바뀌어도 유닛이 없으면 아래에서 지워진다)
 function skillUnits(K) { return S.phase === 'gameover' ? [] : S.units.filter(u => !u.clone && !u.item && !u.miner && K.has(u)); }
+function skillUsable(K, u) { return K.ready(u) && !u.grabbed && !duelLocked(u); } // 🖐️ 집힌 유닛·🏛️ 결투에 묶인 챔피언 제외 (크로스체크 P1: 챔피언이 암살·분신술에 걸리면 5초 동안 도전자를 못 때려 결투에 진다)
 function updateSkillBar() {
   const bar = document.getElementById('skillBar'); if (!bar || !S) return;
+  if (IS_MOBILE) { // 📱 오른쪽 아래(광산 왼쪽)가 기본 — 건물 정보창(오른쪽 아래)이나 오른쪽에 붙은 상태창이 뜨면 왼쪽(성 옆)으로 비킨다. 인라인 style 읽기만(레이아웃 강제 없음)
+    const ui = document.getElementById('unitInfo'), oi = document.getElementById('objInfo');
+    bar.classList.toggle('skLeft', oi.style.display === 'block' || (ui.style.display !== 'none' && ui.style.right === '10px'));
+  }
   for (const K of SKILL_KINDS) {
     const us = skillUnits(K);
     let b = skillBtns[K.k];
@@ -13548,7 +13552,7 @@ function updateSkillBar() {
       const next = SKILL_KINDS.slice(SKILL_KINDS.indexOf(K) + 1).map(x => skillBtns[x.k]).find(Boolean); // 표 순서 유지
       bar.insertBefore(b, next || null);
     }
-    const nReady = us.filter(K.ready).length;
+    const nReady = us.filter(v => skillUsable(K, v)).length;
     let st = 'ready', q = 60;
     if (!nReady) {
       const s = us.reduce((a, u) => K.rem(u) < K.rem(a) ? u : a);
@@ -13566,7 +13570,7 @@ function updateSkillBar() {
 document.getElementById('skillBar').addEventListener('click', e => {
   const b = e.target.closest('.skB'); if (!b || !S || S.paused) return;
   const K = SKILL_KINDS.find(x => x.k === b.dataset.k); if (!K) return;
-  const u = skillUnits(K).find(v => K.ready(v) && !v.grabbed); if (!u) return; // 준비된 유닛이 없으면 아무 일 없음 (충전 중) · 🖐️ 집힌 유닛 제외(암살·분신술이 공중 좌표를 복귀 지점으로 저장한다 — 09-20 교훈)
+  const c = skillUnits(K).filter(v => skillUsable(K, v)), u = c.find(v => v.selected) || c[0]; if (!u) return; // 준비된 유닛이 없으면 아무 일 없음 (충전 중) · 선택한 유닛이 준비돼 있으면 그쪽 먼저 · 집힌 유닛 제외(암살·분신술이 공중 좌표를 복귀 지점으로 저장한다 — 09-20 교훈)
   K.act(u); b._sig = ''; updateSkillBar(); updateInfoPanel();
 });
 // 공격 우선순위 버튼 UI — 선택 1개만 aria-pressed="true" (부대에 공통값이 없으면 cur='' → 전부 false)
