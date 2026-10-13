@@ -2547,6 +2547,25 @@ html body #shopWin[data-view="castle"]:not([data-ctab="upg"]) .roster-recipe>b {
   html body.mobile #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-modal-head {padding-top:6px;padding-bottom:6px;}
   html body.mobile #shopWin[data-view="castle"]:not([data-ctab="upg"]) .v2-tabs {padding:3px;}
 }
+/* ⏩ 10-13 유저: 카드 고를 땐 배속 자동 해제 토글 — 포커 칼럼 왼쪽 아래(소환 버튼 줄). absolute = 패널 높이(--slide·모바일 높이 예산) 무영향
+   세로가 짧은 데스크톱 창은 #wrap이 높이로 좁아져 소환 버튼 옆 여백이 줄어든다(10-13 실측: 1366×625 116px · 920×560 55px · 1100×540 37px — 더블 패)
+   → #pokerMain 폭(컨테이너 쿼리)으로 글자 접기(아이콘+스위치 59px) → 그래도 안 들어가면 숨김. 기준 = 소환 버튼 폭(단일 140·더블 202 — 데스크톱, 모바일은 더 좁다) + 양옆 여유
+   (container-type:inline-size — #pokerMain은 flex 1 1 auto·min-width 0이라 폭이 원래 내용과 무관: 레이아웃 불변 실측) */
+html body #pokerMain {container-type:inline-size;}
+html body #pkSlow {position:absolute;left:0;bottom:0;z-index:1;display:flex;align-items:center;gap:5px;box-sizing:border-box;height:28px;margin:0;padding:0 9px 0 8px;border:1px solid #c6ad7a;border-radius:14px;background:#fff3d4;color:#6d5737;font-family:inherit;font-size:11px;font-weight:700;line-height:1;white-space:nowrap;cursor:pointer;box-shadow:0 2px 0 #cbb17f;}
+html body #pkSlow:hover {background:#fff8e4;}
+html body #pkSlow .dpdIc {flex:0 0 auto;font-size:13px;display:flex;}
+html body #pkSlow .pkSw {flex:0 0 auto;position:relative;width:22px;height:12px;border-radius:6px;background:#bfae8a;transition:background-color .12s;}
+html body #pkSlow .pkSw::after {content:'';position:absolute;top:2px;left:2px;width:8px;height:8px;border-radius:50%;background:#fff8e6;transition:transform .12s;}
+html body #pkSlow[aria-pressed="true"] .pkSw {background:#376849;}
+html body #pkSlow[aria-pressed="true"] .pkSw::after {transform:translateX(10px);}
+html body #pkSlow:focus-visible {outline:3px solid #805f2f;outline-offset:2px;}
+html body.mobile[data-tab="poker"] #pkSlow {height:24px;font-size:10px;padding:0 7px;}
+@container (max-width: 431px) { html body #pkSlow .pkTx {display:none;} }                 /* 단일 패: 여백 < 146 → 아이콘+스위치 */
+@container (max-width: 493px) { html body #pokerMain.pkDbl #pkSlow .pkTx {display:none;} } /* 더블 패(소환 버튼 202) */
+@container (max-width: 273px) { html body #pkSlow {display:none;} }                       /* 단일 패: 여백 < 67 → 숨김 */
+@container (max-width: 335px) { html body #pokerMain.pkDbl #pkSlow {display:none;} }
+@media (prefers-reduced-motion: reduce) {html body #pkSlow .pkSw, html body #pkSlow .pkSw::after {transition:none;}}
 </style>
 <style data-dpd-source="unitinfo.css">
 /* DPD · UNIT INFO / 02 OPAQUE INDIGO / 2026-10-03
@@ -3246,6 +3265,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
         <div id="cards"></div>
         <button id="summonBtn">유닛 소환!</button>
         <div id="handResult"></div>
+        <button type="button" id="pkSlow" aria-pressed="true" aria-label="카드 고를 때 배속 자동 해제" title="카드를 고르는 동안엔 배속을 풀고, 소환하면 원래 배속으로 돌아갑니다 — 눌러서 켜기/끄기"><i class="dpdIc" data-icon="ffwd"></i><span class="pkTx">배속 자동 해제</span><i class="pkSw" aria-hidden="true"></i></button>
       </div>
       <!-- 우측 상시 족보 안내 (현재 패의 족보가 금색으로 강조된다) -->
       <div id="pokerGuide">
@@ -3981,7 +4001,7 @@ function reset() {
   dctx.clearRect(0, 0, 940, 500); // 이전 판 얼룩 제거
   S.mineMax = S.mineHp = mineHP(1);
   S.hunt = { stage: 1, hp: huntHP(1), max: huntHP(1), unit: null };
-  document.getElementById('bSpeed').innerHTML = speedBtnHTML(1); // 배속 표시 동기화 (재시작 시 실제 배속은 1로 리셋됨)
+  syncSpeedUI(); // 배속 표시 동기화 (재시작 시 실제 배속은 1로 리셋됨)
   // 광부 없이 시작 — 시작 칩 1개를 룰렛에 걸지 광부에 쓸지가 첫 의사결정
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('winOverlay').style.display = 'none';
@@ -4270,6 +4290,7 @@ function crownExpire() {
 //   포커 시계는 그대로 흐른다 — 광부가 포커 중에도 캐므로 시계를 멈추면 무한 채굴이 된다. 버튼에 남은 초 표시 (updateGoPoker)
 function startPoker(fromWave) {
   S.phase = 'poker';
+  syncSpeedUI(); // ⏩ 10-13: 카드 고르는 동안 배속 해제 표시
   // 라운드는 endWave에서 이미 올라갔으므로 S.round = 이번 포커가 준비하는 그 전투. 보스 주와 겹치면 휴장이라 제외.
   // 모바일은 포커 탭에서 캔버스가 통째로 숨겨지므로(#cv display:none) 여기서 띄우면 아무도 못 본다 → 전투 탭으로 넘어가는 startWave에서 띄운다.
   // 태양 강림 라운드는 duelRound()가 휴장 처리 — startWave가 조기 return해 도전자를 안 만들기 때문 (가짜 예고 버그)
@@ -4834,6 +4855,7 @@ function swarmParams(t) { // 전투 경과 t(초, S.waveT) → { wb 볼 가중 0
 // ==================== 웨이브 ====================
 function startWave() {
   S.phase = 'wave';
+  syncSpeedUI(); // ⏩ 10-13: 소환 = 원래 배속 복귀 표시 (태양전 조기 return보다 위)
   // ⏱️ 포커 중에 산 시간의 모래는 이 전투에 실린다 (전투 중 구매는 즉시 S.timer에 더해진다)
   S.timer = WAVE_TIME + 15 * S.pendSand;
   S.waveT = 0; S.swarmCue = -1; // 패턴 1단계: 전투 경과 시계·스웜 예고 주기 번호 (태양전 분기보다 앞 — 모든 전투 공통)
@@ -14716,11 +14738,29 @@ function rollEvent() { S.event = null; S.eventMods = null; return; // 라운드 
 }
 function effRange(u) { return u.range * ((S.eventMods && S.eventMods.rangeMul) || 1) * (isHiddenCombo(u) ? 0.8 : 1); } // 히든 조합 유닛 사거리 20%↓
 
+// ⏩ 10-13 유저: 카드 고를 땐 배속 자동 해제 — 포커 페이즈엔 서브스텝 1번(=1배속). S.speed(유저가 고른 배속)는 그대로 두므로
+//    소환(startWave — 태양전 조기 return·시간 초과 자동 소환 포함)하는 순간 원래 배속이 다시 적용된다. 켜기/끄기 = 포커판 #pkSlow (기본 켜짐·브라우저 저장)
+//    ⚠️ 부팅 reset()(startPoker → syncSpeedUI)보다 위에 있어야 한다 (let TDZ)
+let pokerSlow = true; try { pokerSlow = localStorage.getItem('dpd_pokerslow') !== '0'; } catch (e) {}
+function spdEff() { return pokerSlow && S.phase === 'poker' ? 1 : S.speed; } // 실제 서브스텝 수 (frame)
+function syncSpeedUI() { // 배속 버튼·포커판 토글 표시 — 페이즈 전환(startPoker·startWave)·reset·두 버튼 클릭에서만 (매 프레임 X)
+  const held = pokerSlow && S.phase === 'poker' && S.speed > 1; // 지금 잠시 풀려 있음 (1배면 풀 것이 없어 표시 안 함)
+  const b = document.getElementById('bSpeed');
+  b.innerHTML = speedBtnHTML(S.speed, held);
+  b.classList.toggle('off', held);
+  b.title = held ? '배속 — 카드 고르는 동안 잠시 해제 (소환하면 다시 적용)' : '배속';
+  document.getElementById('pkSlow').setAttribute('aria-pressed', pokerSlow ? 'true' : 'false');
+}
 document.getElementById('bSpeed').onclick = () => {
   S.speed = S.speed >= 3 ? 1 : S.speed + 1; // 최대 3배 (08-14 유저: 개발 중 빠른 진행용 — 서브스텝 구조라 물리는 안정)
-  document.getElementById('bSpeed').innerHTML = speedBtnHTML(S.speed);
+  syncSpeedUI(); // 포커 중(해제 켜짐)이면 바뀐 값 = 소환 뒤 배속 — 버튼은 그 숫자 + 꺼짐 표시
 };
-function speedBtnHTML(n) { return dpdIconSVG('ffwd') + `<small class="spdX">${n}×</small>`; } // 배속 버튼 = 빨리 감기 아이콘 + 1×·2×·3×
+function speedBtnHTML(n, held) { return dpdIconSVG('ffwd', 'dpd-icon', { off: !!held }) + `<small class="spdX">${n}×</small>`; } // 배속 버튼 = 빨리 감기 아이콘 + 1×·2×·3× · held = 사선 (음악·효과음 꺼짐과 같은 표시)
+document.getElementById('pkSlow').onclick = () => {
+  pokerSlow = !pokerSlow;
+  try { localStorage.setItem('dpd_pokerslow', pokerSlow ? '1' : '0'); } catch (e) {}
+  syncSpeedUI();
+};
 document.getElementById('btnRestart').onclick = () => {
   if (confirm('처음부터 다시 시작할까요? 현재 진행 상황은 사라집니다.')) reset();
 };
@@ -14784,11 +14824,14 @@ function renderPoker(spin) {
     cardsEl.innerHTML = '';
     btn.style.display = 'none';
     bar.style.display = 'none';
+    document.getElementById('pkSlow').style.display = 'none'; // ⏩ 배속 자동 해제 토글도 카드 고를 때만 (모바일 포커 탭은 전투 중에도 패널이 보인다)
     return;
   }
   btn.style.display = '';
   bar.style.display = '';
+  document.getElementById('pkSlow').style.display = '';
   const double = S.poker.hands.length === 2;
+  document.getElementById('pokerMain').classList.toggle('pkDbl', double); // ⏩ 토글 접기 기준 = 소환 버튼 폭 (더블 패 '유닛 2기 동시 소환!'이 더 넓다)
   const ranks = S.poker.hands.map(h => evalHand(h.cards));
   renderHandGuide(ranks); // 우측 족보 안내에 현재 패 강조
   const match = double && ranks[0] === ranks[1] && ranks[0] > 0; // 에이스는 원페어부터 (하이카드 제외)
@@ -17178,7 +17221,8 @@ function frame(now) {
     if (S.hitstop > 0) S.hitstop -= dt; // 보스 킬 히트스톱: 잠깐 세상이 멈춘다
     else {
       // 배속은 큰 스텝 1번이 아니라 작은 스텝 여러 번(서브스텝)으로 → 모션 부드럽고 물리 안정
-      try { for (let i = 0; i < S.speed && !S.paused; i++) update(dt); } // 서브스텝 중 창이 열리면(부활·왕관) 남은 스텝을 멈춘다 — 10-01 크로스체크 P1: 창이 뜬 채 전투가 끝나던 경합
+      try { for (let i = 0; i < spdEff() && !S.paused; i++) update(dt); } // 서브스텝 중 창이 열리면(부활·왕관) 남은 스텝을 멈춘다 — 10-01 크로스체크 P1: 창이 뜬 채 전투가 끝나던 경합
+      // ⏩ 10-13: spdEff() = 포커(배속 자동 해제 켜짐)면 1 — 반복마다 재평가: 이 프레임 안에서 전투가 끝나 포커로 넘어가면 남은 서브스텝을 바로 끊는다
       catch (e) { reportLoopError('update', e); }
     }
   }
