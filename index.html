@@ -3746,6 +3746,7 @@ const DUEL_EVERY = 7;    // 도전자 주기 (보스 라운드와 겹치면 그 
 //      / R49 90,905 저격영웅 38초 턱걸이 / R63부턴 쌍단검영웅, 헬(R84+)은 슈퍼영웅이어야 신속 판정.
 //      구곡선(5400+250n) 대비 R21 +55% · R49 +415% · R77 +1914%.
 function duelHP(n) {
+  if (S && S.tutMode && tutWave().duelHp) return tutWave().duelHp; // [튜토리얼 10-14]
   let hp = 6080 * Math.pow(1.0525, Math.min(n, 7));        // ~R7: 기본 유닛 초창기
   if (n > 7)  hp *= Math.pow(1.0292, Math.min(n, 14) - 7);  // R7~14: 기본 유닛 성장기 (완만)
   if (n > 14) hp *= Math.pow(1.0643, Math.min(n, 28) - 14); // R14~28: 저티어 영웅 진입기
@@ -3754,7 +3755,7 @@ function duelHP(n) {
 }
 // 🏛️ 결투 라운드 판정: 7의 배수·보스 주 휴장·태양 강림(R190+ 미클리어) 휴장 — startWave가 태양에서 조기 return해
 // 도전자를 안 만들므로, 예고(startPoker)·결투창(duelWindowActive)도 같은 조건을 공유해야 한다 (한 곳만 어긋나면 빈 링에 팝업·락인이 생긴다)
-function duelRound(r) { return r % DUEL_EVERY === 0 && r % 10 !== 0 && !(r >= SUN_ROUND && !S.hellCleared && !S.multi); } // 🤖 멀티 = 태양전 없음 → R190 이후 휴장도 없음
+function duelRound(r) { if (S && S.tutMode) return !!(S.tut.waves[r] && S.tut.waves[r].duel); return r % DUEL_EVERY === 0 && r % 10 !== 0 && !(r >= SUN_ROUND && !S.hellCleared && !S.multi); } // 🤖 멀티 = 태양전 없음 → R190 이후 휴장도 없음
 // ==================== 몬스터 등장 패턴 받침 (2026-10-12, 몬스터등장규칙_제안_2026-10-08\51_구현설계_받침.md §B-3 · 59_구현설계_검수.md §2-2) ====================
 // 스케줄 = 라운드 끝자리 고정(10-09 유저: 랜덤 아님): x3 울타리 행진(R13~) · x6 두 무리(R16~) · x8 방패병(R38~) · R71~79는 이 셋 없음 · 보스(x0)·R1~9·태양전 없음.
 // 공중 = 별도 차원(10-12 유저 결정 3 — 옛 x1 공중·R21/R31 공중은 없어짐): R35부터 매 라운드(보스 라운드 포함 — 보스 자신은 지상) · 태양전·멀티 없음(헬 클리어 뒤 R190+ 일반 라운드는 있음 — curPattern, 10-13) · 위 패턴과 겹쳐도 됨. 비율 = p.ratio(airRatio), 0이면 공중 없음.
@@ -3791,6 +3792,7 @@ function roundPattern(r) { // 순수 함수(S 무관): 라운드 번호 → 패�
 }
 function curPattern() { // 이번 라운드 실제 적용값: 멀티면 없음 · 꺼진 패턴(PAT_ON false)은 떼어냄 · 태그는 어픽스·진형 우선, 공중 태그는 첫 등장 R35에만(그 뒤 상시라 반복 안내 생략)
   if (S.multi) return patNone();
+  if (S.tutMode) { const w = tutWave(), q = patNone(); if (w.fly) { q.ratio = w.fly; q.upT = AIR.UP; q.downT = AIR.DOWN; q.tag = PAT_TAG.fly[0]; q.hint = PAT_TAG.fly[1]; } return q; } // [튜토리얼 10-14] 공중 = 챕터 사양만 (비율은 1 미만으로 쓸 것 — plainMul)
   const p = roundPattern(S.round);
   if (S.round >= SUN_ROUND && S.hellCleared) { p.ratio = AIR.P1; p.upT = AIR.UP; p.downT = AIR.DOWN; } // 헬 클리어 뒤 R190+ 일반 라운드도 공중 1/3 (10-13 유저 결정 3 — 태양 강림 라운드 = 미클리어만 0, roundPattern은 S 무관이라 여기서) · 착지 창까지 같이(0/0이면 시계가 매 프레임 뒤집힘)
   if (!PAT_ON.fly) { p.ratio = 0; p.upT = p.downT = 0; }
@@ -4104,6 +4106,7 @@ function earlyHump(n) {
   return Math.pow(h, n <= R.PEAK ? (n - 1) / (R.PEAK - 1) : (R.END - n) / (R.END - R.PEAK));
 }
 function monsterHP(n) {
+  if (S && S.tutMode) return tutWave().hp; // [튜토리얼 10-14] 챕터가 정한 약한 몹 (초반 혹·난이도·헬 계수 전부 건너뜀)
   // ~30R: 기존 복리 곡선 유지 / 30R 이후: 복리 → 선형 증가 (후반 기하급수 벽 제거 — 업글 화력도 선형이라 결이 맞음)
   const grow = m => m <= 3 ? 14 * Math.pow(1.10, m - 1) : 14 * Math.pow(1.10, 2) * 1.42 * Math.pow(1.15, m - 3);
   let hp = n <= 30 ? grow(n) : grow(30) * (1 + 0.15 * Math.min(n - 30, 10) + 0.13 * Math.max(0, n - 40)); // 30~40R +15%p/R 선형 → 40R부터 +13%p/R (08-11 밸런스 감사 레버 B: 0.09→0.13 — R55~80 '무저항 고원'(여유율 3.3~4.0) 압축. R40 이전 무변화)
@@ -4129,6 +4132,7 @@ const CROWN_HP_COMP = 1.08;
 function splitComp(n) { return 1 + 0.45 * Math.max(0, Math.min(1, (n - 39) / 16)); }
 // 몬스터 수: 렉 저감을 위해 절반 (최대 200) — 대신 개체 HP ×1.6 + 킬 골드 ×2로 보정
 function mobCount(n) {
+  if (S && S.tutMode) return tutWave().n; // [튜토리얼 10-14]
   const base = Math.min(100, 22 + n * 3);
   // R10 ×2를 3라운드 램프(×1.4/1.7/2.0)로 분산 — 09-08 디렉터 리뷰: R9→R10 웨이브HP ×2.43이 전 구간 최대 점프(첫 보스·즉사 룰과 겹쳐 신규 이탈점). R12 이후 동일 = R80 목표 무영향
   const mul = n >= 12 ? 2 : n === 11 ? 1.7 : n === 10 ? 1.4 : 1;
@@ -4141,6 +4145,7 @@ let dailySeed = null; // null = 일반 모드
 function mulberry32(a) { return function() { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function todaySeedNum() { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
 function newDeck(salt) {
+  if (S && S.tutMode) { const td = tutDeckFor(S.round, salt); if (td) return td; } // [튜토리얼 10-14] 정해 둔 패 (난수 안 씀)
   const d = [];
   for (const s of SUITS) for (let r = 2; r <= 14; r++) d.push({r, s});
   const rnd = dailySeed != null ? mulberry32(dailySeed + S.round * 131 + (salt || 0) * 7919) : Math.random; // 라운드·핸드별 고정 시드 → 리롤 여부와 무관하게 덱 동일
@@ -4376,7 +4381,7 @@ function startPoker(fromWave) {
   S.roomVirgin = true; // 🥚 라운드마다 광석방 첫 입장 기록 리셋
   rollEvent(); // 다음 전투 이벤트를 포커 시간에 미리 알린다
   S.pat = curPattern(); // 몬스터 등장 패턴(받침): 이 라운드 패턴 — 배너가 미리 알리고 startWave는 읽기만
-  const double = (S.round % 5 === 0);
+  const double = S.tutMode ? !!(S.tut.deals[S.round] && S.tut.deals[S.round].length === 2) : (S.round % 5 === 0); // [튜토리얼 10-14] 두 패 = 챕터 사양
   // 더블 포커: 두 패를 동시에 펼쳐놓고 서로 비교하며 교환
   S.poker = { hands: [] };
   for (let h = 0; h < (double ? 2 : 1); h++) {
@@ -4416,7 +4421,7 @@ function swapCard(h, i) {
   if (S.phase !== 'poker' || hand.swapped[i]) return;
   const before = evalHand(hand.cards);
   hand.swapped[i] = true;
-  hand.cards[i] = hand.deck.pop();
+  hand.cards[i] = (S.tutMode && tutPick(h, i, hand)) || hand.deck.pop(); // [튜토리얼 10-14] 목표 족보로 가는 카드 고르기 (일반 판 = 덱 꼬리 그대로)
   if (S.tutStep === 1) { S.tutStep = 2; S.tutHold = false; tutMark('t2'); } // 🧭 T1 끝 — 포커 시계 재개, 배너는 T2('마음에 들면 소환!')
   if (S.round === 2 && S.r1High && tutNew('t4')) tutMark('t4'); // 🧭 T4는 실제로 카드를 만진 뒤에 '봤다'로 친다 (판 내림 상태 자동 소환 때 안 보고 소진되지 않게)
   renderPoker({ h, i }); // 해당 카드에 회전 이펙트
@@ -4427,7 +4432,7 @@ function ticketReswap(h, i) {
   if (S.phase !== 'poker' || S.items.reroll <= 0 || !hand.swapped[i]) return;
   S.items.reroll--;
   const before = evalHand(hand.cards);
-  hand.cards[i] = hand.deck.pop();
+  hand.cards[i] = (S.tutMode && tutPick(h, i, hand)) || hand.deck.pop(); // [튜토리얼 10-14]
   logMsg(`재변경권으로 ${i + 1}번 카드만 다시 교환! (남은 ${S.items.reroll})`);
   renderPoker({ h, i }); // 해당 카드 회전 이펙트
   pokerRankFlash(h, before);
@@ -4518,6 +4523,7 @@ function handResult(hands) {
 }
 function confirmHand() {
   if (S.phase !== 'poker') return;
+  if (S.tutMode && !tutCanSummon()) { tutNopeSummon(); return; } // [튜토리얼 10-14] 소환 단계가 아니면 막는다 (라운드가 단계보다 앞서 가지 않게)
   if (S.round === 2 && S.r1High && tutNew('t4') && (IS_MOBILE ? document.body.dataset.tab === 'poker' : !pokerPeek)) tutMark('t4'); // 🧭 포커 화면이 보이는 채 소환했으면 T4 봄
   S.tutStep = 0; S.tutHold = false; // 🧭 T1·T2는 첫 소환으로 끝 (기록은 보여 준 순간에 이미 했다)
   document.getElementById('summonBtn').classList.remove('tutPulse');
@@ -4568,6 +4574,7 @@ function confirmHand() {
     addFloat(CX, CY - 96, `보너스 새총 +${aceBonus}`, '#ffd166', 1.6);
   }
   startWave();
+  tutEv('summon'); // [튜토리얼 10-14] 소환 횟수 (일반 판 = 즉시 return)
 }
 
 // ==================== 유닛 ====================
@@ -4926,7 +4933,8 @@ const BOSS_ABILITY = { 25: 'gravity' };                                         
 function bossHint(sh) { return BOSS_ABILITY[sh] && BOSS_INFO[sh] && BOSS_INFO[sh][2] || ''; } // 포커 배너·정보창 한 구절 (수치 없음). 능력이 있는 모양만 — 힌트 문자열은 BOSS_INFO 셋째 원소(함수 안에서만 읽으므로 선언 순서 무관)
 const GRAV = { FIRST: 6, PERIOD: 18, TELE: 0.6, PULL_T: 1.0, LINES: 0, PILE_R: 60, MOB_HP_MUL: 1.0, TAIL: 22 }; // TAIL(10-12 유저 '추천대로') = 끌려가는 몹 뒤 이동 꼬리 최대 길이 px (사슬을 끈 뒤 견인이 화면에서 안 보였다 — 0이면 끔) // 목성 중력(= 1단계 A3 포효): 등장 +FIRST초 첫 발동, PERIOD초마다, TELE초 예고(부풀기+링+sfx), PULL_T초 견인(220px/s 조커 값), 사슬 선은 먼 LINES마리만(PILE_R 안은 사슬 없음). LINES 0(10-09 리뷰 수정): 소환장이 좁아(198×132) 사슬이 27~62px·0.2초뿐이고 몹 몸통에 덮여 안 보임(보라 41px) — 비용만 들어 끔(40 상한 안). PILE_R = 더미 반지름(보스 중심→몹 중심, 보스 r 52 + 8 = 몹이 목성 테두리에 매달린 더미. 0이면 보스 중심 = 보스 그림 아래 숨음). MOB_HP_MUL = 보정 노브(유저 확정 (가) 보정 0 → 1.0)
 const WEAK = { MUL: 1.5, T: 1.0, SHAPES: { 24: true, 26: true } };                        // 약점 창 틀: 능력 발동 T초 동안 피해 ×MUL — 화성(24)·토성(26)만(유저 확정). 1단계엔 두 보스의 능력이 없어 발동 경로 0 = 수치 영향 0
-function bossShapeFor(n) { return n > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(n / 10)); } // spawnMonster의 보스 shape 식과 동일(그 줄은 그대로 둔다) — 배너·노브가 보스 생성 전에 모양을 알아야 해서
+function bossShapeFor(n) { return S && S.tutMode ? tutBossShape() : n > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(n / 10)); } // spawnMonster의 보스 shape 식과 동일(그 줄은 그대로 둔다) — 배너·노브가 보스 생성 전에 모양을 알아야 해서 · [튜토리얼 10-14] 챕터 사양 모양 (R1~9 = 19는 그림 없음)
+function bossRound(r) { return S && S.tutMode ? !!tutWave().boss : r % 10 === 0; } // [튜토리얼 10-14] 보스 라운드 판정 (startWave·포커 배너 공용 — 일반 판 값은 r % 10 === 0 그대로)
 function swarmParams(t) { // 전투 경과 t(초, S.waveT) → { wb 볼 가중 0~1, wr 링 가중 0~1, spinK 회전 배율, cyc 주기 번호(-1 = 리듬 전) }. 조각 함수라 모든 경계에서 연속(위치 점프 없음)
   if (t < SWARM.START) return SWARM_FREE;
   const u = (t - SWARM.START) % SWARM.PERIOD, cyc = Math.floor((t - SWARM.START) / SWARM.PERIOD);
@@ -4970,7 +4978,7 @@ function startWave() {
   const knob = (pat.affix || pat.form) ? PAT_HP_KNOB : 1;
   const hp0 = Math.max(1, Math.floor(monsterHP(S.round) * (em.hpMul || 1) * knob)); // 환산 전 몹 HP (보스·공중·방패병의 기준)
   const count = S.multi && S.round % 10 === 0 ? 0 : Math.max(1, Math.floor(mobCount(S.round) * (em.countMul || 1))); // 🤖 멀티 보스 라운드 = 소환장 스폰 0 (보스는 수로로)
-  const boss = (S.round % 10 === 0);
+  const boss = bossRound(S.round);
   const nFly = pat.ratio ? Math.round(count * pat.ratio) : 0, nWard = pat.affix === 'ward' ? pat.n : 0; // 공중 = 마릿수 × 비율(별도 차원, 방패병과 겹쳐도 됨) · 방패병 = 정확히 N마리
   const ak = nFly ? airHpKnob(S.round) : 1; // 공중 밸런스 노브(AIR_HP_KNOB, 기본 1.0) — 잡몹만 곱함, 보스는 hp0 그대로
   const hp = nFly || nWard ? Math.max(1, Math.floor(hp0 * plainMul(count, nFly, nWard) * ak)) : hp0; // 지상 잡몹 HP = 총 HP 보존 환산 (어픽스·공중 없으면 hp0 그대로)
@@ -5010,7 +5018,7 @@ function spawnMonster(hp, isBoss, opt) {
     x: opt.x != null ? opt.x : CX, y: opt.y != null ? opt.y : CY, rot: Math.random() * Math.PI,
     hp, max: hp, colorIdx: opt.colorIdx != null ? opt.colorIdx : ci, inc: 0, dead: false,
     // 보스 사다리(태양계 여행): R10 달(20) → R20 수성(21) → R30 금성(22) → R40 지구(23) → R50 화성(24) → R60 목성(25) → R70 토성(26) → R80 태양(27) → 헬 블랙홀(15) → R150 아포칼립스 태양(28)
-    shape: isBoss ? (S.round > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(S.round / 10))) : (opt.shape != null ? opt.shape : stageInfo(S.round).si),
+    shape: isBoss ? (S.tutMode ? tutBossShape() : S.round > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(S.round / 10))) : (opt.shape != null ? opt.shape : stageInfo(S.round).si),
     boss: isBoss, born: opt.child ? 0.35 : 0, hell: opt.hell != null ? opt.hell : S.round > FINAL_ROUND,
     small: !!opt.child, shield: 0, shieldMax: 0, split: false, weakT: 0, puffT: 0, pullQuiet: false, // 패턴 1단계: 약점 창 / 능력 예고 부풀기 / 견인 사슬 생략
     bobP: Math.random() * 6.28, // 공별 바운스 위상 (전원 동기화되면 어색해서 랜덤)
@@ -5023,7 +5031,7 @@ function spawnMonster(hp, isBoss, opt) {
     const nextChance = mi.p > 0.6 ? (mi.p - 0.6) / 0.4 * 0.3 : 0; // 밴드 끝으로 갈수록 다음 재질 최대 30%
     if (Math.random() < nextChance) { m.mat = mi.next; m.esc = 0; }   // 다음 재질(갓 나온 느낌 — 작고 깨끗)
     else { m.mat = mi.idx; m.esc = mi.p; }                            // 이번 재질(밴드 진행만큼 험악)
-    if (Math.random() < 0.003) m.golden = true; // ✨ 황금 레어 (0.3% — 희귀할수록 값지다)
+    if (Math.random() < 0.003 && !S.tutMode) m.golden = true; // ✨ 황금 레어 · [튜토리얼 10-14] 난수는 먼저 뽑고 튜토리얼만 제외 (0.3% — 희귀할수록 값지다)
   }
   m.slot = opt.slot != null ? opt.slot : null; m.slotN = opt.slotN || 0; // 받침: 진형 자리 = 스폰 순번 (조각·보스·레인 null)
   if (!isBoss && !opt.child && opt.affix === 'fly') { m.fly = true; m.flapT = m.phase; m.lift = 0; } // 공중 몹 (B-1): 날개 위상은 개체마다 phase로 · 부양은 이동 루프가 flyLift로 (보스·조각·레인은 절대 안 세움)
@@ -5046,6 +5054,7 @@ function speedBonus() { return S.timer > 1 && !S.reviveWave && !S.duelForfeitWav
 const REVIVE_SEC = 45, ADS_READY = false;
 function showRewardedAd() { return Promise.resolve(true); } // 앱: 보상형 광고 시청 완료면 true, 닫기·실패면 false
 function reviveOffer() {
+  if (S.tutMode) return false; // [튜토리얼 10-14] 목숨이 줄지 않는다 — 부활 창 없음
   if (S.multi) return false; // 🤖 멀티: 부활 없음 (왕국 HP 팀 공유)
   if (gameDialogVisible('reviveModal')) return true; // 이미 떠 있다 (중복 오픈·효과음 겹침 방지)
   if (S.reviveUsed || S.reviveArmed || dailySeed != null || S.phase !== 'wave') return false; // 🔄 봉인한 부활권(샌드박스)이 있으면 그쪽이 먼저
@@ -5107,6 +5116,7 @@ function endWave() {
   const bossAlive = S.monsters.some(m => m.boss);
   const leak = S.monsters.length;
   if (S.multi) mpEndWave(); // 🤖 멀티: 목숨 대신 레인 개체 도착·습격대 생성 (클리어 보너스는 개인 클리어 순간에)
+  else if (S.tutMode) tutWaveEnd(bossAlive, leak); // [튜토리얼 10-14] 보스 실패·누수여도 목숨 그대로 (다음 단계 문구가 다독임)
   else if (bossAlive) {
     // 보스를 시간 내에 못 잡으면 즉시 사망
     S.lifeLog.push({ r: S.round, d: S.life, why: '보스 실패', k: 'boss' }); // k = 판정용 키(tutGameOverLine) — 표시 문구와 분리
@@ -5126,7 +5136,7 @@ function endWave() {
   S.monsters = [];
   S.projs = [];
   if (S.multi && MP.kh <= 0) { mpGameOver(); return; } // 🤖 멀티: 왕국 함락 = 팀 게임오버 (부활·기록 없음)
-  if (S.life <= 0) {
+  if (S.life <= 0 && !S.tutMode) { // [튜토리얼 10-14] 안전망 — 위 분기가 목숨을 안 건드려 도달 불가
     if (S.reviveArmed) { // 🔄 부활권 봉인: 사망 대신 소모하고 부활
       S.lifeLog.push({ r: S.round, d: -(10 - S.life), why: '부활' }); // 실제 증감 (누수로 음수까지 떨어졌다 10이 되면 +12 등)
       S.reviveArmed = false; S.life = 10;
@@ -5387,6 +5397,7 @@ function updatePortal() {
   // 수집 반경은 시각 포털보다 넉넉하게 (길로틴 등 10기 레시피가 유닛 분리 때문에 안 들어가는 문제 방지)
   const GATHER = PORTAL.r + 30;
   const inP = S.units.filter(u => fuseKey(u) && !u.grabbed && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) < GATHER); // 집힌 채 지나가는 유닛은 재료가 아니다 (놓으면 다음 프레임 정상 합성)
+  if (!S.tutMode) { // [튜토리얼 10-14] 튜토리얼 판은 히든 조합 판정을 건너뛴다 (표준 합성만)
   // 히든 조합 먼저 체크: 일반 원페어 ×1 + 투페어 ×2 + 트리플 ×3
   const normals = inP.filter(u => !u.hero && !u.hidden);
   const byT = {};
@@ -5483,6 +5494,7 @@ function updatePortal() {
       return;
     }
   }
+  } // [튜토리얼 10-14] 히든 판정 블록 끝
   const groups = {};
   inP.forEach(u => { const k = fuseKey(u); (groups[k] = groups[k] || []).push(u); });
   for (const k in groups) {
@@ -5532,7 +5544,7 @@ function updateAltar() {
       gachaMiner: useGachaMiner, gachaSuperHero: useGachaSuperHero, upgCoupon: useUpgCoupon })[it.item](); } // 🛒 비상 물자 3종 + 👑 뽑기권 6종 + ⚔️ 쿠폰도 제물대 발동
     updateInfoPanel();
   }
-  if (S.units.some(u => u.catapult)) return; // 이미 투석기 존재
+  if (S.tutMode || S.units.some(u => u.catapult)) return; // 이미 투석기 존재 · [튜토리얼 10-14] 튜토리얼은 제물 흡수 없음 (아이템 발동은 위에서 그대로)
   const highs = S.units.filter(u => u.tier === 0 && !u.hero && !u.hidden && !u.miner && !u.moving && !u.grabbed && // 이동 중(통과)·집힌 채 공중 통과는 제외 — 제물대에 멈춘 하이카드만 소모
     Math.abs(u.x - ALTAR.x) <= ALTAR.w/2 && Math.abs(u.y - ALTAR.y) <= ALTAR.h/2);
   if (!highs.length) return;
@@ -5581,7 +5593,7 @@ function update(dt) {
   S.time += dt;
   // 📈 투자 시장 사이클: 400초마다 30초 개장. 10초 전 예고 → 개장 → 마감 (서브스텝 중복 발동은 플래그로 차단)
   // 게임오버 가드 (크로스체크): 사망 화면은 S.paused를 안 켜므로 이 블록이 계속 돌아 죽은 화면 뒤에서 chirp·coin이 반복 재생됐다
-  if (S.phase !== 'gameover') {
+  if (S.phase !== 'gameover' && !(S.tutMode && !S.tut.mkt)) { // [튜토리얼 10-14] 장은 챕터가 켤 때만
     if (!S.mktOpen) {
       if (!S.mktWarn && S.time >= S.mktNext - 10) {
         S.mktWarn = true;
@@ -5631,7 +5643,7 @@ function update(dt) {
     S.birdTimer -= dt;
     if (S.birdTimer <= 0) {
       S.birdTimer = 300 + Math.random() * 250;
-      if (!S.bird && HIDDEN_DEX.some(h => !hiddenSeen(h.id))) {
+      if (!S.bird && HIDDEN_DEX.some(h => !hiddenSeen(h.id)) && !S.tutMode) {
         const dir = Math.random() < 0.5 ? 1 : -1;
         S.bird = { x: dir > 0 ? -30 : 970, baseY: 46 + Math.random() * 60, y: 46, dir, vx: dir * (72 + Math.random() * 36), t: Math.random() * 6.28 };
       }
@@ -5830,7 +5842,7 @@ function update(dt) {
     // 🧭 첫 판 안내 T1: 첫 카드를 누를 때까지 포커 시계 정지 — 단, 게임 시간 25초 상한 + 광부·아이템 등 유닛이 생기면 즉시 해제
     //    (10-01 크로스체크 P1: 광부는 포커 중에도 캐므로 정지가 길면 무한 채굴이 된다)
     if (S.tutHold && (S.units.length || S.time > S.tutHoldT)) S.tutHold = false;
-    if (!S.tutHold) S.pokerTimer -= dt;
+    if (!S.tutHold && !(S.tutMode && S.tut.holdPoker)) S.pokerTimer -= dt; // [튜토리얼 10-14] 포커 시계 멈춤 단계
     if (S.pokerTimer <= 0) {
       logMsg('포커 시간 종료 — 현재 패로 자동 소환!');
       let guard = 3;
@@ -5854,8 +5866,10 @@ function update(dt) {
     S.freezeT -= dt;
     if (S.multi) mpLaneFreeze(dt); // 🤖 습격대·보스도 얼어붙는다 (출발 시각을 미룬다)
   } else {
+    if (!(S.tutMode && S.tut.holdWave)) { // [튜토리얼 10-14] 전투 시계·전투 경과 멈춤 단계 (스폰은 그대로)
     S.timer -= dt;
     S.waveT += dt; // 패턴 1단계: 시간정지(freezeT) 분기엔 없으므로 자동 동결
+    }
     tenseTick(dt / S.speed); // 💓 막판 심장·시계·BGM 먹먹함 (시계가 흐를 때만 — 시간정지 중엔 이 분기를 안 탄다 · 배속은 실시간 박자 유지)
     // 몬스터 스폰
     if (q.left > 0) {
@@ -6601,7 +6615,7 @@ function recordBest(stage) {
   const key = 'dpd_best_' + DIFF_MUL;
   let best = readBest(key);
   if (!best && key === 'dpd_best_1') best = readBest('dpd_best'); // 구 단일 키 → 보통
-  if (S && (S.sandbox || S.multi)) return best; // 🧪 샌드박스·🤖 멀티 데모는 표시만, 기록 안 함
+  if (S && (S.sandbox || S.multi || S.tutMode)) return best; // 🧪 샌드박스·🤖 멀티 데모·튜토리얼은 표시만, 기록 안 함
   if (stage > best) { best = stage; try { localStorage.setItem(key, String(best)); } catch (e) {} }
   return best;
 }
@@ -6615,14 +6629,14 @@ function hintSeen(id) { // 🐦 새를 잡아 들은 소문만 도감에 남는�
   try { return !!JSON.parse(localStorage.getItem('dpd_hint') || '{}')[id]; } catch (e) { return false; }
 }
 function markHint(id) {
-  if (S && (S.sandbox || S.multi)) return;
+  if (S && (S.sandbox || S.multi || S.tutMode)) return;
   try { const d = JSON.parse(localStorage.getItem('dpd_hint') || '{}'); d[id] = 1; localStorage.setItem('dpd_hint', JSON.stringify(d)); } catch (e) {}
 }
 function hiddenSeen(id) {
   try { return !!JSON.parse(localStorage.getItem('dpd_hidden') || '{}')[id]; } catch (e) { return false; }
 }
 function markHidden(id) {
-  if (S && (S.sandbox || S.multi)) return;
+  if (S && (S.sandbox || S.multi || S.tutMode)) return;
   try {
     const d = JSON.parse(localStorage.getItem('dpd_hidden') || '{}');
     if (!d[id]) {
@@ -6637,7 +6651,7 @@ function achvSeen(id) {
   try { return !!JSON.parse(localStorage.getItem('dpd_achv') || '{}')[id]; } catch (e) { return false; }
 }
 function markAchv(id) {
-  if (S && (S.sandbox || S.mapTest || S.multi)) return; // 샌드박스·멀티맵 미리보기·🤖 멀티 데모는 업적 미기록 (localStorage 오염 방지)
+  if (S && (S.sandbox || S.mapTest || S.multi || S.tutMode)) return; // 샌드박스·멀티맵 미리보기·🤖 멀티 데모·튜토리얼은 업적 미기록 (localStorage 오염 방지)
   try {
     const d = JSON.parse(localStorage.getItem('dpd_achv') || '{}');
     if (!d[id]) {
@@ -6652,7 +6666,7 @@ function monSeen(i) {
   try { return !!JSON.parse(localStorage.getItem('dpd_mondex') || '{}')[i]; } catch (e) { return false; }
 }
 function markMon(i) {
-  if (S && (S.sandbox || S.multi)) return;
+  if (S && (S.sandbox || S.multi || S.tutMode)) return;
   try {
     const d = JSON.parse(localStorage.getItem('dpd_mondex') || '{}');
     if (!d[i]) {
@@ -6869,6 +6883,7 @@ function bakeGhostSprite(u) {
   return c;
 }
 function duelChampionDeath() {
+  if (S.tutMode) { const c = S.champion; if (c) { c.duelOk = false; c.x = ARENA.x; c.y = ARENA.y + ARENA.r + 18; c.tx = c.x; c.ty = c.y; c.moving = false; } return; } // [튜토리얼 10-14] 전사 없음 — 도망과 같은 자리로 내보냄 (호출처가 뒤이어 S.duel·S.champion 정리)
   const u = S.champion;
   S.units = S.units.filter(v => v !== u);
   // 👻 유령 승천 + 🪦 비석 (08-22 유저): 그 유닛 모습 그대로 회색이 되어 다리 대신 꼬리를 살랑이며 떠오르고, 그 자리에 R.I.P 비석이 쌓인다
@@ -13149,6 +13164,7 @@ function issueAttack(px, py) {
     if ((hitM.lane || airborne(hitM)) && !nCmd) return; // 🤖 레인 개체인데 받은 유닛이 없으면(탱크·핵폭탄만 선택 등) 이펙트·로그 생략 — 싱글(레인 없음)은 그대로
     S.effects.push({ type:'boom', x: hitM.x, y: hitM.y, r: 18, t: 0.25 });
     logMsg(`집중 공격 명령! (${(hitM.lane || airborne(hitM)) ? nCmd : sel.length}기)`); // 공중: 거부된 유닛은 빼고 센다
+    tutEv('attack'); // [튜토리얼 10-14]
     return;
   }
   // 빈 땅 클릭 → 어택땅 (이동하다 적 만나면 교전)
@@ -13938,7 +13954,7 @@ let openShop = null;
 function castleSeen() { try { return localStorage.getItem('dpd_castle_seen') === '1'; } catch (e) { return false; } }
 function toggleShop(id) {
   initAudio();
-  if (id === 'castle' && S && !S.castleOpened) { S.castleOpened = true; try { if (!S.multi) localStorage.setItem('dpd_castle_seen', '1'); } catch (e) {} } // 🏰 첫 오픈 뒤엔 캔버스 안내 라벨을 내린다 (브라우저 1회)
+  if (id === 'castle' && S && !S.castleOpened) { S.castleOpened = true; try { if (!S.multi && !S.tutMode) localStorage.setItem('dpd_castle_seen', '1'); } catch (e) {} } // 🏰 첫 오픈 뒤엔 캔버스 안내 라벨을 내린다 (브라우저 1회)
   openShop = (openShop === id) ? null : id;
   document.querySelectorAll('.shopIcon').forEach(b => b.classList.toggle('open', b.dataset.shop === openShop));
   // 상점/족보를 열면 모든 것이 멈춘다 (닫으면 재개). 게임오버/승리 화면 중엔 유지
@@ -14105,7 +14121,7 @@ function wireUpg(el) {
       if (S.gold < S.upgCost[i]) { gambleOverlayClose(); renderShop(); return; } // 골드 부족(차감 전) = 창만 닫음 — 멈춘 뒤엔 ✕가 숨겨져 결과 없이 갇히지 않게
       S.gold -= S.upgCost[i];
       const p = (perfect ? 0.35 : 0.2) + (S.units.some(u => u.gamble) ? 0.10 : 0);
-      const win = Math.random() < p;
+      const win = Math.random() < p || !!S.tutMode; // [튜토리얼 10-14] 튜토리얼은 꼭 성공 (난수는 그대로 뽑음)
       if (win) {
         S.upg[i] += 3;
         S.upgCost[i] = Math.floor(S.upgCost[i] * 1.45 * 1.45 * 1.45); // 3레벨 분량만큼 가격도 전진
@@ -14950,7 +14966,7 @@ function renderPoker(spin) {
   const tutLine = tutPokerLine(ranks); // 🧭 첫 판 안내: 배너 첫 줄을 한 줄 안내로 (보스·이벤트 줄은 그대로 뒤에 붙는다)
   if (tutLine) banner.innerHTML = tutLine;
   if (S.multi) { const w = mpPokerWarn(); if (w) banner.innerHTML += `<br><span class="poker-boss-warning">${w}</span>`; } // 🤖 멀티: 게이트 앞 레인 개체 예고 (보스·습격대)
-  else if (S.round % 10 === 0 || (S.round >= SUN_ROUND && !S.hellCleared)) { // 09-08: 즉사 룰이 보스 클릭 팝업에만 있었다 (수치 없음, 미니멀 원칙 내) · 10-09: 보스 이름 + 능력 한 구절(bossHint, 능력 있는 보스만)
+  else if (bossRound(S.round) || (S.round >= SUN_ROUND && !S.hellCleared)) { // 09-08: 즉사 룰이 보스 클릭 팝업에만 있었다 (수치 없음, 미니멀 원칙 내) · 10-09: 보스 이름 + 능력 한 구절(bossHint, 능력 있는 보스만)
     const sun = S.round >= SUN_ROUND && !S.hellCleared, sh = bossShapeFor(S.round), bi = BOSS_INFO[sh], h = sun ? '' : bossHint(sh);
     banner.innerHTML += `<br><span class="poker-boss-warning">${sun ? '태양 강림' : '보스 라운드 — ' + bi[0] + (h ? ': ' + h : '')} · 시간 안에 못 잡으면 끝</span>`;
   }
@@ -15022,7 +15038,7 @@ const tut = (() => {
 })();
 function tutSave() { try { localStorage.setItem(TUT_KEY, JSON.stringify(tut)); } catch (e) {} }
 // 타이틀 뒤 부팅 더미 판·맵 미리보기(at-title 중 reset)와 샌드박스(reset이 S.sandbox=true보다 먼저 돈다 — DIFF_NAME은 그 전에 정해짐)는 끈다
-function tutOn() { return !tut.off && S && !S.sandbox && !S.mapTest && !S.multi && dailySeed == null && DIFF_NAME !== '샌드박스' && !document.body.classList.contains('at-title'); }
+function tutOn() { return !tut.off && S && !S.sandbox && !S.mapTest && !S.multi && dailySeed == null && DIFF_NAME !== '샌드박스' && !document.body.classList.contains('at-title') && !S.tutMode; } // [튜토리얼 10-14] 튜토리얼 판에선 첫 판 안내 전부 끔
 function tutNew(id) { return tutOn() && !tut.seen[id]; }
 function tutMark(id) { if (!tut.seen[id]) { tut.seen[id] = 1; tutSave(); } }
 function tutOff() {
@@ -15084,7 +15100,7 @@ function tutTick() {
 }
 // 게임오버 한 줄 — 처음 3번만, 가장 그럴듯한 이유 하나
 function tutGameOverLine() {
-  if (tut.off || S.sandbox || S.multi || dailySeed != null) return '';
+  if (tut.off || S.sandbox || S.multi || S.tutMode || dailySeed != null) return '';
   let n = 0; try { n = +localStorage.getItem('dpd_go_n') || 0; } catch (e) {}
   if (n >= 3) return '';
   const last = S.lifeLog[S.lifeLog.length - 1];
@@ -15094,6 +15110,50 @@ function tutGameOverLine() {
   return `<div class="tutGo">${t}</div>`;
 }
 document.getElementById('btnTutAgain').onclick = e => { tut.seen = {}; tut.off = false; tut.replay = true; tutSave(); e.currentTarget.textContent = '다음 판부터 처음 안내를 다시 보여줄게요'; };
+
+// ==================== 튜토리얼 모드 (10-14 유저: "처음 하는 사람이 스무스하게" — 설계 = Desktop\Claude Code\DPD\튜토리얼_2026-10-14\20_설계.md + 22_검토반영.md) ====================
+// 상태는 S.tutMode·S.tut 하나뿐: reset()이 S를 새로 만들면 함께 사라진다. 일반 판은 S.tutMode가 undefined라 모든 분기가 원래 식 그대로(난수 순서 포함).
+// 라운드에 묶인 시스템(몹 HP·수·보스·더블 포커·결투·공중)은 기존 헬퍼 안 분기가 tutWave()를 읽는다 — 복사본 없음.
+const TUT = { OK_MS: 800, WAVE_DEFAULT: { n: 6, hp: 20 } }; // OK_MS = 단계 완료 뒤 '좋아요!' 실시간(ms) · WAVE_DEFAULT = 사양 없는 라운드도 약한 몹 (일반 값이 새지 않게)
+function tutWave() { return (S && S.tut && S.tut.waves[S.round]) || TUT.WAVE_DEFAULT; }
+function tutBossShape() { return tutWave().bossShape || 20; } // 보스 모양 = 사양값, 없으면 달(20)
+function tutEv(k) { if (S && S.tutMode) S.tut.ev[k] = (S.tut.ev[k] || 0) + 1; } // 상태만으로 구분 안 되는 행동 카운터 (일반 판 = 아무것도 안 함)
+function tutEvUp(k) { const t = S.tut; return (t.ev[k] || 0) > ((t.base.ev && t.base.ev[k]) || 0); } // 단계 진입 뒤 그 행동이 있었나 (undefined 비교 방지 — 22 #2)
+// 정해 둔 패: 사양 = { hand: ['7♠', …], tail: [교환 때 나올 순서] } — 같은 카드 두 장 없음(52장), 같은 라운드에서 다시 불러도 같은 패
+function tutDeckFor(round, salt) {
+  const spec = S.tut.deals[round] && S.tut.deals[round][salt || 0]; if (!spec) return null;
+  const P = s => ({ r: { J: 11, Q: 12, K: 13, A: 14 }[s.slice(0, -1)] || +s.slice(0, -1), s: s.slice(-1) });
+  const hand = spec.hand.map(P), tail = (spec.tail || []).map(P);
+  const used = new Set([...hand, ...tail].map(c => c.r + c.s)), fill = [];
+  for (const s of SUITS) for (let r = 2; r <= 14; r++) if (!used.has(r + s)) fill.push({ r, s });
+  return [...hand, ...fill, ...tail.reverse()]; // startPoker의 splice(0,5) = hand, deck.pop() = tail[0]부터
+}
+// 교환 고르기: S.tut.pick[라운드] = { h, goal: { rank, key? } } — 어느 칸을 어떤 순서로 눌러도 목표 족보에 닿게 덱에서 골라 준다 (없으면 null → 덱 꼬리)
+function tutPick(h, i, hand) {
+  const p = S.tut.pick[S.round]; if (!p || p.h !== h) return null;
+  const made = madeCardIdx(hand.cards, evalHand(hand.cards)), onMade = made.includes(i);
+  let bi = -1, bs = -1;
+  hand.deck.forEach((c, k) => {
+    const test = hand.cards.slice(); test[i] = c;
+    const r = evalHand(test), keyOk = !p.goal.key || handKeyRank(test, r) === p.goal.key;
+    let s = (r >= p.goal.rank && keyOk) ? 1000 - (r - p.goal.rank) * 10 : r * 10; // 목표 달성: 넘치지 않는 쪽 우선 · 미달: 가장 높은 족보
+    if (onMade && c.r === hand.cards[i].r) s += 5; // 금테 칸: 같은 숫자로 짝 유지
+    if (s > bs) { bs = s; bi = k; }
+  });
+  return bi < 0 ? null : hand.deck.splice(bi, 1)[0];
+}
+// 소환은 소환 단계(st.summon)·엔진 강제 소환(건너뛰기 길)·포커 시계 0일 때만 — 라운드가 단계보다 앞서 가지 않게 (22 #4)
+function tutCanSummon() { const t = S.tut, st = tutStep(); return !!(t.forceSummon || S.pokerTimer <= 0 || (st && st.summon)); }
+function tutForceSummon() { const t = S.tut; if (S.phase !== 'poker') return; t.forceSummon = true; try { confirmHand(); } finally { t.forceSummon = false; } }
+function tutNopeSummon() { const b = document.getElementById('summonBtn'); b.classList.remove('tutNope'); void b.offsetWidth; b.classList.add('tutNope'); }
+// 전투 끝 (endWave 싱글 분기 대신): 목숨·lifeLog 안 건드림 — 클리어면 보너스 그대로, 아니면 '괜찮아요!'
+function tutWaveEnd(bossAlive, leak) {
+  const t = S.tut, clear = !bossAlive && !leak;
+  t.waveEnds = (t.waveEnds || 0) + 1;
+  t.lastWave = { r: S.round, clear, leak, boss: bossAlive };
+  if (clear) grantClearBonus(); else addFloat(CX, CY, '괜찮아요!', '#8a6a3a', 2);
+}
+function tutStep() { const t = S && S.tut; if (!t) return null; const ch = TUT_CH_BY_ID[t.ch]; return ch && ch.steps[t.i] || null; }
 
 // ==================== HUD ====================
 function fmtTime(s) {
@@ -17433,7 +17493,7 @@ function reportLoopError(where, e) {
 // 이어하기(세이브)는 라운드 재시도 어뷰징 때문에 제거 — 새로고침/이탈 = 처음부터.
 // 진행 중 실수로 닫지 않게 브라우저 기본 경고를 띄운다.
 window.addEventListener('beforeunload', e => {
-  if (S && S.round > 1 && S.phase !== 'gameover') { e.preventDefault(); e.returnValue = ''; }
+  if (S && S.round > 1 && S.phase !== 'gameover' && !S.tutMode) { e.preventDefault(); e.returnValue = ''; } // [튜토리얼 10-14] 잃을 기록 없음
 });
 try { localStorage.removeItem('dpd_save'); } catch (e) {} // 구버전 세이브 정리
 // 시작 화면: 포스터 → 난이도 선택 → 출발. 명시적인 data-name으로 설명 문구와 이름을 분리.
