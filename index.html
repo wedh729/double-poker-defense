@@ -3228,6 +3228,15 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
 #optWin .optRow b {text-align:right;font-size:13px;color:#715333;font-variant-numeric:tabular-nums;white-space:nowrap;}
 #optWin .optRow.off .dpd-icon, #optWin .optRow.off label, #optWin .optRow.off b {opacity:.55;}
 #optWin button:focus-visible, #optWin input:focus-visible {outline:3px solid #315d39;outline-offset:3px;}
+/* ⏩ 배속 자동 해제 백업 행 (포커판 #pkSlow는 좁은 창에서 숨겨진다 — 같은 pokerSlow) */
+#optWin .optRow.optTg {grid-template-columns:20px 1fr auto;margin-top:4px;border-top:1px solid #b1895166;}
+#optWin .optRow.optTg label {white-space:normal;line-height:1.25;font-size:13px;}
+#optPkSlow {display:flex;align-items:center;justify-content:center;width:52px;height:40px;margin:0;padding:0;border:0;background:none;cursor:pointer;}
+#optPkSlow .pkSw {position:relative;width:34px;height:18px;border-radius:9px;background:#bfae8a;transition:background-color .12s;}
+#optPkSlow .pkSw::after {content:'';position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:#fff8e6;transition:transform .12s;}
+#optPkSlow[aria-pressed="true"] .pkSw {background:#376849;}
+#optPkSlow[aria-pressed="true"] .pkSw::after {transform:translateX(16px);}
+@media (prefers-reduced-motion: reduce) {#optPkSlow .pkSw, #optPkSlow .pkSw::after {transition:none;}}
 .mobile #optWin {padding:10px 14px 12px;}
 .mobile #optTitle {font-size:15px;}
 .mobile #optWin .optRow {min-height:40px;}
@@ -3402,6 +3411,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
   <div class="optHead"><div id="optTitle">설정</div><button type="button" id="optClose" title="닫기">✕</button></div>
   <div class="optRow" id="optRowMusic"><i class="dpdIc" data-icon="music"></i><label for="optMusicVol">음악</label><input type="range" id="optMusicVol" min="0" max="100" step="5" value="100"><b id="optMusicVal"></b></div>
   <div class="optRow" id="optRowSfx"><i class="dpdIc" data-icon="sound"></i><label for="optSfxVol">타격음</label><input type="range" id="optSfxVol" min="0" max="100" step="5" value="100"><b id="optSfxVal"></b></div>
+  <div class="optRow optTg"><i class="dpdIc" data-icon="ffwd"></i><label for="optPkSlow">카드 고를 때 배속 자동 해제</label><button type="button" id="optPkSlow" aria-pressed="true" title="카드를 고르는 동안엔 배속을 풀고, 소환하면 원래 배속으로 돌아갑니다 (포커판 토글과 같은 설정)"><i class="pkSw" aria-hidden="true"></i></button></div>
 </div></div>
 <div id="overlay">
   <div class="wd-result">
@@ -14830,7 +14840,7 @@ function rollEvent() { S.event = null; S.eventMods = null; return; // 라운드 
 function effRange(u) { return u.range * ((S.eventMods && S.eventMods.rangeMul) || 1) * (isHiddenCombo(u) ? 0.8 : 1); } // 히든 조합 유닛 사거리 20%↓
 
 // ⏩ 10-13 유저: 카드 고를 땐 배속 자동 해제 — 포커 페이즈엔 서브스텝 1번(=1배속). S.speed(유저가 고른 배속)는 그대로 두므로
-//    소환(startWave — 태양전 조기 return·시간 초과 자동 소환 포함)하는 순간 원래 배속이 다시 적용된다. 켜기/끄기 = 포커판 #pkSlow (기본 켜짐·브라우저 저장)
+//    소환(startWave — 태양전 조기 return·시간 초과 자동 소환 포함)하는 순간 원래 배속이 다시 적용된다. 켜기/끄기 = 포커판 #pkSlow + 설정 창 #optPkSlow 백업 행 (기본 켜짐·브라우저 저장)
 //    ⚠️ 부팅 reset()(startPoker → syncSpeedUI)보다 위에 있어야 한다 (let TDZ)
 let pokerSlow = true; try { pokerSlow = localStorage.getItem('dpd_pokerslow') !== '0'; } catch (e) {}
 function spdEff() { return pokerSlow && S.phase === 'poker' ? 1 : S.speed; } // 실제 서브스텝 수 (frame)
@@ -14841,17 +14851,20 @@ function syncSpeedUI() { // 배속 버튼·포커판 토글 표시 — 페이즈
   b.classList.toggle('off', held);
   b.title = held ? '배속 — 카드 고르는 동안 잠시 해제 (소환하면 다시 적용)' : '배속';
   document.getElementById('pkSlow').setAttribute('aria-pressed', pokerSlow ? 'true' : 'false');
+  document.getElementById('optPkSlow').setAttribute('aria-pressed', pokerSlow ? 'true' : 'false'); // ⚙️ 설정 창 백업 행 (좁은 창에서 #pkSlow가 숨겨질 때)
+}
+function setPokerSlow(on) { // 포커판 #pkSlow · 설정 창 #optPkSlow 공용
+  pokerSlow = on;
+  try { localStorage.setItem('dpd_pokerslow', pokerSlow ? '1' : '0'); } catch (e) {}
+  syncSpeedUI();
 }
 document.getElementById('bSpeed').onclick = () => {
   S.speed = S.speed >= 3 ? 1 : S.speed + 1; // 최대 3배 (08-14 유저: 개발 중 빠른 진행용 — 서브스텝 구조라 물리는 안정)
   syncSpeedUI(); // 포커 중(해제 켜짐)이면 바뀐 값 = 소환 뒤 배속 — 버튼은 그 숫자 + 꺼짐 표시
 };
 function speedBtnHTML(n, held) { return dpdIconSVG('ffwd', 'dpd-icon', { off: !!held }) + `<small class="spdX">${n}×</small>`; } // 배속 버튼 = 빨리 감기 아이콘 + 1×·2×·3× · held = 사선 (음악·효과음 꺼짐과 같은 표시)
-document.getElementById('pkSlow').onclick = () => {
-  pokerSlow = !pokerSlow;
-  try { localStorage.setItem('dpd_pokerslow', pokerSlow ? '1' : '0'); } catch (e) {}
-  syncSpeedUI();
-};
+document.getElementById('pkSlow').onclick = () => setPokerSlow(!pokerSlow);
+document.getElementById('optPkSlow').onclick = () => setPokerSlow(!pokerSlow);
 document.getElementById('btnRestart').onclick = () => {
   if (confirm('처음부터 다시 시작할까요? 현재 진행 상황은 사라집니다.')) reset();
 };
