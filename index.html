@@ -15443,13 +15443,14 @@ function tutGo(i) {
   try {
     const st = C.steps[i];
     t.i = i; t.latched = false; t.okAt = 0; t.alt = ''; t.html = ''; t.scrolled = false;
-    t.base = { ev: { ...t.ev }, upg: S.upg.slice(), gold: S.gold, round: S.round };
+    t.base = t.pendBase || tutSnap(t); t.pendBase = null; // 기준값 = 앞 단계가 래치된 순간 (0.8초 칭찬 동안 한 행동도 이 단계에 쳐진다 — 예: '+1 강화' 직후 바로 '+3 도전')
     t.holdPoker = !(st.hold && st.hold.poker === false);
     t.holdWave = !!(st.hold && st.hold.wave);
     if (st.enter) st.enter(t);
     if (S.tutMode && S.tut === t && S.phase === 'poker') renderPoker(); // 카드 강조·배너 갱신
   } finally { tutTicking = was; }
 }
+function tutSnap(t) { return { ev: { ...t.ev }, upg: S.upg.slice(), gold: S.gold, round: S.round }; } // 단계 술어의 비교 기준
 function tutAdvance() { // 패널 '다음'·'건너뛰기' (배너 글자 버튼도) — 이 단계를 래치 처리하고 바로 다음 (다음 단계 enter가 전제를 맞춘다)
   if (!S || !S.tutMode || tutTicking) return;
   const t = S.tut, st = tutStep(); if (!st) return;
@@ -15478,7 +15479,7 @@ function tutModeTickBody() {
   if (st.tick && !t.latched) st.tick(t);
   if (!S.tutMode || S.tut !== t) return;
   // ① 완료 판정은 화면과 무관하게 (술어는 전부 상태) → ② 0.8초 '좋아요!' 뒤 다음 단계 → ③ 화면 전환 안내는 문구·링만 (22 #1)
-  if (!t.latched && st.next !== 'button' && st.done && st.done(t)) { t.latched = true; t.okAt = performance.now(); if (st.latch) st.latch(t); }
+  if (!t.latched && st.next !== 'button' && st.done && st.done(t)) { t.latched = true; t.okAt = performance.now(); t.pendBase = tutSnap(t); if (st.latch) st.latch(t); }
   if (t.latched && performance.now() - t.okAt >= TUT.OK_MS) { tutGo(t.i + 1); return; }
   // PC: 맵 단계(또는 닫힌 성 창을 다시 열 단계)면 포커판을 내린다 — 맵을 누르면 어차피 내려간다
   if (!t.latched && !IS_MOBILE && S.phase === 'poker' && !pokerPeek && (st.view === 'map' || (st.view === 'modal' && st.modal === 'castle' && openShop !== 'castle'))) { pokerPeek = true; syncPokerPanel(); }
@@ -20186,7 +20187,7 @@ if (WORLD_MOTION_V2) (() => {
 (() => {
   'use strict';
   const leafArt = '<svg viewBox="0 0 96 66" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 52C34 33 52 24 82 17" stroke="#6c4b27" stroke-width="5" stroke-linecap="round"/><path d="M30 41C14 37 11 23 15 13c17 0 25 10 24 20L30 41Z" fill="#5f8c40" stroke="#354f2d" stroke-width="2"/><path d="M49 29C36 20 40 7 50 3c12 8 13 19 6 25L49 29Z" fill="#83a74d" stroke="#456331" stroke-width="2"/><path d="M62 23C70 9 84 7 93 11c-5 13-15 20-29 18L62 23Z" fill="#5f8b42" stroke="#354f2d" stroke-width="2"/><path d="M26 45C34 60 50 63 61 53c-8-12-20-14-32-10L26 45Z" fill="#759949" stroke="#405d31" stroke-width="2"/><path d="m18 20 13 19m19-29 1 17m17-2 17-9M35 47l18 7" stroke="#c5d682" stroke-width="2" stroke-linecap="round"/><circle cx="57" cy="34" r="5" fill="#cb8743" stroke="#744d28" stroke-width="2"/><circle cx="65" cy="36" r="4" fill="#e4ad50" stroke="#744d28" stroke-width="2"/></svg>';
-  for (const id of ['diffRow','coopRow','titleHelp']) {
+  for (const id of ['diffRow','coopRow','tutRow','titleHelp']) {
     const panel = document.getElementById(id);
     if (!panel || panel.querySelector('.woodland-leaves')) continue;
     const leaves = document.createElement('span');
