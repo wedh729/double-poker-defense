@@ -2341,6 +2341,7 @@ body.mobile #goPoker b {font-size:11px;}
 body.mobile #duelForfeit {min-height:0;padding:6px 14px;font-size:13px;border-radius:12px;}
 body.mpMode #duelForfeit {left:50%;top:auto;bottom:14px;transform:translateX(-50%);z-index:10;} /* 멀티: 카메라가 움직이므로 #goPoker처럼 하단 가운데 고정 */
 body.mpMode #duelForfeit:active {transform:translate(-50%,2px);}
+body.mpMode.mobile #duelForfeit {bottom:56px;} /* 모바일 멀티: 스킬 바(bottom 6 + 42) 위로 — 전투 중에 뜨므로 스킬 버튼과 겹치면 안 된다 */
 /* 💬 토스트는 누르면 바로 사라진다 (보일 때만 입력을 받는다 — 투명한 토스트가 캔버스를 막지 않게) */
 #rewardToast {pointer-events:auto;cursor:pointer;} /* design-system.css가 none으로 덮어 기존 '누르면 닫기'가 죽어 있었다 */
 #duelToast.on, #mktToast.on {pointer-events:auto;cursor:pointer;}
