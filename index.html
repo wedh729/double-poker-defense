@@ -15261,8 +15261,118 @@ function tutScrollTo(t, sel) { if (openShop !== 'castle') { t.scrolled = false; 
 
 // ---- 챕터 데이터 (단계 = { id, view:'cards'|'map'|'modal'|'any', modal?, summon?, hold?:{poker,wave}, pc, mo?, alt?(t), next?:'button', enter?(t), tick?(t), done?(t), latch?(t), target?(t), cardHi?(h,i,made,hand) })
 //   enter = 멱등(전제를 스스로 맞춤) · done = 매 틱, 한 번 참이면 래치 · 문구 = 숫자·확률·내부 이름 없이 (UI 미니멀)
-const TUT_BASIC = []; // (기본 조작 단계는 다음 커밋)
-function tutLoadBasic(t) { startPoker(); }
+// 기본 조작 (흐름: R1 포커 1~3 → R1 전투 4 → R2 포커 맵 5~7 → 성 창 8~10 → R2 포커 카드 11 → R2 전투 12~13 → R3 포커 맵 14~16)
+//   전투 단계 술어는 라운드 번호가 아니라 챕터 안 누적 카운터(소환 ev.summon · 전투 끝 t.waveEnds) — 건너뛰기로 라운드가 어긋나도 멈추지 않게 (22 #4)
+function tutLoadBasic(t) {
+  t.deals = {
+    1: [{ hand: ['7♠', '7♥', 'K♦', '4♣', '2♠'], tail: ['J♣', '5♦', '9♥', 'Q♠', '3♦'] }],   // 원페어 7 (금테 = 칸0·1)
+    2: [{ hand: ['9♥', '9♣', 'Q♠', '5♦', '3♠'], tail: ['5♣', 'Q♦', '9♠', '2♥', '8♣'] }],   // 자유 교환 (결정적 꼬리)
+    3: [{ hand: ['10♠', '10♦', '6♣', 'J♥', '2♦'], tail: ['6♥', '4♠', 'J♦', '8♥', '3♣'] }], // R3는 소환 안 함
+  };
+  t.pick = { 1: { h: 0, goal: { rank: 3 } } }; // R1: 어느 칸을 눌러도 트리플 이상 (♦ 부메랑)
+  t.lockMade = { 1: true };                    // R1: 금테 카드 잠금 (풀하우스 단검 길 차단)
+  t.waves = { 1: { n: 8, hp: 40 }, 2: { n: 5, hp: 30 }, 3: { n: 6, hp: 20 } }; // 튜닝 노브 (약한 몹 — 숫자는 화면에 안 나감)
+  t.toughHp = 900;                             // 집중 공격 연습 몹 체력 (지시 전엔 매 틱 되채움)
+  startPoker();                                // R1 정해 둔 패로 다시 깔기 (폰 = 포커 탭)
+}
+const TUT_BASIC = [
+  { id: 'b_swap', view: 'cards',
+    pc: '같은 숫자끼리 금테가 둘러져요. 금테 없는 카드를 눌러 바꿔 보세요.',
+    cardHi: (h, i, made, hand) => !hand.swapped[i] && !made.includes(i),
+    done: () => !!S.poker && evalHand(S.poker.hands[0].cards) >= 3 },
+  { id: 'b_rank', view: 'cards', next: 'button',
+    pc: () => `지금 족보: <b>${HAND_NAMES[evalHand(S.poker.hands[0].cards)]}</b>. ` + (tutVisRect('#pokerGuide') ? '오른쪽 표에서 빛나요. 위로 갈수록 강한 유닛이 나와요.' : '족보 순서는 아래 책 버튼(도감)에서 볼 수 있어요.'),
+    mo: () => `지금 족보: <b>${HAND_NAMES[evalHand(S.poker.hands[0].cards)]}</b>. 이름 옆 막대가 족보의 높이예요. 누르면 족보 도감이 열려요.`,
+    target: () => ({ dom: ['#pokerGuide', '#cards .rankGauge', '#toolbar .shopIcon[data-shop="book"]'] }) },
+  { id: 'b_summon', view: 'cards', summon: true,
+    pc: "마음에 들면 '유닛 소환!'을 눌러요. 바로 전투가 시작돼요.",
+    done: t => (t.ev.summon || 0) >= 1,
+    target: () => ({ dom: '#summonBtn' }) },
+  { id: 'b_fight', view: 'map',
+    pc: '몬스터는 울타리 안에서만 돌고, 유닛이 알아서 공격해요. 시간 안에 다 잡으면 클리어!',
+    enter: t => { tutEnsureWave(t, 1); tutReachFix(); },
+    tick: t => tutEnsureWave(t, 1),
+    done: t => t.waveEnds >= 1,
+    target: () => ({ map: TUT_Z.pen }) },
+  { id: 'b_select', view: 'map',
+    pc: '클리어하면 골드를 받아요. 이제 내 유닛을 클릭해 골라 보세요.',
+    mo: '클리어하면 골드를 받아요. 이제 내 유닛을 눌러 골라 보세요.',
+    alt: t => t.lastWave && !t.lastWave.clear ? '시간이 다 됐지만 괜찮아요. 튜토리얼에선 목숨이 줄지 않아요.' : '',
+    enter: () => { tutSelectOnly([]); hideObjInfo(); },
+    done: () => tutSelFighters().length > 0,
+    target: () => { const u = tutFighters()[0]; return u ? { unit: u } : null; } },
+  { id: 'b_move', view: 'map',
+    pc: '땅을 우클릭하면 그곳으로 걸어가요. 반짝이는 원 안을 우클릭해 보세요.',
+    mo: '유닛을 꾹 누른 채 끌면 들어 올려져요. 반짝이는 원 안에 놓아 보세요.',
+    alt: () => !IS_MOBILE && !tutSelFighters().length ? '먼저 내 유닛을 클릭해 골라요.' : '',
+    enter: () => { if (!IS_MOBILE && !tutSelFighters().length && tutFighters().length) tutSelectOnly([tutFighters()[0]]); },
+    done: () => tutFighters().some(u => tutInZone(u, TUT_Z.move, 14)),
+    target: () => ({ map: TUT_Z.move }) },
+  { id: 'b_castle', view: 'map',
+    pc: '골드로 유닛을 강하게 만들어요. 왼쪽 아래 성을 클릭해 보세요.',
+    mo: '골드로 유닛을 강하게 만들어요. 왼쪽 아래 성을 눌러 보세요.',
+    enter: () => { tutSelectOnly([]); hideObjInfo(); S.gold = Math.max(S.gold, 200); castleTab = 'upg'; },
+    done: () => openShop === 'castle',
+    target: () => ({ map: TUT_Z.house }) },
+  { id: 'b_upg', view: 'modal', modal: 'castle',
+    pc: t => `내 유닛은 <b>${RACES[t.race].suit} ${RACES[t.race].name}</b> 문양이에요. 같은 문양 칸의 '+1 강화'를 누르면 그 문양 유닛이 모두 강해져요.`,
+    enter: t => { const u = tutFighters()[0]; t.race = u && u.race != null ? u.race : 0; tutOpenCastle(); tutGoldFor(t.race); },
+    tick: t => { if (openShop === 'castle' && castleTab !== 'upg') { castleTab = 'upg'; renderShop(); } tutGoldFor(t.race); tutScrollTo(t, `#shopBody [data-upg="${t.race}"]`); },
+    done: t => S.upg[t.race] > t.base.upg[t.race],
+    target: t => ({ dom: `#shopBody [data-upg="${t.race}"]` }) },
+  { id: 'b_gamble', view: 'modal', modal: 'castle',
+    pc: "'+3 도전'은 크게 오르지만 실전에선 실패할 수도 있어요(튜토리얼은 꼭 성공). 누른 뒤 움직이는 막대를 가운데에서 멈춰요.",
+    enter: t => { tutOpenCastle(); tutGoldFor(t.race); },
+    tick: t => { if (openShop === 'castle' && castleTab !== 'upg') { castleTab = 'upg'; renderShop(); } tutGoldFor(t.race); tutScrollTo(t, `#shopBody [data-gupg="${t.race}"]`); },
+    done: t => S.upg[t.race] >= t.base.upg[t.race] + 3,
+    target: t => ({ dom: `#shopBody [data-gupg="${t.race}"]` }) },
+  { id: 'b_close', view: 'any',
+    pc: '강화 끝! 오른쪽 위 ✕를 눌러 창을 닫아요.',
+    done: () => !openShop,
+    target: () => ({ dom: '#shopClose' }) },
+  { id: 'b_summon2', view: 'cards', summon: true,
+    pc: t => (t.waveEnds || 0) < 1 ? '전투가 끝나면 새 카드가 와요.' : "새 카드가 왔어요. 카드마다 한 번씩 바꿔 보고 '유닛 소환!'을 눌러요.",
+    enter: () => { if (openShop) closeShop(); },
+    tick: t => { if (S.phase === 'wave' && (t.ev.summon || 0) < 2 && (t.waveEnds || 0) < 1) tutEndWaveNow(); }, // 건너뛰기 길: 첫 전투가 아직이면 끝낸다
+    done: t => (t.ev.summon || 0) >= 2,
+    target: () => S.phase === 'poker' ? { dom: '#summonBtn' } : null },
+  { id: 'b_attack', view: 'map', hold: { wave: true },
+    pc: '고른 유닛이 한 몬스터만 노리게 할 수 있어요. A 키를 누른 뒤 반짝이는 몬스터를 클릭해 보세요.',
+    mo: '고른 유닛이 한 몬스터만 노리게 할 수 있어요. 반짝이는 몬스터를 꾹 눌러 보세요.',
+    alt: () => !tutSelFighters().length ? (IS_MOBILE ? '먼저 내 유닛을 눌러 골라요.' : '먼저 내 유닛을 클릭해 골라요.') : '',
+    enter: t => { tutEnsureWave(t, 2); if (!tutSelFighters().length) tutSelectOnly(tutFighters()); },
+    tick: t => {
+      tutEnsureWave(t, 2);
+      if (S.phase === 'wave' && (t.ev.summon || 0) >= 2 && !t.toughM) { const m = spawnMonster(t.toughHp, false, {}); m.golden = false; m.spin = 0; t.toughM = m; } // 연습 몹 = 이 단계 && 전투 중 && 아직 없음 (라운드에 안 묶음)
+      if (t.toughM && S.monsters.includes(t.toughM)) t.toughM.hp = t.toughM.max; // 지시 전엔 쓰러지지 않는다 (진짜 체력, 매 틱 되채움 — 22 #5)
+    },
+    done: t => tutEvUp('attack') && !!t.toughM,
+    target: t => t.toughM && S.monsters.includes(t.toughM) ? { mon: t.toughM } : { map: TUT_Z.pen } },
+  { id: 'b_clear2', view: 'map',
+    pc: '잘했어요! 남은 몬스터도 모두 잡아요.',
+    enter: t => { tutEnsureWave(t, 2); tutReachFix(); },
+    tick: t => tutEnsureWave(t, 2),
+    done: t => t.waveEnds >= 2,
+    target: () => ({ map: TUT_Z.pen }) },
+  { id: 'b_box', view: 'map',
+    pc: '여러 유닛을 한 번에 고를 수 있어요. 빈 땅에서 마우스를 누른 채 끌어 유닛들을 네모로 감싸 보세요.',
+    mo: '여러 유닛을 한 번에 고를 수 있어요. 빈 땅을 누르자마자 바로 끌어 유닛들을 네모로 감싸 보세요.',
+    enter: () => { while (tutFighters().length < 2) spawnUnit(1, RACE_OF_RANK[1], false, 9); tutSelectOnly([]); hideObjInfo(); }, // 건너뛰기 길로 유닛이 하나뿐이면 하나 더
+    done: () => tutSelFighters().length >= 2,
+    target: () => { const f = tutFighters(); if (!f.length) return null; const p = IS_MOBILE ? 48 : 24; return { mapRect: [Math.min(...f.map(u => u.x)) - p, Math.min(...f.map(u => u.y)) - p - 10, Math.max(...f.map(u => u.x)) + p, Math.max(...f.map(u => u.y)) + p] }; } },
+  { id: 'b_group', view: 'map',
+    pc: '고른 채로 땅을 우클릭하면 함께 움직여요. 반짝이는 원 안을 우클릭해 보세요.',
+    mo: '고른 유닛 하나를 끌면 함께 따라와요. 반짝이는 원 안에 놓아 보세요.',
+    enter: () => { if (tutSelFighters().length < 2) tutSelectOnly(tutFighters()); },
+    done: () => tutFighters().filter(u => tutInZone(u, TUT_Z.group, 14)).length >= 2,
+    target: () => ({ map: TUT_Z.group }) },
+  { id: 'b_desel', view: 'map',
+    pc: '빈 땅을 클릭하면 선택이 풀려요. 반짝이는 곳을 클릭해 보세요.',
+    mo: '빈 땅을 탭하면 선택이 풀려요. 반짝이는 곳을 탭해 보세요.',
+    enter: () => { if (!tutSelFighters().length) tutSelectOnly(tutFighters()); },
+    done: () => tutSelFighters().length === 0,
+    target: () => ({ map: TUT_Z.desel }) },
+];
 
 // ---- 챕터 목록 — 1차 = 기본 조작만, 나머지는 '준비 중' (2차는 load·steps만 채우고 ready:true)
 const TUT_CH = [
