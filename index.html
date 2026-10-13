@@ -568,7 +568,7 @@
   .mobile .card.sm { width: 48px; height: 68px; }
   .mobile #startOverlay h2 { font-size: 26px; }
   .mobile #modeRow { flex-direction: column; }
-  .mobile #coopRow { flex-direction: column; }
+  .mobile :is(#coopRow,#tutRow) { flex-direction: column; }
   .mobile #diffBtnRow { flex-wrap: wrap; justify-content: center; }
   .mobile .rbTxt { display: none; } /* 다시하기 = 아이콘만 (유저: "글씨 삭제해도 될듯" 2026-08-10) */
   .mobile .shopIcon.restartBtn { width: 42px; padding: 0; }
@@ -1106,7 +1106,8 @@ body.at-title #mobTabs { visibility: hidden; }
   pointer-events: none;
 }
 #startOverlay[data-screen="difficulty"]::after,
-#startOverlay[data-screen="coop"]::after {
+#startOverlay[data-screen="coop"]::after,
+#startOverlay[data-screen="tut"]::after {
   background: rgba(216,239,247,.72);
   backdrop-filter: blur(8px);
 }
@@ -1647,7 +1648,7 @@ html :is(#duelConfirm,#crownModal) {
 </style>
 <style data-dpd-source="woodland-title.css">
 /* Woodland selection windows. The title poster, main menu and game world stay intact. */
-html[data-theme="woodland"] :is(#diffRow,#coopRow,#titleHelp) {
+html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow,#titleHelp) {
   --title-ink:#432a1c;
   --title-muted:#745333;
   --title-line:#bd9357;
@@ -1658,13 +1659,13 @@ html[data-theme="woodland"] :is(#diffRow,#coopRow,#titleHelp) {
   box-shadow:inset 0 0 0 2px #ffe9b4,inset 0 0 18px #b07a3730,0 0 0 2px #60371d,0 5px 0 2px #573b24,0 23px 65px #24312766;
   isolation:isolate;
 }
-html[data-theme="woodland"] :is(#diffRow,#coopRow) {
+html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) {
   position:relative;
   width:min(900px,100%);
   padding:0 26px 24px;
   gap:20px;
 }
-html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-top {
+html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .adventure-top {
   margin:0 -26px;
   padding:13px 20px 14px;
   min-height:64px;
@@ -1674,14 +1675,14 @@ html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-top {
   background:linear-gradient(#9d673ab8,#714b2be6),var(--dpd-file-art-1) center 40%/400px;
   box-shadow:inset 0 2px #dfb86c,inset 0 -1px #c39052;
 }
-html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-label {
+html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .adventure-label {
   color:#ffedc0;
   font-size:12px;
   letter-spacing:1.2px;
   text-shadow:0 2px #5c371e;
   padding-left:5px;
 }
-html[data-theme="woodland"] :is(#diffRow,#coopRow) .title-back {
+html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .title-back {
   min-height:37px;
   border:1px solid #e1b976;
   border-radius:10px;
@@ -1690,16 +1691,16 @@ html[data-theme="woodland"] :is(#diffRow,#coopRow) .title-back {
   box-shadow:inset 0 1px #f6d09b24,0 2px #54331f;
   font-size:12px;
 }
-html[data-theme="woodland"] :is(#diffRow,#coopRow) .title-back:hover { background:#45301de8; }
-html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-intro { padding-top:2px; }
-html[data-theme="woodland"] #startOverlay :is(#diffRow,#coopRow) h2.adventure-heading {
+html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .title-back:hover { background:#45301de8; }
+html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .adventure-intro { padding-top:2px; }
+html[data-theme="woodland"] #startOverlay :is(#diffRow,#coopRow,#tutRow) h2.adventure-heading {
   color:#482e1c;
   font-size:clamp(25px,3vw,32px);
   font-weight:900;
   letter-spacing:-1.2px;
   text-shadow:0 1px #fff2d2;
 }
-html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-intro p {
+html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .adventure-intro p {
   color:#705333;
   font-size:13px;
   margin-top:7px;
@@ -1798,34 +1799,34 @@ html[data-theme="woodland"] #btnDaily {
   box-shadow:inset 0 1px #fff5d2,0 2px #a5793f;
 }
 html[data-theme="woodland"] #btnDaily:hover { background:#ffebbd; }
-html[data-theme="woodland"] #coopRow .coop-card {
+html[data-theme="woodland"] :is(#coopRow,#tutRow) .coop-card {
   border:2px solid #b89158;
   border-radius:16px;
   background:linear-gradient(130deg,#fff0c7,#eccc96);
   color:#4b301c;
   box-shadow:inset 0 0 0 2px #fff0c0,0 4px #b58a4d;
 }
-html[data-theme="woodland"] #coopRow .coop-card:hover { background:#fce7b6; border-color:#547441; }
-html[data-theme="woodland"] #coopRow .coop-card small { color:#755633; }
-html[data-theme="woodland"] #coopRow .coop-symbol { color:#3e6945; text-shadow:0 1px #fff9d9; }
-html[data-theme="woodland"] #coopRow .coop-status { border:1px solid #bea06a; background:#dabc8355; color:#725633; }
+html[data-theme="woodland"] :is(#coopRow,#tutRow) .coop-card:hover { background:#fce7b6; border-color:#547441; }
+html[data-theme="woodland"] :is(#coopRow,#tutRow) .coop-card small { color:#755633; }
+html[data-theme="woodland"] :is(#coopRow,#tutRow) .coop-symbol { color:#3e6945; text-shadow:0 1px #fff9d9; }
+html[data-theme="woodland"] :is(#coopRow,#tutRow) .coop-status { border:1px solid #bea06a; background:#dabc8355; color:#725633; }
 html[data-theme="woodland"] #titleHelp { position:fixed; inset:0; margin:auto; height:fit-content; max-height:calc(100dvh - 32px); overflow:auto; padding:26px; }
 html[data-theme="woodland"] #titleHelp h2 { color:#4b301c; font-size:24px; text-shadow:0 1px #fff2d0; }
 html[data-theme="woodland"] #titleHelp ol { color:#583d26; }
 html[data-theme="woodland"] #titleHelp li::marker { color:#4d713d; font-weight:900; }
 html[data-theme="woodland"] #titleHelp p { color:#785934; }
 html[data-theme="woodland"] #titleHelp .title-link { color:#fff0c5; background:#557540; border:2px solid #3d5b2f; box-shadow:inset 0 1px #97ad6f,0 3px #3b502c; }
-html[data-theme="woodland"] :is(#diffRow,#coopRow,#titleHelp) button:focus-visible { outline:3px solid #315b48; outline-offset:4px; }
+html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow,#titleHelp) button:focus-visible { outline:3px solid #315b48; outline-offset:4px; }
 html[data-theme="woodland"] .woodland-leaves { position:absolute; top:-18px; left:-26px; width:71px; height:52px; z-index:2; pointer-events:none; filter:drop-shadow(0 2px 0 #42362442); }
 html[data-theme="woodland"] .woodland-leaves svg { display:block; width:100%; height:100%; }
 html[data-theme="woodland"] #titleHelp .woodland-leaves { top:-18px; left:-20px; width:60px; }
 @media (max-width:650px) {
-  html[data-theme="woodland"] :is(#diffRow,#coopRow) { border-width:8px; border-radius:21px; padding:0 14px 18px; gap:17px; }
-  html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-top { margin:0 -14px; padding:10px 10px 12px; min-height:56px; border-radius:11px 11px 0 0; gap:6px; }
-  html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-label { font-size:10px; letter-spacing:.4px; padding-left:4px; }
-  html[data-theme="woodland"] :is(#diffRow,#coopRow) .title-back { padding:7px 9px; font-size:11px; min-height:35px; white-space:nowrap; }
-  html[data-theme="woodland"] #startOverlay :is(#diffRow,#coopRow) h2.adventure-heading { font-size:24px; }
-  html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-intro p { font-size:11px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) { border-width:8px; border-radius:21px; padding:0 14px 18px; gap:17px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .adventure-top { margin:0 -14px; padding:10px 10px 12px; min-height:56px; border-radius:11px 11px 0 0; gap:6px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .adventure-label { font-size:10px; letter-spacing:.4px; padding-left:4px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .title-back { padding:7px 9px; font-size:11px; min-height:35px; white-space:nowrap; }
+  html[data-theme="woodland"] #startOverlay :is(#diffRow,#coopRow,#tutRow) h2.adventure-heading { font-size:24px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .adventure-intro p { font-size:11px; }
   html[data-theme="woodland"] #diffBtnRow { gap:10px; }
   html[data-theme="woodland"] #startOverlay #diffRow .diffBtn { padding:12px 11px 11px; border-radius:12px; }
   html[data-theme="woodland"] #diffRow .difficulty-symbol { width:37px; height:41px; margin-bottom:8px; }
@@ -1844,10 +1845,10 @@ html[data-theme="woodland"] #titleHelp .woodland-leaves { top:-18px; left:-20px;
   html[data-theme="woodland"] #titleHelp h2 { font-size:22px; }
 }
 @media (max-height:560px) and (min-width:651px) {
-  html[data-theme="woodland"] :is(#diffRow,#coopRow) { border-width:7px; padding:0 20px 13px; gap:10px; border-radius:20px; }
-  html[data-theme="woodland"] :is(#diffRow,#coopRow) .adventure-top { margin:0 -20px; min-height:42px; height:auto; padding:6px 14px 7px; border-radius:11px 11px 0 0; }
-  html[data-theme="woodland"] :is(#diffRow,#coopRow) .title-back { min-height:29px; padding:5px 10px; }
-  html[data-theme="woodland"] #startOverlay :is(#diffRow,#coopRow) h2.adventure-heading { font-size:23px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) { border-width:7px; padding:0 20px 13px; gap:10px; border-radius:20px; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .adventure-top { margin:0 -20px; min-height:42px; height:auto; padding:6px 14px 7px; border-radius:11px 11px 0 0; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow) .title-back { min-height:29px; padding:5px 10px; }
+  html[data-theme="woodland"] #startOverlay :is(#diffRow,#coopRow,#tutRow) h2.adventure-heading { font-size:23px; }
   html[data-theme="woodland"] #diffRow .adventure-solo { margin:0; }
   html[data-theme="woodland"] #startOverlay #diffRow .diffBtn { padding:10px 12px; }
   html[data-theme="woodland"] #diffRow .difficulty-symbol { width:29px; height:32px; margin-bottom:5px; }
@@ -1860,7 +1861,7 @@ html[data-theme="woodland"] #titleHelp .woodland-leaves { top:-18px; left:-20px;
   html[data-theme="woodland"] .woodland-leaves { width:50px; height:38px; top:-16px; left:-18px; }
 }
 @media (prefers-reduced-motion:reduce) {
-  html[data-theme="woodland"] :is(#diffRow,#coopRow,#titleHelp) * { transition:none !important; }
+  html[data-theme="woodland"] :is(#diffRow,#coopRow,#tutRow,#titleHelp) * { transition:none !important; }
 }
 
 </style>
@@ -1890,7 +1891,7 @@ html[data-theme="woodland"] #titleHelp .woodland-leaves { top:-18px; left:-20px;
 body.mobile :is(#shopOverlay,#chipModal){padding:calc(5px + env(safe-area-inset-top,0px)) calc(7px + env(safe-area-inset-right,0px)) calc(5px + env(safe-area-inset-bottom,0px)) calc(7px + env(safe-area-inset-left,0px));}
 body.mobile :is(#shopWin,#shopWin.wide,#chipWin){max-height:calc(100dvh - 10px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));width:min(760px,100%);max-width:100%;overflow:auto;overscroll-behavior:contain;}
 body.mobile #startOverlay:not([data-screen="title"]){padding:calc(5px + env(safe-area-inset-top,0px)) calc(9px + env(safe-area-inset-right,0px)) calc(5px + env(safe-area-inset-bottom,0px)) calc(9px + env(safe-area-inset-left,0px));}
-body.mobile :is(#diffRow,#coopRow){max-height:calc(100dvh - 12px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto;flex-shrink:0;overscroll-behavior:contain;}
+body.mobile :is(#diffRow,#coopRow,#tutRow){max-height:calc(100dvh - 12px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto;flex-shrink:0;overscroll-behavior:contain;}
 body.mobile :is(#duelConfirm,#crownModal){position:fixed;left:50%;top:50%;z-index:40;width:min(600px,calc(100vw - 24px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)));max-width:none;max-height:calc(100dvh - 20px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto;}
 body.mobile :is(#overlay,#winOverlay,#hellOverlay){padding:calc(6px + env(safe-area-inset-top,0px)) calc(12px + env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) calc(12px + env(safe-area-inset-left,0px));}
 body.mobile .wd-result{max-height:calc(100dvh - 14px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));gap:12px;padding:0 18px 17px;border-width:6px;}
@@ -2419,7 +2420,51 @@ body.mobile .rankGauge {display:inline-flex;gap:2px;margin-left:6px;padding:3px 
   #summonBtn.tutPulse {animation:tutPul .8s ease-in-out 3;}
   #cards .handLabel.rankUp {animation:rankUpFx .9s ease-out;border-radius:8px;}
   #cards .card.nope {animation:nopeFx .35s;}
+  #summonBtn.tutNope {animation:nopeFx .35s;} /* 튜토리얼: 소환 단계가 아닐 때 소환 버튼 흔들림 */
+  #tutRing {animation:tutRingP 1s ease-in-out infinite alternate;}
+  @keyframes tutRingP {from {opacity:.55;transform:scale(.96)} to {opacity:1;transform:scale(1.04)}}
 }
+/* 튜토리얼 모드 (10-14): 미션 패널(양피지 = #tutTip 색)·하이라이트 링·타이틀 버튼·챕터 목록 */
+#tutPanel {position:fixed;z-index:72;left:8px;top:8px;max-width:300px;padding:8px 11px 7px;border-radius:12px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:13px;font-weight:700;line-height:1.45;box-shadow:0 4px 0 #6b4a2a55,0 8px 18px #0005;pointer-events:none;box-sizing:border-box;}
+#tutPanel[hidden], #tutRing[hidden] {display:none;}
+#tutPanel button {pointer-events:auto;}
+#tutPanel .tpHead {display:flex;align-items:center;gap:6px;font-size:11px;color:#7a5530;margin-bottom:3px;}
+#tutPanel .tpHead svg, #tutPanel .tpOk svg {width:14px;height:14px;}
+#tutPanel .tpOk {color:#557540;}
+#tutPanel .tpOk svg {vertical-align:-2px;}
+#tpDots {margin-left:auto;display:flex;gap:3px;}
+#tpDots i {width:6px;height:6px;border-radius:50%;background:#d9c08f;}
+#tpDots i.on {background:#7a5530;} #tpDots i.done {background:#557540;}
+#tutPanel .tpAlt {display:block;color:#9a5a1e;}
+#tutPanel .tpBtns {display:flex;gap:6px;justify-content:flex-end;margin-top:6px;}
+#tutPanel .tpBtns button {min-height:28px;padding:3px 10px;border-radius:8px;border:1px solid #a27039;background:#fffaf0;color:#5c3a1e;font:inherit;font-size:11px;cursor:pointer;}
+#tutPanel .tpBtns button[hidden] {display:none;}
+#tutPanel #tpNext {background:#557540;color:#fff0c5;border-color:#3d5b2f;}
+#tutPanel.dock .tpHead {display:none;}
+#tutPanel.dock .tpBtns {margin-top:2px;gap:10px;}
+#tutPanel.dock .tpBtns button {min-height:0;padding:0;border:0;background:none;color:#9a7a55;font-size:10.5px;font-weight:600;text-decoration:underline;}
+#tutPanel.dock #tpList {display:none;}
+#tutPanel.dock #tpNext {background:none;color:#557540;}
+body.mobile #tutPanel {font-size:11px;max-width:min(250px,40vw);padding:6px 9px;}
+body.mobile #tutPanel .tpBtns button {min-height:30px;}
+body.mobile #tutPanel.dock .tpBtns button {min-height:24px;}
+#tutRing {position:fixed;z-index:65;pointer-events:none;border:3px solid #ffd166;box-shadow:0 0 0 2px #6b4a2a,0 0 14px 2px #ffd16699;box-sizing:border-box;} /* 65 = 성·자금운영·설정 창(60~64) 위, 도전 창(66) 아래 */
+#tutRing.circle {border-radius:50%;} #tutRing.box {border-radius:12px;}
+body.tutMode.tutMap #goPoker {display:none !important;} /* 맵 단계 동안 캔버스 한가운데 '포커장으로 이동'을 숨긴다 (네모 지정·클릭을 가림) */
+.title-link.tut-new {color:#fff0c5;background:#557540;border:2px solid #3d5b2f;box-shadow:inset 0 1px #97ad6f,0 3px #3b502c;}
+.title-link.tut-new small {color:#e6efc8;}
+#tutRow .tut-card {min-height:0;padding:14px 16px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;}
+#tutRow .tut-card b {font-size:16px;margin:4px 0 2px;}
+#tutRow .tut-card .coop-symbol svg {width:24px;height:24px;}
+#tutRow .tut-card[disabled] {opacity:.55;cursor:default;}
+#tutRow .tut-badge {display:inline-flex;align-items:center;gap:3px;margin-top:6px;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800;background:#d7b97d55;color:#71502b;}
+#tutRow .tut-badge.done {background:#557540;color:#fff0c5;}
+#tutRow .tut-badge svg {width:12px;height:12px;}
+#tutRow .tut-foot {text-align:center;}
+#tutDone {padding:12px 14px;border-radius:14px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:13px;line-height:1.6;display:flex;flex-direction:column;gap:10px;}
+#tutDone[hidden] {display:none;}
+#tutDone .tdBtns {display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+#tutDone .title-primary {min-height:44px;padding:8px 20px;font-size:15px;}
 /* 10-01 크로스체크 반영 — 모바일 전투 레일: 🚪나가기(8번째 칸)가 760×350·아이폰 가로에서 잘렸다 → 간격·높이만 줄임 (8칸 214px) */
 @media (orientation: landscape) {
   html body.mobile[data-tab="battle"] #toolbar {gap:2px;}
@@ -3348,6 +3393,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
     <div class="title-actions">
       <button class="title-primary" id="btnSolo">시작하기 <span class="title-arrow" aria-hidden="true">→</span></button>
       <div class="title-secondary">
+        <button class="title-link" id="btnTut">튜토리얼</button>
         <button class="title-link" id="btnCoop">같이하기 <small>준비 중</small></button>
         <button class="title-link" id="btnSandbox">샌드박스</button>
         <button class="title-link" id="btnTitleHelp">게임 안내</button>
@@ -3378,11 +3424,19 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
     <div class="adventure-launch"><div id="diffBestRow"></div><button id="btnBeginAdventure" class="title-primary"><span id="selectedDifficultyLabel" aria-live="polite">보통으로 출발</span><span class="title-arrow" aria-hidden="true">→</span></button></div>
     <div class="daily-challenge"><p><b>오늘은 어떤 카드가 기다릴까요?</b>모두에게 같은 카드 · 보통 난이도</p><button id="btnDaily" class="title-link">오늘의 시드 도전 <span id="dailyBest"></span></button></div>
   </section>
+  <section id="tutRow" class="adventure-panel" style="display:none" aria-labelledby="tutHeading">
+    <div class="adventure-top"><span class="adventure-label">튜토리얼</span><button class="title-back" id="btnTutBack">← 돌아가기</button></div>
+    <div id="tutDone" hidden></div>
+    <div class="adventure-intro"><h2 id="tutHeading" class="adventure-heading">무엇부터 배워 볼까요?</h2><p>'기본 조작'만 끝내면 바로 모험을 떠날 수 있어요. 나머지는 궁금할 때 골라 보세요.</p></div>
+    <div class="coop-options tut-options" id="tutCards"></div>
+    <p class="coop-status tut-foot"><button type="button" class="title-link" id="btnTutPlay">바로 모험 떠나기 →</button></p>
+  </section>
 </div>
 <dialog id="titleHelp" aria-labelledby="titleHelpHeading">
   <h2 id="titleHelpHeading">작은 카드로, 커다란 모험</h2>
   <ol><li><b>포커 족보를 만들어요.</b><br>준비 시간에 카드를 교환하고 유닛을 소환해요.</li><li><b>나만의 군단을 배치해요.</b><br>더 좋은 족보로 더 강한 무기를 얻어요.</li><li><b>몰려오는 몬스터를 막아요.</b><br>골드로 성장하며 80라운드 클리어에 도전해요.</li></ol>
   <p>PC: 드래그로 선택 · 우클릭으로 이동 · A + 클릭으로 공격<br>모바일: 유닛을 집어 옮기기 · 두 번 탭해 같은 유닛 선택</p>
+  <p>처음이라면 <button type="button" class="title-link" id="btnHelpTut">튜토리얼</button>에서 하나씩 해 볼 수 있어요.</p>
   <p><button type="button" class="title-link" id="btnTutAgain">처음 안내 다시 보기</button></p>
   <form method="dialog"><button class="title-link">알겠어요</button></form>
 </dialog>
@@ -3400,6 +3454,9 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
   <div id="rtTitle"></div>
   <div id="rtDesc"></div>
 </div></div>
+<!-- 튜토리얼 모드 (10-14): 미션 패널·하이라이트 링 — body 직속 fixed (창 위에 떠야 하고, 포커스 어댑터 gameRoots 밖이라 inert가 안 걸린다) -->
+<div id="tutPanel" role="status" aria-live="polite" hidden><div class="tpHead"><span class="tpIc"></span><b id="tpTitle"></b><span id="tpDots" aria-hidden="true"></span></div><div id="tpText"></div><div class="tpBtns"><button type="button" id="tpNext" hidden>다음</button><button type="button" id="tpSkip">건너뛰기</button><button type="button" id="tpList">목록</button></div></div>
+<div id="tutRing" aria-hidden="true" hidden></div>
 <!-- 칩 카지노 모달 (복권/룰렛/교환 애니메이션) -->
 <div id="chipModal"><div id="chipWin">
   <button id="chipClose" title="닫기">✕</button>
@@ -14889,7 +14946,7 @@ document.getElementById('btnRestart').onclick = () => {
 };
 // 🚪 나가기 (10-01 유저): 판을 버리고 타이틀로. 지금은 저장·기록 없음 — 단계별 저장이 붙으면 여기서 저장한다.
 //    타이틀 뒤에는 부팅 때처럼 더미 판(reset)이 멈춘 채 깔린다 (startOverlay가 보이면 syncGamePause가 정지)
-function exitToTitle(ask) {
+function exitToTitle(ask, screen) { // screen = 'tut'이면 튜토리얼 목록으로 (10-14 — 인자 없으면 기존과 같다)
   if (ask && !confirm('타이틀로 나갈까요? 지금 판은 저장되지 않습니다.')) return;
   document.body.classList.add('at-title'); // reset()보다 먼저 — 타이틀 뒤 더미 판이 첫 판 안내(T1)를 소진하지 않게 (tutOn이 at-title을 본다)
   dailySeed = null;
@@ -14898,7 +14955,7 @@ function exitToTitle(ask) {
   document.getElementById('page').inert = true;
   document.getElementById('mobTabs').inert = true;
   document.getElementById('startOverlay').style.display = '';
-  showTitleScreen('title', 'btnSolo');
+  showTitleScreen(screen || 'title', screen === 'tut' ? 'btnTutBack' : 'btnSolo');
   dailyBestLabel(); diffBestLabel();
   syncGamePause();
 }
@@ -14965,6 +15022,7 @@ function renderPoker(spin) {
   }
   const tutLine = tutPokerLine(ranks); // 🧭 첫 판 안내: 배너 첫 줄을 한 줄 안내로 (보스·이벤트 줄은 그대로 뒤에 붙는다)
   if (tutLine) banner.innerHTML = tutLine;
+  if (S.tutMode && tutBannerMode()) banner.innerHTML = `<span id="tutBanLine">${tutBannerHTML()}</span>`; // [튜토리얼 10-14] 폰 카드 화면 = 배너 첫 줄이 미션 문구 (보스·패턴 줄은 그대로 뒤에)
   if (S.multi) { const w = mpPokerWarn(); if (w) banner.innerHTML += `<br><span class="poker-boss-warning">${w}</span>`; } // 🤖 멀티: 게이트 앞 레인 개체 예고 (보스·습격대)
   else if (bossRound(S.round) || (S.round >= SUN_ROUND && !S.hellCleared)) { // 09-08: 즉사 룰이 보스 클릭 팝업에만 있었다 (수치 없음, 미니멀 원칙 내) · 10-09: 보스 이름 + 능력 한 구절(bossHint, 능력 있는 보스만)
     const sun = S.round >= SUN_ROUND && !S.hellCleared, sh = bossShapeFor(S.round), bi = BOSS_INFO[sh], h = sun ? '' : bossHint(sh);
@@ -14999,10 +15057,11 @@ function renderPoker(spin) {
       el.innerHTML = `<div class="corner">${rname}<br>${c.s}</div><div class="rk">${rname}</div><div class="st">${c.s}</div><small>${hand.swapped[i] ? '교환 완료' : '클릭 = 교환'}</small>`
         + (hand.swapped[i] && S.items.reroll > 0 ? `<div class="reswap" title="재변경권으로 이 카드만 다시 교환">${dpdIconSVG('ticket')}</div>` : '');
       el.onclick = () => {
-        if (hand.swapped[i]) { el.classList.remove('nope'); void el.offsetWidth; el.classList.add('nope'); return; } // 이미 바꾼 카드: 흔들림으로 '한 번뿐'
+        if (hand.swapped[i] || (S.tutMode && tutCardLock(h, i))) { el.classList.remove('nope'); void el.offsetWidth; el.classList.add('nope'); return; } // 이미 바꾼 카드: 흔들림으로 '한 번뿐' · [튜토리얼 10-14] 잠근 금테 카드도 흔들림
         swapCard(h, i);
       };
       if (S.tutStep === 1 && !hand.swapped[i] && !madeIdx.includes(i)) el.classList.add('tutWiggle'); // 🧭 T1: 금테 없는 카드가 살랑
+      if (S.tutMode) tutDecorateCard(el, h, i, madeIdx, hand); // [튜토리얼 10-14] 단계가 짚는 카드 살랑
       const rb = el.querySelector('.reswap');
       if (rb) rb.onclick = (e) => { e.stopPropagation(); ticketReswap(h, i); };
       if (spin && spin.h === h && spin.i === i) { el.classList.add('spin'); el.addEventListener('animationend', () => el.classList.remove('spin'), { once: true }); } // 애니 끝나면 spin 제거 — 안 그러면 뒷면(::before)이 다음 리렌더까지 안 보임
@@ -15154,6 +15213,300 @@ function tutWaveEnd(bossAlive, leak) {
   if (clear) grantClearBonus(); else addFloat(CX, CY, '괜찮아요!', '#8a6a3a', 2);
 }
 function tutStep() { const t = S && S.tut; if (!t) return null; const ch = TUT_CH_BY_ID[t.ch]; return ch && ch.steps[t.i] || null; }
+// 완료 기록 = 새 키 dpd_tutmode {v, done:{챕터:1}} — 설정 쪽 키라 부팅 '베테랑' 판정 목록(tut)에 넣지 않는다
+const TUTM_KEY = 'dpd_tutmode';
+function tutModeData() { try { const d = JSON.parse(localStorage.getItem(TUTM_KEY) || 'null'); if (d && d.done) return d; } catch (e) {} return { v: 1, done: {} }; }
+function tutModeDone(id) { return !!tutModeData().done[id]; }
+function tutModeMark(id) { const d = tutModeData(); d.done[id] = 1; try { localStorage.setItem(TUTM_KEY, JSON.stringify(d)); } catch (e) {} }
+function tutIsNewPlayer() { return !tut.off && Object.keys(tut.seen).length === 0 && !tutModeDone('basic'); } // 기존 첫 판 안내 객체 재사용: 일반 판을 한 번 시작하면 seen.t1이 생겨 꺼진다
+function syncTutTitleBtn() {
+  const b = document.getElementById('btnTut'); if (!b) return;
+  const on = tutIsNewPlayer();
+  b.classList.toggle('tut-new', on);
+  const h = on ? '튜토리얼 <small>처음이라면</small>' : '튜토리얼';
+  if (b.innerHTML !== h) b.innerHTML = h;
+}
+// 맵 구역(캔버스 논리 좌표 x, y, 반지름) — 이동 목표는 위쪽 절반(아래는 폰에서 유닛 정보 창이 덮을 수 있음) · 하늘 모퉁이(왼쪽 위)는 패널 자리
+const TUT_Z = { move: [600, 140, 40], group: [430, 95, 44], desel: [640, 215, 24], house: [HOUSE.x, HOUSE.y - 10, 46], pen: [CX, CY, 112] };
+function tutFighters() { return S.units.filter(u => !u.miner && !u.item); }
+function tutSelFighters() { return tutFighters().filter(u => u.selected); }
+function tutSelectOnly(list) { S.units.forEach(u => u.selected = list.includes(u)); updateInfoPanel(); }
+function tutInZone(u, z, pad) { return !u.moving && !u.grabbed && Math.hypot(u.x - z[0], u.y - z[1]) <= z[2] + pad; }
+function tutEndWaveNow() { // 건너뛰기 길: 지금 전투를 클리어로 끝낸다 (다음 update의 조기 종료 → endWave)
+  if (S.phase !== 'wave') return;
+  const q = S.spawnQueue; if (q) { q.left = 0; q.bossLeft = 0; }
+  S.monsters = [];
+  if (S.duel) { S.duel = null; S.champion = null; S.duelEnded = true; }
+}
+function tutEnsureWave(t, n) { // n번째 전투가 시작되게 — 앞 전투가 돌고 있으면 끝내고, 포커면 소환 (단계 진입 전제 맞추기)
+  if ((t.ev.summon || 0) >= n) return;
+  if (S.phase === 'wave') tutEndWaveNow();
+  else if (S.phase === 'poker' && !S.paused) tutForceSummon();
+}
+function tutReachFix() { // 사거리가 소환장 몹 자리에 안 닿는 전투 유닛(단검 등)은 소환장 아래 가장자리로 — 22 #3 안전망
+  for (const u of tutFighters()) {
+    if (u.grabbed || duelLocked(u)) continue;
+    const nx = Math.max(CX - 87, Math.min(CX + 87, u.x)), ny = Math.max(CY - 54, Math.min(CY + 54, u.y)); // 몹이 다니는 영역의 가장 가까운 점
+    if (Math.hypot(u.x - nx, u.y - ny) <= effRange(u) - 8) continue;
+    const p = clampTargetPos(Math.max(CX - 80, Math.min(CX + 80, u.x)), CY + PEN.h / 2 + 14);
+    u.x = u.tx = p.x; u.y = u.ty = p.y; u.moving = false;
+  }
+}
+function tutOpenCastle() { // 성 강화 창 + 강화 탭 (toggleShop은 토글이라 열려 있으면 부르지 않는다)
+  if (castleTab !== 'upg') { castleTab = 'upg'; if (openShop === 'castle') renderShop(); }
+  if (openShop !== 'castle') toggleShop('castle');
+}
+function tutGoldFor(r) { if (S.gold < S.upgCost[r]) { S.gold = S.upgCost[r]; if (openShop === 'castle' && !gbOv) renderShop(); } } // 잘못 눌러 골드를 써도 맞는 버튼이 켜지게 (disabled는 렌더 때 정해짐 — 부족할 때만 1회 렌더)
+function tutScrollTo(t, sel) { if (openShop !== 'castle') { t.scrolled = false; return; } if (t.scrolled) return; const b = document.querySelector(sel); if (b) { b.scrollIntoView({ block: 'nearest' }); t.scrolled = true; } }
+
+// ---- 챕터 데이터 (단계 = { id, view:'cards'|'map'|'modal'|'any', modal?, summon?, hold?:{poker,wave}, pc, mo?, alt?(t), next?:'button', enter?(t), tick?(t), done?(t), latch?(t), target?(t), cardHi?(h,i,made,hand) })
+//   enter = 멱등(전제를 스스로 맞춤) · done = 매 틱, 한 번 참이면 래치 · 문구 = 숫자·확률·내부 이름 없이 (UI 미니멀)
+const TUT_BASIC = []; // (기본 조작 단계는 다음 커밋)
+function tutLoadBasic(t) { startPoker(); }
+
+// ---- 챕터 목록 — 1차 = 기본 조작만, 나머지는 '준비 중' (2차는 load·steps만 채우고 ready:true)
+const TUT_CH = [
+  { id: 'basic', title: '기본 조작', icon: 'book', ready: true, desc: '카드 바꾸기 · 소환 · 이동 · 성 강화', next: 'poker', load: tutLoadBasic, steps: TUT_BASIC,
+    endText: '<b>기본 조작 완료!</b> 이제 실전에서 나만의 군단을 키워 보세요. 광부·광석·결투장 같은 다른 기능은 아래에서 골라 볼 수 있어요.' },
+  { id: 'poker', title: '포커 더 알기', icon: 'cards', ready: false, desc: '재변경권 · 두 패 · 에이스', steps: [] },
+  { id: 'economy', title: '광부와 자금 운영', icon: 'pick', ready: false, desc: '칩 · 광부 · 투자 · 비상 물자', steps: [] },
+  { id: 'ore', title: '광석 방과 제물대', icon: 'gem', ready: false, desc: '광석 캐기 · 보상 광석 · 왕관 · 뽑기권', steps: [] },
+  { id: 'fusion', title: '강화 포털', icon: 'star', ready: false, desc: '같은 유닛 합치기 · 영웅 · 숨은 조합', steps: [] },
+  { id: 'duel', title: '결투장', icon: 'swords', ready: false, desc: '도전자 · 입장 · 도망 · 기권', steps: [] },
+  { id: 'boss', title: '보스와 하늘의 몹', icon: 'skull', ready: false, desc: '보스 · 끌어모으기 · 나는 몹 · 스킬', steps: [] },
+  { id: 'extra', title: '편의 기능', icon: 'gear', ready: false, desc: '공격 우선 · 부대 · 배속 · 도감', steps: [] },
+];
+const TUT_CH_BY_ID = Object.fromEntries(TUT_CH.map(c => [c.id, c]));
+function renderTutCards(doneCh) {
+  const box = document.getElementById('tutCards'); if (!box) return;
+  box.innerHTML = TUT_CH.map(c => {
+    const done = tutModeDone(c.id);
+    const badge = !c.ready ? '<span class="tut-badge">준비 중</span>' : done ? `<span class="tut-badge done">${dpdIconSVG('check')}완료</span>` : c.id === 'basic' ? '<span class="tut-badge">먼저 해 보세요</span>' : '';
+    return `<button type="button" class="coop-card tut-card" data-ch="${c.id}"${c.ready ? '' : ' disabled aria-disabled="true"'}><span class="coop-symbol" aria-hidden="true">${dpdIconSVG(c.icon)}</span><b>${c.title}</b><small>${c.desc}</small>${badge}</button>`;
+  }).join('');
+  box.querySelectorAll('.tut-card[data-ch]').forEach(b => { b.onclick = () => tutStart(b.dataset.ch); });
+  const dn = document.getElementById('tutDone'), C = doneCh && TUT_CH_BY_ID[doneCh];
+  if (!C) { dn.hidden = true; dn.innerHTML = ''; return; }
+  const nx = C.next && TUT_CH_BY_ID[C.next];
+  dn.innerHTML = `<p>${C.endText}</p><div class="tdBtns"><button type="button" class="title-primary" id="btnTutDonePlay">바로 모험 떠나기 <span class="title-arrow" aria-hidden="true">→</span></button>${nx && nx.ready ? `<button type="button" class="title-link" id="btnTutDoneNext">다음: ${nx.title}</button>` : ''}</div>`;
+  dn.hidden = false;
+  document.getElementById('btnTutDonePlay').onclick = () => showTitleScreen('difficulty', 'btnBeginAdventure');
+  const nb = document.getElementById('btnTutDoneNext'); if (nb) nb.onclick = () => tutStart(nx.id);
+  document.getElementById('btnTutDonePlay').focus({ preventScroll: true });
+}
+
+// ---- 진입·진행·퇴장
+let tutTicking = false; // 재진입 방지: updateHUD는 구매·고용 직후 등에서도 직접 불린다 (enter가 confirmHand·toggleShop을 불러도 단계가 두 번 넘어가지 않게)
+function tutNewState(ch) {
+  return { ch, i: 0, latched: false, okAt: 0, base: { ev: {} }, ev: {}, holdPoker: true, holdWave: false,
+    deals: {}, pick: {}, lockMade: {}, waves: {}, lastWave: null, waveEnds: 0, mkt: false, forceSummon: false,
+    toughM: null, toughHp: 0, race: 0, alt: '', altT: 0, html: '', slot: -1, slotT: 0, scrolled: false };
+}
+// 진입 순서 고정: at-title → reset() → S.tutMode → hideStartScreen → 챕터 셋업(startPoker 재딜) → 첫 단계 (reset 안 첫 포커가 일반 판 첫 판 안내 T1을 쓰지 않게 — mpStart와 같은 순서)
+function tutStart(ch) {
+  const C = TUT_CH_BY_ID[ch]; if (!C || !C.ready) return;
+  initAudio();
+  if (IS_MOBILE) { lockLandscape(); iosPwaHint(); }
+  dailySeed = null; DIFF_MUL = 1; DIFF_NAME = '튜토리얼'; // DIFF_NAME = 상단바 표시 전용 (판정에 안 쓰임)
+  document.body.classList.add('at-title');
+  reset();
+  casTimers.forEach(clearTimeout); casTimers = []; // reset 안 첫 포커의 딜 소리 예약 — 챕터 셋업의 startPoker가 다시 건다 (두 번 나지 않게)
+  S.tutMode = true; S.tut = tutNewState(ch);
+  hideStartScreen();
+  document.body.classList.add('tutMode');
+  document.getElementById('bSandbox').style.display = 'none';
+  S.paused = false;
+  S.hiAceGiven = true; S.birdTimer = Infinity; // 숨은 요소 차단
+  if (C.load) C.load(S.tut);
+  logMsg('튜토리얼 — ' + C.title);
+  tutGo(0);
+}
+function tutGo(i) {
+  const t = S.tut, C = TUT_CH_BY_ID[t.ch];
+  while (i < C.steps.length && C.steps[i].only && (C.steps[i].only === 'pc') === IS_MOBILE) i++; // 한쪽 플랫폼 전용 단계
+  if (i >= C.steps.length) { tutFinish(); return; } // ⚠️ 이 뒤로 S가 새것 — 부른 쪽은 바로 return
+  const was = tutTicking; tutTicking = true;
+  try {
+    const st = C.steps[i];
+    t.i = i; t.latched = false; t.okAt = 0; t.alt = ''; t.html = ''; t.scrolled = false;
+    t.base = { ev: { ...t.ev }, upg: S.upg.slice(), gold: S.gold, round: S.round };
+    t.holdPoker = !(st.hold && st.hold.poker === false);
+    t.holdWave = !!(st.hold && st.hold.wave);
+    if (st.enter) st.enter(t);
+    if (S.tutMode && S.tut === t && S.phase === 'poker') renderPoker(); // 카드 강조·배너 갱신
+  } finally { tutTicking = was; }
+}
+function tutAdvance() { // 패널 '다음'·'건너뛰기' (배너 글자 버튼도) — 이 단계를 래치 처리하고 바로 다음 (다음 단계 enter가 전제를 맞춘다)
+  if (!S || !S.tutMode || tutTicking) return;
+  const t = S.tut, st = tutStep(); if (!st) return;
+  if (!t.latched && st.latch) st.latch(t);
+  t.latched = true;
+  tutGo(t.i + 1);
+}
+function tutFinish() { const ch = S.tut.ch; tutModeMark(ch); tutToList(ch); }
+function tutToList(doneCh) { exitToTitle(false, 'tut'); DIFF_MUL = 1; DIFF_NAME = '보통'; renderTutCards(doneCh); }
+function tutCardLock(h, i) { // R1처럼 잠근 라운드: 짝(금테) 카드는 바꾸지 못하게 — 7이 바닥나 풀하우스 단검으로 가는 길 차단 (22 #3)
+  const t = S.tut; if (!t.lockMade[S.round] || S.phase !== 'poker') return false;
+  const hand = S.poker.hands[h]; if (hand.swapped[i] || !madeCardIdx(hand.cards, evalHand(hand.cards)).includes(i)) return false;
+  t.alt = '금테 카드는 이미 짝이에요.'; t.altT = performance.now(); t.html = '';
+  return true;
+}
+function tutDecorateCard(el, h, i, made, hand) { const st = tutStep(); if (st && st.cardHi && !S.tut.latched && st.cardHi(h, i, made, hand)) el.classList.add('tutWiggle'); }
+
+// ---- 매 틱 (원본 updateHUD 안 — 20Hz, 창이 열려 멈춘 동안에도 돈다 · 도전 창 동안은 안 돈다)
+function tutModeTick() {
+  if (!S || !S.tutMode || tutTicking) return;
+  tutTicking = true;
+  try { tutModeTickBody(); } catch (e) { reportLoopError('tut', e); } finally { tutTicking = false; }
+}
+function tutModeTickBody() {
+  const t = S.tut, st = tutStep(); if (!st) return;
+  if (st.tick && !t.latched) st.tick(t);
+  if (!S.tutMode || S.tut !== t) return;
+  // ① 완료 판정은 화면과 무관하게 (술어는 전부 상태) → ② 0.8초 '좋아요!' 뒤 다음 단계 → ③ 화면 전환 안내는 문구·링만 (22 #1)
+  if (!t.latched && st.next !== 'button' && st.done && st.done(t)) { t.latched = true; t.okAt = performance.now(); if (st.latch) st.latch(t); }
+  if (t.latched && performance.now() - t.okAt >= TUT.OK_MS) { tutGo(t.i + 1); return; }
+  // PC: 맵 단계(또는 닫힌 성 창을 다시 열 단계)면 포커판을 내린다 — 맵을 누르면 어차피 내려간다
+  if (!t.latched && !IS_MOBILE && S.phase === 'poker' && !pokerPeek && (st.view === 'map' || (st.view === 'modal' && st.modal === 'castle' && openShop !== 'castle'))) { pokerPeek = true; syncPokerPanel(); }
+  document.body.classList.toggle('tutMap', st.view === 'map');
+  tutRender(st, t);
+}
+// 화면 전환 안내 — 단계가 보여야 하는 화면과 지금 화면이 다르면 {text, target}
+function tutViewNeed(st) {
+  const mobPoker = IS_MOBILE && document.body.dataset.tab === 'poker';
+  const toBattle = { text: "오른쪽 아래 '전투' 버튼을 눌러 전장으로 가요.", target: { dom: '#mtBattle' } };
+  if (st.view === 'cards') {
+    if (S.phase !== 'poker' || (IS_MOBILE ? mobPoker : !pokerPeek)) return null; // 전투 페이즈엔 카드가 없다 → 안내 없음
+    return IS_MOBILE ? { text: '오른쪽 아래 카드 그림 버튼을 눌러 카드 화면으로 가요.', target: { dom: '#mtPoker' } }
+      : { text: "가운데 '포커장으로 이동'을 눌러 카드로 돌아가요.", target: { dom: ['#goPoker', '#pokerHandle'] } };
+  }
+  if (st.view === 'map') return mobPoker ? toBattle : null;
+  if (st.view === 'modal' && st.modal === 'castle' && openShop !== 'castle') return mobPoker ? toBattle : { text: IS_MOBILE ? '성을 눌러 창을 다시 열어요.' : '성을 클릭해 창을 다시 열어요.', target: { map: TUT_Z.house } };
+  return null;
+}
+function tutStr(v, t) { return typeof v === 'function' ? v(t) : v; }
+function tutCompose(st, t) { // 지금 보일 문구 {html, need, next, ok}
+  if (t.latched) return { html: `<span class="tpOk">${dpdIconSVG('check')} 좋아요!</span>`, need: null, next: false, ok: true };
+  const need = tutViewNeed(st);
+  let html = need ? need.text : tutStr(IS_MOBILE && st.mo != null ? st.mo : st.pc, t);
+  const alt = t.alt && performance.now() - t.altT < 3000 ? t.alt : !need && st.alt ? st.alt(t) : '';
+  if (alt) html = `<span class="tpAlt">${alt}</span>` + html;
+  return { html, need, next: !need && st.next === 'button', ok: false };
+}
+const TUT_DLG = ['shopOverlay', 'chipModal', 'crownModal', 'duelConfirm', 'reviveModal', 'optModal'], TUT_DLG_WIN = { shopOverlay: 'shopWin', chipModal: 'chipWin', optModal: 'optWin' };
+function tutOpenDialog() { const d = TUT_DLG.find(gameDialogVisible); return d || (document.getElementById('gmgOverlay') ? 'shopOverlay' : null); }
+function tutBannerMode() { return IS_MOBILE && document.body.dataset.tab === 'poker' && S.phase === 'poker' && !tutOpenDialog(); } // 폰 카드 화면 = 캔버스가 숨어 패널 둘 자리가 없다 → 포커 배너 첫 줄
+function tutBannerBtns(c) { return (c.next ? ' <button type="button" class="tutOffLink" onclick="tutAdvance()">다음</button>' : '') + (c.ok ? '' : ' <button type="button" class="tutOffLink" onclick="tutAdvance()">건너뛰기</button>'); }
+function tutBannerHTML() { const st = tutStep(); if (!st) return ''; const c = tutCompose(st, S.tut); return c.html + tutBannerBtns(c); }
+function tutRender(st, t) {
+  const c = tutCompose(st, t), panel = document.getElementById('tutPanel'), dlg = tutOpenDialog();
+  let tg = c.ok ? null : c.need ? c.need.target : st.target ? st.target(t) : null;
+  if (tg && dlg && !tg.dom) tg = null; // 창이 열려 있으면 맵 대상 링은 숨김 (창 위에 뜨지 않게)
+  const rc = tutTargetRect(tg);
+  if (tutBannerMode()) {
+    if (!panel.hidden) panel.hidden = true;
+    let sp = document.getElementById('tutBanLine');
+    if (!sp) { renderPoker(); sp = document.getElementById('tutBanLine'); } // 탭을 막 바꿨으면 배너를 한 번 다시 그린다 (문구만 바뀌면 span만 — 카드 연출 보존, 22 #10)
+    const h = c.html + tutBannerBtns(c);
+    if (sp && sp.__h !== h) { sp.__h = h; sp.innerHTML = h; }
+  } else {
+    panel.hidden = false;
+    const C = TUT_CH_BY_ID[t.ch], key = c.html + '|' + c.next + '|' + c.ok + '|' + t.i;
+    if (t.html !== key) {
+      t.html = key;
+      document.getElementById('tpTitle').textContent = C.title;
+      panel.querySelector('.tpIc').innerHTML = dpdIconSVG(C.icon);
+      document.getElementById('tpDots').innerHTML = C.steps.map((s, k) => s.only && (s.only === 'pc') === IS_MOBILE ? '' : `<i class="${k < t.i ? 'done' : k === t.i ? 'on' : ''}"></i>`).join(''); // 진행 = 점 (숫자 없음)
+      document.getElementById('tpText').innerHTML = c.html;
+      document.getElementById('tpNext').hidden = !c.next;
+      document.getElementById('tpSkip').hidden = c.ok;
+    }
+    tutPlace(panel, t, dlg, rc);
+  }
+  tutRingSet(rc);
+}
+function tutVisRect(sel) { const el = document.querySelector(sel); if (!el || !el.getClientRects().length) return null; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 ? r : null; }
+function tutPlace(panel, t, dlg, rc) { // float = 게임 화면 모퉁이(왼쪽 위 하늘 → 오른쪽 위 → 아래 둘), 피할 것과 0.3초 넘게 겹치면 옮김 · dock = 열린 창 위쪽 바깥(자리 없으면 창 안 윗변)
+  panel.classList.toggle('dock', !!dlg);
+  const W = innerWidth, H = innerHeight;
+  let x, y, mw = '';
+  if (dlg) {
+    const r = (document.getElementById(TUT_DLG_WIN[dlg] || dlg) || document.getElementById(dlg)).getBoundingClientRect();
+    x = r.left + 12; y = r.top - panel.offsetHeight - 6;
+    if (y < 6) { y = r.top + 6; mw = Math.max(160, r.width - 80) + 'px'; } // 창이 위까지 차면 창 안 윗변 (오른쪽 위 ✕는 안 가림)
+  } else {
+    const cr = document.getElementById('cv').getBoundingClientRect();
+    const R = cr.width > 0 ? cr : { left: 0, top: 0, right: W, bottom: H };
+    const pw = panel.offsetWidth, ph = panel.offsetHeight;
+    const cands = [[R.left + 8, R.top + 8], [R.right - 8 - pw, R.top + 8], [R.left + 8, R.bottom - 8 - ph], [R.right - 8 - pw, R.bottom - 8 - ph]];
+    const avoid = ['#unitInfo', '#objInfo', '#stCasino', '#dpsRank', '#skillBar', '#clock', '#mktToast.on', '#duelToast.on', '#goPoker.show', '#pokerHandle.show', '#duelForfeit.show', ...(IS_MOBILE ? [] : ['#pokerPanel.up'])].map(tutVisRect).filter(Boolean);
+    if (rc) avoid.push({ left: rc.x - 12, top: rc.y - 12, right: rc.x + rc.w + 12, bottom: rc.y + rc.h + 12 });
+    const bad = k => { const [ax, ay] = cands[k]; return avoid.some(a => ax < a.right && ax + pw > a.left && ay < a.bottom && ay + ph > a.top); };
+    let best = [0, 1, 2, 3].find(k => !bad(k)); if (best == null) best = 0;
+    if (t.slot < 0) t.slot = best;
+    else if (best !== t.slot) { if (!t.slotT) t.slotT = performance.now(); else if (performance.now() - t.slotT > 300) { t.slot = best; t.slotT = 0; } } // 깜빡임 방지
+    else t.slotT = 0;
+    [x, y] = cands[t.slot];
+  }
+  if (panel.style.maxWidth !== mw) panel.style.maxWidth = mw;
+  x = Math.round(Math.max(4, Math.min(W - panel.offsetWidth - 4, x))); y = Math.round(Math.max(4, Math.min(H - panel.offsetHeight - 4, y)));
+  if (panel.style.left !== x + 'px') panel.style.left = x + 'px';
+  if (panel.style.top !== y + 'px') panel.style.top = y + 'px';
+}
+// 링 대상: {dom: 선택자|[선택자…](보이는 첫 번째)} · {map:[x,y,r]} · {mapRect:[x0,y0,x1,y1]} · {unit} · {mon} — 매 틱 실제 화면 사각형으로 (캐시 금지: 재할당·재생성되는 DOM)
+function tutTargetRect(tg) {
+  if (!tg) return null;
+  if (tg.dom) {
+    for (const s of Array.isArray(tg.dom) ? tg.dom : [tg.dom]) {
+      const r = tutVisRect(s);
+      if (r && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth) return { x: r.left - 6, y: r.top - 6, w: r.width + 12, h: r.height + 12, circle: false };
+    }
+    return null;
+  }
+  const R = document.getElementById('cv').getBoundingClientRect(); if (!R.width) return null; // 폰 카드 화면 = 캔버스 숨음 → 캔버스 대상 링 없음
+  const kx = R.width / VW, ky = R.height / VH;
+  if (tg.mapRect) { const [x0, y0, x1, y1] = tg.mapRect; return { x: R.left + x0 * kx, y: R.top + y0 * ky, w: (x1 - x0) * kx, h: (y1 - y0) * ky, circle: false }; }
+  let x, y, r;
+  if (tg.map) [x, y, r] = tg.map;
+  else if (tg.unit) { if (!S.units.includes(tg.unit)) return null; x = tg.unit.x; y = tg.unit.y - 6; r = 24; }
+  else if (tg.mon) { if (!S.monsters.includes(tg.mon)) return null; x = tg.mon.x; y = tg.mon.y; r = monSize(tg.mon) + 12; }
+  else return null;
+  return { x: R.left + (x - r) * kx, y: R.top + (y - r) * ky, w: 2 * r * kx, h: 2 * r * ky, circle: true };
+}
+function tutRingSet(rc) {
+  const ring = document.getElementById('tutRing');
+  if (!rc) { if (!ring.hidden) ring.hidden = true; return; }
+  ring.hidden = false;
+  const cls = rc.circle ? 'circle' : 'box'; if (ring.className !== cls) ring.className = cls;
+  const st = ring.style, px = v => Math.round(v) + 'px';
+  st.left = px(rc.x); st.top = px(rc.y); st.width = px(rc.w); st.height = px(rc.h);
+}
+function tutUiReset() { // reset마다 (튜토리얼 시작 포함 — tutStart가 이 뒤에 다시 켠다)
+  const p = document.getElementById('tutPanel'), r = document.getElementById('tutRing');
+  if (p) { p.hidden = true; p.classList.remove('dock'); }
+  if (r) r.hidden = true;
+  document.body.classList.remove('tutMode', 'tutMap');
+  document.getElementById('summonBtn').classList.remove('tutNope');
+}
+window.addEventListener('dpd:resetui', tutUiReset);
+document.getElementById('tpNext').onclick = e => { e.currentTarget.blur(); tutAdvance(); };
+document.getElementById('tpSkip').onclick = e => { e.currentTarget.blur(); tutAdvance(); };
+document.getElementById('tpList').onclick = e => { e.currentTarget.blur(); if (S && S.tutMode) tutToList(); };
+// 다시하기 = 이 챕터 처음부터 · 나가기 = 챕터 목록 — 툴바 캡처 단계에서 가로챈다 (일반 판은 바로 통과 → 버튼 onclick 그대로)
+document.getElementById('toolbar').addEventListener('click', e => {
+  if (!S || !S.tutMode) return;
+  const b = e.target.closest('#btnRestart,#btnExit'); if (!b) return;
+  e.stopPropagation(); e.preventDefault();
+  if (b.id === 'btnRestart') { if (confirm('이 챕터를 처음부터 다시 할까요?')) tutStart(S.tut.ch); }
+  else if (confirm('튜토리얼 목록으로 나갈까요?')) tutToList();
+}, true);
+// 게임오버 창 버튼 (목숨 무한이라 도달 불가 — 안전망): '다시 시작' = 이 챕터 처음부터, '타이틀로' = 목록
+document.getElementById('overlay').addEventListener('click', e => {
+  if (!S || !S.tutMode) return;
+  const b = e.target.closest('button'); if (!b) return;
+  e.stopPropagation(); e.preventDefault();
+  if ((b.getAttribute('onclick') || '').includes('reset')) tutStart(S.tut.ch); else tutToList();
+}, true);
 
 // ==================== HUD ====================
 function fmtTime(s) {
@@ -15178,6 +15531,7 @@ function updateHUD() {
   updateDuelForfeit(); // 🏳️ 결투 기권 버튼 (도전자만 남았을 때)
   updateSkillBar(); // ⚡ 스킬 버튼 바 (10-11)
   tutTick();        // 🧭 첫 판 안내 말풍선
+  tutModeTick();    // [튜토리얼 10-14] 단계 판정·미션 패널·링 (일반 판 = 즉시 return)
   refreshInfoOnBuffChange();
   placeInfoPanel(); // 유닛이 카드 쪽으로 이동하면 반대편으로 비켜준다
   if (S.selMon) { // 🎯 선택한 몬스터 체력 실시간 갱신 (죽거나 사라지면 팝업 닫기)
@@ -17383,8 +17737,10 @@ function showTitleScreen(screen, focusId) {
   document.getElementById('modeRow').style.display = screen === 'title' ? 'flex' : 'none';
   document.getElementById('diffRow').style.display = screen === 'difficulty' ? 'flex' : 'none';
   document.getElementById('coopRow').style.display = screen === 'coop' ? 'flex' : 'none';
+  document.getElementById('tutRow').style.display = screen === 'tut' ? 'flex' : 'none'; // 튜토리얼 챕터 목록 (10-14)
   overlay.scrollTop = 0;
   if (focusId) document.getElementById(focusId).focus({ preventScroll: true });
+  syncTutTitleBtn(); // 새 플레이어 강조 (일반 판을 한 번 시작했거나 기본 조작을 마치면 꺼짐)
 }
 function hideStartScreen() {
   document.getElementById('startOverlay').style.display = 'none';
@@ -17396,6 +17752,10 @@ document.getElementById('page').inert = true;
 document.getElementById('mobTabs').inert = true;
 document.getElementById('btnCoop').onclick = () => showTitleScreen('coop', 'btnCoopBack');
 document.getElementById('btnCoopBack').onclick = () => showTitleScreen('title', 'btnCoop');
+document.getElementById('btnTut').onclick = () => { showTitleScreen('tut', 'btnTutBack'); renderTutCards(); };
+document.getElementById('btnTutBack').onclick = () => { showTitleScreen('title', 'btnTut'); renderTutCards(); };
+document.getElementById('btnTutPlay').onclick = () => showTitleScreen('difficulty', 'btnBeginAdventure');
+document.getElementById('btnHelpTut').onclick = () => { document.getElementById('titleHelp').close(); showTitleScreen('tut', 'btnTutBack'); renderTutCards(); };
 document.getElementById('btnDiffBack').onclick = () => showTitleScreen('title', 'btnSolo');
 document.getElementById('btnTitleHelp').onclick = () => document.getElementById('titleHelp').showModal();
 window.addEventListener('keydown', e => {
@@ -17403,8 +17763,8 @@ window.addEventListener('keydown', e => {
   // Pre-game keys must not also trigger unit controls behind the title.
   e.stopImmediatePropagation();
   if (e.key === 'Escape' && !document.getElementById('titleHelp').open) {
-    const wasCoop = document.getElementById('startOverlay').dataset.screen === 'coop';
-    showTitleScreen('title', wasCoop ? 'btnCoop' : 'btnSolo');
+    const scr = document.getElementById('startOverlay').dataset.screen;
+    showTitleScreen('title', scr === 'coop' ? 'btnCoop' : scr === 'tut' ? 'btnTut' : 'btnSolo');
   }
 }, true);
 document.getElementById('btnMapTest').onclick = () => { initAudio(); startMapTest(4); };
@@ -17533,7 +17893,7 @@ function dailyBestLabel() { // 시작 버튼에 오늘 최고 기록 표시
     if (el) el.textContent = (d && d.seed === todaySeedNum()) ? `· 오늘 최고 R${d.best}` : '';
   } catch (e) {}
 }
-dailyBestLabel(); diffBestLabel();
+dailyBestLabel(); diffBestLabel(); syncTutTitleBtn(); // 첫 화면은 정적 HTML이라 showTitleScreen을 안 지난다 — 튜토리얼 버튼 강조는 부팅 때 한 번
 function recordDaily(round) { // 오늘의 시드 최고 기록 저장
   if (dailySeed == null) return;
   try { const d = JSON.parse(localStorage.getItem('dpd_daily') || 'null');
