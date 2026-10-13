@@ -4080,9 +4080,13 @@ let DIFF_MUL = 1, DIFF_NAME = '보통'; // 시작 화면에서 선택 (쉬움 0.
 //   난이도: 쉬움 = HMAX^EASY · 어려움·지옥 = max(혹, 기존 dm) — 혹이 바닥값. ×dm 비례는 지옥 W 8/8·자연패 6/8이 R3~R4 사망(기준 0/16)이라 버림
 //     (기존 dm의 '초반 20% 하향'과 같은 결: 초반 격차는 좁게, 혹이 dm 아래로 내려오는 어려움 R13·지옥 R11부터는 dm 그대로) → 어려움·지옥 W·자연패 각 16/16 생존(R14 목숨 중앙 20)
 //     쉬움 √(EASY 0.5 = ×2.55): 업글 안 하는 초보(첫 모험 추천 난이도 — 튜토리얼에 업글 안내 없음) 자연패 6/6 무누수. 쉬움도 ×6.5면 3/6이 R3~R4 사망
+//   🤖 멀티(S.multi — 사람 소환장·레인 미니보스·보스 mpBossHP·봇 웨이브)와 봇 보정 시뮬 mpBotSim(humpSimOff)은 혹 제외 = 예전 곡선 그대로
+//     (요청은 싱글 보통 기준. 멀티에도 혹을 걸면 봇 누수 R1~10 0→18%·레인 보스 HP ×4.6이라 BOT_SKILL·왕국 HP 재보정이 필요 — 넣으려면 아래 S.multi 줄만 지우면 된다)
 const EARLY_HUMP = { HMAX: 6.5, PEAK: 3, END: 14, EASY: 0.5 }; // PEAK ≥ 2 · PEAK < END
+let humpSimOff = false; // mpBotSim 실행 중 true (S 밖에서 도는 50R 봇 시뮬도 라이브 멀티와 같은 곡선을 타게) — ⚠️ 부팅 reset()보다 위 (let TDZ)
 function earlyHump(n) {
   const R = EARLY_HUMP;
+  if ((S && S.multi) || humpSimOff) return 1;
   if (n <= 1 || n >= R.END) return 1;
   const h = DIFF_MUL < 1 ? Math.pow(R.HMAX, R.EASY) : R.HMAX;
   return Math.pow(h, n <= R.PEAK ? (n - 1) / (R.PEAK - 1) : (R.END - n) / (R.END - R.PEAK));
@@ -17926,13 +17930,16 @@ function mpBotTick() { // 내 페이즈를 따른다: poker 진입 = 딜 · wave
 function mpBotSim(rounds, seed, skill) { // 봇 단독 빠른 시뮬 (보정·하네스용 — S·MP 무접촉): 라운드마다 딜 → 즉시 소환 → 90초 웨이브 → 누수
   const b = mpBotNew(1, mulberry32(seed | 0)), out = [];
   if (skill != null) b.skill = skill;
-  for (let r = 1; r <= rounds; r++) {
-    mpBotDeal(b, r); mpBotSummon(b);
-    b.wave = mpBotWaveNew(b, r);
-    mpBotWaveEnd(b);
-    const L = b.leak[r];
-    out.push({ r, leak: L.n, boss: L.boss, clearT: L.clearT, units: b.units.length, lv: mpBotLv(b, r) });
-  }
+  humpSimOff = true; // 🌱 라이브 멀티처럼 초반 혹 제외 (earlyHump)
+  try {
+    for (let r = 1; r <= rounds; r++) {
+      mpBotDeal(b, r); mpBotSummon(b);
+      b.wave = mpBotWaveNew(b, r);
+      mpBotWaveEnd(b);
+      const L = b.leak[r];
+      out.push({ r, leak: L.n, boss: L.boss, clearT: L.clearT, units: b.units.length, lv: mpBotLv(b, r) });
+    }
+  } finally { humpSimOff = false; }
   return out;
 }
 // ── 스냅샷 MP.snap[seat] = 7장 v/{seat}의 로컬 객체판:
