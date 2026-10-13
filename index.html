@@ -15338,7 +15338,7 @@ function startMusic() {
       if (i === 0) { tone(36.7, 4.4, 'sawtooth', musicGain, 0.16); tone(73.4, 4.4, 'sine', musicGain, 0.2); } // 지옥 드론 (D1+D2)
       if (MEL[i]) { tone(MEL[i], 0.5, 'sawtooth', musicGain, 0.16); tone(MEL[i] / 2, 0.5, 'triangle', musicGain, 0.3); } // 음침한 두 겹
       if (BASS_HELL[i]) tone(BASS_HELL[i], 0.8, 'sine', musicGain, 0.55);
-      if (i % 8 === 4) { tone(49, 0.35, 'sine', musicGain, 0.5); noiseBurst(0.08, 0.05, undefined, undefined, undefined, musicGain); } // 멀리서 쿵… 하는 북
+      if (i % 8 === 4) { tone(49, 0.35, 'sine', musicGain, 0.5); noiseBurst(0.08, 0.05 * SFX_BASE / MUSIC_BASE, undefined, undefined, undefined, musicGain); } // 멀리서 쿵… 하는 북 (음악 버스로 옮긴 만큼 보정 — 기본 음량에서 예전 효과음 버스 실효 0.011 그대로)
       if (Math.random() < 0.012) tone(58, 1.6, 'sawtooth', musicGain, 0.07); // 가끔 낮은 우르릉
     } else if (fileBgm) {
       if (!hell && S && S.phase !== 'wave' && Math.random() < 0.055) birdCall(); // 🐦 앰비언스는 그대로 (지옥·전투 중엔 없음 — 합성 음악과 같은 규칙)
@@ -15353,7 +15353,7 @@ function startMusic() {
         if (i % 4 === 0) tone(MEL[i] * 2 / 3, 0.32, 'triangle', musicGain, 0.14); // 오르가눔: 강박마다 평행 5도 아래 — 즉석 중세
       }
       if (BS[i]) tone(BS[i], 0.5, 'sine', musicGain, 0.55);
-      if (S && S.phase === 'wave' && i % 4 === 2) noiseBurst(0.03, 0.05, undefined, undefined, undefined, musicGain); // 전투 중엔 은은한 셰이커로 긴장감
+      if (S && S.phase === 'wave' && i % 4 === 2) noiseBurst(0.03, 0.05 * SFX_BASE / MUSIC_BASE, undefined, undefined, undefined, musicGain); // 전투 중엔 은은한 셰이커로 긴장감 (북과 같은 보정)
       else if (S && S.phase !== 'wave' && Math.random() < 0.055) birdCall(); // 🐦 평화로울 땐 새 (빈도 0.025→0.055)
     }
     windTick(); // 🌬️ 바람은 페이즈·난이도 무관 상시 (지옥에서도 스산하게 분다)
@@ -15535,7 +15535,9 @@ const optVolSaved = { music: musicVol, sfx: sfxVol }; // 마지막으로 놓은(
 let optDownBack = false; // 배경에서 누르기 시작했을 때만 배경 클릭으로 닫는다 (슬라이더를 끌다 창 밖에서 놓으면 click이 공통 조상 = 배경으로 온다)
 function optSync() { // 슬라이더·값 글자·행 꺼짐 표시를 현재 musicOn/sfxOn·음량에 맞춘다
   for (const [k, on, vol, ic] of [['Music', musicOn, musicVol, 'music'], ['Sfx', sfxOn, sfxVol, 'sound']]) {
-    document.getElementById('opt' + k + 'Vol').value = on ? vol : 0;
+    const el = document.getElementById('opt' + k + 'Vol');
+    el.value = on ? vol : 0;
+    el.setAttribute('aria-valuetext', on ? vol + '%' : '꺼짐'); // 화면 낭독기도 '0' 대신 '꺼짐'·'100' 대신 '100%'
     document.getElementById('opt' + k + 'Val').textContent = on ? vol + '%' : '꺼짐';
     const row = document.getElementById('optRow' + k);
     if (row.classList.contains('off') === on) { row.classList.toggle('off', !on); dpdFillIcon(row.querySelector('.dpdIc'), ic, { off: !on }); }
