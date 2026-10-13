@@ -3205,6 +3205,28 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
 .mobile #gmgOverlay :is(#gmgStop, #gmgOk) { min-height: 46px; margin-top: 10px !important; padding: 8px 28px !important; font-size: 16px !important; }
 .mobile #gmgCancel { top: calc(40px + env(safe-area-inset-top, 0px)); width: 38px; height: 38px; font-size: 16px; } /* 모바일 상단 보상 띠(#rewardToast, 높이 ~32)에 가리지 않게 */
 </style>
+<style id="dpd-1013">
+/* ⚙️ 설정 창 (10-13 유저 #3) — 부활 창과 같은 나무·양피지 톤. z64 = 성 강화 60·자금 운영 62 위, 도전 66·보상 토스트 70 아래 */
+#optModal {position:fixed;inset:0;z-index:64;display:none;align-items:center;justify-content:center;box-sizing:border-box;padding:max(12px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:#172b26ab;}
+#optWin {width:min(360px,100%);max-height:100%;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;padding:14px 18px 16px;color:#432a1c;border:5px solid #a27039;border-radius:17px;background:linear-gradient(125deg,#fff1c150,transparent 38%,#bf893212),linear-gradient(#f1d6a0,#e8c68b);box-shadow:inset 0 0 0 1px #fff0c2,0 0 0 2px #674023,0 7px 0 #57371f88,0 18px 50px #17251666;text-align:left;}
+#optWin .optHead {display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}
+#optTitle {font-size:18px;font-weight:bold;letter-spacing:-.3px;color:#614021;text-shadow:0 1px 0 #fff0c2;}
+#optClose {flex:0 0 36px;width:36px;height:36px;padding:0;border-radius:10px;border:1px solid #b18951;background:linear-gradient(#efd29e,#dbb67b);color:#654625;font-size:15px;font-weight:900;cursor:pointer;box-shadow:inset 0 1px 0 #fff0c5,0 3px 0 #a27b44;font-family:inherit;}
+#optWin .optRow {display:grid;grid-template-columns:20px 50px 1fr 42px;align-items:center;gap:8px;min-height:44px;}
+#optWin .optRow .dpd-icon {width:18px;height:18px;color:#614021;display:block;}
+#optWin .optRow label {font-size:14px;font-weight:bold;color:#614021;white-space:nowrap;}
+#optWin .optRow input[type=range] {width:100%;min-width:0;height:28px;margin:0;accent-color:#4c7139;cursor:pointer;}
+#optWin .optRow b {text-align:right;font-size:13px;color:#715333;font-variant-numeric:tabular-nums;white-space:nowrap;}
+#optWin .optRow.off .dpd-icon, #optWin .optRow.off label, #optWin .optRow.off b {opacity:.55;}
+#optWin button:focus-visible, #optWin input:focus-visible {outline:3px solid #315d39;outline-offset:3px;}
+.mobile #optWin {padding:10px 14px 12px;}
+.mobile #optTitle {font-size:15px;}
+.mobile #optWin .optRow {min-height:40px;}
+/* 모바일 전투 레일: 설정 버튼으로 9칸(9h+24) — 최대 높이 100svh−117을 넘지 않게 짧은 화면만 칸 24→22 (760×350: 222 ≤ 233). 357px 이상은 24 그대로(240) */
+@media (orientation: landscape) and (max-height: 356px) {
+  html body.mobile[data-tab="battle"] #toolbar .shopIcon {height:22px;}
+}
+</style>
 </head>
 <body class="at-title">
 <div id="page">
@@ -3284,6 +3306,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
     <div class="tbGroup" title="시스템">
       <button class="shopIcon" id="bMusic" title="배경음악 켜기/끄기"><i class="dpdIc" data-icon="music"></i></button>
       <button class="shopIcon" id="bSfx" title="타격음 켜기/끄기"><i class="dpdIc" data-icon="sound"></i></button>
+      <button class="shopIcon" id="bOpt" title="설정 — 음악·타격음 음량"><i class="dpdIc" data-icon="gear"></i></button>
       <button class="shopIcon" id="bSpeed" title="배속"><i class="dpdIc" data-icon="ffwd"></i></button>
       <button class="shopIcon" id="bLowSpec" title="저사양 모드 — 렌더 해상도를 절반으로 (끊길 때)"><i class="dpdIc" data-icon="battery"></i></button>
       <button class="shopIcon" id="btnFull" title="전체화면">⛶</button>
@@ -3364,6 +3387,12 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
   <div id="chipTitle"></div>
   <div id="chipBody"></div>
 </div></div>
+<!-- ⚙️ 설정 (10-13 유저 #3: 음악·타격음 세부 조절) — 열면 게임 정지(syncGamePause) · 닫기 = ✕·바깥·Esc · 슬라이더 0 = 그 소리 끄기(툴바 토글과 같은 상태) -->
+<div id="optModal"><div id="optWin">
+  <div class="optHead"><div id="optTitle">설정</div><button type="button" id="optClose" title="닫기">✕</button></div>
+  <div class="optRow" id="optRowMusic"><i class="dpdIc" data-icon="music"></i><label for="optMusicVol">음악</label><input type="range" id="optMusicVol" min="0" max="100" step="5" value="100"><b id="optMusicVal"></b></div>
+  <div class="optRow" id="optRowSfx"><i class="dpdIc" data-icon="sound"></i><label for="optSfxVol">타격음</label><input type="range" id="optSfxVol" min="0" max="100" step="5" value="100"><b id="optSfxVal"></b></div>
+</div></div>
 <div id="overlay">
   <div class="wd-result">
   <h2>게임 오버</h2>
@@ -3441,6 +3470,7 @@ const DPD_ICONS = {
   exit:    { d: 'M14 4H6v16h8 M10 12h10 M17 8.5 20.5 12 17 15.5' },
   flask:   { d: 'M9 3h6 M10 3v6.5L4.8 18.2A2 2 0 0 0 6.5 21h11a2 2 0 0 0 1.7-2.8L14 9.5V3 M7.2 15h9.6' },
   pause:   { d: 'M8.5 5v14 M15.5 5v14', fill: 'M6 5h4.5v14H6Z M13.5 5H18v14h-4.5Z' },
+  gear:    { d: 'M10.2 5.2L10.4 2.9L13.6 2.9L13.8 5.2L15.5 5.9L17.3 4.5L19.5 6.7L18.1 8.5L18.8 10.2L21.1 10.4L21.1 13.6L18.8 13.8L18.1 15.5L19.5 17.3L17.3 19.5L15.5 18.1L13.8 18.8L13.6 21.1L10.4 21.1L10.2 18.8L8.5 18.1L6.7 19.5L4.5 17.3L5.9 15.5L5.2 13.8L2.9 13.6L2.9 10.4L5.2 10.2L5.9 8.5L4.5 6.7L6.7 4.5L8.5 5.9Z M15 12a3 3 0 1 0-6 0a3 3 0 1 0 6 0Z' }, // 설정(10-13 유저 #3) — 톱니 8개(바깥 9.2·뿌리 7) + 가운데 구멍 r3
   // 아이템 유닛(맵)
   hourglass: { d: 'M6 3h12M6 21h12M7 3c0 6 5 6 5 9S7 15 7 21M17 3c0 6-5 6-5 9s5 3 5 9M8 18h8',
                fill: 'M6 2h12v2h-1c0 4.5-3.5 6-3.5 8s3.5 3.5 3.5 8h1v2H6v-2h1c0-4.5 3.5-6 3.5-8S7 8.5 7 4H6Z' },
@@ -3907,7 +3937,7 @@ function gameDialogVisible(id) {
 function syncGamePause() {
   if (!S) return;
   S.paused = !!(S.mapTest || // 게임오버는 일부러 제외: 사망 화면 뒤 배경은 계속 흐른다(기존 설계, update()의 gameover 가드가 부작용 차단). 오버레이가 툴바·캔버스를 inert로 막는다
-    ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal'].some(gameDialogVisible));
+    ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal'].some(gameDialogVisible));
   needRedraw = true;
   document.body.classList.toggle('dpd-modal', ['chipModal', 'shopOverlay'].some(id => document.getElementById(id).style.display === 'flex')); // 🔋 창 여닫는 순간 즉시 (updateHUD 20Hz 토글은 안전망)
   window.dispatchEvent(new Event('dpd:modalchange'));
@@ -4124,7 +4154,7 @@ document.getElementById('mktToast').addEventListener('click', e => { // 📈 개
   if (!el.classList.contains('mktOpen') || !el.classList.contains('on')) return;
   e.stopPropagation();
   clearTimeout(mktToastTimer); el.classList.remove('on'); mktToastPend = null;
-  const busy = ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal'].some(gameDialogVisible) || gbOv || document.querySelector('#cvWrap .gbxStage.ovl'); // 다른 창·뽑기 상자 연출 중엔 그 위에 겹쳐 열지 않고 토스트만 닫는다
+  const busy = ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal'].some(gameDialogVisible) || gbOv || document.querySelector('#cvWrap .gbxStage.ovl'); // 다른 창·뽑기 상자 연출 중엔 그 위에 겹쳐 열지 않고 토스트만 닫는다
   if (!busy && S && S.mktOpen && S.phase !== 'gameover' && !document.body.classList.contains('at-title')) { initAudio(); openChip('투자'); casInvest(); }
 });
 // 🏛️ 결투 창이 열리는 순간: 링 안에 서 있던 전투 유닛을 가장자리 밖으로 밀어내고 목표 해제 (지나가다 갇히는 참사 방지)
@@ -4234,7 +4264,7 @@ function crownGuideLines() { // 안내 팝업·왕관 상태창 공용 문구
 }
 function openCrownGuide() {
   if (S.phase === 'gameover' || S.crownRace >= 0 || !S.units.some(u => u.item === 'crown')) return;
-  const busy = ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal'].some(gameDialogVisible) || gbOv || document.querySelector('#cvWrap .gbxStage.ovl'); // 개장 토스트와 같은 판정
+  const busy = ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal'].some(gameDialogVisible) || gbOv || document.querySelector('#cvWrap .gbxStage.ovl'); // 개장 토스트와 같은 판정
   if (busy) { casTimeout(openCrownGuide, 1000); return; } // 다른 창·뽑기 연출 중엔 겹쳐 열지 않고 1초 뒤 다시 (대관식을 먼저 하면 위 crownRace 가드로 끝)
   const m = document.getElementById('crownModal');
   const t = m.querySelector('.dcTitle'), b = m.querySelector('.dcBody');
@@ -8994,7 +9024,7 @@ function tenseBeat(k) { // 쿵-쿵 한 번 (k: 0 = 15초 남음 → 1 = 끝, 갈
     o.start(t + d); h.start(t + d); o.stop(t + d + 0.22); h.stop(t + d + 0.11);
   }
 }
-function tenseMuffle(lv) { // BGM 버스 저역통과: 0 = 원음(나이퀴스트 = 필터 완전 통과) · 1~12 = 5.2kHz → 1.4kHz (남은 12초 → 0초). musicGain(음악 토글이 .value를 직접 씀)·덱 게인(크로스페이드)은 안 건드린다
+function tenseMuffle(lv) { // BGM 버스 저역통과: 0 = 원음(나이퀴스트 = 필터 완전 통과) · 1~12 = 5.2kHz → 1.4kHz (남은 12초 → 0초). musicGain(음악 토글·설정 음량 = applyVol이 씀)·덱 게인(크로스페이드)은 안 건드린다
   if (lv === tenseLv || !AC || !musicGain) return;
   const nyq = AC.sampleRate / 2;
   if (!tenseLP) { // 첫 막판에 1회: musicGain → 필터 → 출력 (iOS 잠금 해제·덱 연결은 musicGain 앞단이라 무관). Q −3dB = 버터워스(공진 없음 → 음량은 그대로, 밝기만 깎인다)
@@ -15094,13 +15124,33 @@ function updateHUD() {
 let AC = null, sfxGain = null, musicGain = null, musicTimer = null, musicStep = 0;
 let musicOn = true, sfxOn = true; // 배경음악 / 타격음 개별 토글
 try { musicOn = localStorage.getItem('dpd_music') !== '0'; sfxOn = localStorage.getItem('dpd_sfx') !== '0'; } catch (e) {}
+// ⚙️ 10-13 유저 #3 음량: 설정 창 슬라이더(5~100 %, 0 = 끄기 = musicOn/sfxOn). 실제 게인 = 기준 × (값/100)² — 100 = 예전과 같은 음량(기준이 상한: 효과음 버스에 리미터가 없어 증폭은 클리핑)
+// musicGain·sfxGain 게인은 생성 직후를 빼면 applyVol 한 곳에서만 쓴다 (자동화가 걸린 AudioParam에 .value 대입은 파이어폭스가 조용히 무시 → 끄기가 안 먹는다)
+// 사용자 설정이라 resetTransientUI에 넣지 않는다 (판마다 초기화 금지)
+const MUSIC_BASE = 0.09, SFX_BASE = 0.22;
+let musicVol = 100, sfxVol = 100;
+try {
+  const mv = Math.round(parseInt(localStorage.getItem('dpd_music_vol'), 10) / 5) * 5, sv = Math.round(parseInt(localStorage.getItem('dpd_sfx_vol'), 10) / 5) * 5;
+  if (mv >= 5 && mv <= 100) musicVol = mv;
+  if (sv >= 5 && sv <= 100) sfxVol = sv;
+} catch (e) {}
+function musicLevel() { return musicOn ? MUSIC_BASE * (musicVol / 100) ** 2 : 0; }
+function sfxLevel() { return sfxOn ? SFX_BASE * (sfxVol / 100) ** 2 : 0; }
+function applyVol(smooth) { // smooth = 슬라이더(30ms 램프로 지퍼 잡음 방지) · 아니면 즉시(토글)
+  if (!AC) return;
+  const t = AC.currentTime;
+  for (const [g, v] of [[musicGain, musicLevel()], [sfxGain, sfxLevel()]]) {
+    const p = g.gain; p.cancelScheduledValues(t);
+    if (smooth) { p.setValueAtTime(p.value, t); p.setTargetAtTime(v, t, 0.03); } else p.setValueAtTime(v, t);
+  }
+}
 const lastSfx = {};
 function initAudio() {
   if (AC) { if (AC.state === 'suspended' && audioWanted()) AC.resume(); return; }
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
-    sfxGain = AC.createGain(); sfxGain.gain.value = sfxOn ? 0.22 : 0; sfxGain.connect(AC.destination);
-    musicGain = AC.createGain(); musicGain.gain.value = musicOn ? 0.09 : 0; musicGain.connect(AC.destination);
+    sfxGain = AC.createGain(); sfxGain.gain.value = sfxLevel(); sfxGain.connect(AC.destination); // ⚙️ 기준 0.22 × 음량² (생성 직후라 .value 대입 — 이후 쓰기는 applyVol만)
+    musicGain = AC.createGain(); musicGain.gain.value = musicLevel(); musicGain.connect(AC.destination); // 기준 0.09 × 음량²
     startMusic();
     bgmInit(); // 🎼 파일 BGM (실패하면 합성 음악 그대로)
     audioSync(); // 🔋 숨김 중이거나 음악·효과음 둘 다 꺼진 채 시작하면 바로 재운다
@@ -15115,7 +15165,7 @@ function tone(freq, dur, type, node, vol, when) {
   o.connect(g); g.connect(node); o.start(t); o.stop(t + dur + 0.02);
 }
 let noiseBuf = null; // 🔋 2초 백색잡음 1회 생성 — 전엔 효과음마다 새 버퍼+난수 채우기(전투 중 초당 ~20개, GC 쓰레기)
-function noiseBurst(dur, vol, freq, type, when) { // when = 예약 시각 (생략 시 지금 — 기존 호출 무변화)
+function noiseBurst(dur, vol, freq, type, when, out) { // when = 예약 시각 (생략 시 지금 — 기존 호출 무변화) · out = 출력 버스 (생략 = 효과음 sfxGain — 합성 음악의 북·셰이커만 musicGain)
   if (!AC) return;
   if (!noiseBuf) { noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
   const t = when || AC.currentTime;
@@ -15123,7 +15173,7 @@ function noiseBurst(dur, vol, freq, type, when) { // when = 예약 시각 (생�
   const f = AC.createBiquadFilter(); f.type = type || 'lowpass'; f.frequency.value = freq || 1400;
   if (type === 'bandpass') f.Q.value = 1.2;
   const g = AC.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  n.connect(f); f.connect(g); g.connect(sfxGain); n.start(t, Math.random() * Math.max(0, 2 - dur), Math.min(dur, 2)); // 무작위 구간 = 매번 다른 잡음
+  n.connect(f); f.connect(g); g.connect(out || sfxGain); n.start(t, Math.random() * Math.max(0, 2 - dur), Math.min(dur, 2)); // 무작위 구간 = 매번 다른 잡음
 }
 // 🃏 포커 시작: 카드 셔플(촤라락) + 5장 딜(탁·탁·탁) — 음정 없는 잡음만, 'clear'(0.16)보다 작게 ≈0.75초 (10-04 유저)
 function dealSound() {
@@ -15226,7 +15276,7 @@ function startMusic() {
       if (i === 0) { tone(36.7, 4.4, 'sawtooth', musicGain, 0.16); tone(73.4, 4.4, 'sine', musicGain, 0.2); } // 지옥 드론 (D1+D2)
       if (MEL[i]) { tone(MEL[i], 0.5, 'sawtooth', musicGain, 0.16); tone(MEL[i] / 2, 0.5, 'triangle', musicGain, 0.3); } // 음침한 두 겹
       if (BASS_HELL[i]) tone(BASS_HELL[i], 0.8, 'sine', musicGain, 0.55);
-      if (i % 8 === 4) { tone(49, 0.35, 'sine', musicGain, 0.5); noiseBurst(0.08, 0.05); } // 멀리서 쿵… 하는 북
+      if (i % 8 === 4) { tone(49, 0.35, 'sine', musicGain, 0.5); noiseBurst(0.08, 0.05, undefined, undefined, undefined, musicGain); } // 멀리서 쿵… 하는 북
       if (Math.random() < 0.012) tone(58, 1.6, 'sawtooth', musicGain, 0.07); // 가끔 낮은 우르릉
     } else if (fileBgm) {
       if (!hell && S && S.phase !== 'wave' && Math.random() < 0.055) birdCall(); // 🐦 앰비언스는 그대로 (지옥·전투 중엔 없음 — 합성 음악과 같은 규칙)
@@ -15241,7 +15291,7 @@ function startMusic() {
         if (i % 4 === 0) tone(MEL[i] * 2 / 3, 0.32, 'triangle', musicGain, 0.14); // 오르가눔: 강박마다 평행 5도 아래 — 즉석 중세
       }
       if (BS[i]) tone(BS[i], 0.5, 'sine', musicGain, 0.55);
-      if (S && S.phase === 'wave' && i % 4 === 2) noiseBurst(0.03, 0.05); // 전투 중엔 은은한 셰이커로 긴장감
+      if (S && S.phase === 'wave' && i % 4 === 2) noiseBurst(0.03, 0.05, undefined, undefined, undefined, musicGain); // 전투 중엔 은은한 셰이커로 긴장감
       else if (S && S.phase !== 'wave' && Math.random() < 0.055) birdCall(); // 🐦 평화로울 땐 새 (빈도 0.025→0.055)
     }
     windTick(); // 🌬️ 바람은 페이즈·난이도 무관 상시 (지옥에서도 스산하게 분다)
@@ -15392,28 +15442,71 @@ function bgmTick() { // 250ms 음악 타이머에서: 곡 선택·반복·일시
   const dur = cd.a.duration;
   if (dur > BGM_XF * 3 && cd.a.currentTime > dur - BGM_XF - 0.3 && AC.currentTime > bgm.xfUntil) bgmSwitch(key); // 곡 끝 → 같은 곡을 다른 덱에서 처음부터
 }
-document.getElementById('bMusic').onclick = () => {
+// 음악·타격음 켜기/끄기 — 툴바 토글과 설정 창 슬라이더(0 = 끄기)가 같은 함수를 쓴다 (⚙️ 10-13 #3)
+function setMusicOn(on) {
   initAudio();
-  musicOn = !musicOn;
+  musicOn = on;
   try { localStorage.setItem('dpd_music', musicOn ? '1' : '0'); } catch (e) {}
-  if (musicGain) musicGain.gain.value = musicOn ? 0.09 : 0;
+  applyVol(false);
   if (musicOn) startWind(); else stopWind(); // 🔋 음악 OFF = 바람 루프 정지 (gain 0이어도 소스·필터는 매 퀀텀 렌더된다)
   audioSync();
   bgmUnlock(); bgmTick(); // 켜기 = 이 클릭(제스처) 안에서 잠금 해제 + 바로 재생 재개
   dpdFillIcon(document.querySelector('#bMusic .dpdIc'), 'music', { off: !musicOn });
   document.getElementById('bMusic').classList.toggle('off', !musicOn);
-};
-document.getElementById('bSfx').onclick = () => {
+}
+function setSfxOn(on) {
   initAudio();
-  sfxOn = !sfxOn;
+  sfxOn = on;
   try { localStorage.setItem('dpd_sfx', sfxOn ? '1' : '0'); } catch (e) {}
-  if (sfxGain) sfxGain.gain.value = sfxOn ? 0.22 : 0;
+  applyVol(false);
   audioSync();
   dpdFillIcon(document.querySelector('#bSfx .dpdIc'), 'sound', { off: !sfxOn });
-};
+}
+document.getElementById('bMusic').onclick = () => setMusicOn(!musicOn);
+document.getElementById('bSfx').onclick = () => setSfxOn(!sfxOn);
 document.getElementById('bMusic').classList.toggle('off', !musicOn);
 dpdFillIcon(document.querySelector('#bMusic .dpdIc'), 'music', { off: !musicOn });
 dpdFillIcon(document.querySelector('#bSfx .dpdIc'), 'sound', { off: !sfxOn });
+// ⚙️ 설정 창 (10-13 유저 #3): 음악·타격음 음량 슬라이더. 열면 게임 정지(상점·자금운영과 같은 규칙 — 음악은 계속 나와 들으며 조절)
+const OM = document.getElementById('optModal');
+const optVolSaved = { music: musicVol, sfx: sfxVol }; // 마지막으로 놓은(change) 음량 — 0까지 끌어 끌 때 되돌릴 값
+let optDownBack = false; // 배경에서 누르기 시작했을 때만 배경 클릭으로 닫는다 (슬라이더를 끌다 창 밖에서 놓으면 click이 공통 조상 = 배경으로 온다)
+function optSync() { // 슬라이더·값 글자·행 꺼짐 표시를 현재 musicOn/sfxOn·음량에 맞춘다
+  for (const [k, on, vol, ic] of [['Music', musicOn, musicVol, 'music'], ['Sfx', sfxOn, sfxVol, 'sound']]) {
+    document.getElementById('opt' + k + 'Vol').value = on ? vol : 0;
+    document.getElementById('opt' + k + 'Val').textContent = on ? vol + '%' : '꺼짐';
+    const row = document.getElementById('optRow' + k);
+    if (row.classList.contains('off') === on) { row.classList.toggle('off', !on); dpdFillIcon(row.querySelector('.dpdIc'), ic, { off: !on }); }
+  }
+}
+function optInput(kind, commit) { // input = 실시간 반영 · change = 저장(+타격음 미리 듣기)
+  const music = kind === 'music', el = document.getElementById(music ? 'optMusicVol' : 'optSfxVol');
+  const v = Math.round(+el.value / 5) * 5, on = music ? musicOn : sfxOn, set = music ? setMusicOn : setSfxOn;
+  if (v <= 0) { // 0 = 끄기 — 기억할 음량은 마지막으로 '놓은' 값 (50에서 0까지 끌며 지나간 15·10 같은 중간값이 아니라 50 → 다시 켜면 그 값)
+    if (music) musicVol = optVolSaved.music; else sfxVol = optVolSaved.sfx;
+    if (on) set(false);
+  } else {
+    if (music) musicVol = v; else sfxVol = v;
+    if (!on) set(true); else applyVol(true);
+  }
+  optSync();
+  if (commit) {
+    if (music) optVolSaved.music = musicVol; else optVolSaved.sfx = sfxVol;
+    try { localStorage.setItem(music ? 'dpd_music_vol' : 'dpd_sfx_vol', String(music ? musicVol : sfxVol)); } catch (e) {}
+    if (!music && sfxOn) sfx('metal'); // 타격음 미리 듣기 — 놓을 때 1번 (AC가 아직 깨는 중이면 sfx 게이트가 조용히 건너뜀)
+  }
+}
+function openOpt() { initAudio(); optSync(); OM.style.display = 'flex'; syncGamePause(); }
+function closeOpt() { OM.style.display = 'none'; syncGamePause(); }
+document.getElementById('bOpt').onclick = openOpt;
+document.getElementById('optClose').onclick = closeOpt;
+OM.addEventListener('pointerdown', e => { optDownBack = e.target === OM; });
+OM.onclick = e => { if (e.target === OM && optDownBack) closeOpt(); optDownBack = false; };
+for (const k of ['music', 'sfx']) {
+  const el = document.getElementById(k === 'music' ? 'optMusicVol' : 'optSfxVol');
+  el.addEventListener('input', () => optInput(k, false));
+  el.addEventListener('change', () => optInput(k, true));
+}
 // 🔋 저사양 모드 토글 — rsMaybe()가 즉시 리베이크 (게임 도중에도 안전, 다음 프레임부터 새 해상도)
 document.getElementById('bLowSpec').onclick = () => {
   LOW_SPEC = !LOW_SPEC;
@@ -18689,7 +18782,7 @@ window.addEventListener('keydown', e => {
   const tg = e.target, tag = tg && tg.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if (document.getElementById('gmgStop')) return; // 강화 ×3 타이밍 미니게임이 Space를 쓴다
-  if (['shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal'].some(gameDialogVisible)) return;
+  if (['shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal'].some(gameDialogVisible)) return;
   const c = e.code;
   if (MP_KEYS[c]) { MP.keys[MP_KEYS[c]] = true; e.preventDefault(); return; }
   if (c === 'Home' || (c === 'Space' && tag !== 'BUTTON')) { mpHomeView(); e.preventDefault(); } // 버튼 포커스 중 Space = 버튼 누르기 그대로
@@ -19356,9 +19449,10 @@ if (WORLD_MOTION_V2) (() => {
     ['winOverlay', 'h2', null],
     ['hellOverlay', 'h2', null],
     ['chipModal', '#chipTitle', '#chipClose'],
+    ['optModal', '#optTitle', '#optClose'],
   ].map(([id, heading, close]) => {
     const el = document.getElementById(id);
-    const panel = el.querySelector('#shopWin, #chipWin') || el;
+    const panel = el.querySelector('#shopWin, #chipWin, #optWin') || el;
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'true');
     const label = el.querySelector(heading);
@@ -19446,6 +19540,7 @@ if (WORLD_MOTION_V2) (() => {
       else if (top.id === 'shopOverlay') closeShop();
       else if (top.id === 'duelConfirm') duelDecline();
       else if (top.id === 'crownModal') crownCancel();
+      else if (top.id === 'optModal') closeOpt();
       return;
     }
     if (e.key !== 'Tab') return;
