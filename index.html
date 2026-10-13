@@ -4033,7 +4033,7 @@ function reset() {
     combo: { n: 0, t: 0, pop: 0 }, hitstop: 0, shake: 0, slowT: 0, graves: [], // 🪦 결투 전사자 비석 (판 내 영구 누적)
     lifeLog: [], maxCombo: 0, bestHand: 0, aceN: 0, superAceN: 0, castleOpened: castleSeen(), // 📋 09-08: 게임오버 정산용(목숨 타임라인·최고 콤보·최고 족보·에이스 수) / 🏰 성 강화창 안내 라벨 — 브라우저당 1회(dpd_castle_seen)
     tutStep: 0, tutHold: false, tutHoldT: 0, r1High: false, // 🧭 첫 판 안내: 포커 배너 단계(1 = T1, 2 = T2) / 포커 시계 정지 / 정지 상한(게임 시간) / R1을 하이카드로 소환
-    reviveUsed: false, revived: false, reviveWave: false, // ❤️‍🩹 부활: 이번 판 제안 소진(수락·포기) / 수락함 / 지금 전투가 부활 연장전 (스피드 보너스 없음)
+    reviveUsed: false, revived: false, reviveWave: false, duelForfeitWave: false, // 🏳️ duelForfeitWave = 이번 전투에서 결투 기권함 (스피드 보너스 0, 10-13) // ❤️‍🩹 부활: 이번 판 제안 소진(수락·포기) / 수락함 / 지금 전투가 부활 연장전 (스피드 보너스 없음)
     crownForced: false, // 👑 기한 뒤 강제 대관식 창(취소 불가)이 열려 있음
     crownRace: -1, crownDropped: false, // 👑 왕관: 선택한 종족 (-1 = 미선택 — ⚠️ null 금지: 광부 race가 null이라 일치해 버린다) / 석탄 보상 왕관 지급 여부 (잭팟 2배 중복 방지)
     crownAge: -1, crownMul: 1, // 👑 10-11: 왕관을 얻은 뒤 시작된 전투 수(-1 = 아직 없음, 대관식 전까지만 셈) / 대관식 때 정해진 배수 (crownMulNow)
@@ -4093,7 +4093,8 @@ let DIFF_MUL = 1, DIFF_NAME = '보통'; // 시작 화면에서 선택 (쉬움 0.
 //     쉬움 √(EASY 0.5 = ×2.55): 업글 안 하는 초보(첫 모험 추천 난이도 — 튜토리얼에 업글 안내 없음) 자연패 6/6 무누수. 쉬움도 ×6.5면 3/6이 R3~R4 사망
 //   🤖 멀티(S.multi — 사람 소환장·레인 미니보스·보스 mpBossHP·봇 웨이브)와 봇 보정 시뮬 mpBotSim(humpSimOff)은 혹 제외 = 예전 곡선 그대로
 //     (요청은 싱글 보통 기준. 멀티에도 혹을 걸면 봇 누수 R1~10 0→18%·레인 보스 HP ×4.6이라 BOT_SKILL·왕국 HP 재보정이 필요 — 넣으려면 아래 S.multi 줄만 지우면 된다)
-const EARLY_HUMP = { HMAX: 6.5, PEAK: 3, END: 14, EASY: 0.5 }; // PEAK ≥ 2 · PEAK < END
+//   ⇒ 10-13 유저 선택: 6.5가 업글 안 하는 초보 6판 중 4판 R3~R4 사망이라 "조금 약하게(×5)" — 원원하 R3·R4 ≈72~73초 무누수(측정 보고). 쉬움 = 5^0.5 ≈ ×2.24
+const EARLY_HUMP = { HMAX: 5, PEAK: 3, END: 14, EASY: 0.5 }; // PEAK ≥ 2 · PEAK < END (10-13 6.5 → 5 유저 선택)
 let humpSimOff = false; // mpBotSim 실행 중 true (S 밖에서 도는 50R 봇 시뮬도 라이브 멀티와 같은 곡선을 타게) — ⚠️ 부팅 reset()보다 위 (let TDZ)
 function earlyHump(n) {
   const R = EARLY_HUMP;
@@ -5038,7 +5039,7 @@ function spawnMonster(hp, isBoss, opt) {
   return m;
 }
 // ⏱️ 스피드 보너스: 남은 시간 × (1 + 라운드×0.25)G/초 — 같은 시간 광산을 돌리는 것보단 달게, 킬 수입보단 작게 (HUD 실시간 표시와 정산이 같은 공식을 쓴다)
-function speedBonus() { return S.timer > 1 && !S.reviveWave ? Math.round(S.timer * (1 + S.round * 0.25)) : 0; } // ❤️‍🩹 부활 연장전은 0 — 45초가 골드로 바뀌지 않게
+function speedBonus() { return S.timer > 1 && !S.reviveWave && !S.duelForfeitWave ? Math.round(S.timer * (1 + S.round * 0.25)) : 0; } // ❤️‍🩹 부활 연장전은 0 — 45초가 골드로 바뀌지 않게 · 🏳️ 결투 기권한 전투도 0 (10-13 유저: 기다렸을 때보다 더 받으면 안 됨)
 // ❤️‍🩹 부활 (10-01 유저): 죽게 될 전투가 끝나는 순간(보스 생존 또는 누수로 목숨 0) 판당 1회 제안 → 수락하면 같은 전투를 45초 더.
 //    보스·몹이 그대로 남아 보스를 건너뛰지 않는다. 오늘의 시드(기록 경쟁)에선 제안하지 않는다.
 //    유저 선택 = '광고 보고 부활' — 광고 SDK는 앱 빌드에서 붙는다. 그 전(웹)은 무료 1회: ADS_READY=false, showRewardedAd()는 즉시 성공.
@@ -5168,6 +5169,7 @@ function endWave() {
   S.round++;
   crownExpire(); // 👑 기한(CROWN_DEADLINE) 전투가 끝났는데 대관식 전이면 왕관 소멸 — 부활·게임오버 분기 뒤
   S.reviveWave = false; // ❤️‍🩹 부활 연장전 종료 — 다음 전투부터 스피드 보너스 정상
+  S.duelForfeitWave = false; // 🏳️ 결투 기권한 전투 끝 — 다음 전투부터 스피드 보너스 정상
   S.duelEnded = false; // 🏛️ 새 라운드 — 다음 결투 창을 위해 리셋
   settleInvests(); // 📈 만기 도래한 예치금 지급 (라운드가 올라간 직후 = "N라운드 뒤")
   if (S.round >= 40) markAchv('r40');
@@ -6918,7 +6920,7 @@ function duelFlee() {
   logMsg(`${u.weapon}이(가) 결투장에서 도망쳤다!`);
 }
 // 🏳️ 결투 기권 (10-13 유저 #4): 아무도 안 들어가면 소환장을 다 비워도 도전자(S.duel) 때문에 전투 시간을 다 기다려야 했다 (update 끝 조기 종료 조건 !S.duel)
-//   → 도전자만 남으면 소환장 자리에 [결투 기권] — 도전자 퇴장(보상 없음·벌칙 없음) → 다음 틱 조기 종료(클리어·스피드 보너스는 결투 없는 라운드와 똑같이).
+//   → 도전자만 남으면 소환장 자리에 [결투 기권] — 도전자 퇴장(보상 없음·벌칙 없음) → 다음 틱 조기 종료(클리어 보너스는 그대로, 스피드 보너스는 0 — 10-13 유저 결정 S.duelForfeitWave).
 //   챔피언이 있으면(입장 확정 = 락인 — S.champion은 duelEnter에서만 duelOk와 함께 생긴다) 기존 규칙(도망 게이지·시간 초과 전사) 그대로. 도망친 뒤엔 기권 가능.
 //   포커 단계 기권은 없음: startWave가 duelEnded를 안 보고 도전자를 만든다.
 function duelForfeitReady() {
@@ -6929,6 +6931,7 @@ function duelForfeitReady() {
 function duelForfeit() {
   if (!duelForfeitReady()) return; // 락인·창 열림·몹 남음 = 무시 (포커스 어댑터가 #cvWrap 안 버튼은 inert로 막지 않는다)
   S.duel = null; S.champion = null; S.duelEnded = true; // duelWin·endWave 정리와 같은 세 줄 — duelEnded는 다음 라운드 endWave가 되돌린다
+  S.duelForfeitWave = true; // 🏳️ 10-13 유저: 기권한 전투는 스피드 보너스 없음 (기다렸을 때보다 더 받지 않게 — speedBonus·HUD 예고 공용)
   addFloat(ARENA.x, ARENA.y - 40, '기권', '#9e9e9e', 1.4);
   logMsg('결투 기권 — 도전자: "싱겁군. 다음엔 제대로 덤벼라." (퇴장 · 보상 없음)', true); // true = 모바일 전투 탭 티커도
   updateDuelForfeit();
