@@ -15077,6 +15077,10 @@ function tutTick() {
   if (S.round >= 2 && tutNew('fore')) return tutTip('fore', '유닛을 이 방에 넣으면 광석을 캐요. 다 캐면 보상!', ROOM.cx, ROOM.cy + ROOM.h / 2 + 4, 'below', 8);
   if (S.units.some(u => u.fusable) && tutNew('fportal')) return tutTip('fportal', '강화 포털 — 같은 유닛 5마리를 여기 모으면 강해져요', PORTAL.x + PORTAL.r + 4, PORTAL.y, 'right', 8);
   if (S.units.some(u => u.item) && tutNew('faltar')) return tutTip('faltar', IS_MOBILE ? '끌어서 제물대로' : '제물대로 옮기면 열려요', ALTAR.x, ALTAR.y - ALTAR.h / 2 - 4, 'above', 7);
+  // 🏰 10-13 유저: 초반 혹(EARLY_HUMP) 뒤 강화를 한 번도 안 하는 초보가 보통 R3~R4에서 무너진다 → R2·R3 전투에서 강화 0회면 성 옆 안내 (브라우저당 각 1회, 숫자 없음)
+  const noUpg = S.upg.every(v => v === 0);
+  if (S.round === 2 && noUpg && S.timer < WAVE_TIME - 4 && tutNew('fcastle')) return tutTip('fcastle', '골드가 모이면 성을 눌러 강화하세요. 곧 몹이 단단해져요', HOUSE.x + 34, HOUSE.y - 18, 'right', 9);
+  if (S.round === 3 && noUpg && S.timer < WAVE_TIME - 4 && tutNew('fcastle2')) return tutTip('fcastle2', '강화 없이는 버티기 어려워요. 성을 눌러보세요', HOUSE.x + 34, HOUSE.y - 18, 'right', 9);
 }
 // 게임오버 한 줄 — 처음 3번만, 가장 그럴듯한 이유 하나
 function tutGameOverLine() {
