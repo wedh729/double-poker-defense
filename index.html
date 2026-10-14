@@ -2456,6 +2456,7 @@ body.mobile #tutToast .ttBtns {margin-top:5px;}
 body.mobile #ttOk {min-height:30px;font-size:12px;}
 body.tutMode.tutMap #goPoker, body.tutMode.tutMap #pokerHandle {display:none !important;} /* 맵 단계 동안 캔버스 한가운데 '포커장으로 이동'·'포커판 ▲'을 숨긴다 (네모 지정·클릭을 가림 · 눌러도 맵 단계라 곧 내려가던 것 — 1차 P2-11) */
 body.storyMode [data-go="invest"], body.storyMode #tIntWrap, body.storyMode [data-valve="sand"] {display:none !important;} /* 📖 스토리 판: 투자·장 시계·시간의 모래 단추 숨김 (시계가 없는 판 — :has 안 씀, 10-02 성능 교훈) */
+body.storyNoMine [data-go="hire"], body.storyNoMine [data-go="miner"], body.storyNoMine .roster-miners {display:none !important;} /* 📖 광산 없는 스토리 맵: 광부 고용·뽑기·광부 업그레이드 숨김 (못 쓰는 단추는 안 보이게 — P2-7) */
 body:has(#gmgOverlay) :is(#tutPanel, #tutRing) {visibility:hidden;} /* 도전 막대 창 동안은 알림·링 숨김 (창 위 '건너뛰기' 오조작 방지 — 1차 P2-4) */
 .title-link.tut-new {color:#fff0c5;background:#557540;border:2px solid #3d5b2f;box-shadow:inset 0 1px #97ad6f,0 3px #3b502c;}
 .title-link.tut-new small {color:#e6efc8;}
@@ -3783,7 +3784,7 @@ function monBroken(m) { // 갑옷이 먼저 부서지고(broken1) 투구가 나�
 // ☁️ 하늘 모퉁이 (2026-08-08 유저 테스트 요청): 좌상단을 라운드로 잘라 하늘로 — 해·달이 초원이 아니라 하늘에 뜬다.
 // 지상이 아니므로 유닛 통행 불가 (blockSky). 없애려면 SKY_CUT = null 한 줄.
 const SKY_CUT = { rx: 265, ry: 175 };
-function inSky(x, y) { if (!SKY_CUT || (S && S.multi) || x < 0 || y < 0) return false; const nx = x / SKY_CUT.rx, ny = y / SKY_CUT.ry; return nx * nx + ny * ny < 1; }
+function inSky(x, y) { if (!SKY_CUT || (S && (S.multi || (S.story && !S.story.map.skyCut))) || x < 0 || y < 0) return false; const nx = x / SKY_CUT.rx, ny = y / SKY_CUT.ry; return nx * nx + ny * ny < 1; }
 const PORTAL = { x: 84, y: 224, r: 34 }; // 강화 포털: 같은 유닛 5기를 넣으면 영웅 (하늘 모퉁이에 밀려 y 78 → 224)
 const PORTAL_OUT = { x: PORTAL.x + 58, y: PORTAL.y + 18 }; // 합성 산출 지점 = 포털 오른쪽 아래 (09-30: 포털 밑은 딜 순위 위젯 자리 — 크로스체크 P1). 포털 중심 거리 60.7 < GATHER 64 = 기존(60)과 같은 합성 반경 의미
 const WAVE_TIME = 90, POKER_TIME = 60;
@@ -3811,7 +3812,7 @@ function duelHP(n) {
 }
 // 🏛️ 결투 라운드 판정: 7의 배수·보스 주 휴장·태양 강림(R190+ 미클리어) 휴장 — startWave가 태양에서 조기 return해
 // 도전자를 안 만들므로, 예고(startPoker)·결투창(duelWindowActive)도 같은 조건을 공유해야 한다 (한 곳만 어긋나면 빈 링에 팝업·락인이 생긴다)
-function duelRound(r) { if (S && S.tutMode) return !!(S.tut.waves[r] && S.tut.waves[r].duel); return r % DUEL_EVERY === 0 && r % 10 !== 0 && !(r >= SUN_ROUND && !S.hellCleared && !S.multi); } // 🤖 멀티 = 태양전 없음 → R190 이후 휴장도 없음
+function duelRound(r) { if (S && S.story) return false; /* 📖 콜로세움은 스토리에 없음 */ if (S && S.tutMode) return !!(S.tut.waves[r] && S.tut.waves[r].duel); return r % DUEL_EVERY === 0 && r % 10 !== 0 && !(r >= SUN_ROUND && !S.hellCleared && !S.multi); } // 🤖 멀티 = 태양전 없음 → R190 이후 휴장도 없음
 // ==================== 몬스터 등장 패턴 받침 (2026-10-12, 몬스터등장규칙_제안_2026-10-08\51_구현설계_받침.md §B-3 · 59_구현설계_검수.md §2-2) ====================
 // 스케줄 = 라운드 끝자리 고정(10-09 유저: 랜덤 아님): x3 울타리 행진(R13~) · x6 두 무리(R16~) · x8 방패병(R38~) · R71~79는 이 셋 없음 · 보스(x0)·R1~9·태양전 없음.
 // 공중 = 별도 차원(10-12 유저 결정 3 — 옛 x1 공중·R21/R31 공중은 없어짐): R35부터 매 라운드(보스 라운드 포함 — 보스 자신은 지상) · 태양전·멀티 없음(헬 클리어 뒤 R190+ 일반 라운드는 있음 — curPattern, 10-13) · 위 패턴과 겹쳐도 됨. 비율 = p.ratio(airRatio), 0이면 공중 없음.
@@ -3848,6 +3849,7 @@ function roundPattern(r) { // 순수 함수(S 무관): 라운드 번호 → 패�
 }
 function curPattern() { // 이번 라운드 실제 적용값: 멀티면 없음 · 꺼진 패턴(PAT_ON false)은 떼어냄 · 태그는 어픽스·진형 우선, 공중 태그는 첫 등장 R35에만(그 뒤 상시라 반복 안내 생략)
   if (S.multi) return patNone();
+  if (S.story) { const q = patNone(), r = PAT_ON.fly ? airRatio(S.round) : 0; if (r) { q.ratio = r; q.upT = AIR.UP; q.downT = AIR.DOWN; } return q; } // 📖 공중 비율만 (진형·방패병·태그 없음 — 소개 무리는 M3)
   if (S.tutMode) { const w = tutWave(), q = patNone(); if (w.fly) { q.ratio = w.fly; q.upT = w.upT || AIR.UP; q.downT = w.downT || AIR.DOWN; q.tag = PAT_TAG.fly[0]; q.hint = PAT_TAG.fly[1]; } return q; } // [튜토리얼 10-14] 공중 = 챕터 사양만 (비율은 1 미만으로 쓸 것 — plainMul)
   const p = roundPattern(S.round);
   if (S.round >= SUN_ROUND && S.hellCleared) { p.ratio = AIR.P1; p.upT = AIR.UP; p.downT = AIR.DOWN; } // 헬 클리어 뒤 R190+ 일반 라운드도 공중 1/3 (10-13 유저 결정 3 — 태양 강림 라운드 = 미클리어만 0, roundPattern은 S 무관이라 여기서) · 착지 창까지 같이(0/0이면 시계가 매 프레임 뒤집힘)
@@ -4157,7 +4159,7 @@ const EARLY_HUMP = { HMAX: 5, PEAK: 3, END: 14, EASY: 0.5 }; // PEAK ≥ 2 · PE
 let humpSimOff = false; // mpBotSim 실행 중 true (S 밖에서 도는 50R 봇 시뮬도 라이브 멀티와 같은 곡선을 타게) — ⚠️ 부팅 reset()보다 위 (let TDZ)
 function earlyHump(n) {
   const R = EARLY_HUMP;
-  if ((S && S.multi) || humpSimOff) return 1;
+  if ((S && (S.multi || S.story)) || humpSimOff) return 1; // 📖 스토리 HP는 M5 표로 (초반 혹 없음)
   if (n <= 1 || n >= R.END) return 1;
   const h = DIFF_MUL < 1 ? Math.pow(R.HMAX, R.EASY) : R.HMAX;
   return Math.pow(h, n <= R.PEAK ? (n - 1) / (R.PEAK - 1) : (R.END - n) / (R.END - R.PEAK));
@@ -4637,7 +4639,8 @@ function confirmHand() {
 // ==================== 유닛 ====================
 function spawnUnit(rank, race, hidden, keyRank, superAce) {
   const i = S.units.length;
-  const x = CX + (i % 8 - 3.5) * 34, y = Math.min(CY + 130 + Math.floor(i / 8) * 30, 440); // y 클램프 440: 캔버스 아래로 안 숨고, 광부 갓길(상단 모서리 y≈465)도 발끝이 안 닿는다
+  let x = CX + (i % 8 - 3.5) * 34, y = Math.min(CY + 130 + Math.floor(i / 8) * 30, 440); // y 클램프 440: 캔버스 아래로 안 숨고, 광부 갓길(상단 모서리 y≈465)도 발끝이 안 닿는다
+  if (S.story) ({ x, y } = storyFreeSpot()); // 📖 맵 소환 자리 둘레 빈 땅 (M2 대기석이 오면 안 씀)
   const w = WEAPONS[rank];
   const kr = keyRank || 14;
   S.units.push({
@@ -4872,7 +4875,8 @@ const ITEM_META = {
 const GACHA_COL = { gachaHero:'#c9a227', gachaAce:'#e91e8c', gachaAceHero:'#8c5bff', gachaSuper:'#ff2d95', gachaMiner:'#2e9e5b', gachaSuperHero:'#3fa9f5' };
 function spawnItemUnit(key) {
   const meta = ITEM_META[key];
-  const x = CX + (Math.random() - 0.5) * 70, y = CY + 150;
+  let x = CX + (Math.random() - 0.5) * 70, y = CY + 150; // 난수는 먼저 뽑는다 (챌린지 순서 그대로)
+  if (S.story) ({ x, y } = storyFreeSpot()); // 📖 맵 소환 자리 둘레 빈 땅
   S.units.push({ x, y, tx: x, ty: y, item: key, race: null, tier: -2, hidden: false, hero: false, miner: false,
     keyRank: 14, keyLabel: meta.icon, kills: 0, jx: (Math.random() - 0.5) * 40, jy: (Math.random() - 0.5) * 40,
     forceTarget: null, attackMine: false, amove: false, hold: false, priority: 'near', selected: false, walk: 0, moving: false, speed: 70,
@@ -5250,7 +5254,7 @@ function endWave() {
   if (S.round >= 120) markAchv('r120');
   if (S.round >= 150) markAchv('r150');
   // 광석방 정원 증가 알림 (10라운드마다)
-  if (S.round % 10 === 0) {
+  if (S.round % 10 === 0 && !(S.story && !storyHas('room'))) { // 📖 광석방 없는 맵은 알림 없음
     logMsg(`광석방 채굴 정원이 늘었습니다! 이제 동시에 ${oreCap()}명까지 캘 수 있습니다.`);
     addFloat(ROOM.cx, ROOM.cy - 30, `정원 +1 (${oreCap()}명)`, '#c8752f', 2.5);
   }
@@ -5262,7 +5266,7 @@ function endWave() {
 //    유닛 몸이 울타리 그림에 겹쳐 "안에 들어간 것처럼" 보였다 (2026-08-10 유저: 다리도 안 가리게 아예 차단)
 function penTopEx() { return FENCEART.img ? 52 : 10; } // 52 = 울타리 그림 솟음 33 + 유닛 발끝 반경 ~17 + 여유
 function pushOutOfPen(u) {
-  if (u.inPen || onPlank(u.x, u.y)) return; // 돌격 중이거나 나무판자 위면 소환장 안 허용
+  if (S.story || u.inPen || onPlank(u.x, u.y)) return; // 돌격 중이거나 나무판자 위면 소환장 안 허용 · 📖 스토리엔 소환장 없음
   const hw = PEN.w / 2 + 10;
   const yTop = CY - PEN.h / 2 - penTopEx(), yBot = CY + PEN.h / 2 + 10;
   const dx = u.x - CX;
@@ -5287,6 +5291,7 @@ function clampTargetPos(x, y) {
       const k = 1.04 / d; x = cx2 * k; y = cy2 * k;
     }
   }
+  if (S.story) return { x, y }; // 📖 소환장 울타리 보정 없음 (하늘 보정은 위에서 그대로)
   const hw = PEN.w / 2 + 14;
   const yTop = CY - PEN.h / 2 - penTopEx() - 4, yBot = CY + PEN.h / 2 + 14;
   const dx = x - CX;
@@ -5656,7 +5661,7 @@ function update(dt) {
   S.time += dt;
   // 📈 투자 시장 사이클: 400초마다 30초 개장. 10초 전 예고 → 개장 → 마감 (서브스텝 중복 발동은 플래그로 차단)
   // 게임오버 가드 (크로스체크): 사망 화면은 S.paused를 안 켜므로 이 블록이 계속 돌아 죽은 화면 뒤에서 chirp·coin이 반복 재생됐다
-  if (S.phase !== 'gameover' && !(S.tutMode && !S.tut.mkt)) { // [튜토리얼 10-14] 장은 챕터가 켤 때만
+  if (S.phase !== 'gameover' && !(S.tutMode && !S.tut.mkt) && !S.story) { // [튜토리얼 10-14] 장은 챕터가 켤 때만 · 📖 스토리엔 투자 시장 없음
     if (!S.mktOpen) {
       if (!S.mktWarn && S.time >= S.mktNext - 10) {
         S.mktWarn = true;
@@ -5963,7 +5968,7 @@ function update(dt) {
   }
   // 몬스터 스웜: 울타리 안에서 파도처럼 뭉쳤다 퍼지며 서로 비벼진다
   const gw = 0.5 + 0.5 * Math.sin(S.time * 0.55); // 0(뭉침)~1(퍼짐), 주기 ~11초
-  const sp = S.multi || S.round === FINAL_ROUND || (S.round >= SUN_ROUND && !S.hellCleared) ? SWARM_FREE : swarmParams(S.waveT); // A2 스웜 리듬 (멀티·R80 앵커·태양전은 리듬 없음 — 59 §5·§6-2 'R80 불변')
+  const sp = S.multi || S.story || S.round === FINAL_ROUND || (S.round >= SUN_ROUND && !S.hellCleared) ? SWARM_FREE : swarmParams(S.waveT); // A2 스웜 리듬 (멀티·R80 앵커·태양전은 리듬 없음 — 59 §5·§6-2 'R80 불변')
   if (sp.cyc >= 0 && sp.wb > 0 && sp.wb < 1 && S.swarmCue !== sp.cyc && S.monsters.length) { // 예고: 모이기 시작하는 순간 1회 — 바닥 링이 바깥으로
     S.swarmCue = sp.cyc; S.effects.push({ type: 'cue', x: CX, y: CY, r0: 12, r1: 84, t: 0.8, dur: 0.8, col: '255,255,255' });
   }
@@ -6748,7 +6753,7 @@ function markMon(i) {
 // ==================== 우측 상단 광석 방 (정원제: 1명 시작, 10라운드마다 +1) ====================
 const OREPOS = { x: ROOM.cx + ROOM.w/2 - 22, y: ROOM.cy }; // 광석을 방 최우측에 고정 (유닛에 안 가려지게)
 const ORE_LINE = OREPOS.x - 34; // 유닛 접근 한계선 — 이 선을 넘으면 광석이 가려지므로 통행 금지
-function isInRoom(u) { return Math.abs(u.x - ROOM.cx) <= ROOM.w/2 && Math.abs(u.y - ROOM.cy) <= ROOM.h/2; }
+function isInRoom(u) { if (S && S.story && !storyHas('room')) return false; /* 📖 광석방 없는 맵 */ return Math.abs(u.x - ROOM.cx) <= ROOM.w/2 && Math.abs(u.y - ROOM.cy) <= ROOM.h/2; }
 const ROOM_GATE = 40; // 🧱 입구 반높이 (왼쪽 벽 가운데) — 담장 통과는 여기로만
 // 🧱 광석방 경계 스냅 (10-04 유저: "울타리에 애매하게 걸쳐 보이는데 판정상 밖이라 안 캐는 경우 — 경계만 확실하게")
 //    '안' = isInRoom(유닛 중심이 안뜰 사각형 안) — assignOreSlots의 유일한 공간 조건(정원·사거리 규칙은 그대로). 돌담 아트는 사각형 바깥으로 돌출(WALLART 실측 좌23·위21·우27·아래27).
@@ -6756,6 +6761,7 @@ const ROOM_GATE = 40; // 🧱 입구 반높이 (왼쪽 벽 가운데) — 담장
 //    위쪽 바깥은 맵 끝(설 땅 없음), 아래쪽 바깥 오른편은 결투장 링이 돌담에 붙어 있어 → 그 경우는 '안'으로. 광석 쪽으로 당기지는 않는다(사거리 규칙 그대로).
 const ROOM_ART = { l: 23, t: 21, r: 27, b: 27 };
 function roomSnap(pts, units, c, pad = 0) { // pts = [{x,y}] 격자 칸 (제자리 수정), units = 같은 순서의 유닛, c = 부대 중심, pad = 걸어가는 목표의 도착 오차 여유
+  if (S && S.story && !storyHas('room')) return pts; // 📖 광석방 없는 맵 = 옛 담 띠에서 안 밀어냄 (P2-6)
   const x0 = ROOM.cx - ROOM.w / 2, x1 = ROOM.cx + ROOM.w / 2, y0 = ROOM.cy - ROOM.h / 2, y1 = ROOM.cy + ROOM.h / 2;
   const half = pts.map((p, i) => { const u = units[i], B = bodyShape(u); return { w: B.w * 0.75 + 2 + pad, h: B.h * 0.75 + 2 + pad }; }); // 본체 1.5배 그림의 반폭·반높이 + 2 (+ 도착 오차). 머리 장식 높이(hatH)는 10-11부터 판정에서 뺌(아래)
   // 10-11 유저: "경계가 너무 극단적 — 맵을 낭비한다, 돌울타리 부분에만 안 겹치면 충분" → 위·아래 판정에서 머리 장식(hat, 영웅 36~44)을 뺐다.
@@ -6817,6 +6823,7 @@ function blockSky(u) {
   u.x *= k; u.y *= k;
 }
 function blockRoomWalls(u) { // 이동 전 위치(u.px,u.py)와 비교해 담장을 가로질렀으면 그 축만 되돌린다 (벽 따라 미끄러져 입구를 찾게)
+  if (S && S.story && !storyHas('room')) return; // 📖 광석방 없는 맵 = 담 없음
   const x0 = ROOM.cx - ROOM.w / 2, x1 = ROOM.cx + ROOM.w / 2, y0 = ROOM.cy - ROOM.h / 2, y1 = ROOM.cy + ROOM.h / 2;
   const gy0 = ROOM.cy - ROOM_GATE, gy1 = ROOM.cy + ROOM_GATE;
   const px = u.px != null ? u.px : u.x, py = u.py != null ? u.py : u.y;
@@ -7152,13 +7159,13 @@ function spawnExcavator() {
 // ⛏️ 광부 고용·뽑기 (10-06 오후 유저: "1개로 구매도 가능하고, 뽑기로도 가능 — 선택이 두 가지") — 고용 = 칩 1개 → 광부 1명 확정 / 뽑기 = 확률표는 여기 한 곳 (가중치, 합으로 나눈다)
 // 갬블러 가호 등 기존 확률 보정은 광부 뽑기에 적용하지 않는다 (뽑기권 상자 성공률에만 걸린다 — 10-06 오후 유저 확정)
 const MINER_HIRE_COST = 1;                                               // 광부 고용 칩 1개 (10-05 이전 그대로)
-function canMinerHire() { return S.chips >= MINER_HIRE_COST; }           // 버튼 2벌(원본·v2)·클릭 공용 판정
+function canMinerHire() { return S.chips >= MINER_HIRE_COST && !(S.story && !storyHas('mine')); } // 📖 광산 없는 맵 = 고용 불가           // 버튼 2벌(원본·v2)·클릭 공용 판정
 const MINER_DRAW_COST = 1.25;                                            // 칩 1¼개
 const MINER_DRAW_P = [['miner', 95], ['sminer', 4], ['exc', 1]];          // 자금 운영 광부 뽑기 (%)
 const MINER_TICKET_DRAW_P = [['miner', 1], ['sminer', 1], ['exc', 1]];   // 광부 뽑기권 (사파이어 보상) ⅓씩
 const MINER_KIND = { miner: ['pick', '광부', spawnMiner], sminer: ['pick', '슈퍼 광부', spawnSuperMiner], exc: ['excavator', '굴착기', spawnExcavator] };
 function drawPick(table, r) { let x = r * table.reduce((a, t) => a + t[1], 0); for (const [k, w] of table) if ((x -= w) < 0) return k; return table[table.length - 1][0]; } // r ∈ [0,1)
-function canMinerDraw() { return S.chips >= MINER_DRAW_COST; } // 버튼 2벌(원본·v2)·클릭·튜토리얼 공용 판정
+function canMinerDraw() { return S.chips >= MINER_DRAW_COST && !(S.story && !storyHas('mine')); } // 버튼 2벌(원본·v2)·클릭·튜토리얼 공용 판정
 function minerDrawOdds(sep) { return MINER_DRAW_P.map(([k, w]) => `${MINER_KIND[k][1]} ${w}%`).join(sep || ' · '); }
 // ==================== 🩸 히든 영웅 제물 승급 (자기 레시피 계열 유닛을 바쳐 강화, 최대 2단계) ====================
 const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단련 담당) — needs: 제단 위 제물 [{tier, hero?, n}]
@@ -8474,6 +8481,7 @@ function drawBackdrop() {
 }
 // 🏛️ 결투장: 로마 콜로세움 (¾ 원근) — 회색 석재, 뒤쪽 관중석 2단 아케이드, 일부 붕괴, 앞은 관전용 개방
 function drawArena() {
+  if (S.story) return; // 📖 콜로세움은 스토리에 없음
   const { x, y, r } = ARENA;
   const as = m3Img('arena') || artSp('arena'); // 🎨 V3 결투장이 있으면 같은 자리·같은 폭(r×2.25)
   if (as) { // 🎨 원형 결투장 에셋 (계단 없음 — 어디로든 들어간다)
@@ -9139,7 +9147,7 @@ function tenseVignette() { // 캔버스 비율 타원 비네트 마스크 1회 �
   return (tenseVig = c);
 }
 function drawTension() {
-  if (S.phase !== 'wave') return;
+  if (S.phase !== 'wave' || S.story) return; // 📖 시계 없는 판 = 막판 긴장 없음
   const p = Math.max(0, Math.min(1, (1 - S.timer / WAVE_TIME - 0.5) * 2));
   if (p <= 0) return;
   const e = Math.pow(p, 1.5); // 초반은 은은하게, 막판으로 갈수록 몰아서 (p²는 경과 75%에서 너무 옅었다)
@@ -9160,6 +9168,7 @@ function drawTension() {
 const TENSE_HB_SEC = 15, TENSE_LP_SEC = 12; // 심장·시계 시작 / BGM 먹먹함 시작 (남은 초)
 let tenseBus = null, tenseLP = null, tenseLv = 0, tenseSec = 0; // 마지막 박동 출력(즉시 끊기용) · BGM 저역통과(첫 사용 때 musicGain 뒤에 끼움) · 먹먹함 단계 · 시계 표시 초
 function tenseTick(dt) {
+  if (S.story) return; // 📖 시계 없는 판 = 심장·먹먹함·시계 숫자 없음 (endWave의 tenseEnd가 정리)
   const p = Math.max(0, Math.min(1, (1 - S.timer / WAVE_TIME - 0.5) * 2)); // drawTension과 같은 진행도 (남은 45초 → 0초 = 0 → 1)
   const ph0 = S.tensePh || 0;
   S.tensePh = ph0 + (0.6 + 1.2 * p) * dt;
@@ -9511,6 +9520,7 @@ function enemyPortalFx(a) { // 소환장 중심(CX, CY)에 붉은 소용돌이 (
   ctx.restore(); ctx.globalAlpha = 1;
 }
 function drawOreRoom() {
+  if (S.story && !storyHas('room')) return; // 📖 광석방 없는 맵
   const R = ROOM, x0 = R.cx - R.w / 2, y0 = R.cy - R.h / 2;
   const anyIn = S.units.some(u => !u.miner && isInRoom(u));
   // 담장은 (입장 여부 × 아트 여부)로만 변하는 정적 그림 — 베이크. 광석·게이지·라벨은 아래에서 라이브
@@ -9605,6 +9615,7 @@ const MINE_TIERS = [
 ];
 // ⛏️ 광부 갓길: 성 ↔ 광산 하단 전용 흙길 (부대 주둔지 아래로 동선 분리 — 시각적으로도 "광부의 길"임을 읽게)
 function drawMinerRoad() {
+  if (S && S.story && !storyHas('mine')) return; // 📖 광산 없는 맵 = 광부 갓길 없음 (대체 지면 베이크 안 호출도 함께)
   const x0 = HOUSE.x + 24, y0 = 468, cx1 = 470, cy1 = 478, x1 = MINE_POS.x - 34, y1 = MINE_POS.y + 26;
   const rd = m3Img('miner_road');
   if (rd) { bakedLayer('mroad|g' + m3Tone(), x0 - 40, Math.min(y0, y1) - 40, x1 - x0 + 56, Math.abs(y1 - y0) + 56, () => drawMinerRoadArt(rd, x0, y0, cx1, cy1, x1, y1)); return; } // 🎨 V3 흙길 (정적 — 1회 베이크, 위·왼쪽 40 = 성 밑으로 들어가는 시작 구간)
@@ -9652,6 +9663,7 @@ function drawMinerRoadArt(im, x0, y0, cx1, cy1, x1, y1) {
   }
 }
 function drawMine() {
+  if (S.story && !storyHas('mine')) return; // 📖 광산 없는 맵
   const p = MINE_POS, x = p.x, y = p.y;
   const T = MINE_TIERS[Math.min(S.mineLayer - 1, MINE_TIERS.length - 1)];
   const m3m = m3Img('mine'), ms = m3m || artSp('mine'); // 🎨 V3 광산이 있으면 같은 자리·같은 폭(124)
@@ -13399,6 +13411,7 @@ function showMonsterInfo(m) {
   placeObjInfo(); // 10-06 후속: 포커 판 위 남은 높이에 맞춤
 }
 function objAt(x, y) {
+  if (S.story) return storyObjAt(x, y); // 📖 결투장·소환장 없음 · 광산·광석방은 맵에 있을 때만
   if (Math.abs(x - ALTAR.x) <= ALTAR.w/2 && Math.abs(y - ALTAR.y) <= ALTAR.h/2) return 'altar';
   if (Math.hypot(x - PORTAL.x, y - PORTAL.y) < PORTAL.r + 12) return 'portal';
   if (Math.abs(x - ROOM.cx) <= ROOM.w/2 && Math.abs(y - ROOM.cy) <= ROOM.h/2) return 'room';
@@ -16106,7 +16119,7 @@ function updateHUD() {
   const clock = document.getElementById('clock');
   let frac = 0, col = '#e53935';
   if (S.phase === 'wave') {
-    frac = 1 - S.timer / WAVE_TIME; col = '#e53935';
+    frac = S.story ? 0 : 1 - S.timer / WAVE_TIME; col = '#e53935'; // 📖 시계 없는 판 = 전투 중 빈 원판
     const tb = S.multi && (MP.clr === S.round || S.round % 10 === 0) ? 0 : speedBonus(); // ⏱️ 실시간 예고: 눈앞에서 줄어드는 보상 — 빨리 잡을수록 이득임이 와닿게 · 🤖 멀티: 개인 클리어로 이미 받았거나 보스 라운드(보너스 없음)면 숨김
     hudSetHtml('tPhase', '전투 (몹 ' + (S.multi ? S.monsters.filter(m => !m.lane).length : S.monsters.length) + ')' + // 🤖 멀티: 소환장 몹 수만
       (tb > 0 ? ' · <span style="color:#c9a227" title="지금 전멸시키면 받는 스피드 보너스">' + dpdIconSVG('clock') + '+' + tb + 'G</span>' : ''));
@@ -18541,6 +18554,38 @@ function storyGameOver() { // endWave 게임오버 — 기록·오늘의 시드�
   document.getElementById('finalScore').innerHTML = `<b>${M.name}</b> — ${S.storyR}번째 무리에서 성이 무너졌어요<br>` + lifeHTML + statsHTML;
   document.getElementById('overlay').style.display = 'flex'; syncGamePause();
 }
+// ---- 건물·자리 (설계 §9·§11) ----
+function storyObjAt(x, y) { // objAt 스토리판 — 제단·포털·성 + (맵에 있으면) 광석방·광산. 결투장·소환장 없음
+  if (Math.abs(x - ALTAR.x) <= ALTAR.w / 2 && Math.abs(y - ALTAR.y) <= ALTAR.h / 2) return 'altar';
+  if (Math.hypot(x - PORTAL.x, y - PORTAL.y) < PORTAL.r + 12) return 'portal';
+  if (storyHas('room') && Math.abs(x - ROOM.cx) <= ROOM.w / 2 && Math.abs(y - ROOM.cy) <= ROOM.h / 2) return 'room';
+  if (Math.abs(x - HOUSE.x) < 48 && Math.abs(y - HOUSE.y + 8) < 52) return 'castle';
+  if (storyHas('mine') && Math.abs(x - MINE_POS.x) < 52 && Math.abs(y - MINE_POS.y) < 55) return 'mine';
+  return null;
+}
+function storySegDist(x, y, a, b) { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / l2)) : 0; return Math.hypot(x - a[0] - dx * t, y - a[1] - dy * t); }
+function storySpotOk(x, y) { // 소환 자리 후보 — 길(가장 넓은 반폭 + 14) 밖 · 건물 + 12 밖 · 배치 불가 지형 밖 · [20,920]×[70,470] · 하늘 밖 · 다른 유닛과 20px
+  if (x < 20 || x > 920 || y < 70 || y > 470 || inSky(x, y)) return false;
+  const st = S.story; let hw = 0; for (const P of st.P) hw = Math.max(hw, P.w / 2);
+  if (storyPathDist(x, y) < hw + 14) return false;
+  if (Math.abs(x - HOUSE.x) < 60 && Math.abs(y - HOUSE.y + 8) < 64) return false;
+  if (Math.abs(x - ALTAR.x) < ALTAR.w / 2 + 12 && Math.abs(y - ALTAR.y) < ALTAR.h / 2 + 12) return false;
+  if (Math.hypot(x - PORTAL.x, y - PORTAL.y) < PORTAL.r + 12) return false;
+  if (storyHas('room') && Math.abs(x - ROOM.cx) < ROOM.w / 2 + 12 && Math.abs(y - ROOM.cy) < ROOM.h / 2 + 12) return false;
+  if (storyHas('mine') && Math.abs(x - MINE_POS.x) < 64 && Math.abs(y - MINE_POS.y) < 67) return false;
+  for (const nb of st.map.noBuild) {
+    if (nb.circle && Math.hypot(x - nb.circle[0], y - nb.circle[1]) < nb.circle[2] + 10) return false;
+    if (nb.band) { const p = nb.band.pts; for (let i = 1; i < p.length; i++) if (storySegDist(x, y, p[i - 1], p[i]) < nb.band.w / 2 + 10) return false; }
+  }
+  for (const u of S.units) if (Math.hypot(u.x - x, u.y - y) < 20) return false;
+  return true;
+}
+function storyFreeSpot() { // 맵 spawn 둘레를 가까운 순으로 (6열 × 줄 위아래 번갈아)
+  const [sx, sy] = S.story.map.spawn;
+  for (let k = 0; k < 60; k++) { const col = k % 6, row = (k / 6) | 0, x = sx + (col - 2.5) * 30, y = sy + (row % 2 ? 1 : -1) * Math.ceil(row / 2) * 26;
+    if (storySpotOk(x, y)) return { x, y }; }
+  return { x: sx, y: sy };
+}
 // 진입 순서 = 튜토리얼과 같음: at-title → reset() → S.story → hideStartScreen → startPoker 재딜 (reset 안 첫 포커가 첫 판 안내 T1을 소진하지 않게)
 function storyStart(id, gesture) { // gesture = 클릭으로 불렸나 (다시하기 = true, URL 진입 = false — 오디오 잠금 풀기·전체 화면은 제스처 안에서만)
   const map = Object.prototype.hasOwnProperty.call(STORY_MAPS, id) ? STORY_MAPS[id] : null; if (!map) return false;
@@ -18567,13 +18612,13 @@ function storyApply(map) { // 건물 좌표 덮기 (const 객체라 속성 대�
   HOUSE.x = b.castle[0]; HOUSE.y = b.castle[1];
   PORTAL.x = b.portal[0]; PORTAL.y = b.portal[1]; PORTAL_OUT.x = PORTAL.x + 58; PORTAL_OUT.y = PORTAL.y + 18;
   ALTAR.x = b.altar[0]; ALTAR.y = b.altar[1]; ALTAR_OUT.x = ALTAR.x + 62; ALTAR_OUT.y = ALTAR.y - 40;
-  storyApplied = true; storyBakesReset(); document.body.classList.add('storyMode');
+  storyApplied = true; storyBakesReset(); document.body.classList.add('storyMode'); document.body.classList.toggle('storyNoMine', !b.mine);
 }
 function storyLeave() { // 'dpd:resetui' (resetTransientUI 끝 — 새 S를 만들기 전) — 나가기·다시하기·새 판·튜토리얼·멀티·맵 미리보기 전부 reset()을 지난다
   if (!storyApplied) return; // 챌린지 경로는 여기서 끝 (베이크를 건드리지 않는다)
   Object.assign(HOUSE, STORY_BLD0.house); Object.assign(PORTAL, STORY_BLD0.portal); Object.assign(PORTAL_OUT, STORY_BLD0.portalOut);
   Object.assign(ALTAR, STORY_BLD0.altar); Object.assign(ALTAR_OUT, STORY_BLD0.altarOut);
-  storyApplied = false; storyBakesReset(); document.body.classList.remove('storyMode');
+  storyApplied = false; storyBakesReset(); document.body.classList.remove('storyMode', 'storyNoMine');
 }
 function storyBakesReset() { bldgLayers.clear(); sbWorldBake = null; storyRoadBake = null; } // 성·광부 길('mroad|g' 폭 = 광산 − HOUSE.x)·초원 꽃(제단·포털 회피)·대체 지면 베이크 — 다음 프레임에 다시 굽는다
 window.addEventListener('dpd:resetui', storyLeave); // mpLeave와 같은 방식 (resetTransientUI 본문은 안 고침)
