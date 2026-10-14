@@ -4971,7 +4971,7 @@ function useSandItem() {
 }
 function useVBombItem() {
   if (S.phase === 'wave' && S.monsters.some(m => !m.entering && !m.lane)) emergencyBomb(); // 🤖 레인 프록시는 소환장 몹이 아니다
-  else { S.pendBomb++; logMsg('긴급 폭격 — 몬스터가 나타나는 즉시 떨어집니다.'); }
+  else { S.pendBomb++; logMsg(S.story ? '긴급 폭격 — 몬스터 첫 무리가 나오면 떨어집니다.' : '긴급 폭격 — 몬스터가 나타나는 즉시 떨어집니다.'); }
 }
 function usePrayItem() { if (S.multi) return; S.life += 3; S.lifeLog.push({ r: S.story ? S.storyR : S.round, d: -3, why: '기도' }); addFloat(HOUSE.x, HOUSE.y - 40, '+3', '#e53935', 2); sfx('reward'); logMsg('생명의 기도 — 목숨 +3!'); }
 function useStimpack() { S.stimT = 20; addFloat(CX, CY, '스팀팩! 전군 공속 2배 20초!', '#43a047', 2); sfx('hero'); logMsg('스팀팩 — 20초간 전 아군 공속 2배!'); }
@@ -6320,7 +6320,7 @@ function update(dt) {
   // 💣 예약된 긴급 폭격: 소환이 끝나 몹이 전부 나온 뒤에 떨어진다.
   // (몹이 보이자마자 터뜨리면 2초에 걸쳐 나오는 뒷줄이 통째로 폭격을 피한다 — 예약분이 손해가 되면 안 된다)
   const sq = S.spawnQueue;
-  if (S.pendBomb > 0 && sq && sq.left === 0 && sq.bossLeft === 0 && S.monsters.some(m => !m.entering && !m.lane)) {
+  if (S.pendBomb > 0 && sq && (S.story ? storyBombReady(sq) : sq.left === 0 && sq.bossLeft === 0) && S.monsters.some(m => !m.entering && !m.lane)) { // 📖 스토리는 무리 간격 때문에 스폰 끝까지 기다리면 그새 대부분 성에 닿는다
     while (S.pendBomb > 0) { S.pendBomb--; emergencyBomb(); }
   }
   // 조기 종료는 '소환장이 비었고 결투도 끝났을 때'만. 도전자가 남아 있으면 라운드는 계속된다
@@ -18313,6 +18313,7 @@ const STORY = {      // 노브 한 곳 (화면에 안 나옴)
   PULL_V: 220,       // 조커 되감기·목성 끌어모으기 속도 px/게임초
   GRAV_S: 260, PILE_S: 34, // 목성: 같은 길에서 보스 앞뒤 260px 안 몹 → 보스 s ± 34로
   NOLEAK_K: 0.5,     // 무누수 보너스 = 클리어 보너스 × 0.5
+  BOMB_N: 8,         // 예약 긴급 폭격 = 이번 전투 몹이 이만큼 나오고(첫 무리 = GROUP) 보스 라운드면 보스도 나온 뒤 (10-15 리뷰 ENG-1 — 시점은 유저 확인 거리)
   HP_K: 1, N_K: 1,   // M5 노브: 몹 HP·마릿수 배수
   LIVES: 20,
 };
@@ -18553,6 +18554,7 @@ function storyStartWave() { // startWave의 공통 줄(페이즈·배속·waveT�
   renderPoker();
   logMsg(`${S.story.map.name} — 몹이 길을 따라 온다${boss ? ' · 보스!' : ''}`, true);
 }
+function storyBombReady(q) { return q.bossLeft === 0 && q.count - q.left >= Math.min(q.count, STORY.BOMB_N); } // 예약 긴급 폭격 발동 시점 (update 사망 필터 뒤 — 맵 위 몹 있음은 호출처가 본다)
 function storyWaveDone(q) { return S.life <= 0 || S.story.bossIn || S.waveT >= STORY.CAP || (q.left === 0 && q.bossLeft === 0 && S.monsters.length === 0); } // 전투 끝: 목숨 0 · 보스 도착 · 안전 상한 · 스폰 끝 + 0마리
 function storyWaveEnd(bossAlive, leak) { // endWave 분기 — 목숨은 도착 때 이미 깎임
   const st = S.story;
