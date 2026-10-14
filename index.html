@@ -4973,17 +4973,19 @@ function useVBombItem() {
   if (S.phase === 'wave' && S.monsters.some(m => !m.entering && !m.lane)) emergencyBomb(); // 🤖 레인 프록시는 소환장 몹이 아니다
   else { S.pendBomb++; logMsg('긴급 폭격 — 몬스터가 나타나는 즉시 떨어집니다.'); }
 }
-function usePrayItem() { if (S.multi) return; S.life += 3; S.lifeLog.push({ r: S.round, d: -3, why: '기도' }); addFloat(HOUSE.x, HOUSE.y - 40, '+3', '#e53935', 2); sfx('reward'); logMsg('생명의 기도 — 목숨 +3!'); }
+function usePrayItem() { if (S.multi) return; S.life += 3; S.lifeLog.push({ r: S.story ? S.storyR : S.round, d: -3, why: '기도' }); addFloat(HOUSE.x, HOUSE.y - 40, '+3', '#e53935', 2); sfx('reward'); logMsg('생명의 기도 — 목숨 +3!'); }
 function useStimpack() { S.stimT = 20; addFloat(CX, CY, '스팀팩! 전군 공속 2배 20초!', '#43a047', 2); sfx('hero'); logMsg('스팀팩 — 20초간 전 아군 공속 2배!'); }
 function useBombard() { // 소환장 전체 즉발 광역
   S.effects.push({ type:'boom', x: PEN.x, y: PEN.y, r: 150, t: 0.6 });
   for (let i = 0; i < 40; i++) { const a = Math.random()*6.28, v = 120 + Math.random()*220; S.parts.push({ x: PEN.x, y: PEN.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.55, r: 2 + Math.random()*4, c: i%2?'#ff5252':'#ffb74d' }); }
   for (const m of S.monsters) if (!m.lane) dealDamage(m, 500, null); // 🤖 소환장 전체 = 레인 프록시 제외
-  addFloat(PEN.x, PEN.y - 60, '융단폭격!', '#ff5252', 2); sfx('bigboom'); logMsg('융단폭격 — 소환장 전체 강타!');
+  addFloat(PEN.x, PEN.y - 60, '융단폭격!', '#ff5252', 2); sfx('bigboom'); logMsg(S.story ? '융단폭격 — 몬스터 전부 강타!' : '융단폭격 — 소환장 전체 강타!');
 }
-function useAcid() { // 소환장 중앙에 염산 장판 (5초 도트)
-  S.acidPools.push({ x: PEN.x, y: PEN.y, r: 95, t: 5, dps: 70 });
-  addFloat(PEN.x, PEN.y - 60, '염산 장판!', '#7cb342', 2); sfx('slash'); logMsg('염산병 — 5초간 장판 도트 데미지!');
+function useAcid() { // 소환장 중앙에 염산 장판 (5초 도트) · 📖 스토리 = 선두 몹 땅 지점 (없으면 첫 입구 길 가운데)
+  let ax = PEN.x, ay = PEN.y;
+  if (S.story) { const lm = storyLeadMob(); if (lm) { ax = lm.x; ay = lm.y + (lm.lift || 0); } else { const P = S.story.P[S.story.doors[0]], i = P.n >> 1; ax = P.x[i]; ay = P.y[i]; } }
+  S.acidPools.push({ x: ax, y: ay, r: 95, t: 5, dps: 70 });
+  addFloat(ax, ay - 60, '염산 장판!', '#7cb342', 2); sfx('slash'); logMsg('염산병 — 5초간 장판 도트 데미지!');
 }
 // ==================== 몬스터 등장 패턴 1단계 (2026-10-09, Desktop\Claude Code\DPD\몬스터등장규칙_제안_2026-10-08\50_구현설계_1단계.md) ====================
 // 노브는 전부 여기 한 곳. 수치·%는 화면에 절대 노출하지 않는다(UI 미니멀). 멀티(S.multi)·레인 개체(m.lane)는 전부 제외.
@@ -5457,7 +5459,7 @@ function spawnCatapult(x, y) {
   });
   addFloat(x, y - 30, '공성 투석기 완성!!', '#78909c', 2.8);
   sfx('jackpot'); sfx('hero');
-  logMsg('하이카드 20기 제물!! <b>공성 투석기</b> 완성! 소환장 전체를 포격합니다 (이동 불가)!');
+  logMsg(S.story ? '하이카드 20기 제물!! <b>공성 투석기</b> 완성! 길 위 몬스터를 포격합니다 (이동 불가)!' : '하이카드 20기 제물!! <b>공성 투석기</b> 완성! 소환장 전체를 포격합니다 (이동 불가)!');
   markHidden('catapult');
 }
 // 강화 포털: 같은 유닛 5기가 포털 안에 모이면 영웅/슈퍼영웅으로 합성
@@ -5870,11 +5872,13 @@ function update(dt) {
       u.skillT -= dt;
       u.inPen = true; // 단검 암살·분신술 모두 소환장 안에서 싸운다
       let tgt = u.assassinTgt;
-      if (!tgt || tgt.hp <= 0 || (airborne(tgt) && !canHitAir(u))) tgt = u.assassinTgt = strongestMonster(); // 공중: 대상이 떠오르면 다시 고름
-      if (tgt) { const d = Math.hypot(tgt.x - u.x, tgt.y + (tgt.lift || 0) - u.y); if (d > effRange(u) * 0.7) { u.tx = tgt.x; u.ty = tgt.y + (tgt.lift || 0); } else { u.tx = u.x; u.ty = u.y; } } // 사거리·목적지 = 그림자(땅 지점 y + lift) 기준 (10-12 ② — 착지 하강 중 공중 대상, 지상 몹 lift 0 = 무변경)
+      if (!tgt || tgt.hp <= 0 || (S.story && tgt.dead) || (airborne(tgt) && !canHitAir(u))) tgt = u.assassinTgt = strongestMonster(); // 공중: 대상이 떠오르면 다시 고름 · 📖 성에 닿아 빠진 몹(dead)은 다시 고름
+      if (tgt && S.story) storyBlink(u, tgt); // 📖 걸어가지 않고 표적 옆으로 순간 이동
+      else if (tgt) { const d = Math.hypot(tgt.x - u.x, tgt.y + (tgt.lift || 0) - u.y); if (d > effRange(u) * 0.7) { u.tx = tgt.x; u.ty = tgt.y + (tgt.lift || 0); } else { u.tx = u.x; u.ty = u.y; } } // 사거리·목적지 = 그림자(땅 지점 y + lift) 기준 (10-12 ② — 착지 하강 중 공중 대상, 지상 몹 lift 0 = 무변경)
       if (u.skillT <= 0) { // 종료 → 원래 자리로 복귀
         u.skillT = 0; u.skillCd = 150; u.inPen = false; u.assassinTgt = null;
         u.tx = u.homeX != null ? u.homeX : CX - 40; u.ty = u.homeY != null ? u.homeY : CY + 150;
+        if (S.story) storyBlinkHome(u); // 📖 원래 자리로 순간 이동
       }
     }
     if (u.chronoCd > 0) u.chronoCd = Math.max(0, u.chronoCd - dt); // ⏳ 시간술사 스킬 쿨
@@ -6006,7 +6010,7 @@ function update(dt) {
       m.abilT -= dt;
       if (m.abilT <= GRAV.TELE && !m.abilCued) { m.abilCued = true; m.puffT = GRAV.TELE; sfx('boss');
         S.effects.push({ type: 'cue', x: m.x, y: m.y, r0: 96, r1: monSize(m) * 1.4, t: GRAV.TELE, dur: GRAV.TELE, col: '232,195,154' }); } // 예고: 링이 안으로 (목성 띠색)
-      if (m.abilT <= 0) { m.abilT = GRAV.PERIOD; m.abilCued = false; bossGravity(m); }
+      if (m.abilT <= 0) { m.abilT = GRAV.PERIOD; m.abilCued = false; if (S.story) storyGravity(m); else bossGravity(m); } // 📖 같은 길 보스 앞뒤 몹을 보스 곁으로
     }
     m.born = Math.min(1, m.born + dt * 2.5);
     if (m.fly) { const l0 = m.lift || 0; m.flapT += dt; m.lift = flyLift(m.flapT, m.phase, S.air ? S.air.k : 0) * m.born; if (m.pullT > 0 || m.returnT > 0) m.y -= m.lift - l0; } // 공중: 날개 위상·부양 (freezeT continue 아래 = 시간정지 동결) — 논리 lift = 궤도점을 들어 올림(투사체·클릭이 몸에 맞음) · × m.born = 스폰 0.4초 동안 포털에서 떠오름(10-12 ②: 56px 위에 툭 나타나지 않게) · 견인·복귀 중 이착륙 = 몸도 lift만큼 같이 올림/내림(땅 지점 연속 — 궤도 경로는 oy가 이미 −lift, 10-12 ② 크로스체크)
@@ -6056,27 +6060,27 @@ function update(dt) {
       continue;
     }
     if (updateDuelFight(u)) continue; // 🏛️ 결투: 챔피언은 도전자에게만 집중 (웨이브·포커 공용)
-    if (u.forceTarget && (u.forceTarget.dead || u.forceTarget.hp <= 0 || (u.forceTarget.lane && mpNoAim(u, u.forceTarget)) || (airborne(u.forceTarget) && !canHitAir(u)))) u.forceTarget = null; // 🤖 다리 밑에 가린 레인 표적(펜 포탄 유닛은 레인 전부)은 고정 해제 · 공중: 지정 뒤 이륙하면 해제(못 치는 무기)
+    if (u.forceTarget && (u.forceTarget.dead || u.forceTarget.hp <= 0 || (u.forceTarget.lane && mpNoAim(u, u.forceTarget)) || u.forceTarget.occl || (airborne(u.forceTarget) && !canHitAir(u)))) u.forceTarget = null; // 🤖 다리 밑에 가린 레인 표적(펜 포탄 유닛은 레인 전부)은 고정 해제 · 공중: 지정 뒤 이륙하면 해제(못 치는 무기)
     // A명령: 대상 집중 공격 (보스 저격용)
     if (u.forceTarget) {
       const ft = u.forceTarget;
       const d = Math.hypot(ft.x - u.x, ft.y + (ft.lift || 0) - u.y); // 사거리 = 그림자(땅 지점) 기준 — 떠 있는 몹은 '그림자가 사거리 안이면 닿음' (10-12 ②, 지상 몹 lift 0 = 무변경)
-      if (d > effRange(u)) { const t = clampTargetPos(ft.x + u.jx, ft.y + (ft.lift || 0) + u.jy); u.tx = t.x; u.ty = t.y; } // 목적지도 그림자(땅 지점) — 몸으로 잡으면 뒷줄 하늘 몸 쪽 윗변에 붙어 그림자가 사거리 밖인 채 정지(단거리 ○: 길로틴·콰르텟 — 10-12 ② 크로스체크 P1)
+      if (d > effRange(u)) { if (!S.story) { const t = clampTargetPos(ft.x + u.jx, ft.y + (ft.lift || 0) + u.jy); u.tx = t.x; u.ty = t.y; } } // 📖 스토리: 쫓아가지 않음 (아래 자동 조준으로 다른 몹) · 목적지도 그림자(땅 지점) — 몸으로 잡으면 뒷줄 하늘 몸 쪽 윗변에 붙어 그림자가 사거리 밖인 채 정지(단거리 ○: 길로틴·콰르텟 — 10-12 ② 크로스체크 P1)
       else {
         u.tx = u.x; u.ty = u.y;
         if (u.cool <= 0 && !u.moving) { u.cool = effCd(u); fireAt(u, ft); }
       }
-      continue;
+      if (!S.story || d <= effRange(u)) continue; // 📖 표적이 사거리 밖이면 제자리에서 아래 자동 조준 (표적 지정은 안 풀림 — 들어오면 집중)
     }
     // 자동 타겟: 사거리 내에서 우선순위(가까운/강한/멀리)로 선택. 죽을 예정 몹은 제외 (핫루프 — 제곱거리 비교)
     let best = null, bestScore = Infinity, anyInRange = false;
     const r2 = effRange(u) * effRange(u);
     for (const m of S.monsters) {
-      if (m.entering || m.hp + m.shield - m.inc <= 0 || (m.lane && mpNoAim(u, m)) || (airborne(m) && !canHitAir(u))) continue; // 강림 중인 태양은 조준 불가 · 🤖 다리 밑 레인 개체도 (펜 포탄 유닛은 레인 전부) · 못 치는 공중 몹엔 탄 낭비 0
+      if (m.entering || m.hp + m.shield - m.inc <= 0 || (m.lane && mpNoAim(u, m)) || m.occl || (airborne(m) && !canHitAir(u))) continue; // 📖 다리 밑(m.occl) 조준 불가 ·강림 중인 태양은 조준 불가 · 🤖 다리 밑 레인 개체도 (펜 포탄 유닛은 레인 전부) · 못 치는 공중 몹엔 탄 낭비 0
       const ddx = m.x - u.x, ddy = m.y + (m.lift || 0) - u.y, d2 = ddx * ddx + ddy * ddy; // 사거리 = 그림자(땅 지점) 기준 (10-12 ②)
       if (d2 > r2) continue;
       anyInRange = true;
-      const score = u.priority === 'far' ? -d2 : u.priority === 'strong' ? -(m.hp + m.shield) : u.priority === 'air' && !airborne(m) ? d2 + 1e12 : d2; // 공중(10-12 결정 2): 사거리 안 떠 있는 몹 중 가장 가까운 것, 없으면 가까운 순 (d2 ≤ 사거리² ≪ 1e12)
+      const score = u.priority === 'far' ? (S.story ? m.rem : -d2) : u.priority === 'strong' ? -(m.hp + m.shield) : u.priority === 'air' && !airborne(m) ? d2 + 1e12 : d2; // 공중(10-12 결정 2): 사거리 안 떠 있는 몹 중 가장 가까운 것, 없으면 가까운 순 (d2 ≤ 사거리² ≪ 1e12)
       if (score < bestScore) { bestScore = score; best = m; }
     }
     // 어택땅: 이동 중 사거리에 적이 들어오면 정지 후 교전
@@ -6113,12 +6117,12 @@ function update(dt) {
           S.effects.push({ type:'boom', x: p.ex, y: p.ey, r: big ? 130 : 95, t: 0.5 });
           const nn = big ? 46 : 24, c = big ? '#ff5252' : '#ffb74d';
           for (let i = 0; i < nn; i++) { const a = Math.random()*6.28, v = 110 + Math.random()*230; S.parts.push({ x: p.ex, y: p.ey, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.55, r: 2 + Math.random()*4, c }); }
-          for (const m of S.monsters) if (!m.lane) dealDamage(m, p.dmg, p.owner); // 🤖 소환장 전체 타격 = 레인 프록시 제외
+          if (S.story) storyPenHit(p); else for (const m of S.monsters) if (!m.lane) dealDamage(m, p.dmg, p.owner); // 🤖 소환장 전체 타격 = 레인 프록시 제외 · 📖 스토리 = 쏜 유닛 사거리 안 전부
           if (p.cluster) { // 💥 슈퍼 탱크 2단 폭탄: 파편 8개가 사방으로 흩어져 한 번 더 폭발
             for (let i = 0; i < 8; i++) {
               const a2 = i / 8 * 6.28 + Math.random() * 0.5, rr = 40 + Math.random() * (PEN.w / 2 - 40);
-              const fx = Math.max(CX - PEN.w/2 + 14, Math.min(CX + PEN.w/2 - 14, p.ex + Math.cos(a2) * rr));
-              const fy = Math.max(CY - PEN.h/2 + 14, Math.min(CY + PEN.h/2 - 14, p.ey + Math.sin(a2) * rr * 0.66));
+              const fx = S.story ? p.ex + Math.cos(a2) * rr : Math.max(CX - PEN.w/2 + 14, Math.min(CX + PEN.w/2 - 14, p.ex + Math.cos(a2) * rr)); // 📖 소환장 사각 clamp 없음
+              const fy = S.story ? p.ey + Math.sin(a2) * rr * 0.66 : Math.max(CY - PEN.h/2 + 14, Math.min(CY + PEN.h/2 - 14, p.ey + Math.sin(a2) * rr * 0.66));
               projQ.push({ kind: 'bombthrow', deliver: 'area', owner: p.owner, mini: true,
                 sx: p.ex, sy: p.ey, x: p.ex, y: p.ey, ex: fx, ey: fy,
                 t: 0, dur: 0.35 + Math.random() * 0.2, dmg: p.dmg * 0.35, splash: 60, spin: 0, ang: 0 });
@@ -6130,8 +6134,8 @@ function update(dt) {
           if (p.boulder && !p.frag && p.owner && (p.owner.ascend || 0) >= 1) { // 🪨 승급1: 착탄 시 파편 4방 소형 폭발
             for (let i = 0; i < 4; i++) {
               const a2 = i / 4 * 6.28 + Math.random() * 0.6, rr = 34 + Math.random() * 30;
-              const fx = Math.max(CX - PEN.w / 2 + 14, Math.min(CX + PEN.w / 2 - 14, p.ex + Math.cos(a2) * rr));
-              const fy = Math.max(CY - PEN.h / 2 + 14, Math.min(CY + PEN.h / 2 - 14, gcy + Math.sin(a2) * rr * 0.7)); // 파편 착탄점 = 땅 중심 둘레 (공중 표적이면 몸 쪽 lift 위로 몰리지 않게 · 지상 = ey 그대로)
+              const fx = S.story ? p.ex + Math.cos(a2) * rr : Math.max(CX - PEN.w / 2 + 14, Math.min(CX + PEN.w / 2 - 14, p.ex + Math.cos(a2) * rr)); // 📖 소환장 사각 clamp 없음
+              const fy = S.story ? gcy + Math.sin(a2) * rr * 0.7 : Math.max(CY - PEN.h / 2 + 14, Math.min(CY + PEN.h / 2 - 14, gcy + Math.sin(a2) * rr * 0.7)); // 파편 착탄점 = 땅 중심 둘레 (공중 표적이면 몸 쪽 lift 위로 몰리지 않게 · 지상 = ey 그대로)
               projQ.push({ kind: 'bombthrow', deliver: 'area', owner: p.owner, boulder: true, frag: true, mini: false,
                 sx: p.ex, sy: p.ey, x: p.ex, y: p.ey, ex: fx, ey: fy, t: 0, dur: 0.3 + Math.random() * 0.15,
                 dmg: p.dmg * 0.3, splash: 55, spin: 0, ang: 0 });
@@ -6157,7 +6161,8 @@ function update(dt) {
           }
           const r2 = p.splash * p.splash;
           const lava = p.boulder && p.owner && p.owner.stone === 'lava'; // 🥚 용암 묻은 돌 — 착탄 화상 도트 (쇼군 화상 재사용)
-          for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y + (m.lift || 0) - gcy; if (ddx*ddx + ddy*ddy <= r2) { dealDamage(m, p.dmg, p.owner); if (lava && !airborne(m)) { m.burnT = Math.max(m.burnT || 0, 2.5); m.burnDmg = Math.max(m.burnDmg || 0, p.dmg * 0.2); } } } // 거리 = 땅 지점끼리 (지상 몹 lift 0 = 무변경)
+          if (p.storyAll) storyPenHit(p, lava); // 📖 투석기 = 사거리 안 전부 (용암 돌 화상 포함)
+          else for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y + (m.lift || 0) - gcy; if (ddx*ddx + ddy*ddy <= r2) { dealDamage(m, p.dmg, p.owner); if (lava && !airborne(m)) { m.burnT = Math.max(m.burnT || 0, 2.5); m.burnDmg = Math.max(m.burnDmg || 0, p.dmg * 0.2); } } } // 거리 = 땅 지점끼리 (지상 몹 lift 0 = 무변경)
         }
         return false;
       }
@@ -6342,7 +6347,7 @@ function dealDamage(m, dmg, owner) {
 function farthestMob(x, y, exclude, rad, skipAir) { // 반경 안에서 가장 먼 몹 — 대형 표창이 시원하게 가로지르며 팅긴다 · skipAir = 떠 있는 몹 제외(못 치는 무기의 팅김)
   let best = null, bd = -1;
   for (const m of S.monsters) {
-    if (m.hp <= 0 || m.dead || (exclude && exclude.includes(m)) || (m.lane && m.lane.occl) || (skipAir && airborne(m))) continue; // 🤖 다리 밑 레인 개체로는 안 튕긴다
+    if (m.hp <= 0 || m.dead || (exclude && exclude.includes(m)) || (m.lane && m.lane.occl) || m.occl || (skipAir && airborne(m))) continue; // 🤖 다리 밑 레인 개체로는 안 튕긴다 · 📖 스토리 다리 밑도
     const d = Math.hypot(m.x - x, m.y - y);
     if (d <= rad && d > bd) { bd = d; best = m; }
   }
@@ -6351,7 +6356,7 @@ function farthestMob(x, y, exclude, rad, skipAir) { // 반경 안에서 가장 �
 function nearestMob(x, y, exclude, rad, skipAir, ground) { // skipAir = 떠 있는 몹 제외(못 치는 무기의 팅김·파편) · ground = 몹 쪽도 땅 지점(m.y + lift)으로 잼 — 파편(범위 판정, 10-12 결정 1). 팅김(직격 재조준)은 몸
   let best = null, bd = rad;
   for (const m of S.monsters) {
-    if (m.hp <= 0 || m.dead || (exclude && exclude.includes(m)) || (m.lane && m.lane.occl) || (skipAir && airborne(m))) continue; // 🤖 다리 밑 레인 개체로는 안 튕긴다
+    if (m.hp <= 0 || m.dead || (exclude && exclude.includes(m)) || (m.lane && m.lane.occl) || m.occl || (skipAir && airborne(m))) continue; // 🤖 다리 밑 레인 개체로는 안 튕긴다 · 📖 스토리 다리 밑도
     const d = Math.hypot(m.x - x, m.y + (ground ? m.lift || 0 : 0) - y);
     if (d < bd) { bd = d; best = m; }
   }
@@ -6402,8 +6407,10 @@ function fireAt(u, target) {
           sx: m.x, sy: m.y, x: m.x, y: m.y, ex: target.x, ey: target.y, gy: target.y + (target.lift || 0), // gy = 표적 땅 지점(투척 그림자 자리 — 착탄은 몸, 10-12 ②)
           t: 0, dur: arc ? 0.5 : Math.max(0.18, Math.hypot(target.x - m.x, target.y - m.y) / 640),
           dmg, splash: u.splash, spin: 0, ang: Math.atan2(target.y - m.y, target.x - m.x) });
+        if (S.story && u.catapult) { const sp = S.projs[S.projs.length - 1]; storyPenShot(sp, u, target); sp.storyAll = true; } // 📖 투석기 = 사거리 안 길 위 전부 (사거리 799 → 사실상 맵 전체)
         if (u.catapult && (u.ascend || 0) >= 2) { // 🪨 승급2: 돌덩이 2발 동시 포격 (두 번째는 랜덤 지점)
-          const ex2 = CX + (Math.random() - 0.5) * PEN.w * 0.85, ey2 = CY + (Math.random() - 0.5) * PEN.h * 0.85;
+          const rm = S.story ? storyRandMob() : null; // 📖 둘째 돌 = 무작위 몹 땅 지점 (챌린지는 기존 난수 그대로)
+          const ex2 = rm ? rm.x : CX + (Math.random() - 0.5) * PEN.w * 0.85, ey2 = rm ? rm.y + (rm.lift || 0) : CY + (Math.random() - 0.5) * PEN.h * 0.85;
           S.projs.push({ kind: 'bombthrow', deliver: 'area', owner: u, boulder: true,
             sx: m.x, sy: m.y, x: m.x, y: m.y, ex: ex2, ey: ey2, t: 0, dur: 0.55, dmg, splash: u.splash, spin: 0, ang: 0 });
         }
@@ -6416,6 +6423,7 @@ function fireAt(u, target) {
       S.projs.push({ kind: 'shell', deliver: 'pen', nuke, owner: u, cluster: u.super && !nuke, // 💥 슈퍼 탱크: 2단 폭탄
         sx: m.x, sy: m.y, x: m.x, y: m.y, ex: CX, ey: CY,
         t: 0, dur: nuke ? 0.75 : 0.5, dmg, spin: 0 });
+      if (S.story) storyPenShot(S.projs[S.projs.length - 1], u, target); // 📖 착탄 = 고른 표적 자리 · 타격 = 쏜 유닛 사거리 × PEN_RK 안 전부
       break;
     }
     case 'sniper': { // 저격총: 단일 초강력 (즉시) — 보스에겐 급소 저격으로 2배
@@ -6568,7 +6576,9 @@ function areaHit(u, x, y, dmg, gy) {
       if (d2 <= pr2) inR.push([d2, m]);
     }
     if (inR.length > cap) inR.sort((a, b) => a[0] - b[0]);
-    for (let i = 0; i < Math.min(cap, inR.length); i++) { const m = inR[i][1]; m.pullT = pt; m.pullX = u.x; m.pullY = u.y; m.pullQuiet = false; }
+    for (let i = 0; i < Math.min(cap, inR.length); i++) { const m = inR[i][1];
+      if (S.story && !storyJokerPull(m, u, pr)) continue; // 📖 길 뒤로 되감기: 그 몹 길에서 조커와 가장 가까운 점(뒤쪽 2×사거리 안)까지만 — 사거리 밖·앞쪽이면 안 끌림
+      m.pullT = pt; m.pullX = u.x; m.pullY = u.y; m.pullQuiet = false; }
   }
 }
 // 파편: 명중 지점에서 돌조각이 사방으로 튀며 주변 몹에 소량 데미지
@@ -7302,7 +7312,7 @@ function airborne(m) { return !!(m.fly && S.air && S.air.up); } // 지금 떠 �
 function strongestMonster() {
   let best = null, bv = -1;
   for (const m of S.monsters) {
-    if (m.hp <= 0 || m.entering || m.lane || airborne(m)) continue; // 🤖 사거리 무관 전역 선택 — 레인 프록시 제외 (단검 급습이 수로로 뛰어들지 않게) · 공중: 호출처(암살 — 정보창·스킬 바 공용)가 단검(✕)뿐이라 떠 있는 몹 제외(허공 돌격 방지)
+    if (m.hp <= 0 || m.entering || m.lane || m.occl || airborne(m)) continue; // 📖 다리 밑 제외 · 🤖 사거리 무관 전역 선택 — 레인 프록시 제외 (단검 급습이 수로로 뛰어들지 않게) · 공중: 호출처(암살 — 정보창·스킬 바 공용)가 단검(✕)뿐이라 떠 있는 몹 제외(허공 돌격 방지)
     const v = (m.boss ? 1e9 : 0) + m.hp + (m.shield || 0);
     if (v > bv) { bv = v; best = m; }
   }
@@ -7318,6 +7328,7 @@ function spawnClones(u, count) {
     c.x = u.x + Math.cos(a) * 28; c.y = u.y + Math.sin(a) * 28;
     c.inPen = true; // 분신도 울타리 안으로 들어가 난전
     c.amove = false; c.tx = CX + Math.cos(a) * (PEN.w / 4); c.ty = CY + Math.sin(a) * (PEN.h / 4);
+    if (S.story) storyCloneSpot(c, i, count, u); // 📖 표적(가장 강한 몹) 둘레로 순간 이동 — 수명 동안 그 자리에서 싸움
     S.units.push(c);
   }
 }
@@ -13366,7 +13377,7 @@ const MAT_DESC = [
 function monsterAt(x, y) {
   let best = null, bd = Infinity;
   for (const m of S.monsters) {
-    if (m.hp <= 0 || m.dead || (m.lane && m.lane.occl)) continue; // 🤖 다리 밑 레인 개체는 집을 수 없다
+    if (m.hp <= 0 || m.dead || (m.lane && m.lane.occl) || m.occl) continue; // 🤖 다리 밑 레인 개체는 집을 수 없다 · 📖 스토리 다리 밑도 (P2-5)
     const rad = monSize(m) + (IS_MOBILE ? 21 : 12); // 패드 16/8 → 21/12: 몹 30% 축소(≈5px)로 줄어든 절대 탭 반경 보상 (크로스체크)
     const d = Math.hypot(m.x - x, m.y - y);
     if (d < rad && d < bd) { bd = d; best = m; }
@@ -13392,7 +13403,7 @@ function showMonsterInfo(m) {
   const mat = MATERIALS[m.mat] || { name: '수수께끼 공' };
   const bi = m.boss ? (BOSS_INFO[m.shape] || ['보스', '정체불명. 아무튼 세다.']) : null;
   const name = m.boss ? bi[0] + ' (보스)' : mat.name + (m.golden ? ' (황금)' : '');
-  const desc = m.boss ? `<i class="oi-quote">“${bi[1]}”</i>${m.abil && bossHint(m.shape) ? '<br><span class="tip">' + bossHint(m.shape) + '</span>' : '<br>'}<span class="oi-warn">시간 내에 못 잡으면 즉사</span>` : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…'); // 10-09: 능력 힌트 줄(bossHint, 능력 있는 보스만)
+  const desc = m.boss ? `<i class="oi-quote">“${bi[1]}”</i>${m.abil && bossHint(m.shape) ? '<br><span class="tip">' + bossHint(m.shape) + '</span>' : '<br>'}<span class="oi-warn">${S.story ? '성에 닿으면 끝' : '시간 내에 못 잡으면 즉사'}</span>` : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…'); // 10-09: 능력 힌트 줄(bossHint, 능력 있는 보스만)
   const hp = Math.max(0, Math.ceil(m.hp)), max = Math.max(1, Math.ceil(m.max));
   const pct = Math.max(0, Math.min(1, m.hp / m.max));
   const col = pct > 0.5 ? '#43a047' : pct > 0.25 ? '#ff9800' : '#e53935';
@@ -13677,7 +13688,7 @@ function unitShortName(u) {
 // 값은 유닛 필드 그대로 = 슈퍼·에이스·승급이 반영된 실효값 · 스킬 버튼이 따로 있는 시간정지·대박 폭격·견인·풀하우스 스킬은 칩 없음
 function unitTraits(u) {
   const t = [];
-  if (u.atk === 'pen') t.push('소환장 전체 타격');
+  if (u.atk === 'pen') t.push(S && S.story ? '사거리 안 모두 타격' : '소환장 전체 타격');
   else if (u.vis === 'flame') t.push('화염');
   else if ((u.vis === 'sword' || u.vis === 'twin') && !u.shogun) t.push('단일');
   else if (u.splash || (u.atk === 'shot' && u.proj === 'shuriken')) t.push('광역'); // 유탄 = 착탄 범위 공격 (SF_SPLASH)
@@ -13932,11 +13943,12 @@ function activateSlot(u) {
   const n = (u.ascend || 0) >= 1 ? 20 + Math.floor(Math.random() * 11) : 14 + Math.floor(Math.random() * 9); // 승급1: 20~30개
   const dmg = 60 * (1 + 0.15 * (u.heroUpLv || 0)); // 히든은 종족 업글 대상이 아니므로 단련 배수로 성장
   for (let i = 0; i < n; i++) {
-    const ex = CX + (Math.random() - 0.5) * PEN.w * 0.9, ey = CY + (Math.random() - 0.5) * PEN.h * 0.9;
+    let ex = CX + (Math.random() - 0.5) * PEN.w * 0.9, ey = CY + (Math.random() - 0.5) * PEN.h * 0.9; // 난수는 먼저 (챌린지 순서 그대로)
+    if (S.story) { const rm = storyRandMob(); if (rm) { ex = rm.x; ey = rm.y + (rm.lift || 0); } } // 📖 무작위 몹 땅 지점
     S.slotBombs.push({ delay: i * (1.2 / n), ex, ey, dmg, owner: u });
   }
   addFloat(u.x, u.y - 28, '대박 폭격!', '#ffd54f', 1.6);
-  logMsg(`${u.weapon} 대박 폭격! 소환장에 폭탄 세례!`);
+  logMsg(S.story ? `${u.weapon} 대박 폭격! 몬스터 머리 위로 폭탄 세례!` : `${u.weapon} 대박 폭격! 소환장에 폭탄 세례!`);
   sfx('jackpot');
 }
 function slotRow(u) {
@@ -14000,7 +14012,7 @@ document.getElementById('skillBar').addEventListener('click', e => {
 // air = 대공 가능 유닛이 있을 때만 '공중' 버튼 (10-12 유저 결정 2: 사거리 안 떠 있는 몹 우선 타격)
 function priorityRow(cur, air) {
   const b = (v, label) => `<button type="button" class="priBtn" data-pri="${v}" aria-pressed="${cur === v}">${label}</button>`;
-  return `<div class="ui-pri${air ? ' ui-pri4' : ''}"><span class="ui-pri-label">공격 우선:</span> ${b('near','가까운')}${b('strong','강한')}${b('far','멀리')}${air ? b('air','공중') : ''}</div>`; // ui-pri4 = 4버튼 줄(모바일 폭 CSS 만 — 3버튼 줄은 그대로)
+  return `<div class="ui-pri${air ? ' ui-pri4' : ''}"><span class="ui-pri-label">공격 우선:</span> ${b('near','가까운')}${b('strong','강한')}${b('far', S && S.story ? '선두' : '멀리')}${air ? b('air','공중') : ''}</div>`; // ui-pri4 = 4버튼 줄(모바일 폭 CSS 만 — 3버튼 줄은 그대로)
 }
 function airPriOk(u) { return !u.miner && !u.item && canHitAir(u); } // '공중' 우선을 받을 수 있는 유닛 (canHitAir 는 아이템·owner 없음도 true 라 따로 뺌)
 function wirePriorityButtons(el) {
@@ -18553,6 +18565,47 @@ function storyGameOver() { // endWave 게임오버 — 기록·오늘의 시드�
   const lifeHTML = S.lifeLog.length ? `<div style="margin-top:8px;text-align:left;font-size:12px;color:#ef9a9a">목숨: ${S.lifeLog.slice(-6).map(e => `R${e.r} ${e.d > 0 ? '−' + e.d : '+' + (-e.d)} ${e.why}`).join(' · ')}</div>` : '';
   document.getElementById('finalScore').innerHTML = `<b>${M.name}</b> — ${S.storyR}번째 무리에서 성이 무너졌어요<br>` + lifeHTML + statsHTML;
   document.getElementById('overlay').style.display = 'flex'; syncGamePause();
+}
+// ---- 전투 규칙 (설계 §8 — 스토리만) ----
+function storyPenShot(p, u, target) { p.ex = target.x; p.ey = target.y; p.R = effRange(u) * STORY.PEN_RK; p.ox = u.x; p.oy = u.y; } // 탱크·핵·투석기: 착탄 = 고른 표적 · 타격 = 쏜 자리 기준 사거리 × PEN_RK 안
+function storyPenHit(p, lava) { // '사거리 안 길 위 전부' — 거리 = 쏜 유닛 ↔ 몹 땅 지점 · 다리 밑 몹도 맞음 (폭발) · 용암 돌이면 지상 몹 화상
+  const r2 = p.R * p.R;
+  for (const m of S.monsters) { const dx = m.x - p.ox, dy = m.y + (m.lift || 0) - p.oy;
+    if (dx * dx + dy * dy <= r2) { dealDamage(m, p.dmg, p.owner); if (lava && !airborne(m)) { m.burnT = Math.max(m.burnT || 0, 2.5); m.burnDmg = Math.max(m.burnDmg || 0, p.dmg * 0.2); } } }
+}
+function storyRandMob() { const c = S.monsters.filter(m => m.hp > 0 && !m.dead && !m.entering); return c.length ? c[(Math.random() * c.length) | 0] : null; } // 슬롯 폭탄·투석기 둘째 돌 (스토리 판에서만 난수)
+function storyLeadMob() { let b = null; for (const m of S.monsters) if (m.hp > 0 && !m.dead && m.rem != null && (!b || m.rem < b.rem)) b = m; return b; } // 성에 가장 가까운 몹 (염산 장판)
+function storyPuff(x, y) { S.effects.push({ type: 'boom', x, y: y - 10, r: 16, t: 0.18 }); } // 순간 이동 연기
+function storyBlink(u, tgt) { // 단검 암살: 표적 땅 지점이 사거리 0.7배 밖이면 그 몹 옆 풀밭(길 반폭 + 14)으로 '훅' — 표적이 걸어가 멀어지면 다시
+  const gx = tgt.x, gy = tgt.y + (tgt.lift || 0);
+  if (Math.hypot(gx - u.x, gy - u.y) <= effRange(u) * 0.7) { u.tx = u.x; u.ty = u.y; return; }
+  const P = S.story.P[tgt.path]; if (!P || tgt.s == null) return;
+  const i = storyIdx(P, tgt.s), sg = (tgt.off || 0) >= 0 ? 1 : -1, d = P.w / 2 + 14;
+  storyPuff(u.x, u.y);
+  u.x = u.tx = P.x[i] + P.nx[i] * sg * d; u.y = u.ty = P.y[i] + P.ny[i] * sg * d; u.moving = false;
+  storyPuff(u.x, u.y);
+}
+function storyBlinkHome(u) { storyPuff(u.x, u.y); u.x = u.tx; u.y = u.ty; u.moving = false; storyPuff(u.x, u.y); } // 끝 → tx/ty(= homeX/Y)로 순간 이동
+function storyCloneSpot(c, i, count, u) { // 분신: 가장 강한 몹(없으면 본체) 땅 지점 둘레 반지름 34에 고르게
+  const t = strongestMonster(), gx = t ? t.x : u.x, gy = t ? t.y + (t.lift || 0) : u.y, a = Math.PI * 2 * (i + 0.5) / count;
+  c.x = c.tx = gx + Math.cos(a) * 34; c.y = c.ty = gy + Math.sin(a) * 34;
+}
+function storyJokerPull(m, u, pr) { // 조커 되감기 (P1-1): 그 몹 길의 [s − 2×사거리, s] 안에서 조커와 가장 가까운 점 — 그 점이 사거리 밖이거나 뒤쪽이 아니면 안 끌림
+  const P = S.story.P[m.path]; if (!P || m.s == null) return false;
+  const s = storyNearS(P, u.x, u.y, m.s - 2 * pr, m.s), i = storyIdx(P, s);
+  if (s >= m.s - 1 || (P.x[i] - u.x) ** 2 + (P.y[i] - u.y) ** 2 > pr * pr) return false;
+  m.pullS = s; m.pullK = null; return true;
+}
+function storyGravity(b) { // 목성 중력 = 같은 길, 보스 앞뒤 GRAV_S 안 잡몹 → 보스 s ± PILE_S (고기 방패). 사슬 = 보스 땅 지점
+  let n = 0;
+  for (const o of S.monsters) {
+    if (o === b || o.boss || o.pullT > 0 || o.path !== b.path || o.s == null) continue;
+    const ds = o.s - b.s; if (Math.abs(ds) > STORY.GRAV_S) continue;
+    const Po = S.story.P[o.path];
+    o.pullT = GRAV.PULL_T; o.pullK = 'grav'; o.pullS = Math.max(0, Math.min(Po.L - 1, b.s + (ds >= 0 ? 1 : -1) * STORY.PILE_S)); // P2-2: 성 앞 보스여도 끌려가다 도착 처리되지 않게
+    o.pullX = b.x; o.pullY = b.y + (b.lift || 0); o.pullQuiet = n++ >= GRAV.LINES || Math.abs(ds) <= STORY.PILE_S;
+  }
+  if (WEAK.SHAPES[b.shape]) b.weakT = WEAK.T; // bossGravity와 같은 줄 (목성은 해당 없음)
 }
 // ---- 건물·자리 (설계 §9·§11) ----
 function storyObjAt(x, y) { // objAt 스토리판 — 제단·포털·성 + (맵에 있으면) 광석방·광산. 결투장·소환장 없음
