@@ -6001,7 +6001,7 @@ function update(dt) {
   for (const m of S.monsters) {
     m.hitT = Math.max(0, (m.hitT || 0) - dt);
     if (m.lane) { mpLanePos(m); continue; } // 🤖 레인 프록시: 위치는 결정론 경로가 덮어쓴다 (배회·펜 클램프·견인·화상 면역)
-    if (m.burnT > 0) { m.burnT -= dt; if (!airborne(m)) m.hp -= m.burnDmg * dt; } // 🔥 쇼군 화상 도트 (얼어붙어도 계속 탄다) · 공중: 착지 창에 붙은 화상은 날아오른 동안엔 안 깎임(시간은 흐름 — 쇼군·용암 ✕ 체감, pat2 크로스체크 P2)
+    if (m.burnT > 0) { m.burnT -= dt; if (!airborne(m)) m.hp -= m.vk ? varBurn(m, m.burnDmg * dt) : m.burnDmg * dt; } // 🫧 구슬 변종(10-15) 불 약점은 varBurn(꺼지면 m.vk 없음 = 식 그대로) · 🔥 쇼군 화상 도트 (얼어붙어도 계속 탄다) · 공중: 착지 창에 붙은 화상은 날아오른 동안엔 안 깎임(시간은 흐름 — 쇼군·용암 ✕ 체감, pat2 크로스체크 P2)
     if (!m.boss) { // 🪖 장비 파괴 감지: 단계가 늘어난 프레임에만 1회성 이펙트
       const brk = monBroken(m);
       if (brk > m._brk) { monGearBreakFx(m.x, m.y, monSize(m)); m._brk = brk; }
@@ -6025,6 +6025,7 @@ function update(dt) {
       continue;
     }
     if (S.freezeT > 0) continue; // 시간 정지 중엔 위치 갱신 없이 제자리
+    if (m.vk) varTick(m, dt); // 🫧 구슬 변종(10-15): 이끼 재생·불 맞음 연출 — 이 줄 위 continue 덕에 시간정지 중 멈춤
     if (m.weakT > 0) m.weakT -= dt; // 약점 창(틀) — freezeT continue 아래 = 시간정지 중 동결 (열린 채 멈춤, 토성 규칙과 동일)
     if (m.puffT > 0) m.puffT -= dt; // 능력 예고 부풀기
     if (m.abil === 'gravity' && !m.small && !m.entering && m.hp > m.max * 0.2) { // 목성 중력 (받침 A: 보스 HP 20% 아래면 능력 정지)
@@ -6327,6 +6328,7 @@ function update(dt) {
           });
         }
       }
+      if (m.vk === 14 && !m.vkKid && S.monsters.length + newborns.length < 260) varSplit(m, newborns); // 🫧 젤리(구슬 변종 10-15): 잡으면 작은 젤리 2개 (보스 분열과 같은 상한) · 시간정지 중에도 갈라짐(조각도 제자리에 멈춰 있음)
       return false;
     }
     return true;
@@ -6367,12 +6369,89 @@ function dealDamage(m, dmg, owner, el) {
 function varInit(m, vk) { // 변종 세우기 — spawnMonster가 재질·황금·쉴드 난수를 다 뽑은 뒤 덮어씀(켜도 일반 몹과 같은 난수를 같은 순서로 소비)
   m.vk = vk; m.mat = vk; m.esc = matInfo(S.round).p; m.golden = false; // 재질·밴드 험악도 고정(밴드 끝 '다음 재질'에 뽑혔어도) · 황금 불가(모양이 먼저 읽혀야 함)
   m.lastHitAt = S.time; m.fireT = 0; m.fxT = 0; // 마지막으로 맞은 시각(이끼 재생 시계) · '불 맞음' 끝 시각 · 연출 쓰로틀
+  if (vk === 14) m.max = m.hp = Math.max(1, Math.floor(m.max * JELLY.PARENT)); // 젤리 본체 = 몫 H의 절반 (나머지 절반 = 잡힐 때 갈라지는 조각 2개)
+  if (vk === 15) m.shell = true; // 밤송이 껍질
+  if (vk === 16) { m.vBudget = m.max * MOSS.BUDGET; m.vRegT = 0; } // 이끼 재생 예산(자기·옆 몹 합) · 0.25초 틱 누적
 }
-function varHit(m, dmg, el) { // dealDamage 자리 — 반환 = 바뀐 피해
+function varHit(m, dmg, el) { // dealDamage 자리 — 반환 = 바뀐 피해. 순서: 불(약점 배수·밤송이 즉시 벗김) | 물리(밤송이 껍질 ×0.88·절반 넘는 한 방에 벗김)
   if (!m.vk) return dmg; // 진입점 차단
   m.lastHitAt = S.time; // [금성 lastHitAt] 첫 사용 — 금성 재생 틀이 생기면 보스도 같은 필드
-  if (el === 'fire') m.fireT = S.time + VAR_FIRE_T;
+  if (el === 'fire') {
+    m.fireT = S.time + VAR_FIRE_T;
+    if (VAR_FIRE[m.vk]) dmg *= VAR_FIRE[m.vk]; // 이끼 공·눈덩이 ×1.4
+    if (m.shell) varPeel(m, true, m.hp - dmg); // 밤송이: 불이면 바로 탁 — 이 한 방은 껍질 감소 없이 그대로
+    varSee(m.vk, 'fire');
+  } else if (m.shell) {
+    dmg *= BURR.MUL; // 껍질 동안 물리 ×0.88 (단단함 시스템이 생기면 '단단함 +1'로 옮기고 이 줄 삭제)
+    varSee(m.vk, 'phys');
+    if (m.hp - dmg <= m.max * BURR.PEEL_AT) varPeel(m, false, m.hp - dmg); // 이 한 방으로 절반을 넘으면 벗겨짐 (변종은 쉴드 없음 — R≤49)
+  }
   return dmg;
+}
+function varBurn(m, d) { return d * (VAR_FIRE[m.vk] || 1); } // 화상 도트 1틱 — 불 약점 ×1.4는 여기서 한 번만(burnDmg는 varHit 전 값이라 거기서 곱하지 않음)
+function varPeel(m, byFire, hpAfter) { // 밤송이 껍질 → 알밤(그림만, m.mat 15 그대로). 상태는 늘 바뀌고, 연출(파편·링·소리)은 그 한 방에 살아남을 때만 — 벗겨지며 죽으면 죽음 팡만
+  m.shell = false; m.peel = true; m.peelHp = Math.max(1, hpAfter); // 알밤 손상 표시 기준 = 벗겨진 직후 체력
+  if (hpAfter <= 0) return;
+  const crowd = S.parts.length <= 180 ? 1 : Math.max(0.25, 180 / S.parts.length); // burstJuice 혼잡 예산과 같은 규칙 — 탱크·핵·화염 띠 한 번에 수십 마리가 같이 벗겨질 때
+  const sz = monSize(m), n = Math.max(1, Math.round(6 * crowd));
+  for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, v = 90 + Math.random() * 120; S.parts.push({ x: m.x, y: m.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 70, g: true, frag: true, t: 0.5, c: '#5d2d00', r: 2.2 + Math.random() * 2, spin: Math.random() * 6.28 }); } // 갈색 껍질 조각
+  if (byFire) for (let i = 0, k = Math.max(1, Math.round(3 * crowd)); i < k; i++) { const a = Math.random() * 6.28, v = 70 + Math.random() * 90; S.parts.push({ x: m.x, y: m.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 50, g: true, t: 0.4, c: i % 2 ? '#ffd54f' : '#ff8a3d', r: 1.4 + Math.random() * 1.2 }); } // 주황 불똥
+  if (S.effects.length < 90) S.effects.push({ type: 'boom', x: m.x, y: m.y, r: sz * 1.2, t: 0.16 }); // 작은 링 (글자 없음 — UI 미니멀)
+  sfx('thud');
+  if (S.parts.length > 500) S.parts.splice(0, S.parts.length - 500);
+}
+function varTick(m, dt) { // update 몬스터 루프 — 시간정지 continue 아래(정지 중 멈춤). 이끼 재생 + 불 맞음 연출
+  if (!m.vk || !(m.hp > 0)) return; // 같은 프레임에 화상으로 0 아래로 간 몹은 되살리지 않음
+  if (m.vk === 16 && m.vBudget > 0 && (m.vRegT += dt) >= MOSS.TICK) { // 🌿 이끼 공: 쉬게 두면 차오름
+    const T = m.vRegT; m.vRegT = 0;
+    if (S.time - m.lastHitAt >= MOSS.IDLE && S.time >= m.fireT && !(m.burnT > 0)) { // 맞는 중·불 맞음·화상 중 = 멈춤 (도트는 '맞음'으로 안 치므로 burnT 조건 따로)
+      let got = 0;
+      const a = Math.min(m.max - m.hp, MOSS.SELF * m.max * T, m.vBudget);
+      if (a > 0) { m.hp += a; m.vBudget -= a; got += a; }
+      if (m.vBudget > 0) { // 옆 몹: 중심 거리 NEAR_R 안 가까운 NEAR_N마리 — 지상 잡몹만(공중 몹은 착지해도 제외: 층 섞임 방지)
+        const R2 = MOSS.NEAR_R * MOSS.NEAR_R, near = [];
+        for (const o of S.monsters) {
+          if (o === m || o.dead || !(o.hp > 0) || !(o.hp < o.max) || o.boss || o.lane || o.entering || o.fly) continue;
+          const dx = o.x - m.x, dy = o.y - m.y, d2 = dx * dx + dy * dy;
+          if (d2 <= R2) near.push([d2, o]);
+        }
+        near.sort((p, q) => p[0] - q[0]);
+        for (let i = 0; i < near.length && i < MOSS.NEAR_N && m.vBudget > 0; i++) {
+          const o = near[i][1], b = Math.min(o.max - o.hp, MOSS.NEAR * m.max * T, m.vBudget);
+          if (b > 0) { o.hp += b; m.vBudget -= b; got += b; }
+        }
+      }
+      if (got > 0 && S.parts.length <= 300) { const ph = m.phase + S.time * 3.1, sz = monSize(m); S.parts.push({ x: m.x + Math.sin(ph) * sz * 0.5, y: m.y - sz * 0.4, vx: Math.cos(ph) * 8, vy: -34, t: 0.6, r: 1.8, c: '#9be36b' }); } // 연두 잎 점 1개가 위로 (난수 안 씀)
+    }
+  }
+  if ((m.vk === 16 || m.vk === 17) && S.time < m.fireT && S.time >= m.fxT && S.parts.length <= 300) { // 불 맞음 연출 0.3초에 한 번: 눈덩이 = 흰 김 + 하늘색 물방울 뚝 / 이끼 = 회색 연기
+    m.fxT = S.time + 0.3; const sz = monSize(m), ph = m.phase + S.time * 2.3;
+    if (m.vk === 17) {
+      S.parts.push({ x: m.x + Math.sin(ph) * sz * 0.4, y: m.y - sz * 0.6, vx: Math.cos(ph) * 10, vy: -40, t: 0.55, r: 2.6, c: '#f4f8fb' });
+      S.parts.push({ x: m.x + Math.cos(ph) * sz * 0.5, y: m.y + sz * 0.3, vx: 0, vy: 10, g: true, t: 0.45, r: 1.7, c: '#9fd2f5' });
+    } else S.parts.push({ x: m.x + Math.sin(ph) * sz * 0.4, y: m.y - sz * 0.6, vx: Math.cos(ph) * 8, vy: -30, t: 0.7, r: 2.8, c: '#8a8f87' });
+  }
+}
+function varSplit(m, newborns) { // 젤리 본체가 잡힘 → 작은 젤리 2개 (보스 분열 조각과 같은 규칙 — 사망 필터 도중이라 newborns에 객체 리터럴, 260 상한은 호출처 · 누수·킬 골드·콤보 1씩)
+  const chp = Math.max(1, Math.floor(m.max * JELLY.KID));
+  for (let i = 0; i < JELLY.KIDS; i++) {
+    const s = i ? 1 : -1;
+    newborns.push({
+      ang: m.ang + s * 0.15, baseR: m.baseR, phase: m.phase + i * 1.7, spin: m.spin, x: m.x + s * 6, y: m.y, rot: m.rot, // 본체 궤도 값 물려받기(난수 없음)
+      hp: chp, max: chp, colorIdx: m.colorIdx, inc: 0, dead: false, shape: m.shape,
+      mat: 14, esc: m.esc, golden: false, bobP: m.bobP + i * 1.3,
+      boss: false, born: 0.4, hell: m.hell, small: true, shield: 0, shieldMax: 0, split: false, child: true, _brk: 0,
+      weakT: 0, puffT: 0, pullQuiet: false, slot: null, slotN: 0, returnT: 6, // returnT: 본체 자리에서 퐁 갈라져 궤도 자리로 굴러감(조커 복귀와 같은 길 — 다음 프레임에 가운데로 순간이동하지 않게)
+      vk: 14, vkKid: true, lastHitAt: S.time, fireT: 0, fxT: 0,
+    });
+  }
+}
+let varSeenC = null; // localStorage 'dpd_monel' 사본 — 도감 속성 아이콘 발견 기록(판과 무관한 영구 기록의 거울이라 resetTransientUI 대상 아님)
+function varSeen(vk, el) { if (!varSeenC) { try { varSeenC = JSON.parse(localStorage.getItem('dpd_monel') || '{}') || {}; } catch (e) { varSeenC = {}; } } return !!varSeenC[vk + el]; }
+function varSee(vk, el) { // 그 속성으로 처음 맞혔을 때만 기록 — dealDamage는 가장 뜨거운 길이라 맞을 때마다 JSON.parse·setItem 금지(사본 캐시)
+  const L = VAR_DEX_EL[vk]; if (!L || !L.includes(el)) return; // 도감 표에 있는 것만 (젤리 'fire' 같은 쓸모없는 키 안 씀)
+  if (S.sandbox || S.mapTest || S.multi || S.tutMode || varSeen(vk, el)) return; // markAchv와 같은 제외 목록
+  varSeenC[vk + el] = 1; try { localStorage.setItem('dpd_monel', JSON.stringify(varSeenC)); } catch (e) {}
 }
 function farthestMob(x, y, exclude, rad, skipAir) { // 반경 안에서 가장 먼 몹 — 대형 표창이 시원하게 가로지르며 팅긴다 · skipAir = 떠 있는 몹 제외(못 치는 무기의 팅김)
   let best = null, bd = -1;
