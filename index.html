@@ -18589,9 +18589,12 @@ function storyBlink(u, tgt) { // 단검 암살: 표적 땅 지점이 사거리 0
   const gx = tgt.x, gy = tgt.y + (tgt.lift || 0);
   if (Math.hypot(gx - u.x, gy - u.y) <= effRange(u) * 0.7) { u.tx = u.x; u.ty = u.y; return; }
   const P = S.story.P[tgt.path]; if (!P || tgt.s == null) return;
-  const i = storyIdx(P, tgt.s), sg = (tgt.off || 0) >= 0 ? 1 : -1, d = P.w / 2 + 14;
+  const i = storyIdx(P, tgt.s), sg = (tgt.off || 0) >= 0 ? 1 : -1, d = P.w / 2 + 14, at = k => [P.x[i] + P.nx[i] * k * d, P.y[i] + P.ny[i] * k * d];
+  let hw = 0; for (const Q of S.story.P) hw = Math.max(hw, Q.w / 2);
+  let p = at(sg); const pd = storyPathDist(p[0], p[1]);
+  if (pd < hw) { const q = at(-sg); if (storyPathDist(q[0], q[1]) > pd) p = q; } // 그 자리가 다른 길(합류·갈림 근처) 위면 반대쪽 풀밭 — 둘 다 길이면 덜 겹치는 쪽 (10-15 리뷰)
   storyPuff(u.x, u.y);
-  u.x = u.tx = P.x[i] + P.nx[i] * sg * d; u.y = u.ty = P.y[i] + P.ny[i] * sg * d; u.moving = false;
+  u.x = u.tx = p[0]; u.y = u.ty = p[1]; u.moving = false;
   storyPuff(u.x, u.y);
 }
 function storyBlinkHome(u) { storyPuff(u.x, u.y); u.x = u.tx; u.y = u.ty; u.moving = false; storyPuff(u.x, u.y); } // 끝 → tx/ty(= homeX/Y)로 순간 이동
