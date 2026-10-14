@@ -3757,7 +3757,7 @@ const ALTAR_OUT = { x: ALTAR.x + 62, y: ALTAR.y - 40 }; // 제단 산출 지점(
 const PLANK_W = 48, PLANK_DEPTH = 12; // 🪵 나무판자: 소환장 중앙 하단 발판. 폭 48(2기 낑김), 깊이 12(짧게) — 유닛이 올라가 소환장 안을 직접 타격
 // 판정 상한 -26 = 발 위치 보정: 유닛 중심이 판자 위끝보다 26px 위까지 허용 → "발"이 판자 끝단에 딱 서는 그림
 // 판정 하한 +16: 울타리 밀어내기 경계(+10)보다 아래까지 겹치게 (경계 틈 데드존 방지)
-function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > CY + PEN.h/2 - PLANK_DEPTH - 26 && y < CY + PEN.h/2 + 16; }
+function onPlank(x, y) { return S.plank && !S.story && Math.abs(x - CX) < PLANK_W/2 && y > CY + PEN.h/2 - PLANK_DEPTH - 26 && y < CY + PEN.h/2 + 16; }
 // 몬스터 크기 (2배 스케일) — drawMonster/deathPop 공용
 // 크기: 밴드 진행도(esc)만큼 커진다 (③ 시각적 난이도 신호)
 // 재질별 크기 배율: 실제 공 크기 싱크 (야구공 작게 ~ 농구공 크게). 천체는 웅장하게
@@ -5605,7 +5605,7 @@ function updateAltar() {
     S.units = S.units.filter(u => u !== it);
     for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 50 + Math.random()*80; S.parts.push({ x: ALTAR.x, y: ALTAR.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 20, t: 0.4, r: 1.5 + Math.random()*2, c: '#ffd166' }); }
     if (it.item === 'revive') { S.reviveArmed = true; addFloat(ALTAR.x, ALTAR.y - 44, '부활 봉인!', '#43a047', 2); sfx('hero'); logMsg('부활권 봉인 — 이번 라운드 사망 시 부활! (무사 클리어 시 소멸)'); }
-    else if (it.item === 'plank') { S.plank = true; addFloat(CX, CY + PEN.h/2 + 22, '나무판자 설치!', '#a1887f', 2); sfx('pick'); logMsg('나무판자 설치 — 소환장 중앙 하단에 발판! 단검(풀하우스)을 올려보세요.'); }
+    else if (it.item === 'plank') { if (!S.story) { S.plank = true; addFloat(CX, CY + PEN.h/2 + 22, '나무판자 설치!', '#a1887f', 2); sfx('pick'); logMsg('나무판자 설치 — 소환장 중앙 하단에 발판! 단검(풀하우스)을 올려보세요.'); } } // 📖 스토리엔 소환장이 없어 판자도 없음 (얻는 길도 샌드박스뿐)
     else if (it.item === 'oreGift') { openOreGift(it.oreStage || 1); } // 💎 보상 광석 — 깨서 개봉
     else if (it.item === 'crown') { openCrownModal(); } // 👑 왕관 — 종족 선택 모달 (취소 시 왕관 재소환)
     else if (it.item === 'gachaBox') { mpOpenBox(); } // 🤖 멀티: 🎫 골드티켓 ② 뽑기권 상자 개봉 (멀티에서만 생긴다)
@@ -9412,6 +9412,7 @@ function drawAltar() {
 }
 // 🪵 나무판자: 소환장 중앙 하단 발판 (유닛이 올라가 소환장 안을 직접 타격)
 function drawPlank() {
+  if (S.story) return; // 📖 스토리엔 소환장 없음 → 판자 없음
   const x = CX, yTop = CY + PEN.h/2 - PLANK_DEPTH, h = PLANK_DEPTH + 8, w = PLANK_W;
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(x, yTop + h, w*0.6, 5, 0, 0, 6.28); ctx.fill();
