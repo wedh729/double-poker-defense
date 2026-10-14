@@ -2424,47 +2424,39 @@ body.mobile .rankGauge {display:inline-flex;gap:2px;margin-left:6px;padding:3px 
   #tutRing {animation:tutRingP 1s ease-in-out infinite alternate;}
   @keyframes tutRingP {from {opacity:.55;transform:scale(.96)} to {opacity:1;transform:scale(1.04)}}
 }
-/* 튜토리얼 모드 (10-14): 미션 패널(양피지 = #tutTip 색)·하이라이트 링·타이틀 버튼·챕터 목록 */
-#tutPanel {position:fixed;z-index:72;left:8px;top:8px;max-width:300px;padding:8px 11px 7px;border-radius:12px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:13px;font-weight:700;line-height:1.45;box-shadow:0 4px 0 #6b4a2a55,0 8px 18px #0005;pointer-events:none;box-sizing:border-box;}
-#tutPanel[hidden], #tutRing[hidden] {display:none;}
+/* 튜토리얼 모드 (10-14): 한 줄 알림(양피지 = #tutTip 색)·하이라이트 링·일시정지 토스트·타이틀 버튼·끝 화면 */
+#tutPanel {position:fixed;z-index:72;left:8px;top:8px;max-width:340px;padding:5px 10px;border-radius:11px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:12.5px;font-weight:700;line-height:1.4;box-shadow:0 3px 0 #6b4a2a55,0 6px 14px #0004;pointer-events:none;box-sizing:border-box;}
+#tutPanel[hidden], #tutRing[hidden], #tutVeil[hidden], #tutToast[hidden] {display:none;}
 #tutPanel button {pointer-events:auto;}
-#tutPanel .tpHead {display:flex;align-items:center;gap:6px;font-size:11px;color:#7a5530;margin-bottom:3px;}
-#tutPanel .tpHead svg, #tutPanel .tpOk svg {width:14px;height:14px;}
 #tutPanel .tpOk {color:#557540;}
-#tutPanel .tpOk svg {vertical-align:-2px;}
-#tpDots {margin-left:auto;display:flex;gap:3px;}
-#tpDots i {width:6px;height:6px;border-radius:50%;background:#d9c08f;}
-#tpDots i.on {background:#7a5530;} #tpDots i.done {background:#557540;}
-#tutPanel .tpAlt {display:block;color:#9a5a1e;}
-#tutPanel .tpBtns {display:flex;gap:6px;justify-content:flex-end;margin-top:6px;}
-#tutPanel .tpBtns button {min-height:28px;padding:3px 10px;border-radius:8px;border:1px solid #a27039;background:#fffaf0;color:#5c3a1e;font:inherit;font-size:11px;cursor:pointer;}
-#tutPanel .tpBtns button[hidden] {display:none;}
-#tutPanel #tpNext {background:#557540;color:#fff0c5;border-color:#3d5b2f;}
-#tutPanel.dock .tpHead {display:none;}
-#tutPanel.dock .tpBtns {margin-top:2px;gap:10px;}
-#tutPanel.dock .tpBtns button {min-height:0;padding:0;border:0;background:none;color:#9a7a55;font-size:10.5px;font-weight:600;text-decoration:underline;}
-#tutPanel.dock #tpList {display:none;}
-#tutPanel.dock #tpNext {background:none;color:#557540;}
-body.mobile #tutPanel {font-size:11px;max-width:min(250px,40vw);padding:6px 9px;}
-body.mobile #tutPanel .tpBtns button {min-height:30px;}
-body.mobile #tutPanel.dock .tpBtns button {min-height:24px;}
-#tutRing {position:fixed;z-index:65;pointer-events:none;border:3px solid #ffd166;box-shadow:0 0 0 2px #6b4a2a,0 0 14px 2px #ffd16699;box-sizing:border-box;} /* 65 = 성·자금운영·설정 창(60~64) 위, 도전 창(66) 아래 */
+#tutPanel .tpOk svg {width:14px;height:14px;vertical-align:-2px;}
+#tutPanel .tpAlt {color:#9a5a1e;}
+#tutPanel .tpBtns {display:inline-flex;gap:9px;margin-left:8px;vertical-align:baseline;}
+#tutPanel .tpBtns button {min-height:0;padding:0;border:0;background:none;color:#9a7a55;font:inherit;font-size:10.5px;font-weight:600;text-decoration:underline;cursor:pointer;}
+#tutPanel .tpBtns[hidden] {display:none;}
+body.mobile #tutPanel {font-size:11px;max-width:min(300px,46vw);padding:4px 8px;}
+body.mobile #tutPanel .tpBtns button {min-height:22px;}
+#tutRing {position:fixed;z-index:65;pointer-events:none;border:3px solid #ffd166;box-shadow:0 0 0 2px #6b4a2a,0 0 14px 2px #ffd16699;box-sizing:border-box;} /* 65 = 성·자금운영·설정 창(60~64) 위, 도전 창(66) 아래 · 토스트 중엔 덮개 위(.over) */
 #tutRing.circle {border-radius:50%;} #tutRing.box {border-radius:12px;}
+#tutRing.over {z-index:75;}
+#tutVeil {position:fixed;inset:0;z-index:74;background:#2a1a0a2e;} /* 토스트 동안 = 게임 정지 — 뒤 화면 입력을 삼킨다 (누르면 토스트 닫기) */
+#tutToast {position:fixed;z-index:76;left:50%;top:12px;width:max-content;max-width:min(380px,calc(100vw - 16px));padding:10px 14px 9px;border-radius:14px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:14px;font-weight:700;line-height:1.5;box-shadow:0 5px 0 #6b4a2a66,0 10px 26px #0006;box-sizing:border-box;cursor:pointer;}
+#tutToast .ttHead {display:flex;align-items:center;gap:7px;font-size:15px;font-weight:800;color:#4a2e14;margin-bottom:3px;}
+#tutToast .ttIc svg {width:18px;height:18px;display:block;color:#7a5530;}
+#ttText b {color:#7a3d0e;}
+#tutToast .ttBtns {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px;}
+#ttOk {min-height:34px;min-width:84px;padding:4px 18px;border-radius:9px;border:2px solid #3d5b2f;background:#557540;color:#fff0c5;font:inherit;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 2px 0 #33472a;}
+#ttQuit {padding:0;border:0;background:none;color:#9a7a55;font:inherit;font-size:11px;font-weight:600;text-decoration:underline;cursor:pointer;}
+body.mobile #tutToast {font-size:12px;line-height:1.45;max-width:min(330px,calc(100vw - 16px));padding:7px 11px 7px;border-radius:12px;}
+body.mobile #tutToast .ttHead {font-size:13px;margin-bottom:2px;}
+body.mobile #tutToast .ttIc svg {width:15px;height:15px;}
+body.mobile #tutToast .ttBtns {margin-top:5px;}
+body.mobile #ttOk {min-height:30px;font-size:12px;}
 body.tutMode.tutMap #goPoker {display:none !important;} /* 맵 단계 동안 캔버스 한가운데 '포커장으로 이동'을 숨긴다 (네모 지정·클릭을 가림) */
 .title-link.tut-new {color:#fff0c5;background:#557540;border:2px solid #3d5b2f;box-shadow:inset 0 1px #97ad6f,0 3px #3b502c;}
 .title-link.tut-new small {color:#e6efc8;}
-#tutRow .tut-card {min-height:0;padding:10px 14px;display:grid;grid-template-columns:auto 1fr auto;column-gap:11px;row-gap:1px;align-items:center;}
-#tutRow .tut-card .coop-symbol {grid-row:1 / 3;line-height:0;}
-#tutRow .tut-card .coop-symbol svg {width:24px;height:24px;}
-#tutRow .tut-card b {grid-column:2;font-size:15px;margin:0;}
-#tutRow .tut-card small {grid-column:2;}
-#tutRow .tut-card[disabled] {opacity:.55;cursor:default;}
-#tutRow .tut-badge {grid-column:3;grid-row:1 / 3;display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800;white-space:nowrap;background:#d7b97d55;color:#71502b;}
-#tutRow .tut-badge.done {background:#557540;color:#fff0c5;}
-#tutRow .tut-badge svg {width:12px;height:12px;}
-#tutRow .tut-foot {text-align:center;}
 #tutDone {padding:12px 14px;border-radius:14px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:13px;line-height:1.6;display:flex;flex-direction:column;gap:10px;}
-#tutDone[hidden] {display:none;}
+#tutDone p {margin:0;}
 #tutDone .tdBtns {display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 #tutDone .title-primary {min-height:44px;padding:8px 20px;font-size:15px;gap:14px;border:2px solid #405b2f;border-radius:13px;color:#fff5d3;background:linear-gradient(#7c9550,#567b3d 55%,#466637);box-shadow:inset 0 0 0 1px #bcc484,0 4px 0 #33472a;text-shadow:0 2px #2f4e2d;} /* #btnBeginAdventure 숲 초록과 같은 꼴 */
 #tutDone .title-primary:hover {background:linear-gradient(#8ea95f,#658d49 55%,#52773e);}
@@ -3428,11 +3420,9 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
     <div class="daily-challenge"><p><b>오늘은 어떤 카드가 기다릴까요?</b>모두에게 같은 카드 · 초원 난이도</p><button id="btnDaily" class="title-link">오늘의 시드 도전 <span id="dailyBest"></span></button></div>
   </section>
   <section id="tutRow" class="adventure-panel" style="display:none" aria-labelledby="tutHeading">
-    <div class="adventure-top"><span class="adventure-label">튜토리얼</span><button class="title-back" id="btnTutBack">← 돌아가기</button></div>
-    <div id="tutDone" hidden></div>
-    <div class="adventure-intro"><h2 id="tutHeading" class="adventure-heading">무엇부터 배워 볼까요?</h2><p>'기본 조작'만 끝내면 바로 모험을 떠날 수 있어요. 나머지는 궁금할 때 골라 보세요.</p></div>
-    <div class="coop-options tut-options" id="tutCards"></div>
-    <p class="coop-status tut-foot"><button type="button" class="title-link" id="btnTutPlay">바로 모험 떠나기 →</button></p>
+    <div class="adventure-top"><span class="adventure-label">튜토리얼</span><button class="title-back" id="btnTutBack">← 타이틀</button></div>
+    <div class="adventure-intro"><h2 id="tutHeading" class="adventure-heading">튜토리얼 완료!</h2><p>카드부터 결투장·보스·하늘의 몬스터까지 모두 둘러봤어요.</p></div>
+    <div id="tutDone" role="status"><p>이제 실전에서 나만의 군단을 키워 보세요. 처음엔 <b>동산</b>이나 <b>초원</b>을 추천해요.</p><div class="tdBtns"><button type="button" class="title-primary" id="btnTutDonePlay">바로 모험 떠나기 <span class="title-arrow" aria-hidden="true">→</span></button><button type="button" class="title-link" id="btnTutDoneTitle">타이틀로</button></div></div>
   </section>
 </div>
 <dialog id="titleHelp" aria-labelledby="titleHelpHeading">
@@ -3457,9 +3447,11 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
   <div id="rtTitle"></div>
   <div id="rtDesc"></div>
 </div></div>
-<!-- 튜토리얼 모드 (10-14): 미션 패널·하이라이트 링 — body 직속 fixed (창 위에 떠야 하고, 포커스 어댑터 gameRoots 밖이라 inert가 안 걸린다) -->
-<div id="tutPanel" role="status" aria-live="polite" hidden><div class="tpHead"><span class="tpIc"></span><b id="tpTitle"></b><span id="tpDots" aria-hidden="true"></span></div><div id="tpText"></div><div class="tpBtns"><button type="button" id="tpNext" hidden>다음</button><button type="button" id="tpSkip">건너뛰기</button><button type="button" id="tpList">목록</button></div></div>
+<!-- 튜토리얼 모드 (10-14): 한 줄 알림·하이라이트 링·일시정지 토스트(+덮개) — body 직속 fixed (창 위에 떠야 하고, 포커스 어댑터 gameRoots 밖이라 inert가 안 걸린다) -->
+<div id="tutPanel" role="region" aria-label="튜토리얼 알림" hidden><span id="tpText" aria-live="polite"></span><span class="tpBtns"><button type="button" id="tpSkip">건너뛰기</button><button type="button" id="tpQuit">그만하기</button></span></div>
 <div id="tutRing" aria-hidden="true" hidden></div>
+<div id="tutVeil" hidden></div>
+<div id="tutToast" role="dialog" aria-labelledby="ttTitle" aria-describedby="ttText" hidden><div class="ttHead"><span class="ttIc" aria-hidden="true"></span><b id="ttTitle"></b></div><div id="ttText"></div><div class="ttBtns"><button type="button" id="ttQuit">튜토리얼 그만하기</button><button type="button" id="ttOk">확인</button></div></div>
 <!-- 칩 카지노 모달 (복권/룰렛/교환 애니메이션) -->
 <div id="chipModal"><div id="chipWin">
   <button id="chipClose" title="닫기">✕</button>
@@ -3852,7 +3844,7 @@ function roundPattern(r) { // 순수 함수(S 무관): 라운드 번호 → 패�
 }
 function curPattern() { // 이번 라운드 실제 적용값: 멀티면 없음 · 꺼진 패턴(PAT_ON false)은 떼어냄 · 태그는 어픽스·진형 우선, 공중 태그는 첫 등장 R35에만(그 뒤 상시라 반복 안내 생략)
   if (S.multi) return patNone();
-  if (S.tutMode) { const w = tutWave(), q = patNone(); if (w.fly) { q.ratio = w.fly; q.upT = AIR.UP; q.downT = AIR.DOWN; q.tag = PAT_TAG.fly[0]; q.hint = PAT_TAG.fly[1]; } return q; } // [튜토리얼 10-14] 공중 = 챕터 사양만 (비율은 1 미만으로 쓸 것 — plainMul)
+  if (S.tutMode) { const w = tutWave(), q = patNone(); if (w.fly) { q.ratio = w.fly; q.upT = w.upT || AIR.UP; q.downT = w.downT || AIR.DOWN; q.tag = PAT_TAG.fly[0]; q.hint = PAT_TAG.fly[1]; } return q; } // [튜토리얼 10-14] 공중 = 챕터 사양만 (비율은 1 미만으로 쓸 것 — plainMul)
   const p = roundPattern(S.round);
   if (S.round >= SUN_ROUND && S.hellCleared) { p.ratio = AIR.P1; p.upT = AIR.UP; p.downT = AIR.DOWN; } // 헬 클리어 뒤 R190+ 일반 라운드도 공중 1/3 (10-13 유저 결정 3 — 태양 강림 라운드 = 미클리어만 0, roundPattern은 S 무관이라 여기서) · 착지 창까지 같이(0/0이면 시계가 매 프레임 뒤집힘)
   if (!PAT_ON.fly) { p.ratio = 0; p.upT = p.downT = 0; }
@@ -4022,7 +4014,8 @@ function gameDialogVisible(id) {
 function syncGamePause() {
   if (!S) return;
   S.paused = !!(S.mapTest || // 게임오버는 일부러 제외: 사망 화면 뒤 배경은 계속 흐른다(기존 설계, update()의 gameover 가드가 부작용 차단). 오버레이가 툴바·캔버스를 inert로 막는다
-    ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal'].some(gameDialogVisible));
+    ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal'].some(gameDialogVisible) ||
+    (S.tutMode && tutFreeze())); // [튜토리얼 10-14] 안내 토스트·'좋아요!' 동안 정지 (일반 판 = undefined → 위 판정 그대로)
   needRedraw = true;
   document.body.classList.toggle('dpd-modal', ['chipModal', 'shopOverlay'].some(id => document.getElementById(id).style.display === 'flex')); // 🔋 창 여닫는 순간 즉시 (updateHUD 20Hz 토글은 안전망)
   window.dispatchEvent(new Event('dpd:modalchange'));
@@ -4265,7 +4258,7 @@ document.getElementById('mktToast').addEventListener('click', e => { // 📈 개
   if (!el.classList.contains('mktOpen') || !el.classList.contains('on')) return;
   e.stopPropagation();
   clearTimeout(mktToastTimer); el.classList.remove('on'); mktToastPend = null;
-  const busy = ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal'].some(gameDialogVisible) || gbOv || document.querySelector('#cvWrap .gbxStage.ovl'); // 다른 창·뽑기 상자 연출 중엔 그 위에 겹쳐 열지 않고 토스트만 닫는다
+  const busy = ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal'].some(gameDialogVisible) || gbOv || document.querySelector('#cvWrap .gbxStage.ovl') || (S && S.tutMode && tutFreeze()); // 다른 창·뽑기 상자 연출 중엔 그 위에 겹쳐 열지 않고 토스트만 닫는다 · [튜토리얼 10-14] 안내 토스트 중도
   if (!busy && S && S.mktOpen && S.phase !== 'gameover' && !document.body.classList.contains('at-title')) { initAudio(); openChip('투자'); casInvest(); }
 });
 // 🏛️ 결투 창이 열리는 순간: 링 안에 서 있던 전투 유닛을 가장자리 밖으로 밀어내고 목표 해제 (지나가다 갇히는 참사 방지)
@@ -4375,7 +4368,7 @@ function crownGuideLines() { // 안내 팝업·왕관 상태창 공용 문구
 }
 function openCrownGuide() {
   if (S.phase === 'gameover' || S.crownRace >= 0 || !S.units.some(u => u.item === 'crown')) return;
-  const busy = ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal'].some(gameDialogVisible) || gbOv || document.querySelector('#cvWrap .gbxStage.ovl'); // 개장 토스트와 같은 판정
+  const busy = ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal'].some(gameDialogVisible) || gbOv || document.querySelector('#cvWrap .gbxStage.ovl') || (S.tutMode && tutFreeze()); // 개장 토스트와 같은 판정 · [튜토리얼 10-14] 안내 토스트 위에 겹쳐 열지 않는다
   if (busy) { casTimeout(openCrownGuide, 1000); return; } // 다른 창·뽑기 연출 중엔 겹쳐 열지 않고 1초 뒤 다시 (대관식을 먼저 하면 위 crownRace 가드로 끝)
   const m = document.getElementById('crownModal');
   const t = m.querySelector('.dcTitle'), b = m.querySelector('.dcBody');
@@ -4700,7 +4693,7 @@ function spawnMiner() {
 // 광부 채굴 사이클: 광산에서 5초 캐고 → 광물을 들고 집으로 → 배달 시 골드
 function updateMiner(u, dt) {
   const spdMul = u.exc ? EXC_MOVE : u.sminer ? 3 : (u.hminer ? 1.6 : 1);
-  u.speed = MINER_SPEED * (1 + 0.25 * S.minerMoveLv) * spdMul;
+  u.speed = MINER_SPEED * (1 + 0.25 * S.minerMoveLv) * spdMul * (S.tutMode ? TUT.MINER_SPD : 1); // [튜토리얼 10-14] 배달을 기다리는 단계가 지루하지 않게 (일반 판 ×1)
   if (u.mjob === 'toMine') {
     if (u.exc) excSpot(u);
     else { u.tx = MINE_POS.x - 36 + u.jx * 0.35; u.ty = MINE_POS.y + 26 + u.jy * 0.2; } // 광산 서쪽 갓길에 선다 (y≈474 도로 위)
@@ -4708,7 +4701,7 @@ function updateMiner(u, dt) {
     // (58이던 시절 오프셋이 큰 광부는 목표에 서고도 채굴을 시작 못 하고 영영 멈춰 있었다)
     // 굴착기는 자기 자리 14px 안이어도 도착 — 자리가 원 밖이어도 채굴을 시작하고, 남은 거리는 아래 'mine'에서 마저 간다 (밀려서 자리에 못 서도 멈추지 않는다)
     if (Math.hypot(MINE_POS.x - u.x, MINE_POS.y - u.y) < 74 || (u.exc && Math.hypot(u.tx - u.x, u.ty - u.y) < 14)) {
-      u.mjob = 'mine'; u.mtimer = MINE_TIME; // 채굴 체류는 고정 5초 — 채굴Lv·슈퍼는 아래 곡괭이 효율(깎는 속도)로 반영
+      u.mjob = 'mine'; u.mtimer = S.tutMode ? TUT.MINE_T : MINE_TIME; // 채굴 체류는 고정 5초 · [튜토리얼 10-14] 짧게 — 채굴Lv·슈퍼는 아래 곡괭이 효율(깎는 속도)로 반영
       u.tx = u.x; u.ty = u.y;
     }
   } else if (u.mjob === 'mine') {
@@ -4730,6 +4723,7 @@ function updateMiner(u, dt) {
       u.carry = true; u.mjob = 'toHouse';
       // 단일 롤 사다리: 특별 발굴(희귀순) → 재변경권 — 서로 배타, 확률은 각자 명시값 그대로
       let roll = Math.random(), special = null;
+      if (S.tutMode) roll = tutMinerRoll(); // [튜토리얼 10-14] 운 고정: 첫 채굴 = 재변경권, 그 뒤 = 없음 · 특별 발굴 없음 (난수는 위에서 그대로 뽑음)
       for (const [k, p] of MINER_SPECIALS) { if (roll < p) { special = k; break; } roll -= p; }
       if (special) minerSpecial(special, u);
       else if (roll < MINER_TICKET_P) { // 🎟️ 재변경권 발굴 — 머리에 이고 가서 배달 시 지급
@@ -5731,7 +5725,8 @@ function update(dt) {
       if (grabPos) { const k = Math.min(1, dt * 14); u.x += (grabPos.x + u.grabOx - u.x) * k; u.y += (grabPos.y + u.grabOy - u.y) * k; }
       u.tx = u.x; u.ty = u.y; continue;
     }
-    const dx = u.tx - u.x, dy = u.ty - u.y, d = Math.hypot(dx, dy);
+    const tw = S.tutMode && !u.miner ? tutSteer(u) : null; // [튜토리얼 10-14] 울타리·광석 방 담을 돌아가는 길 안내 (일반 판 = null → 아래 식 그대로)
+    const dx = (tw ? tw.x : u.tx) - u.x, dy = (tw ? tw.y : u.ty) - u.y, d = Math.hypot(dx, dy);
     let stopNow = false;
     if (d > 3) {
       const spd = (u.skillT > 0 && !u.hero) ? u.speed * 2.4 : u.speed; // 🗡️ 암살 급습 대시
@@ -5746,7 +5741,7 @@ function update(dt) {
         if (u.lastD !== undefined && u.lastD - d < step * 0.25) u.stuckT = (u.stuckT || 0) + dt;
         else u.stuckT = Math.max(0, (u.stuckT || 0) - dt * 0.5);
         u.lastD = d;
-        u.nearT = d < 30 ? (u.nearT || 0) + dt : 0;
+        u.nearT = d < 30 && !tw ? (u.nearT || 0) + dt : 0; // [튜토리얼] 길 안내 모퉁이는 도착이 아님
         if (u.stuckT > 0.6 || u.nearT > 0.4) { u.tx = u.x; u.ty = u.y; u.moving = false; u.stuckT = 0; u.nearT = 0; u.lastD = undefined; stopNow = true; }
       }
     } else { u.moving = false; u.stuckT = 0; u.nearT = 0; u.lastD = undefined; }
@@ -7107,7 +7102,7 @@ function giveHuntReward(stage) {
 function openOreGift(stage) {
   const R = huntRewardDef(stage);
   const ore = ORES[Math.min(9, stage - 1)] || ORES[0];
-  const jackpot = Math.random() < 0.01; // 🎰 1%: 보상 2배 (유닛 보상이면 2기)
+  const jackpot = Math.random() < 0.01 && !S.tutMode; // 🎰 1%: 보상 2배 (유닛 보상이면 2기) · [튜토리얼 10-14] 운 고정 (난수는 먼저 뽑음)
   gachaBoxAnim(document.getElementById('cvWrap'), {
     ovl: true, win: true, ore,
     revealIcon: R[0], revealText: R[1] + (jackpot ? ' ×2!!' : ''), color: jackpot ? '#ffd166' : R[3],
@@ -7312,6 +7307,7 @@ function activateSkill(u) {
   if (!u.hero && !strongestMonster() && S.monsters.some(airborne)) { airFloat(u); return; } // 공중: 떠 있는 몹만 남았으면 단검 암살은 쿨을 쓰지 않고 거부(정보창·스킬 바 공용 — pat2 크로스체크 P2). 몹이 아예 없을 때는 예전 그대로
   u.homeX = u.x; u.homeY = u.y; // 끝나면 원래 자리로 복귀
   u.skillT = 5;
+  tutEv('skill'); // [튜토리얼 10-14] 스킬 발동 횟수 (일반 판 = 즉시 return)
   if (u.hero) { // 🌀 영웅(전기톱)·슈퍼: 분신술
     const n = u.super ? 5 : 3; // 총 인원 (본체 포함) → 분신 n-1명
     spawnClones(u, n - 1);
@@ -14949,7 +14945,7 @@ document.getElementById('btnRestart').onclick = () => {
 };
 // 🚪 나가기 (10-01 유저): 판을 버리고 타이틀로. 지금은 저장·기록 없음 — 단계별 저장이 붙으면 여기서 저장한다.
 //    타이틀 뒤에는 부팅 때처럼 더미 판(reset)이 멈춘 채 깔린다 (startOverlay가 보이면 syncGamePause가 정지)
-function exitToTitle(ask, screen) { // screen = 'tut'이면 튜토리얼 목록으로 (10-14 — 인자 없으면 기존과 같다)
+function exitToTitle(ask, screen) { // screen = 'tut'이면 튜토리얼 끝 화면으로 (10-14 — 인자 없으면 기존과 같다)
   if (ask && !confirm('타이틀로 나갈까요? 지금 판은 저장되지 않습니다.')) return;
   document.body.classList.add('at-title'); // reset()보다 먼저 — 타이틀 뒤 더미 판이 첫 판 안내(T1)를 소진하지 않게 (tutOn이 at-title을 본다)
   dailySeed = null;
@@ -14958,7 +14954,7 @@ function exitToTitle(ask, screen) { // screen = 'tut'이면 튜토리얼 목록�
   document.getElementById('page').inert = true;
   document.getElementById('mobTabs').inert = true;
   document.getElementById('startOverlay').style.display = '';
-  showTitleScreen(screen || 'title', screen === 'tut' ? 'btnTutBack' : 'btnSolo');
+  showTitleScreen(screen || 'title', screen === 'tut' ? 'btnTutDonePlay' : 'btnSolo');
   dailyBestLabel(); diffBestLabel();
   syncGamePause();
 }
@@ -15173,10 +15169,12 @@ function tutGameOverLine() {
 }
 document.getElementById('btnTutAgain').onclick = e => { tut.seen = {}; tut.off = false; tut.replay = true; tutSave(); e.currentTarget.textContent = '다음 판부터 처음 안내를 다시 보여줄게요'; };
 
-// ==================== 튜토리얼 모드 (10-14 유저: "처음 하는 사람이 스무스하게" — 설계 = Desktop\Claude Code\DPD\튜토리얼_2026-10-14\20_설계.md + 22_검토반영.md) ====================
-// 상태는 S.tutMode·S.tut 하나뿐: reset()이 S를 새로 만들면 함께 사라진다. 일반 판은 S.tutMode가 undefined라 모든 분기가 원래 식 그대로(난수 순서 포함).
-// 라운드에 묶인 시스템(몹 HP·수·보스·더블 포커·결투·공중)은 기존 헬퍼 안 분기가 tutWave()를 읽는다 — 복사본 없음.
-const TUT = { OK_MS: 800, WAVE_DEFAULT: { n: 6, hp: 20 } }; // OK_MS = 단계 완료 뒤 '좋아요!' 실시간(ms) · WAVE_DEFAULT = 사양 없는 라운드도 약한 몹 (일반 값이 새지 않게)
+// ==================== 튜토리얼 모드 (10-14 유저: "처음 하는 사람이 스무스하게" → 2차 "한 판에 다 경험 — 실제 플레이 화면에서 토스트 팝업으로 하나하나, 팝업이 뜰 땐 일시정지") ====================
+// 설계·결과 = Desktop\Claude Code\DPD\튜토리얼_2026-10-14\ (20_설계·40_한판튜토리얼). 상태는 S.tutMode·S.tut 하나뿐: reset()이 S를 새로 만들면 함께 사라진다.
+// 일반 판은 S.tutMode가 undefined라 모든 분기가 원래 식 그대로(난수 순서 포함). 라운드에 묶인 시스템(몹 HP·수·보스·더블 포커·결투·공중)은 기존 헬퍼 안 분기가 tutWave()를 읽는다.
+// 한 단계 = [토스트(게임 정지) → 닫으면 한 줄 알림 + 링(게임 진행) → 행동 완료 → '좋아요!'(정지) → 다음 토스트]. 칭찬부터 다음 토스트까지 정지가 끊기지 않아
+//   2~3배속에서도 단계 사이에 전투가 흐르지 않는다 (1차 크로스체크 P1-1의 부류 전체 차단).
+const TUT = { OK_MS: 650, TOAST_LOCK: 350, WAVE_DEFAULT: { n: 6, hp: 20 }, MINER_SPD: 4, MINE_T: 1.5, HUNT_HP: 260 }; // OK_MS = '좋아요!' 실시간(ms) · TOAST_LOCK = 토스트가 뜬 직후 닫기 잠금(직전 탭·키가 바로 닫지 않게) · 광부 걸음 ×4·채굴 1.5초 · 첫 광석 체력
 function tutWave() { return (S && S.tut && S.tut.waves[S.round]) || TUT.WAVE_DEFAULT; }
 function tutBossShape() { return tutWave().bossShape || 20; } // 보스 모양 = 사양값, 없으면 달(20)
 function tutEv(k) { if (S && S.tutMode) S.tut.ev[k] = (S.tut.ev[k] || 0) + 1; } // 상태만으로 구분 안 되는 행동 카운터 (일반 판 = 아무것도 안 함)
@@ -15215,13 +15213,17 @@ function tutWaveEnd(bossAlive, leak) {
   t.lastWave = { r: S.round, clear, leak, boss: bossAlive };
   if (clear) grantClearBonus(); else addFloat(CX, CY, '괜찮아요!', '#8a6a3a', 2);
 }
-function tutStep() { const t = S && S.tut; if (!t) return null; const ch = TUT_CH_BY_ID[t.ch]; return ch && ch.steps[t.i] || null; }
-// 완료 기록 = 새 키 dpd_tutmode {v, done:{챕터:1}} — 설정 쪽 키라 부팅 '베테랑' 판정 목록(tut)에 넣지 않는다
+function tutStep() { const t = S && S.tut; return t ? TUT_STEPS[t.i] || null : null; }
+// 정지 = 토스트가 보임 · 뜰 차례인데 다른 연출을 기다림 · '좋아요!' 칭찬 중 — 매 틱 t.frozen으로 정하고 syncGamePause가 읽는다 (S.paused 직접 대입 금지)
+function tutFreeze() { return !!(S.tut && S.tut.frozen); }
+// 광부 롤 (updateMiner — 난수는 이미 뽑은 뒤): 첫 채굴 = 재변경권 확정 · 그 뒤 = 꽝 · 특별 발굴(슬로모·섬광)은 없음
+function tutMinerRoll() { const t = S.tut; if (t.ticketDone) return 1; t.ticketDone = true; return MINER_SPECIALS.reduce((s, [, p]) => s + p, 0) + MINER_TICKET_P * 0.5; }
+// 완료 기록 = 새 키 dpd_tutmode {v, done:{main:1}} — 설정 쪽 키라 부팅 '베테랑' 판정 목록(tut)에 넣지 않는다
 const TUTM_KEY = 'dpd_tutmode';
 function tutModeData() { try { const d = JSON.parse(localStorage.getItem(TUTM_KEY) || 'null'); if (d && d.done) return d; } catch (e) {} return { v: 1, done: {} }; }
 function tutModeDone(id) { return !!tutModeData().done[id]; }
 function tutModeMark(id) { const d = tutModeData(); d.done[id] = 1; try { localStorage.setItem(TUTM_KEY, JSON.stringify(d)); } catch (e) {} }
-function tutIsNewPlayer() { return !tut.off && Object.keys(tut.seen).length === 0 && !tutModeDone('basic'); } // 기존 첫 판 안내 객체 재사용: 일반 판을 한 번 시작하면 seen.t1이 생겨 꺼진다
+function tutIsNewPlayer() { return !tut.off && Object.keys(tut.seen).length === 0 && !tutModeDone('main'); } // 기존 첫 판 안내 객체 재사용: 일반 판을 한 번 시작하면 seen.t1이 생겨 꺼진다 · 튜토리얼을 끝까지 하면 꺼진다
 function syncTutTitleBtn() {
   const b = document.getElementById('btnTut'); if (!b) return;
   const on = tutIsNewPlayer();
@@ -15231,8 +15233,19 @@ function syncTutTitleBtn() {
 }
 // 맵 구역(캔버스 논리 좌표 x, y, 반지름) — 유닛은 길찾기 없이 곧장 걸어 울타리에 걸리면 멈춘다(하네스 실측: 소환 자리 → 울타리 너머 목표 = 울타리 아래에서 정지)
 //   → 이동·부대 이동 목표는 소환 자리(소환장 왼쪽 아래)에서 울타리를 안 건너는 왼쪽 땅 · 제물대·포털·성과 안 겹침 · 하늘 모퉁이(왼쪽 위)는 패널 자리
-const TUT_Z = { move: [290, 268, 38], group: [215, 318, 42], desel: [640, 215, 24], house: [HOUSE.x, HOUSE.y - 10, 46], pen: [CX, CY, 112] };
+const TUT_Z = { move: [290, 268, 38], group: [215, 318, 42], desel: [640, 215, 24], house: [HOUSE.x, HOUSE.y - 10, 46], pen: [CX, CY, 112],
+  room: [ROOM.cx - 6, ROOM.cy + 4, 62], altar: [ALTAR.x, ALTAR.y, 46], portal: [PORTAL.x, PORTAL.y, 46], arena: [ARENA.x, ARENA.y, ARENA.r - 6] };
 function tutFighters() { return S.units.filter(u => !u.miner && !u.item); }
+function tutFree() { return tutFighters().filter(u => !isInRoom(u) && !duelLocked(u)); } // 지금 지시할 수 있는 전투 유닛 (광석 방·결투 중 제외)
+function tutSupply(text) { addFloat(CX, CY - 110, text, '#557540', 2.2); logMsg('튜토리얼 보급: ' + text); } // 연출에 필요한 것을 직접 줄 때 — 화면에 '보급'이라고 알린다
+function tutKeepMob(t) { // 연습 몹: 단계 동안 쓰러지지 않는 몹 하나 (전투가 그 단계보다 먼저 끝나지 않게 — 배속 버튼·딜 순위·공격 지정)
+  if (S.phase !== 'wave') return;
+  if (!(t.toughM && S.monsters.includes(t.toughM))) { const m = spawnMonster(t.toughHp || 900, false, {}); m.golden = false; m.spin = 0; t.toughM = m; }
+  t.toughM.hp = t.toughM.max;
+}
+function tutFreeMob(t, hp) { if (t.toughM && S.monsters.includes(t.toughM)) t.toughM.hp = Math.min(t.toughM.hp, hp); t.toughM = null; } // 단계가 끝나면 = 잡을 수 있는 체력으로 (더는 되채우지 않음)
+function tutHeroN() { return S.units.filter(u => u.hero && !u.super && !isHiddenCombo(u)).length; }
+function tutOpenChip() { if (CM.style.display !== 'flex') openCasino(); else if (document.getElementById('chipWin').dataset.view !== 'finance') casMenu(); }
 function tutSelFighters() { return tutFighters().filter(u => u.selected); }
 function tutSelectOnly(list) { S.units.forEach(u => u.selected = list.includes(u)); updateInfoPanel(); }
 function tutInZone(u, z, pad) { return !u.moving && !u.grabbed && Math.hypot(u.x - z[0], u.y - z[1]) <= z[2] + pad; }
@@ -15240,7 +15253,7 @@ function tutEndWaveNow() { // 건너뛰기 길: 지금 전투를 클리어로 �
   if (S.phase !== 'wave') return;
   const q = S.spawnQueue; if (q) { q.left = 0; q.bossLeft = 0; }
   S.monsters = [];
-  if (S.duel) { S.duel = null; S.champion = null; S.duelEnded = true; }
+  if (S.duel) { const c = S.champion; if (c) { c.duelOk = false; c.x = ARENA.x; c.y = ARENA.y + ARENA.r + 18; c.tx = c.x; c.ty = c.y; c.moving = false; } S.duel = null; S.champion = null; S.duelEnded = true; } // 챔피언은 결투장 밖으로 (1차 P2-14c)
 }
 function tutEnsureWave(t, n) { // n번째 전투가 시작되게 — 앞 전투가 돌고 있으면 끝내고, 포커면 소환 (단계 진입 전제 맞추기)
   if ((t.ev.summon || 0) >= n) return;
@@ -15249,7 +15262,7 @@ function tutEnsureWave(t, n) { // n번째 전투가 시작되게 — 앞 전투�
 }
 function tutReachFix() { // 사거리가 소환장 몹 자리에 안 닿는 전투 유닛(단검 등)은 소환장 아래 가장자리로 — 22 #3 안전망
   for (const u of tutFighters()) {
-    if (u.grabbed || duelLocked(u)) continue;
+    if (u.grabbed || duelLocked(u) || isInRoom(u) || u === S.champion) continue; // 광석 방에서 캐는 유닛·결투장 챔피언은 그대로 (1차 P2-13)
     const nx = Math.max(CX - 87, Math.min(CX + 87, u.x)), ny = Math.max(CY - 54, Math.min(CY + 54, u.y)); // 몹이 다니는 영역의 가장 가까운 점
     if (Math.hypot(u.x - nx, u.y - ny) <= effRange(u) - 8) continue;
     const p = clampTargetPos(Math.max(CX - 80, Math.min(CX + 80, u.x)), CY + PEN.h / 2 + 14);
@@ -15263,211 +15276,515 @@ function tutOpenCastle() { // 성 강화 창 + 강화 탭 (toggleShop은 토글�
 function tutGoldFor(r) { if (S.gold < S.upgCost[r]) { S.gold = S.upgCost[r]; if (openShop === 'castle' && !gbOv) renderShop(); } } // 잘못 눌러 골드를 써도 맞는 버튼이 켜지게 (disabled는 렌더 때 정해짐 — 부족할 때만 1회 렌더)
 function tutScrollTo(t, sel) { if (openShop !== 'castle') { t.scrolled = false; return; } if (t.scrolled) return; const b = document.querySelector(sel); if (b) { b.scrollIntoView({ block: 'nearest' }); t.scrolled = true; } }
 
-// ---- 챕터 데이터 (단계 = { id, view:'cards'|'map'|'modal'|'any', modal?, summon?, hold?:{poker,wave}, pc, mo?, alt?(t), next?:'button', enter?(t), tick?(t), done?(t), latch?(t), target?(t), cardHi?(h,i,made,hand) })
-//   enter = 멱등(전제를 스스로 맞춤) · done = 매 틱, 한 번 참이면 래치 · 문구 = 숫자·확률·내부 이름 없이 (UI 미니멀)
-// 기본 조작 (흐름: R1 포커 1~3 → R1 전투 4 → R2 포커 맵 5~7 → 성 창 8~10 → R2 포커 카드 11 → R2 전투 12~13 → R3 포커 맵 14~16)
-//   전투 단계 술어는 라운드 번호가 아니라 챕터 안 누적 카운터(소환 ev.summon · 전투 끝 t.waveEnds) — 건너뛰기로 라운드가 어긋나도 멈추지 않게 (22 #4)
-function tutLoadBasic(t) {
-  t.deals = {
-    1: [{ hand: ['7♠', '7♥', 'K♦', '4♣', '2♠'], tail: ['J♣', '5♦', '9♥', 'Q♠', '3♦'] }],   // 원페어 7 (금테 = 칸0·1)
-    2: [{ hand: ['9♥', '9♣', 'Q♠', '5♦', '3♠'], tail: ['5♣', 'Q♦', '9♠', '2♥', '8♣'] }],   // 자유 교환 (결정적 꼬리)
-    3: [{ hand: ['10♠', '10♦', '6♣', 'J♥', '2♦'], tail: ['6♥', '4♠', 'J♦', '8♥', '3♣'] }], // R3는 소환 안 함
-  };
-  t.pick = { 1: { h: 0, goal: { rank: 3 } } }; // R1: 어느 칸을 눌러도 트리플 이상 (♦ 부메랑)
-  t.lockMade = { 1: true };                    // R1: 금테 카드 잠금 (풀하우스 단검 길 차단)
-  t.waves = { 1: { n: 8, hp: 70 }, 2: { n: 5, hp: 30 }, 3: { n: 6, hp: 20 } }; // 튜닝 노브 (약한 몹 — 숫자는 화면에 안 나감) · R1 70 = 트리플 부메랑 1기로 실시간 약 12초 (40이면 7초)
-  t.toughHp = 900;                             // 집중 공격 연습 몹 체력 (지시 전엔 매 틱 되채움)
-  startPoker();                                // R1 정해 둔 패로 다시 깔기 (폰 = 포커 탭)
+// 튜토리얼 전용 길 안내 — 유닛은 길찾기 없이 곧장 걸어 울타리에 걸리면 멈춘다(1차 실측). 튜토리얼은 먼 곳(광석 방·결투장·제물대·포털)으로 보내는 단계가 많아
+//   곧장 가면 소환장 울타리를 지나는 이동만 모퉁이를 돌게 한다 · 광석 방이 목표면 왼쪽 입구 앞을 먼저 들른다. 일반 판은 호출하지 않는다(길찾기 없음 그대로).
+function tutSegBox(x0, y0, x1, y1, L, T, R, B) { // 선분이 사각형 안을 지나나 (Liang–Barsky)
+  let t0 = 0, t1 = 1; const dx = x1 - x0, dy = y1 - y0;
+  for (const [p, q] of [[-dx, x0 - L], [dx, R - x0], [-dy, y0 - T], [dy, B - y0]]) {
+    if (p === 0) { if (q < 0) return false; continue; }
+    const r = q / p;
+    if (p < 0) { if (r > t1) return false; if (r > t0) t0 = r; } else { if (r < t0) return false; if (r < t1) t1 = r; }
+  }
+  return t0 < t1;
 }
-const TUT_BASIC = [
-  { id: 'b_swap', view: 'cards',
-    pc: '같은 숫자끼리 금테가 둘러져요. 금테 없는 카드를 눌러 바꿔 보세요.',
+function tutSteer(u) {
+  if (u.grabbed || u.inPen || (u.skillT || 0) > 0 || u.forceTarget || u.amove) return null;
+  let gx = u.tx, gy = u.ty;
+  if (Math.hypot(gx - u.x, gy - u.y) <= 3) return null;
+  const inRoomT = Math.abs(gx - ROOM.cx) <= ROOM.w / 2 && Math.abs(gy - ROOM.cy) <= ROOM.h / 2;
+  if (inRoomT && !isInRoom(u)) { const ex = ROOM.cx - ROOM.w / 2 - 24, ey = ROOM.cy + 2; if (!(u.x > ex - 10 && Math.abs(u.y - ey) < 30)) { gx = ex; gy = ey; } } // 입구 앞 (거기서부터는 곧장 안으로)
+  const L = CX - PEN.w / 2 - 10, R = CX + PEN.w / 2 + 10, T = CY - PEN.h / 2 - penTopEx(), B = CY + PEN.h / 2 + 10; // pushOutOfPen 경계
+  const wp = (gx !== u.tx || gy !== u.ty) ? { x: gx, y: gy } : null;
+  if ((gx > L && gx < R && gy > T && gy < B) || !tutSegBox(u.x, u.y, gx, gy, L + 2, T + 2, R - 2, B - 2)) return wp; // 목표가 울타리 안(추격 등)이면 돌지 않음 · 막힘 없으면 곧장
+  // 모퉁이 하나 또는 이웃한 모퉁이 둘을 거치는 길 중 가장 짧은 것 (모든 구간이 울타리를 안 지나야 함) → 첫 모퉁이로
+  const C = [[L - 12, T - 12], [R + 12, T - 12], [R + 12, B + 12], [L - 12, B + 12]], ok = (x0, y0, x1, y1) => !tutSegBox(x0, y0, x1, y1, L + 2, T + 2, R - 2, B - 2), D = (x0, y0, x1, y1) => Math.hypot(x1 - x0, y1 - y0);
+  let best = null, bd = 1e9;
+  for (let a = 0; a < 4; a++) {
+    const [ax, ay] = C[a];
+    if (D(u.x, u.y, ax, ay) < 4 || !ok(u.x, u.y, ax, ay)) continue;
+    if (ok(ax, ay, gx, gy)) { const dd = D(u.x, u.y, ax, ay) + D(ax, ay, gx, gy); if (dd < bd) { bd = dd; best = { x: ax, y: ay }; } }
+    for (const b of [(a + 1) % 4, (a + 3) % 4]) { const [bx, by] = C[b]; if (!ok(bx, by, gx, gy)) continue; const dd = D(u.x, u.y, ax, ay) + D(ax, ay, bx, by) + D(bx, by, gx, gy); if (dd < bd) { bd = dd; best = { x: ax, y: ay }; } }
+  }
+  return best || wp;
+}
+
+// ---- 한 판 흐름 — 단계 = { id, view:'cards'|'map'|'modal'|'any', modal?:'castle'|'chip', icon, title, toast?/toastMo? (토스트 본문 — 없으면 한 줄 알림만),
+//   hint?/hintMo? (토스트를 닫은 뒤 한 줄), alt?(t) (상황 문구 — 있으면 hint 대신), ok? (칭찬 문구), summon?, hold?:{wave}, dlgOk?:[창 id],
+//   toastWhen?(t) (그 상태가 화면에 보일 때 토스트 — 기다리는 동안은 게임 진행, waitHint), enter?(t) (멱등 — 건너뛰기 길도 전제를 스스로 맞춤),
+//   tick?(t), done?(t) (매 틱, 한 번 참이면 래치 — 없으면 토스트를 닫는 것이 완료), giveUp?(t) (더 할 수 없는 상황 = 넘어감), latch?(t),
+//   target?(t) (링), toastTarget?(t), cardHi?(h,i,made,hand) }
+//   문구 = 숫자·확률·내부 이름 없이 (버튼 이름 '+1 강화'·'+3 도전'만 예외) · 합성 마리 수도 쓰지 않는다(대개편으로 바뀔 예정) · 이스터에그 언급 0
+// 라운드 = 소환 횟수 + 1 (포커 시계는 내내 멈춤 → 자동 소환 없음): R1 포커·전투 → R2 이동·성 강화·공격 지정 → R3 부대·자금운영·광부·광석·왕관·포털·재변경권
+//   → R3 전투 배속·딜 순위 → R4 두 패 → R4 전투 정보 창 → R5 결투장 → R6 보스·스킬 → R7 하늘의 몹 → R8 설정·도감 → 끝 (R9 미만: 광석 정원·재질·하늘·왕관 기한 그대로)
+//   전투 단계 술어는 라운드 번호가 아니라 누적 카운터(소환 ev.summon · 전투 끝 t.waveEnds) — 건너뛰기로 라운드가 어긋나도 멈추지 않게
+function tutLoad(t) {
+  t.deals = {
+    1: [{ hand: ['7♠', '7♥', 'K♦', '4♣', '2♠'], tail: ['J♣', '5♦', '9♥', 'Q♠', '3♦'] }],    // 원페어 7 (금테 = 칸0·1) → 트리플 부메랑 ♦
+    2: [{ hand: ['9♥', '9♣', 'Q♠', '5♦', '3♠'], tail: ['5♣', 'Q♦', '9♠', '2♥', '8♣'] }],    // 자유 교환
+    3: [{ hand: ['8♠', '8♥', '8♦', 'K♣', '2♠'], tail: ['5♣', 'Q♦', '4♥', '9♣', '3♦'] }],    // 트리플 → 바꾸면 풀하우스 단검 (스킬 단계용)
+    4: [{ hand: ['Q♠', 'Q♥', '7♦', '4♣', '2♠'], tail: ['J♣', '5♦', '9♥', '6♠', '3♦'] },      // 두 패: 위 = 원페어 (잠금)
+        { hand: ['J♦', '5♣', '9♠', '3♥', '6♦'], tail: ['K♣', '8♥', '10♦', '2♣', '4♠'] }],   //        아래 = 바꾸면 원페어 → 에이스
+    5: [{ hand: ['10♠', '10♥', 'A♦', '6♣', '3♠'], tail: ['J♥', '4♦', '8♠', 'K♥', '2♦'] }],
+    6: [{ hand: ['J♠', 'J♥', '5♦', '5♣', '9♠'], tail: ['2♥', '7♣', 'Q♦', '3♠', '8♥'] }],
+    7: [{ hand: ['6♠', '6♥', 'K♦', '9♣', '2♠'], tail: ['Q♥', '4♣', '10♦', '3♥', '7♠'] }],
+    8: [{ hand: ['4♠', '4♥', 'J♦', '8♣', '2♥'], tail: ['K♠', '6♦', '10♣', '3♦', '9♥'] }],
+  };
+  t.pick = { 1: { h: 0, goal: { rank: 3 } }, 3: { h: 0, goal: { rank: 6 } }, 4: { h: 1, goal: { rank: 1 } } }; // 어느 칸을 어떤 순서로 눌러도 목표 족보로
+  t.lockMade = { 1: true, 3: true }; // 금테 카드 잠금 (R1 = 풀하우스 단검 길 차단 · R3 = 트리플을 풀하우스로만)
+  t.lockHand = { 4: 0 };             // R4: 위 패는 그대로 (아래 패만 바꿔 맞추기)
+  t.waves = { 1: { n: 8, hp: 70 }, 2: { n: 5, hp: 30 }, 3: { n: 6, hp: 30 }, 4: { n: 6, hp: 30 }, 5: { n: 5, hp: 30, duel: true, duelHp: 160 },
+    6: { n: 5, hp: 30, boss: true, bossShape: 20 }, 7: { n: 6, hp: 40, fly: 0.5, upT: 8, downT: 6 }, 8: { n: 6, hp: 30 } }; // 튜닝 노브 (약한 몹 — 문구엔 안 나감)
+  t.toughHp = 900; // 연습 몹 체력 (단계 동안 매 틱 되채움)
+  startPoker();    // R1 정해 둔 패로 다시 깔기 (폰 = 포커 탭)
+}
+function tutCrownU() { return S.units.find(u => u.item === 'crown') || null; }
+function tutCrownOpen() { return document.getElementById('crownModal').style.display === 'block' && !crownGuideOn; }
+function tutEnsurePoker(t, r) { if (S.phase === 'wave' && (t.ev.summon || 0) >= r - 1) tutEndWaveNow(); } // r번째 포커가 되게 — 앞 전투가 돌고 있으면 끝낸다 (건너뛰기 길)
+function tutRect(list, p) { if (!list.length) return null; return { mapRect: [Math.min(...list.map(u => u.x)) - p, Math.min(...list.map(u => u.y)) - p - 10, Math.max(...list.map(u => u.x)) + p, Math.max(...list.map(u => u.y)) + p] }; }
+function tutSupplyAlive(t) { return (t.supply || []).filter(u => S.units.includes(u)); }
+function tutWaveSteps(n) { return { enter: t => { tutEnsureWave(t, n); tutReachFix(); }, tick: t => tutEnsureWave(t, n), done: t => t.waveEnds >= n, target: () => ({ map: TUT_Z.pen }) }; }
+const TUT_STEPS = [
+  // ① 포커 — 카드 교환·금테·족보 표·소환
+  { id: 'intro', view: 'any', icon: 'cards', title: '어서 와요, 지휘관님!',
+    toast: '카드로 유닛을 뽑아 몰려오는 몬스터를 막는 게임이에요. 하나씩 알려 드릴게요. 이런 안내가 떠 있는 동안 게임은 잠시 멈춰요.' },
+  { id: 'swap', view: 'cards', icon: 'cards', title: '카드 바꾸기',
+    toast: '같은 숫자끼리 짝이 되면 금테가 둘러져요. 금테 없는 카드를 눌러 바꿔 보세요. 카드마다 한 번씩 바꿀 수 있어요.',
+    hint: '금테 없는 카드를 눌러 바꿔요.',
     cardHi: (h, i, made, hand) => !hand.swapped[i] && !made.includes(i),
-    done: () => !!S.poker && evalHand(S.poker.hands[0].cards) >= 3 },
-  { id: 'b_rank', view: 'cards', next: 'button',
-    pc: () => `지금 족보: <b>${HAND_NAMES[evalHand(S.poker.hands[0].cards)]}</b>. ` + (tutVisRect('#pokerGuide') ? '오른쪽 표에서 빛나요. 위로 갈수록 강한 유닛이 나와요.' : '족보 순서는 아래 책 버튼(도감)에서 볼 수 있어요.'),
-    mo: () => `지금 족보: <b>${HAND_NAMES[evalHand(S.poker.hands[0].cards)]}</b>. 이름 옆 막대가 족보의 높이예요. 누르면 족보 도감이 열려요.`,
+    done: () => !!S.poker && evalHand(S.poker.hands[0].cards) >= 3,
+    target: () => ({ dom: '#cards' }) },
+  { id: 'rank', view: 'cards', icon: 'book', title: '족보',
+    toast: () => `<b>${HAND_NAMES[evalHand(S.poker.hands[0].cards)]}</b> 완성! ` + (IS_MOBILE ? '이름 옆 막대가 족보의 높이예요. 막대를 누르면 족보 순서를 볼 수 있어요.'
+      : tutVisRect('#pokerGuide') ? '오른쪽 족보 표에서 지금 족보가 빛나요. 위로 갈수록 강한 유닛이 나와요.' : '족보 순서는 책 버튼(도감)에서 볼 수 있어요. 강한 족보일수록 강한 유닛이 나와요.'),
     target: () => ({ dom: ['#pokerGuide', '#cards .rankGauge', '#toolbar .shopIcon[data-shop="book"]'] }) },
-  { id: 'b_summon', view: 'cards', summon: true,
-    pc: "마음에 들면 '유닛 소환!'을 눌러요. 바로 전투가 시작돼요.",
+  { id: 'summon', view: 'cards', summon: true, icon: 'swords', title: '유닛 소환',
+    toast: "마음에 들면 '유닛 소환!'을 눌러요. 족보에 맞는 유닛이 나오고 바로 전투가 시작돼요.",
+    hint: "'유닛 소환!'을 눌러요.",
     done: t => (t.ev.summon || 0) >= 1,
     target: () => ({ dom: '#summonBtn' }) },
-  { id: 'b_fight', view: 'map',
-    pc: '몬스터는 울타리 안에서만 돌고, 유닛이 알아서 공격해요. 시간 안에 다 잡으면 클리어!',
-    enter: t => { tutEnsureWave(t, 1); tutReachFix(); },
-    tick: t => tutEnsureWave(t, 1),
-    done: t => t.waveEnds >= 1,
-    target: () => ({ map: TUT_Z.pen }) },
-  { id: 'b_select', view: 'map',
-    pc: '클리어하면 골드를 받아요. 이제 내 유닛을 클릭해 골라 보세요.',
-    mo: '클리어하면 골드를 받아요. 이제 내 유닛을 눌러 골라 보세요.',
+  // ② 전투 — 자동 공격·시간 안에 클리어
+  Object.assign({ id: 'fight', view: 'map', icon: 'swords', title: '전투',
+    toast: '몬스터는 울타리 안에서만 돌아요. 유닛은 알아서 공격해요. 시간 안에 모두 잡으면 클리어!',
+    hint: '전투를 지켜봐요.' }, tutWaveSteps(1)),
+  // ③ 유닛 고르기·이동
+  { id: 'select', view: 'map', icon: 'star', title: '유닛 고르기',
+    toast: '클리어하면 골드를 받아요. 이제 유닛을 움직여 봐요. 내 유닛을 클릭해 골라 보세요.',
+    toastMo: '클리어하면 골드를 받아요. 이제 유닛을 움직여 봐요. 내 유닛을 눌러 골라 보세요.',
+    hint: '내 유닛을 클릭해 골라요.', hintMo: '내 유닛을 눌러 골라요.',
     alt: t => t.lastWave && !t.lastWave.clear ? '시간이 다 됐지만 괜찮아요. 튜토리얼에선 목숨이 줄지 않아요.' : '',
     enter: () => { tutSelectOnly([]); hideObjInfo(); },
     done: () => tutSelFighters().length > 0,
     target: () => { const u = tutFighters()[0]; return u ? { unit: u } : null; } },
-  { id: 'b_move', view: 'map',
-    pc: '땅을 우클릭하면 그곳으로 걸어가요. 반짝이는 원 안을 우클릭해 보세요.',
-    mo: '유닛을 꾹 누른 채 끌면 들어 올려져요. 반짝이는 원 안에 놓아 보세요.',
+  { id: 'move', view: 'map', icon: 'arrow', title: '이동',
+    toast: '땅을 우클릭하면 고른 유닛이 그곳으로 걸어가요. 반짝이는 원 안을 우클릭해 보세요.',
+    toastMo: '유닛을 꾹 누른 채 끌면 들어 올려져요. 반짝이는 원 안에 놓아 보세요.',
+    hint: '반짝이는 원 안을 우클릭해요.', hintMo: '유닛을 끌어 반짝이는 원 안에 놓아요.',
     alt: () => !IS_MOBILE && !tutSelFighters().length ? '먼저 내 유닛을 클릭해 골라요.' : '',
     enter: () => { if (!IS_MOBILE && !tutSelFighters().length && tutFighters().length) tutSelectOnly([tutFighters()[0]]); },
     done: () => tutFighters().some(u => tutInZone(u, TUT_Z.move, 14)),
     target: () => ({ map: TUT_Z.move }) },
-  { id: 'b_castle', view: 'map',
-    pc: '골드로 유닛을 강하게 만들어요. 왼쪽 아래 성을 클릭해 보세요.',
-    mo: '골드로 유닛을 강하게 만들어요. 왼쪽 아래 성을 눌러 보세요.',
+  // ④ 성 강화 — +1 강화·+3 도전
+  { id: 'castle', view: 'map', icon: 'castle', title: '성 강화',
+    toast: '골드로 유닛을 강하게 만들어요. 왼쪽 아래 성을 클릭해 보세요.',
+    toastMo: '골드로 유닛을 강하게 만들어요. 왼쪽 아래 성을 눌러 보세요.',
+    hint: '왼쪽 아래 성을 클릭해요.', hintMo: '왼쪽 아래 성을 눌러요.',
     enter: () => { tutSelectOnly([]); hideObjInfo(); S.gold = Math.max(S.gold, 200); castleTab = 'upg'; },
     done: () => openShop === 'castle',
     target: () => ({ map: TUT_Z.house }) },
-  { id: 'b_upg', view: 'modal', modal: 'castle',
-    pc: t => `내 유닛은 <b>${RACES[t.race].suit} ${RACES[t.race].name}</b> 문양이에요. 같은 문양 칸의 '+1 강화'를 누르면 그 문양 유닛이 모두 강해져요.`,
+  { id: 'upg', view: 'modal', modal: 'castle', icon: 'sword', title: '유닛 강화',
+    toast: t => `내 유닛은 <b>${RACES[t.race].suit} ${RACES[t.race].name}</b> 문양이에요. 같은 문양 칸의 '+1 강화'를 누르면 그 문양 유닛이 모두 강해져요.`,
+    hint: "같은 문양 칸의 '+1 강화'를 눌러요.",
     enter: t => { const u = tutFighters()[0]; t.race = u && u.race != null ? u.race : 0; tutOpenCastle(); tutGoldFor(t.race); },
     tick: t => { if (openShop === 'castle' && castleTab !== 'upg') { castleTab = 'upg'; renderShop(); } tutGoldFor(t.race); tutScrollTo(t, `#shopBody [data-upg="${t.race}"]`); },
     done: t => S.upg[t.race] > t.base.upg[t.race],
     target: t => ({ dom: `#shopBody [data-upg="${t.race}"]` }) },
-  { id: 'b_gamble', view: 'modal', modal: 'castle',
-    pc: "'+3 도전'은 크게 오르지만 실전에선 실패할 수도 있어요(튜토리얼은 꼭 성공). 누른 뒤 움직이는 막대를 가운데에서 멈춰요.",
+  { id: 'gamble', view: 'modal', modal: 'castle', icon: 'star', title: '도전 강화',
+    toast: "'+3 도전'은 크게 오르지만 실전에선 실패할 수도 있어요(튜토리얼은 꼭 성공). 누른 뒤 움직이는 막대를 가운데에서 멈춰요.",
+    hint: "'+3 도전'을 누르고 막대를 가운데에서 멈춰요.",
     enter: t => { tutOpenCastle(); tutGoldFor(t.race); },
     tick: t => { if (openShop === 'castle' && castleTab !== 'upg') { castleTab = 'upg'; renderShop(); } tutGoldFor(t.race); tutScrollTo(t, `#shopBody [data-gupg="${t.race}"]`); },
     done: t => S.upg[t.race] >= t.base.upg[t.race] + 3,
     target: t => ({ dom: `#shopBody [data-gupg="${t.race}"]` }) },
-  { id: 'b_close', view: 'any',
-    pc: '강화 끝! 오른쪽 위 ✕를 눌러 창을 닫아요.',
+  { id: 'close', view: 'any', hint: '강화 끝! 오른쪽 위 ✕를 눌러 창을 닫아요.',
     done: () => !openShop,
     target: () => ({ dom: '#shopClose' }) },
-  { id: 'b_summon2', view: 'cards', summon: true,
-    pc: t => (t.waveEnds || 0) < 1 ? '전투가 끝나면 새 카드가 와요.' : "새 카드가 왔어요. 카드마다 한 번씩 바꿔 보고 '유닛 소환!'을 눌러요.",
+  { id: 'summon2', view: 'cards', summon: true, icon: 'cards', title: '새 카드',
+    toast: '전투가 끝나면 새 카드가 와요. 실전에선 카드 고르는 시간이 다 되면 지금 패로 저절로 소환돼요. 마음대로 바꿔 보고 소환해요.',
+    hint: "카드를 바꿔 보고 '유닛 소환!'을 눌러요.",
     enter: () => { if (openShop) closeShop(); },
     tick: t => { if (S.phase === 'wave' && (t.ev.summon || 0) < 2 && (t.waveEnds || 0) < 1) tutEndWaveNow(); }, // 건너뛰기 길: 첫 전투가 아직이면 끝낸다
     done: t => (t.ev.summon || 0) >= 2,
-    target: () => S.phase === 'poker' ? { dom: '#summonBtn' } : null },
-  { id: 'b_attack', view: 'map', hold: { wave: true },
-    pc: '고른 유닛이 한 몬스터만 노리게 할 수 있어요. A 키를 누른 뒤 반짝이는 몬스터를 클릭해 보세요.',
-    mo: '고른 유닛이 한 몬스터만 노리게 할 수 있어요. 반짝이는 몬스터를 꾹 눌러 보세요.',
+    target: () => S.phase === 'poker' ? { dom: '#summonBtn' } : null,
+    toastTarget: () => ({ dom: ['#pokerTimerBar', '#summonBtn'] }) },
+  // ⑤ 공격 지정·부대 지정·선택 해제
+  { id: 'attack', view: 'map', hold: { wave: true }, icon: 'swords', title: '공격 지정',
+    toast: '고른 유닛이 한 몬스터만 노리게 할 수 있어요. A 키를 누른 뒤 반짝이는 몬스터를 클릭해 보세요.',
+    toastMo: '고른 유닛이 한 몬스터만 노리게 할 수 있어요. 반짝이는 몬스터를 꾹 눌러 보세요.',
+    hint: 'A 키를 누른 뒤 반짝이는 몬스터를 클릭해요.', hintMo: '반짝이는 몬스터를 꾹 눌러요.',
     alt: () => !tutSelFighters().length ? (IS_MOBILE ? '먼저 내 유닛을 눌러 골라요.' : '먼저 내 유닛을 클릭해 골라요.') : '',
-    enter: t => { tutEnsureWave(t, 2); if (!tutSelFighters().length) tutSelectOnly(tutFighters()); },
-    tick: t => {
-      tutEnsureWave(t, 2);
-      if (S.phase === 'wave' && (t.ev.summon || 0) >= 2 && !t.toughM) { const m = spawnMonster(t.toughHp, false, {}); m.golden = false; m.spin = 0; t.toughM = m; } // 연습 몹 = 이 단계 && 전투 중 && 아직 없음 (라운드에 안 묶음)
-      if (t.toughM && S.monsters.includes(t.toughM)) t.toughM.hp = t.toughM.max; // 지시 전엔 쓰러지지 않는다 (진짜 체력, 매 틱 되채움 — 22 #5)
-    },
+    enter: t => { tutEnsureWave(t, 2); if (!tutSelFighters().length) tutSelectOnly(tutFree()); if ((t.ev.summon || 0) >= 2) tutKeepMob(t); },
+    tick: t => { tutEnsureWave(t, 2); if ((t.ev.summon || 0) >= 2) tutKeepMob(t); },
     done: t => tutEvUp('attack') && !!t.toughM,
+    giveUp: t => S.phase !== 'wave' && t.waveEnds >= 2,
+    latch: t => tutFreeMob(t, 900),
     target: t => t.toughM && S.monsters.includes(t.toughM) ? { mon: t.toughM } : { map: TUT_Z.pen } },
-  { id: 'b_clear2', view: 'map',
-    pc: '잘했어요! 남은 몬스터도 모두 잡아요.',
-    enter: t => { tutEnsureWave(t, 2); tutReachFix(); },
-    tick: t => tutEnsureWave(t, 2),
-    done: t => t.waveEnds >= 2,
-    target: () => ({ map: TUT_Z.pen }) },
-  { id: 'b_box', view: 'map',
-    pc: '여러 유닛을 한 번에 고를 수 있어요. 빈 땅에서 마우스를 누른 채 끌어 유닛들을 네모로 감싸 보세요.',
-    mo: '여러 유닛을 한 번에 고를 수 있어요. 빈 땅을 누르자마자 바로 끌어 유닛들을 네모로 감싸 보세요.',
+  Object.assign({ id: 'clear2', view: 'map', hint: '잘했어요! 남은 몬스터도 모두 잡아요.' }, tutWaveSteps(2)),
+  { id: 'box', view: 'map', icon: 'star', title: '여러 유닛 고르기',
+    toast: '빈 땅에서 마우스를 누른 채 끌면 네모가 생겨요. 유닛들을 네모로 감싸 한 번에 골라 보세요.',
+    toastMo: '빈 땅을 누르자마자 바로 끌면 네모가 생겨요. 유닛들을 네모로 감싸 한 번에 골라 보세요.',
+    hint: '빈 땅에서 끌어 유닛들을 네모로 감싸요.', hintMo: '빈 땅에서 바로 끌어 유닛들을 네모로 감싸요.',
     enter: () => { while (tutFighters().length < 2) spawnUnit(1, RACE_OF_RANK[1], false, 9); tutSelectOnly([]); hideObjInfo(); }, // 건너뛰기 길로 유닛이 하나뿐이면 하나 더
     done: () => tutSelFighters().length >= 2,
-    target: () => { const f = tutFighters(); if (!f.length) return null; const p = IS_MOBILE ? 48 : 24; return { mapRect: [Math.min(...f.map(u => u.x)) - p, Math.min(...f.map(u => u.y)) - p - 10, Math.max(...f.map(u => u.x)) + p, Math.max(...f.map(u => u.y)) + p] }; } },
-  { id: 'b_group', view: 'map',
-    pc: '고른 채로 땅을 우클릭하면 함께 움직여요. 반짝이는 원 안을 우클릭해 보세요.',
-    mo: '고른 유닛 하나를 끌면 함께 따라와요. 반짝이는 원 안에 놓아 보세요.',
-    enter: () => { if (tutSelFighters().length < 2) tutSelectOnly(tutFighters()); },
+    target: () => tutRect(tutFighters(), IS_MOBILE ? 48 : 24) },
+  { id: 'group', view: 'map', icon: 'arrow', title: '함께 이동',
+    toast: '고른 채로 땅을 우클릭하면 다 함께 움직여요. 반짝이는 원 안을 우클릭해 보세요.',
+    toastMo: '고른 유닛 하나를 끌면 다 함께 따라와요. 반짝이는 원 안에 놓아 보세요.',
+    hint: '반짝이는 원 안을 우클릭해요.', hintMo: '고른 유닛 하나를 끌어 원 안에 놓아요.',
+    enter: () => { if (tutSelFighters().length < 2) tutSelectOnly(tutFree()); },
     done: () => tutFighters().filter(u => tutInZone(u, TUT_Z.group, 14)).length >= 2,
     target: () => ({ map: TUT_Z.group }) },
-  { id: 'b_desel', view: 'map',
-    pc: '빈 땅을 클릭하면 선택이 풀려요. 반짝이는 곳을 클릭해 보세요.',
-    mo: '빈 땅을 탭하면 선택이 풀려요. 반짝이는 곳을 탭해 보세요.',
-    enter: () => { if (!tutSelFighters().length) tutSelectOnly(tutFighters()); },
+  { id: 'desel', view: 'map', icon: 'check', title: '선택 풀기',
+    toast: '빈 땅을 클릭하면 선택이 풀려요. 반짝이는 곳을 클릭해 보세요.',
+    toastMo: '빈 땅을 탭하면 선택이 풀려요. 반짝이는 곳을 탭해 보세요.',
+    hint: '반짝이는 곳을 클릭해요.', hintMo: '반짝이는 곳을 탭해요.',
+    enter: () => { if (!tutSelFighters().length) tutSelectOnly(tutFree()); },
     done: () => tutSelFighters().length === 0,
     target: () => ({ map: TUT_Z.desel }) },
+  // ⑥ 칩 → 자금운영 → 광부 고용·배달 (+ 뽑기·투자·비상 물자는 '이런 게 있다')
+  { id: 'chip', view: 'map', icon: 'chip', title: '칩과 자금운영',
+    toast: "칩은 보스나 결투장에서 얻는 특별한 돈이에요. 왼쪽 '자금운영'에서 써요. 눌러 보세요.",
+    hint: "왼쪽 '자금운영'을 눌러요.",
+    enter: () => { if (S.chips < 1) { S.chips = 1; tutSupply('칩'); } },
+    done: () => CM.style.display === 'flex',
+    target: () => ({ dom: '#stCasino' }) },
+  { id: 'hire', view: 'modal', modal: 'chip', icon: 'pick', title: '광부 고용',
+    toast: "칩으로 광부를 고용할 수 있어요. '광부 고용'을 눌러 보세요.",
+    hint: "'광부 고용'을 눌러요.",
+    enter: () => { if (S.chips < 1) { S.chips = 1; if (CM.style.display === 'flex') casMenu(); } tutOpenChip(); },
+    done: t => S.units.filter(u => u.miner).length > t.base.miners,
+    target: () => ({ dom: '#chipBody [data-go="hire"]' }) },
+  { id: 'more', view: 'modal', modal: 'chip', icon: 'gift', title: '그 밖의 것들',
+    toast: '뽑기도 칩으로 해요. 결과는 운에 달렸어요. 골드 투자는 장이 열릴 때만, 비상 물자는 급할 때 골드로 사요.',
+    enter: () => tutOpenChip(),
+    target: () => ({ dom: '#chipBody [data-go="miner"]' }) },
+  { id: 'chipClose', view: 'any', hint: '✕를 눌러 창을 닫으면 광부가 일하러 가요.',
+    done: () => CM.style.display !== 'flex',
+    target: () => ({ dom: '#chipClose' }) },
+  { id: 'miner', view: 'map', icon: 'pick', title: '광부',
+    toast: '광부는 오른쪽 아래 광산에서 캐서 성으로 골드를 날라요. 가끔 재변경권도 캐 와요. 잠깐 지켜봐요.',
+    hint: '광부가 성으로 돌아올 때까지 기다려요.', ok: '재변경권을 캐 왔어요!',
+    enter: () => { if (CM.style.display === 'flex') closeChip(); if (!S.units.some(u => u.miner)) { spawnMiner(); tutSupply('광부'); } },
+    done: t => S.items.reroll > t.base.reroll,
+    target: () => { const m = S.units.find(u => u.miner); return m ? { unit: m } : null; } },
+  // ⑦ 광석 방 → 보상 광석 → 제물대 → 왕관 안내·대관식
+  { id: 'room', view: 'map', icon: 'gem', title: '광석 방',
+    toast: '오른쪽 위 돌담 방이 광석 방이에요. 유닛을 넣으면 몬스터 대신 광석을 캐요. 유닛을 골라 방 안을 우클릭해 보세요.',
+    toastMo: '오른쪽 위 돌담 방이 광석 방이에요. 유닛을 넣으면 몬스터 대신 광석을 캐요. 유닛을 끌어 방 안에 놓아 보세요.',
+    hint: '유닛을 골라 광석 방 안을 우클릭해요.', hintMo: '유닛을 끌어 광석 방 안에 놓아요.',
+    alt: () => !IS_MOBILE && !tutSelFighters().length ? '먼저 내 유닛 하나를 클릭해 골라요.' : '',
+    enter: t => { tutSelectOnly([]); hideObjInfo(); if (!t.huntSet && S.hunt && S.hunt.stage === 1) { S.hunt.max = S.hunt.hp = TUT.HUNT_HP; t.huntSet = true; } },
+    done: () => tutFighters().some(u => isInRoom(u) && u.oreSlot),
+    target: () => ({ map: TUT_Z.room }) },
+  { id: 'mine', view: 'map', hint: '방 안 유닛이 광석을 다 캘 때까지 기다려요.', ok: '보상 광석이 나왔어요!',
+    enter: t => { if (!t.huntSet && S.hunt && S.hunt.stage === 1) { S.hunt.max = S.hunt.hp = TUT.HUNT_HP; t.huntSet = true; }
+      if (!tutFighters().some(u => isInRoom(u))) { const u = tutFree()[0]; if (u) { u.x = u.tx = ROOM.cx; u.y = u.ty = ROOM.cy; u.moving = false; } } }, // 건너뛰기 길: 한 기를 방 안으로
+    done: () => S.units.some(u => u.item === 'oreGift') || (S.hunt && S.hunt.stage > 1),
+    target: () => ({ map: TUT_Z.room }) },
+  { id: 'gift', view: 'map', icon: 'gem', title: '보상 광석',
+    toast: '보상 광석이 나왔어요! 클릭해 고른 뒤 왼쪽 위 제물대를 우클릭해 옮겨요. 제물대에 올리면 열려요.',
+    toastMo: '보상 광석이 나왔어요! 끌어서 왼쪽 위 제물대에 놓아요. 제물대에 올리면 열려요.',
+    hint: t => IS_MOBILE ? '보상 광석을 끌어 제물대에 놓아요.' : t.giftU && t.giftU.selected ? '왼쪽 위 제물대를 우클릭해요.' : '보상 광석을 클릭해 골라요.',
+    enter: t => { t.giftU = S.units.find(u => u.item === 'oreGift') || null; if (!t.giftU) { giveHuntReward(1); t.giftU = S.units.find(u => u.item === 'oreGift') || null; } tutSelectOnly([]); hideObjInfo(); },
+    done: t => !!t.giftU && !S.units.includes(t.giftU),
+    target: t => t.giftU && S.units.includes(t.giftU) && (IS_MOBILE ? !t.giftU.grabbed : !t.giftU.selected) ? { unit: t.giftU } : { map: TUT_Z.altar },
+    toastTarget: t => t.giftU && S.units.includes(t.giftU) ? { unit: t.giftU } : null },
+  { id: 'crownWait', view: 'any', hint: () => crownGuideOn ? '왕관 안내를 읽고 ✕로 닫아요.' : '보상 광석이 열리고 있어요.',
+    enter: t => { t.sawGuide = false; if (t.giftU && S.units.includes(t.giftU)) { S.units.splice(S.units.indexOf(t.giftU), 1); openOreGift(t.giftU.oreStage || 1); } }, // 건너뛰기 길: 바로 개봉
+    tick: t => { if (crownGuideOn) t.sawGuide = true; },
+    done: t => (t.sawGuide && !crownGuideOn && document.getElementById('crownModal').style.display !== 'block') || S.crownRace >= 0,
+    giveUp: t => !t.sawGuide && performance.now() - t.stepAt > 12000, // 안내 창이 끝내 안 뜨면 (다른 창을 계속 열어 둠 등) 넘어간다
+    target: () => crownGuideOn ? { dom: '#crGuideX' } : { map: TUT_Z.altar } },
+  { id: 'crown', view: 'map', icon: 'crown', title: '왕관',
+    toast: '왕관도 제물대에 올려 보세요. 대관식에서 고른 종족이 게임 끝까지 강해져요.',
+    toastMo: '왕관도 끌어서 제물대에 놓아 보세요. 대관식에서 고른 종족이 게임 끝까지 강해져요.',
+    hint: () => { const c = tutCrownU(); return IS_MOBILE ? '왕관을 끌어 제물대에 놓아요.' : c && !c.selected ? '왕관을 클릭해 골라요.' : '왼쪽 위 제물대를 우클릭해요.'; },
+    enter: () => { if (S.crownRace < 0 && !tutCrownU() && !tutCrownOpen()) { S.crownDropped = true; spawnItemUnit('crown'); S.crownAge = 0; } tutSelectOnly([]); hideObjInfo(); },
+    done: () => tutCrownOpen() || S.crownRace >= 0,
+    target: () => { const c = tutCrownU(); return c && (IS_MOBILE ? !c.grabbed : !c.selected) ? { unit: c } : { map: TUT_Z.altar }; },
+    toastTarget: () => { const c = tutCrownU(); return c ? { unit: c } : null; } },
+  { id: 'crownPick', view: 'any', hint: '왕관을 씌울 종족을 하나 골라요.', ok: '대관식 끝!',
+    alt: () => !tutCrownOpen() && tutCrownU() ? '왕관을 다시 제물대에 올려요.' : '',
+    enter: () => { if (S.crownRace < 0 && !tutCrownOpen()) { const c = tutCrownU(); if (c) S.units.splice(S.units.indexOf(c), 1); openCrownModal(); } }, // 건너뛰기 길: 바로 대관식 창
+    done: () => S.crownRace >= 0,
+    target: () => tutCrownOpen() ? { dom: '#crGrid' } : tutCrownU() ? { unit: tutCrownU() } : null },
+  // ⑧ 강화 포털 — 같은 유닛을 모아 영웅 (+ 숨은 조합은 존재만)
+  { id: 'fuse1', view: 'map', icon: 'star', title: '같은 유닛 모으기',
+    toast: '같은 유닛을 모아 하나로 합치면 더 강한 영웅이 돼요. 보급으로 같은 유닛을 보내 드렸어요. 하나를 더블클릭하면 같은 종류가 한꺼번에 골라져요.',
+    toastMo: '같은 유닛을 모아 하나로 합치면 더 강한 영웅이 돼요. 보급으로 같은 유닛을 보내 드렸어요. 하나를 빠르게 두 번 탭하면 같은 종류가 한꺼번에 골라져요.',
+    hint: '보급된 유닛 하나를 더블클릭해요.', hintMo: '보급된 유닛 하나를 빠르게 두 번 탭해요.',
+    enter: t => { tutSelectOnly([]); hideObjInfo(); if (!t.supply) { t.supply = []; for (let k = 0; k < 5; k++) { spawnUnit(1, RACE_OF_RANK[1], false, 10); t.supply.push(S.units[S.units.length - 1]); } tutSupply('같은 유닛'); } },
+    done: t => { const s = tutSupplyAlive(t); return s.length > 0 && s.every(u => u.selected); },
+    target: t => { const s = tutSupplyAlive(t); return s.length ? { unit: s[0] } : null; },
+    toastTarget: t => tutRect(tutSupplyAlive(t), 22) },
+  { id: 'fuse2', view: 'map', icon: 'star', title: '강화 포털',
+    toast: '왼쪽 소용돌이가 강화 포털이에요. 고른 유닛들을 포털로 보내면 하나로 합쳐져요. 포털을 우클릭해 보세요.',
+    toastMo: '왼쪽 소용돌이가 강화 포털이에요. 고른 유닛 하나를 끌어 포털에 놓으면 다 같이 따라가 하나로 합쳐져요.',
+    hint: '왼쪽 소용돌이(강화 포털)를 우클릭해요.', hintMo: '고른 유닛 하나를 끌어 포털에 놓아요.', ok: '영웅이 됐어요!',
+    alt: t => { const s = tutSupplyAlive(t); return s.length && !s.every(u => u.selected) ? (IS_MOBILE ? '보급된 유닛 하나를 빠르게 두 번 탭해 다시 골라요.' : '보급된 유닛 하나를 더블클릭해 다시 골라요.') : ''; },
+    enter: t => { const s = tutSupplyAlive(t); if (s.length && !s.every(u => u.selected)) tutSelectOnly(s); },
+    done: t => tutHeroN() > t.base.heroes,
+    target: () => ({ map: TUT_Z.portal }) },
+  { id: 'hidden', view: 'any', icon: 'book', title: '숨은 조합',
+    toast: '서로 다른 유닛을 특별하게 모으면 숨은 영웅이 나오기도 해요. 방법은 비밀! 찾으면 도감(책 버튼)에 기록돼요.',
+    target: () => ({ dom: '#toolbar .shopIcon[data-shop="book"]' }) },
+  // 재변경권 (광부가 캐 온 것) → R3 소환
+  { id: 'reroll', view: 'cards', icon: 'ticket', title: '재변경권',
+    toast: '광부가 캐 온 재변경권을 써 봐요. 카드를 하나 바꾼 뒤, 바꾼 카드의 작은 표를 누르면 그 카드를 한 번 더 바꿀 수 있어요.',
+    hint: () => S.poker && S.poker.hands[0].swapped.some(Boolean) ? '바꾼 카드의 작은 표를 눌러요.' : '금테 없는 카드를 하나 바꿔요.',
+    enter: t => { if (S.items.reroll < 1) { S.items.reroll = 1; tutSupply('재변경권'); if (S.phase === 'poker') renderPoker(); } t.rr0 = S.items.reroll; },
+    cardHi: (h, i, made, hand) => !hand.swapped.some(Boolean) && !made.includes(i),
+    done: t => S.items.reroll < t.rr0,
+    target: () => S.poker && S.poker.hands[0].swapped.some(Boolean) ? { dom: ['#cards .reswap', '#cards'] } : { dom: '#cards' } },
+  { id: 'summon3', view: 'cards', summon: true, hint: "좋아요! 이제 '유닛 소환!'을 눌러요.",
+    done: t => (t.ev.summon || 0) >= 3,
+    target: () => ({ dom: '#summonBtn' }) },
+  // ⑭ 편의 (R3 전투) — 배속·딜 순위
+  { id: 'speed', view: 'map', hold: { wave: true }, icon: 'ffwd', title: '빨리 감기',
+    toast: '빨리 감기 버튼으로 게임을 빠르게 할 수 있어요. 눌러 보세요.',
+    hint: '빨리 감기 버튼을 눌러요.',
+    enter: t => { tutEnsureWave(t, 3); tutReachFix(); tutKeepMob(t); },
+    tick: t => { tutEnsureWave(t, 3); tutKeepMob(t); },
+    done: t => S.speed !== t.base.speed,
+    target: () => ({ dom: '#bSpeed' }) },
+  { id: 'dps', view: 'map', hold: { wave: true }, icon: 'chart', title: '딜 순위',
+    toast: "'딜 순위'를 누르면 어떤 유닛이 잘 싸웠는지 더 자세히 볼 수 있어요. 눌러 보세요.",
+    hint: "'딜 순위'를 눌러요.",
+    enter: t => { tutEnsureWave(t, 3); tutKeepMob(t); tutSelectOnly([]); },
+    tick: t => { tutEnsureWave(t, 3); tutKeepMob(t); },
+    done: t => dpsMode !== t.base.dps,
+    giveUp: () => !tutVisRect('#dpsHead') && S.phase !== 'wave',
+    target: () => ({ dom: '#dpsHead' }) },
+  Object.assign({ id: 'clear3', view: 'map', hint: '전투를 마쳐요.' }, tutWaveSteps(3), { enter: t => { tutEnsureWave(t, 3); tutFreeMob(t, 240); } }),
+  // ⑨ 두 패 → 에이스 (+ 카드 고를 때 배속 해제)
+  { id: 'pkslow', view: 'cards', icon: 'ffwd', title: '카드 고를 때',
+    toast: () => tutVisRect('#pkSlow') ? '카드를 고르는 동안엔 빨리 감기가 잠시 풀려요. 이 스위치로 켜고 끌 수 있어요.' : '카드를 고르는 동안엔 빨리 감기가 잠시 풀려요. 설정(톱니 버튼)에서 켜고 끌 수 있어요.',
+    enter: t => tutEnsurePoker(t, 4),
+    target: () => ({ dom: ['#pkSlow', '#bOpt'] }) },
+  { id: 'double', view: 'cards', icon: 'cards', title: '두 패',
+    toast: "가끔 두 패가 함께 와요. 두 패의 족보를 똑같이 맞추면 강한 '에이스'가 나와요. 아래 패를 바꿔 위 패와 맞춰 보세요.",
+    hint: '아래 패의 카드를 바꿔 위 패와 같은 족보로 맞춰요.',
+    cardHi: (h, i, made, hand) => h === 1 && !hand.swapped[i] && !made.includes(i),
+    done: () => S.poker.hands.length === 2 && handResult(S.poker.hands).tier >= 1,
+    target: () => ({ dom: '#cards' }) },
+  { id: 'ace', view: 'cards', summon: true, hint: "에이스 완성! '유닛 소환!'을 눌러요.",
+    done: t => (t.ev.summon || 0) >= 4,
+    target: () => ({ dom: '#summonBtn' }) },
+  // ⑭ 유닛 정보 창 (R4 전투)
+  { id: 'info', view: 'map', icon: 'star', title: '유닛 정보',
+    toast: '유닛을 클릭하면 정보 창이 떠요. 이름과 세기, 누구부터 칠지 정하는 버튼이 있어요. 하나 골라 보세요.',
+    toastMo: '유닛을 누르면 정보 창이 떠요. 이름과 세기, 누구부터 칠지 정하는 버튼이 있어요. 하나 골라 보세요.',
+    hint: '내 유닛을 클릭해 정보 창을 봐요.', hintMo: '내 유닛을 눌러 정보 창을 봐요.',
+    enter: t => { tutEnsureWave(t, 4); tutReachFix(); tutSelectOnly([]); hideObjInfo(); },
+    done: () => tutSelFighters().length > 0 && document.getElementById('unitInfo').style.display === 'block',
+    target: () => { const a = S.units.find(u => u.hidden && !u.miner && !u.item) || tutFree()[0]; return a ? { unit: a } : null; } },
+  Object.assign({ id: 'clear4', view: 'map', hint: '전투를 마쳐요.' }, tutWaveSteps(4), { enter: t => tutEnsureWave(t, 4) }),
+  // ⑩ 결투장 — 도전자·입장 경고·입장·도망·결투·기권
+  { id: 'duel', view: 'map', icon: 'swords', title: '결투장',
+    toast: '오른쪽 원형 경기장이 결투장이에요. 이번 전투엔 도전자가 와요! 유닛 하나를 들여보내 이기면 칩을 받아요. 유닛을 골라 결투장 안을 우클릭해 보세요.',
+    toastMo: '오른쪽 원형 경기장이 결투장이에요. 이번 전투엔 도전자가 와요! 유닛 하나를 들여보내 이기면 칩을 받아요. 유닛을 끌어 결투장 안에 놓아 보세요.',
+    hint: () => IS_MOBILE ? '유닛 하나를 끌어 결투장 안에 놓아요.' : tutSelFighters().length ? '결투장 안을 우클릭해요.' : '먼저 내 유닛 하나를 클릭해 골라요.',
+    enter: t => { tutEnsurePoker(t, 5); tutSelectOnly([]); hideObjInfo(); },
+    done: () => gameDialogVisible('duelConfirm') || !!(S.champion && S.champion.duelOk),
+    target: () => ({ map: TUT_Z.arena }) },
+  { id: 'duelIn', view: 'any', dlgOk: ['duelConfirm'], icon: 'lock', title: '입장',
+    toast: "들어가면 결투가 끝날 때까지 못 나와요. 실전에선 시간 안에 못 이기면 그 유닛을 잃어요. '입장한다'를 눌러요.",
+    hint: "'입장한다'를 눌러요.",
+    alt: () => !gameDialogVisible('duelConfirm') && !S.champion ? (IS_MOBILE ? "다시 결투장에 놓고 '입장한다'를 눌러요." : "다시 결투장 안을 우클릭하고 '입장한다'를 눌러요.") : '',
+    done: () => !!(S.champion && S.champion.duelOk),
+    target: () => gameDialogVisible('duelConfirm') ? { dom: '#duelConfirm .dcBtns button' } : { map: TUT_Z.arena } },
+  { id: 'flee', view: 'map', icon: 'arrow', title: '도망',
+    toast: "들어가자마자 잠깐, 결투장 아래 '도망' 버튼이 차올라요. 위험하면 눌러서 빠져나올 수 있어요. 이번엔 그대로 싸워 봐요.",
+    target: () => { if (!duelFleeActive()) return { map: TUT_Z.arena }; const r = duelFleeBtnRect(); return { mapRect: [r.x, r.y, r.x + r.w, r.y + r.h] }; } },
+  { id: 'duelSummon', view: 'cards', summon: true, hint: "도전자는 전투가 시작되면 나와요. '유닛 소환!'을 눌러요.",
+    done: t => (t.ev.summon || 0) >= 5,
+    target: () => ({ dom: '#summonBtn' }) },
+  { id: 'duelFight', view: 'map', icon: 'trophy', title: '결투',
+    toast: '챔피언이 도전자와 싸워요. 시간 안에 이기면 칩을 받아요!',
+    hint: '결투를 지켜봐요.',
+    alt: () => S.duel && !S.champion ? (tutVisRect('#duelForfeit') ? "'결투 기권'을 누르거나 유닛을 결투장에 보내요." : '결투장에 유닛을 보내 도전자와 싸워요.') : '',
+    enter: t => { tutEnsureWave(t, 5); tutReachFix(); },
+    tick: t => tutEnsureWave(t, 5),
+    done: t => !!S.duelEnded || t.waveEnds >= 5,
+    target: () => S.duel && !S.champion && tutVisRect('#duelForfeit') ? { dom: '#duelForfeit' } : { map: TUT_Z.arena } },
+  { id: 'forfeit', view: 'map', icon: 'lock', title: '결투 기권',
+    toast: "아무도 안 보냈는데 도전자만 남으면 전투가 끝나지 않아요. 그땐 소환장 가운데 '결투 기권'을 누르면 보상 없이 끝낼 수 있어요.",
+    target: () => ({ map: TUT_Z.pen }) },
+  Object.assign({ id: 'clear5', view: 'map', hint: '전투를 마쳐요.' }, tutWaveSteps(5), { enter: t => tutEnsureWave(t, 5) }),
+  // ⑪ 보스 라운드 + ⑬ 스킬 버튼 (풀하우스 단검 암살)
+  { id: 'boss', view: 'cards', summon: true, icon: 'skull', title: '보스',
+    toast: '이번 전투엔 커다란 보스가 나와요. 실전에선 시간 안에 못 잡으면 바로 끝이에요. 튜토리얼에선 걱정 마세요. 소환해 보세요.',
+    hint: "'유닛 소환!'을 눌러요.",
+    enter: t => tutEnsurePoker(t, 6),
+    done: t => (t.ev.summon || 0) >= 6,
+    target: () => ({ dom: '#summonBtn' }),
+    toastTarget: () => ({ dom: ['#pokerBanner .poker-boss-warning', '#summonBtn'] }) },
+  { id: 'bossCome', view: 'map', hint: '곧 커다란 보스가 나타나요.', ok: '보스 등장!',
+    enter: t => { tutEnsureWave(t, 6); tutReachFix(); },
+    tick: t => tutEnsureWave(t, 6),
+    done: () => S.monsters.some(m => m.boss),
+    giveUp: t => t.waveEnds >= 6,
+    target: () => ({ map: TUT_Z.pen }) },
+  { id: 'skill', view: 'map', hold: { wave: true }, icon: 'sword', title: '스킬 버튼',
+    toast: '단검 유닛에겐 특별한 스킬이 있어요. 둥근 스킬 버튼을 누르면 가장 강한 몬스터에게 뛰어들어요. 눌러 보세요.',
+    hint: '둥근 스킬 버튼을 눌러요.', ok: '암살!',
+    enter: t => { tutEnsureWave(t, 6); if (!S.units.some(u => u.tier === 6 && !u.hero && !u.miner && !u.item && !(u.skillCd > 0))) { spawnUnit(6, RACE_OF_RANK[6], false, 13); tutSupply('단검 유닛'); } },
+    tick: t => { const b = S.monsters.find(m => m.boss); if (b) b.hp = b.max; }, // 스킬을 쓰기 전엔 보스가 쓰러지지 않게
+    done: () => tutEvUp('skill'),
+    giveUp: t => t.waveEnds >= 6,
+    target: () => ({ dom: '#skillBar .skB[data-k="assassin"]' }) },
+  Object.assign({ id: 'bossKill', view: 'map', hint: '보스를 잡으면 칩도 받아요. 끝까지 잡아요.' }, tutWaveSteps(6), { enter: t => tutEnsureWave(t, 6),
+    target: () => { const b = S.monsters.find(m => m.boss); return b ? { mon: b } : { map: TUT_Z.pen }; } }),
+  // ⑫ 하늘을 나는 몬스터 — 쏘는 유닛만·'공중' 우선·내려앉기
+  { id: 'air', view: 'cards', summon: true, icon: 'arrow', title: '하늘을 나는 몬스터',
+    toast: '이번엔 날아다니는 몬스터가 와요. 활·총처럼 위로 쏘는 유닛만 맞힐 수 있어요. 소환해 보세요.',
+    hint: "'유닛 소환!'을 눌러요.",
+    enter: t => tutEnsurePoker(t, 7),
+    done: t => (t.ev.summon || 0) >= 7,
+    target: () => ({ dom: '#summonBtn' }),
+    toastTarget: () => ({ dom: ['#pokerBanner .poker-event-notice', '#summonBtn'] }) },
+  { id: 'airPri', view: 'map', icon: 'star', title: '공중 우선',
+    toast: "활·총 유닛을 골라 정보 창의 '공중' 버튼을 누르면 나는 몬스터부터 노려요. 해 보세요.",
+    hint: () => tutSelFighters().some(airPriOk) ? "정보 창의 '공중' 버튼을 눌러요." : IS_MOBILE ? '활이나 총 유닛을 눌러 골라요.' : '활이나 총 유닛을 클릭해 골라요.',
+    enter: t => { tutEnsureWave(t, 7); tutReachFix(); tutSelectOnly([]); hideObjInfo(); if (!tutFighters().some(airPriOk)) { spawnUnit(1, RACE_OF_RANK[1], false, 10); tutSupply('활 유닛'); } },
+    done: () => S.units.some(u => !u.miner && !u.item && u.priority === 'air'),
+    target: () => { if (tutSelFighters().some(airPriOk) && tutVisRect('#unitInfo .priBtn[data-pri="air"]')) return { dom: '#unitInfo .priBtn[data-pri="air"]' }; const a = tutFree().find(airPriOk) || tutFighters().find(airPriOk); return a ? { unit: a } : null; } },
+  { id: 'airLand', view: 'map', icon: 'arrow', title: '내려앉기',
+    toast: '나는 몬스터도 가끔 땅에 내려앉아요. 그때는 모든 유닛이 공격할 수 있어요.',
+    toastWhen: () => !S.monsters.some(m => m.fly) || (S.air && !S.air.up) || S.phase !== 'wave', waitHint: '전투를 지켜봐요.',
+    target: () => { const m = S.monsters.find(x => x.fly); return m ? { mon: m } : { map: TUT_Z.pen }; } },
+  Object.assign({ id: 'clear7', view: 'map', hint: '전투를 마쳐요.' }, tutWaveSteps(7), { enter: t => tutEnsureWave(t, 7) }),
+  // ⑭ 설정·도감 → ⑮ 끝
+  { id: 'opt', view: 'any', icon: 'gear', title: '설정',
+    toast: "톱니 버튼은 설정이에요. 소리 크기를 바꾸거나 '카드 고를 때 배속 해제'를 켜고 끌 수 있어요.",
+    enter: t => tutEnsurePoker(t, 8),
+    target: () => ({ dom: '#bOpt' }) },
+  { id: 'book', view: 'any', icon: 'book', title: '도감',
+    toast: '책 버튼은 도감이에요. 족보 순서·숨은 조합·업적·몬스터를 볼 수 있어요.',
+    target: () => ({ dom: '#toolbar .shopIcon[data-shop="book"]' }) },
+  { id: 'end', view: 'any', icon: 'trophy', title: '튜토리얼 완료!', okLabel: '끝내기',
+    toast: '카드부터 결투장·보스·하늘의 몬스터까지 모두 둘러봤어요. 이제 실전에서 나만의 군단을 키워 보세요!' },
 ];
-
-// ---- 챕터 목록 — 1차 = 기본 조작만, 나머지는 '준비 중' (2차는 load·steps만 채우고 ready:true)
-const TUT_CH = [
-  { id: 'basic', title: '기본 조작', icon: 'book', ready: true, desc: '카드 바꾸기 · 소환 · 이동 · 성 강화', next: 'poker', load: tutLoadBasic, steps: TUT_BASIC,
-    endText: '<b>기본 조작 완료!</b> 이제 실전에서 나만의 군단을 키워 보세요. 광부·광석·결투장 같은 다른 기능은 아래에서 골라 볼 수 있어요.' },
-  { id: 'poker', title: '포커 더 알기', icon: 'cards', ready: false, desc: '재변경권 · 두 패 · 에이스', steps: [] },
-  { id: 'economy', title: '광부와 자금 운영', icon: 'pick', ready: false, desc: '칩 · 광부 · 투자 · 비상 물자', steps: [] },
-  { id: 'ore', title: '광석 방과 제물대', icon: 'gem', ready: false, desc: '광석 캐기 · 보상 광석 · 왕관 · 뽑기권', steps: [] },
-  { id: 'fusion', title: '강화 포털', icon: 'star', ready: false, desc: '같은 유닛 합치기 · 영웅 · 숨은 조합', steps: [] },
-  { id: 'duel', title: '결투장', icon: 'swords', ready: false, desc: '도전자 · 입장 · 도망 · 기권', steps: [] },
-  { id: 'boss', title: '보스와 하늘의 몹', icon: 'skull', ready: false, desc: '보스 · 끌어모으기 · 나는 몹 · 스킬', steps: [] },
-  { id: 'extra', title: '편의 기능', icon: 'gear', ready: false, desc: '공격 우선 · 부대 · 배속 · 도감', steps: [] },
-];
-const TUT_CH_BY_ID = Object.fromEntries(TUT_CH.map(c => [c.id, c]));
-function renderTutCards(doneCh) {
-  const box = document.getElementById('tutCards'); if (!box) return;
-  box.innerHTML = TUT_CH.map(c => {
-    const done = tutModeDone(c.id);
-    const badge = !c.ready ? '<span class="tut-badge">준비 중</span>' : done ? `<span class="tut-badge done">${dpdIconSVG('check')}완료</span>` : c.id === 'basic' ? '<span class="tut-badge">먼저 해 보세요</span>' : '';
-    return `<button type="button" class="coop-card tut-card" data-ch="${c.id}"${c.ready ? '' : ' disabled aria-disabled="true"'}><span class="coop-symbol" aria-hidden="true">${dpdIconSVG(c.icon)}</span><b>${c.title}</b><small>${c.desc}</small>${badge}</button>`;
-  }).join('');
-  box.querySelectorAll('.tut-card[data-ch]').forEach(b => { b.onclick = () => tutStart(b.dataset.ch); });
-  const dn = document.getElementById('tutDone'), C = doneCh && TUT_CH_BY_ID[doneCh];
-  document.getElementById('btnTutPlay').parentElement.hidden = !!C; // 끝 띠에 큰 '바로 모험 떠나기'가 있으면 아래 작은 버튼 줄(테두리 문단째)은 숨긴다 (하나만 — 10-14 유저 기본값)
-  if (!C) { dn.hidden = true; dn.innerHTML = ''; return; }
-  const nx = C.next && TUT_CH_BY_ID[C.next];
-  dn.innerHTML = `<p>${C.endText}</p><div class="tdBtns"><button type="button" class="title-primary" id="btnTutDonePlay">바로 모험 떠나기 <span class="title-arrow" aria-hidden="true">→</span></button>${nx && nx.ready ? `<button type="button" class="title-link" id="btnTutDoneNext">다음: ${nx.title}</button>` : ''}</div>`;
-  dn.hidden = false;
-  document.getElementById('btnTutDonePlay').onclick = () => showTitleScreen('difficulty', 'btnBeginAdventure');
-  const nb = document.getElementById('btnTutDoneNext'); if (nb) nb.onclick = () => tutStart(nx.id);
-  document.getElementById('btnTutDonePlay').focus({ preventScroll: true });
-}
-
 // ---- 진입·진행·퇴장
 let tutTicking = false; // 재진입 방지: updateHUD는 구매·고용 직후 등에서도 직접 불린다 (enter가 confirmHand·toggleShop을 불러도 단계가 두 번 넘어가지 않게)
-function tutNewState(ch) {
-  return { ch, i: 0, latched: false, okAt: 0, base: { ev: {} }, ev: {}, holdPoker: true, holdWave: false,
-    deals: {}, pick: {}, lockMade: {}, waves: {}, lastWave: null, waveEnds: 0, mkt: false, forceSummon: false,
-    toughM: null, toughHp: 0, race: 0, alt: '', altT: 0, html: '', slot: -1, slotT: 0, scrolled: false };
+function tutNewState() {
+  return { i: 0, latched: false, okAt: 0, okText: '', base: { ev: {} }, ev: {}, holdPoker: true, holdWave: false,
+    deals: {}, pick: {}, lockMade: {}, lockHand: {}, waves: {}, lastWave: null, waveEnds: 0, mkt: false, forceSummon: false,
+    toughM: null, toughHp: 0, race: 0, alt: '', altT: 0, html: '', slot: -1, slotT: 0, scrolled: false,
+    toast: false, toastWait: false, toastAt: 0, frozen: false, stepAt: 0, ticketDone: false, supply: null };
 }
-// 진입 순서 고정: at-title → reset() → S.tutMode → hideStartScreen → 챕터 셋업(startPoker 재딜) → 첫 단계 (reset 안 첫 포커가 일반 판 첫 판 안내 T1을 쓰지 않게 — mpStart와 같은 순서)
-function tutStart(ch) {
-  const C = TUT_CH_BY_ID[ch]; if (!C || !C.ready) return;
+// 진입 순서 고정: at-title → reset() → S.tutMode → hideStartScreen → 셋업(startPoker 재딜) → 첫 단계 (reset 안 첫 포커가 일반 판 첫 판 안내 T1을 쓰지 않게 — mpStart와 같은 순서)
+function tutStart() {
   initAudio();
   if (IS_MOBILE) { lockLandscape(); iosPwaHint(); }
   dailySeed = null; DIFF_MUL = 1; DIFF_NAME = '튜토리얼'; // DIFF_NAME = 상단바 표시 전용 (판정에 안 쓰임)
   document.body.classList.add('at-title');
   reset();
   casTimers.forEach(clearTimeout); casTimers = []; // reset 안 첫 포커의 딜 소리 예약 — 챕터 셋업의 startPoker가 다시 건다 (두 번 나지 않게)
-  S.tutMode = true; S.tut = tutNewState(ch);
+  S.tutMode = true; S.tut = tutNewState();
   hideStartScreen();
   document.body.classList.add('tutMode');
   document.getElementById('bSandbox').style.display = 'none';
   S.paused = false;
   S.hiAceGiven = true; S.birdTimer = Infinity; // 숨은 요소 차단
-  if (C.load) C.load(S.tut);
-  logMsg('튜토리얼 — ' + C.title);
+  tutLoad(S.tut);
+  logMsg('튜토리얼 시작');
   tutGo(0);
+  tutModeTick(); // 첫 토스트를 바로 (정지)
 }
 function tutGo(i) {
-  const t = S.tut, C = TUT_CH_BY_ID[t.ch];
-  while (i < C.steps.length && C.steps[i].only && (C.steps[i].only === 'pc') === IS_MOBILE) i++; // 한쪽 플랫폼 전용 단계
-  if (i >= C.steps.length) { tutFinish(); return; } // ⚠️ 이 뒤로 S가 새것 — 부른 쪽은 바로 return
+  const t = S.tut;
+  while (i < TUT_STEPS.length && TUT_STEPS[i].only && (TUT_STEPS[i].only === 'pc') === IS_MOBILE) i++; // 한쪽 플랫폼 전용 단계
+  if (i >= TUT_STEPS.length) { tutFinish(); return; } // ⚠️ 이 뒤로 S가 새것 — 부른 쪽은 바로 return
   const was = tutTicking; tutTicking = true;
   try {
-    const st = C.steps[i];
-    t.i = i; t.latched = false; t.okAt = 0; t.alt = ''; t.html = ''; t.scrolled = false;
-    t.base = t.pendBase || tutSnap(t); t.pendBase = null; // 기준값 = 앞 단계가 래치된 순간 (0.8초 칭찬 동안 한 행동도 이 단계에 쳐진다 — 예: '+1 강화' 직후 바로 '+3 도전')
+    const st = TUT_STEPS[i];
+    t.i = i; t.latched = false; t.okAt = 0; t.okText = ''; t.alt = ''; t.html = ''; t.scrolled = false;
+    t.base = t.pendBase || tutSnap(t); t.pendBase = null; // 기준값 = 앞 단계가 래치된 순간 ('좋아요!' 동안 한 행동도 이 단계에 쳐진다 — 예: '+1 강화' 직후 바로 '+3 도전')
     t.holdPoker = !(st.hold && st.hold.poker === false);
     t.holdWave = !!(st.hold && st.hold.wave);
+    t.toast = false; t.toastWait = !!st.toast; t.stepAt = performance.now();
     if (st.enter) st.enter(t);
     if (S.tutMode && S.tut === t && S.phase === 'poker') renderPoker(); // 카드 강조·배너 갱신
   } finally { tutTicking = was; }
 }
-function tutSnap(t) { return { ev: { ...t.ev }, upg: S.upg.slice(), gold: S.gold, round: S.round }; } // 단계 술어의 비교 기준
-function tutAdvance() { // 패널 '다음'·'건너뛰기' (배너 글자 버튼도) — 이 단계를 래치 처리하고 바로 다음 (다음 단계 enter가 전제를 맞춘다)
+function tutSnap(t) { return { ev: { ...t.ev }, upg: S.upg.slice(), gold: S.gold, round: S.round, miners: S.units.filter(u => u.miner).length, reroll: S.items.reroll, heroes: tutHeroN(), speed: S.speed, dps: dpsMode }; } // 단계 술어의 비교 기준
+function tutLatch(t, st, okText) { t.latched = true; t.okAt = performance.now(); t.pendBase = tutSnap(t); t.okText = okText != null ? okText : tutStr(st.ok, t) || '좋아요!'; if (st.latch) st.latch(t); }
+function tutAdvance() { // 알림의 '건너뛰기' (폰 배너 글자 버튼도) — 이 단계를 래치 처리하고 바로 다음 (다음 단계 enter가 전제를 맞춘다)
   if (!S || !S.tutMode || tutTicking) return;
-  const t = S.tut, st = tutStep(); if (!st) return;
+  const t = S.tut, st = tutStep(); if (!st || t.toast) return;
   if (!t.latched && st.latch) st.latch(t);
-  t.latched = true;
+  t.latched = true; t.pendBase = null;
   tutGo(t.i + 1);
+  tutModeTick();
 }
-function tutFinish() { const ch = S.tut.ch; tutModeMark(ch); tutToList(ch); }
-function tutToList(doneCh) { exitToTitle(false, 'tut'); DIFF_MUL = 1; DIFF_NAME = '초원'; renderTutCards(doneCh); }
-function tutCardLock(h, i) { // R1처럼 잠근 라운드: 짝(금테) 카드는 바꾸지 못하게 — 7이 바닥나 풀하우스 단검으로 가는 길 차단 (22 #3)
-  const t = S.tut; if (!t.lockMade[S.round] || S.phase !== 'poker') return false;
-  const hand = S.poker.hands[h]; if (hand.swapped[i] || !madeCardIdx(hand.cards, evalHand(hand.cards)).includes(i)) return false;
+function tutExit(screen) { exitToTitle(false, screen); DIFF_MUL = 1; DIFF_NAME = '초원'; } // 튜토리얼 판 → 타이틀 (reset이 S.tutMode를 지운다)
+function tutFinish() { tutModeMark('main'); tutExit('tut'); } // 끝 화면(#tutRow) — 새 플레이어 강조 꺼짐
+function tutQuitAsk() { if (S && S.tutMode && confirm('튜토리얼을 그만하고 타이틀로 나갈까요?')) tutExit(); }
+function tutCardLock(h, i) { // 잠근 라운드: 짝(금테) 카드·위 패는 바꾸지 못하게 (R1 = 풀하우스 단검 길 차단 · R3 = 풀하우스로만 · R4 = 아래 패만 바꿔 맞추기)
+  const t = S.tut; if (S.phase !== 'poker') return false;
+  const hand = S.poker.hands[h]; if (hand.swapped[i]) return false;
+  if (t.lockHand[S.round] === h) { t.alt = '위 패는 그대로 두고, 아래 패를 바꿔 맞춰 봐요.'; t.altT = performance.now(); t.html = ''; return true; }
+  if (!t.lockMade[S.round] || !madeCardIdx(hand.cards, evalHand(hand.cards)).includes(i)) return false;
   t.alt = '금테 카드는 이미 짝이에요.'; t.altT = performance.now(); t.html = '';
   return true;
 }
 function tutDecorateCard(el, h, i, made, hand) { const st = tutStep(); if (st && st.cardHi && !S.tut.latched && st.cardHi(h, i, made, hand)) el.classList.add('tutWiggle'); }
+
+// ---- 토스트 (게임 정지) — 띄우기·닫기·자리
+function tutToastBlocked(st) { // 다른 연출·창이 떠 있으면 토스트는 그 뒤로 미룬다 (단계 자체가 그 창이면 예외)
+  if (gbOv || document.querySelector('#cvWrap .gbxStage.ovl')) return true; // 보상 토스트(#rewardToast)는 기다리지 않고 자리만 피한다 (tutToastPlace)
+  return ['crownModal', 'duelConfirm', 'reviveModal'].some(d => gameDialogVisible(d) && !(st.dlgOk && st.dlgOk.includes(d)));
+}
+function tutToastShow(st, t) {
+  t.toastWait = false; t.toast = true; t.toastAt = performance.now();
+  const el = document.getElementById('tutToast');
+  el.querySelector('.ttIc').innerHTML = dpdIconSVG(st.icon || 'star');
+  document.getElementById('ttTitle').textContent = st.title || '';
+  document.getElementById('ttText').innerHTML = tutStr(IS_MOBILE && st.toastMo != null ? st.toastMo : st.toast, t);
+  document.getElementById('ttOk').textContent = st.okLabel || '확인';
+  setAttackMode(false); // A 키를 눌러 둔 채 토스트가 뜨면 닫은 뒤 첫 클릭이 공격 지정이 되지 않게
+  document.getElementById('tutVeil').hidden = false; el.hidden = false;
+  try { document.getElementById('ttOk').focus({ preventScroll: true }); } catch (e) {}
+}
+function tutToastHide() {
+  const el = document.getElementById('tutToast'), ok = document.getElementById('ttOk');
+  if (document.activeElement === ok) ok.blur();
+  el.hidden = true; document.getElementById('tutVeil').hidden = true;
+}
+function tutToastClose() { // [확인]·Enter·Space·Esc·토스트 탭·덮개 탭
+  if (!S || !S.tutMode) return;
+  const t = S.tut, st = tutStep();
+  if (!t.toast || performance.now() - t.toastAt < TUT.TOAST_LOCK) return; // 뜬 직후 잠금 — 직전 행동의 탭·키·폰 고스트 클릭이 바로 닫지 않게
+  t.toast = false; tutToastHide();
+  if (st && !st.done) { if (st.id === 'end') { tutFinish(); return; } t.pendBase = null; tutGo(t.i + 1); } // 알려 주기만 하는 단계 = 닫으면 다음
+  tutModeTick(); // 정지 해제·다음 토스트를 바로
+}
+function tutToastPlace(rc) { // 대상 근처(위 → 아래 → 왼쪽 → 오른쪽), 안 되면 위 가운데 — 대상·다른 알림과 안 겹치게
+  const el = document.getElementById('tutToast'), W = innerWidth, H = innerHeight, M = 8, G = 14;
+  const w = el.offsetWidth, h = el.offsetHeight;
+  const av = ['#rewardToast', '#duelToast.on', '#mktToast.on'].map(tutVisRect).filter(Boolean);
+  if (rc) av.push({ left: rc.x - 4, top: rc.y - 4, right: rc.x + rc.w + 4, bottom: rc.y + rc.h + 4 });
+  const top = Math.max(M, Math.round(H * 0.08));
+  const cx = rc ? rc.x + rc.w / 2 - w / 2 : 0, cy = rc ? rc.y + rc.h / 2 - h / 2 : 0;
+  const cands = (rc ? [[cx, rc.y - h - G], [cx, rc.y + rc.h + G], [rc.x - w - G, cy], [rc.x + rc.w + G, cy]] : []).concat([[W / 2 - w / 2, top], [W / 2 - w / 2, H - h - M], [M, top], [W - w - M, top]]);
+  const fit = ([x, y]) => [Math.round(Math.max(M, Math.min(W - w - M, x))), Math.round(Math.max(M, Math.min(H - h - M, y)))];
+  const hits = ([x, y]) => av.some(a => x < a.right && x + w > a.left && y < a.bottom && y + h > a.top);
+  let p = null;
+  for (const c of cands) { const q = fit(c); if (!hits(q)) { p = q; break; } }
+  if (!p) p = fit(cands[0]);
+  if (el.style.left !== p[0] + 'px') el.style.left = p[0] + 'px';
+  if (el.style.top !== p[1] + 'px') el.style.top = p[1] + 'px';
+}
 
 // ---- 매 틱 (원본 updateHUD 안 — 20Hz, 창이 열려 멈춘 동안에도 돈다 · 도전 창 동안은 안 돈다)
 function tutModeTick() {
@@ -15476,70 +15793,101 @@ function tutModeTick() {
   try { tutModeTickBody(); } catch (e) { reportLoopError('tut', e); } finally { tutTicking = false; }
 }
 function tutModeTickBody() {
-  const t = S.tut, st = tutStep(); if (!st) return;
+  const t = S.tut; let st = tutStep(); if (!st) return;
   if (st.tick && !t.latched) st.tick(t);
   if (!S.tutMode || S.tut !== t) return;
-  // ① 완료 판정은 화면과 무관하게 (술어는 전부 상태) → ② 0.8초 '좋아요!' 뒤 다음 단계 → ③ 화면 전환 안내는 문구·링만 (22 #1)
-  if (!t.latched && st.next !== 'button' && st.done && st.done(t)) { t.latched = true; t.okAt = performance.now(); t.pendBase = tutSnap(t); if (st.latch) st.latch(t); }
-  if (t.latched && performance.now() - t.okAt >= TUT.OK_MS) { tutGo(t.i + 1); return; }
-  // PC: 맵 단계(또는 닫힌 성 창을 다시 열 단계)면 포커판을 내린다 — 맵을 누르면 어차피 내려간다
-  if (!t.latched && !IS_MOBILE && S.phase === 'poker' && !pokerPeek && (st.view === 'map' || (st.view === 'modal' && st.modal === 'castle' && openShop !== 'castle'))) { pokerPeek = true; syncPokerPanel(); }
-  document.body.classList.toggle('tutMap', st.view === 'map');
-  tutRender(st, t);
+  // ① '좋아요!' 끝 → 다음 단계 (같은 틱에 다음 토스트까지 — 정지가 끊기지 않게)
+  if (t.latched && performance.now() - t.okAt >= TUT.OK_MS) {
+    tutGo(t.i + 1); if (!S.tutMode || S.tut !== t) return;
+    st = tutStep(); if (!st) return;
+    if (st.tick) st.tick(t);
+    if (!S.tutMode || S.tut !== t) return;
+  }
+  // ② PC: 맵 단계(또는 닫힌 창을 다시 열 단계)면 포커판을 내린다 — 맵을 누르면 어차피 내려간다
+  if (!t.latched && !IS_MOBILE && S.phase === 'poker' && !pokerPeek && (st.view === 'map' || (st.view === 'modal' && !TUT_MODAL[st.modal].open()))) { pokerPeek = true; syncPokerPanel(); }
+  // ③ 토스트 차례: 화면이 맞고(카드/전장/창) 다른 연출이 없을 때 띄운다 (그 상태가 보일 때 띄우는 단계는 그때까지 게임 진행)
+  const need = t.latched ? null : tutViewNeed(st);
+  let hold = false;
+  if (t.toastWait && !t.latched) {
+    if (!need && !tutToastBlocked(st) && (!st.toastWhen || st.toastWhen(t))) tutToastShow(st, t);
+    else hold = !need && !st.toastWhen;
+  }
+  // ④ 완료 판정 (토스트를 닫은 뒤 · 술어는 전부 상태) → 래치 = '좋아요!'(정지)
+  if (!t.latched && !t.toast && !t.toastWait && st.done) {
+    if (st.done(t)) tutLatch(t, st);
+    else if (st.giveUp && st.giveUp(t)) tutLatch(t, st, '');
+  }
+  const f = !!(t.toast || t.latched || hold);
+  if (f !== t.frozen) { t.frozen = f; syncGamePause(); }
+  document.body.classList.toggle('tutMap', st.view === 'map' && !t.latched);
+  tutRender(st, t, t.latched ? null : need);
 }
-// 화면 전환 안내 — 단계가 보여야 하는 화면과 지금 화면이 다르면 {text, target}
+// 화면 전환 안내 — 단계가 보여야 하는 화면과 지금 화면이 다르면 {text, target} (그동안 토스트는 미루고 게임은 진행)
+const TUT_MODAL = {
+  castle: { dlg: 'shopOverlay', open: () => openShop === 'castle', text: () => IS_MOBILE ? '성을 눌러 창을 다시 열어요.' : '성을 클릭해 창을 다시 열어요.', target: () => ({ map: TUT_Z.house }) },
+  chip: { dlg: 'chipModal', open: () => CM.style.display === 'flex', text: () => "'자금운영'을 눌러 창을 다시 열어요.", target: () => ({ dom: '#stCasino' }) },
+};
+const TUT_DLG_CLOSE = { shopOverlay: '#shopClose', chipModal: '#chipClose', optModal: '#optClose' };
 function tutViewNeed(st) {
   const mobPoker = IS_MOBILE && document.body.dataset.tab === 'poker';
   const toBattle = { text: "오른쪽 아래 '전투' 버튼을 눌러 전장으로 가요.", target: { dom: '#mtBattle' } };
+  const dlg = tutOpenDialog();
+  if (st.view === 'modal') { const md = TUT_MODAL[st.modal]; if (md.open()) return null; if (dlg && dlg !== md.dlg && TUT_DLG_CLOSE[dlg]) return { text: '이 창을 닫으면 튜토리얼이 이어져요.', target: { dom: TUT_DLG_CLOSE[dlg] } }; return mobPoker ? toBattle : { text: md.text(), target: md.target() }; }
+  if (st.view === 'any') return null;
+  if (dlg && TUT_DLG_CLOSE[dlg] && !(st.dlgOk && st.dlgOk.includes(dlg))) return { text: '이 창을 닫으면 튜토리얼이 이어져요.', target: { dom: TUT_DLG_CLOSE[dlg] } }; // 엉뚱한 때 연 도감·설정 등
   if (st.view === 'cards') {
-    if (S.phase !== 'poker' || (IS_MOBILE ? mobPoker : !pokerPeek)) return null; // 전투 페이즈엔 카드가 없다 → 안내 없음
+    if (S.phase !== 'poker') return { text: '전투가 끝나면 새 카드가 와요.', target: null };
+    if (IS_MOBILE ? mobPoker : !pokerPeek) return null;
     if (IS_MOBILE && !tutVisRect('#goPoker')) return { text: '오른쪽 아래 카드 그림 버튼을 눌러 카드 화면으로 가요.', target: { dom: '#mtPoker' } }; // 폰: 가운데 큰 버튼이 없을 때만 탭 버튼 (10-14 유저 기본값 — 큰 버튼 우선)
     return { text: "가운데 '포커장으로 이동'을 눌러 카드로 돌아가요.", target: { dom: ['#goPoker', IS_MOBILE ? '#mtPoker' : '#pokerHandle'] } };
   }
   if (st.view === 'map') return mobPoker ? toBattle : null;
-  if (st.view === 'modal' && st.modal === 'castle' && openShop !== 'castle') return mobPoker ? toBattle : { text: IS_MOBILE ? '성을 눌러 창을 다시 열어요.' : '성을 클릭해 창을 다시 열어요.', target: { map: TUT_Z.house } };
   return null;
 }
 function tutStr(v, t) { return typeof v === 'function' ? v(t) : v; }
-function tutCompose(st, t) { // 지금 보일 문구 {html, need, next, ok}
-  if (t.latched) return { html: `<span class="tpOk">${dpdIconSVG('check')} 좋아요!</span>`, need: null, next: false, ok: true };
-  const need = tutViewNeed(st);
-  let html = need ? need.text : tutStr(IS_MOBILE && st.mo != null ? st.mo : st.pc, t);
-  const alt = t.alt && performance.now() - t.altT < 3000 ? t.alt : !need && st.alt ? st.alt(t) : '';
-  if (alt) html = `<span class="tpAlt">${alt}</span>` + html;
-  return { html, need, next: !need && st.next === 'button', ok: false };
+function tutCompose(st, t, need) { // 한 줄 알림 문구 {html, ok} — 토스트를 닫은 뒤에만 (상황 문구 alt가 있으면 그것만 — 한 줄)
+  if (t.latched) return { html: t.okText ? `<span class="tpOk">${dpdIconSVG('check')} ${t.okText}</span>` : '', ok: true };
+  if (need) return { html: need.text, ok: false };
+  if (t.toastWait) return { html: st.waitHint ? tutStr(st.waitHint, t) : '', ok: false };
+  const alt = t.alt && performance.now() - t.altT < 3000 ? t.alt : st.alt ? st.alt(t) : '';
+  return { html: alt ? `<span class="tpAlt">${alt}</span>` : tutStr(IS_MOBILE && st.hintMo != null ? st.hintMo : st.hint, t) || '', ok: false };
 }
 const TUT_DLG = ['shopOverlay', 'chipModal', 'crownModal', 'duelConfirm', 'reviveModal', 'optModal'], TUT_DLG_WIN = { shopOverlay: 'shopWin', chipModal: 'chipWin', optModal: 'optWin' };
 function tutOpenDialog() { const d = TUT_DLG.find(gameDialogVisible); return d || (document.getElementById('gmgOverlay') ? 'shopOverlay' : null); }
-function tutBannerMode() { return IS_MOBILE && document.body.dataset.tab === 'poker' && S.phase === 'poker' && !tutOpenDialog(); } // 폰 카드 화면 = 캔버스가 숨어 패널 둘 자리가 없다 → 포커 배너 첫 줄
-function tutBannerBtns(c) { return (c.next ? ' <button type="button" class="tutOffLink" onclick="tutAdvance()">다음</button>' : '') + (c.ok ? '' : ' <button type="button" class="tutOffLink" onclick="tutAdvance()">건너뛰기</button>'); }
-function tutBannerHTML() { const st = tutStep(); if (!st) return ''; const c = tutCompose(st, S.tut); return c.html + tutBannerBtns(c); }
-function tutRender(st, t) {
-  const c = tutCompose(st, t), panel = document.getElementById('tutPanel'), dlg = tutOpenDialog();
-  let tg = c.ok ? null : c.need ? c.need.target : st.target ? st.target(t) : null;
-  if (tg && dlg && !tg.dom) tg = null; // 창이 열려 있으면 맵 대상 링은 숨김 (창 위에 뜨지 않게)
-  const rc = tutTargetRect(tg);
-  if (tutBannerMode()) {
+function tutBannerMode() { return IS_MOBILE && document.body.dataset.tab === 'poker' && S.phase === 'poker' && !tutOpenDialog(); } // 폰 카드 화면 = 캔버스가 숨어 알림 둘 자리가 없다 → 포커 배너 첫 줄
+function tutBannerBtns(c) { return c.ok ? '' : ' <button type="button" class="tutOffLink" onclick="tutAdvance()">건너뛰기</button><button type="button" class="tutOffLink" onclick="tutQuitAsk()">그만하기</button>'; }
+function tutBannerHTML() { // renderPoker가 부른다 (폰 카드 화면)
+  const st = tutStep(), t = S.tut; if (!st || t.toast) return '';
+  const c = tutCompose(st, t, t.latched ? null : tutViewNeed(st));
+  return c.html ? c.html + tutBannerBtns(c) : '';
+}
+function tutRender(st, t, need) {
+  const panel = document.getElementById('tutPanel'), dlg = tutOpenDialog();
+  const banSet = h => { if (!tutBannerMode()) return; let sp = document.getElementById('tutBanLine'); if (!sp && h) { renderPoker(); sp = document.getElementById('tutBanLine'); } if (sp && sp.__h !== h) { sp.__h = h; sp.innerHTML = h; } }; // 탭을 막 바꿨으면 배너를 한 번 다시 그린다 (문구만 바뀌면 span만 — 카드 연출 보존)
+  if (t.toast) { // 토스트: 링 = 토스트가 가리키는 대상(덮개 위) · 한 줄 알림은 숨김
+    const tg = st.toastTarget ? st.toastTarget(t) : st.target ? st.target(t) : null, rc = tutTargetRect(tg, dlg);
     if (!panel.hidden) panel.hidden = true;
-    let sp = document.getElementById('tutBanLine');
-    if (!sp) { renderPoker(); sp = document.getElementById('tutBanLine'); } // 탭을 막 바꿨으면 배너를 한 번 다시 그린다 (문구만 바뀌면 span만 — 카드 연출 보존, 22 #10)
-    const h = c.html + tutBannerBtns(c);
-    if (sp && sp.__h !== h) { sp.__h = h; sp.innerHTML = h; }
-  } else {
+    banSet('');
+    tutRingSet(rc, true);
+    tutToastPlace(rc);
+    return;
+  }
+  const c = tutCompose(st, t, need);
+  const tg = c.ok || (t.toastWait && !need) ? null : need ? need.target : st.target ? st.target(t) : null;
+  const rc = tutTargetRect(tg, dlg);
+  if (!c.html) { if (!panel.hidden) panel.hidden = true; banSet(''); }
+  else if (tutBannerMode()) { if (!panel.hidden) panel.hidden = true; banSet(c.html + tutBannerBtns(c)); }
+  else {
     panel.hidden = false;
-    const C = TUT_CH_BY_ID[t.ch], key = c.html + '|' + c.next + '|' + c.ok + '|' + t.i;
+    const key = c.html + '|' + c.ok + '|' + t.i;
     if (t.html !== key) {
       t.html = key;
-      document.getElementById('tpTitle').textContent = C.title;
-      panel.querySelector('.tpIc').innerHTML = dpdIconSVG(C.icon);
-      document.getElementById('tpDots').innerHTML = C.steps.map((s, k) => s.only && (s.only === 'pc') === IS_MOBILE ? '' : `<i class="${k < t.i ? 'done' : k === t.i ? 'on' : ''}"></i>`).join(''); // 진행 = 점 (숫자 없음)
       document.getElementById('tpText').innerHTML = c.html;
-      document.getElementById('tpNext').hidden = !c.next;
-      document.getElementById('tpSkip').hidden = c.ok;
+      panel.querySelector('.tpBtns').hidden = c.ok;
     }
     tutPlace(panel, t, dlg, rc);
   }
-  tutRingSet(rc);
+  tutRingSet(rc, false);
 }
 function tutVisRect(sel) { const el = document.querySelector(sel); if (!el || !el.getClientRects().length) return null; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 ? r : null; }
 function tutPlace(panel, t, dlg, rc) { // float = 게임 화면 모퉁이(왼쪽 위 하늘 → 오른쪽 위 → 아래 둘), 피할 것과 0.3초 넘게 겹치면 옮김 · dock = 열린 창 위쪽 바깥(자리 없으면 창 안 윗변)
@@ -15573,15 +15921,18 @@ function tutPlace(panel, t, dlg, rc) { // float = 게임 화면 모퉁이(왼쪽
   if (panel.style.top !== y + 'px') panel.style.top = y + 'px';
 }
 // 링 대상: {dom: 선택자|[선택자…](보이는 첫 번째)} · {map:[x,y,r]} · {mapRect:[x0,y0,x1,y1]} · {unit} · {mon} — 매 틱 실제 화면 사각형으로 (캐시 금지: 재할당·재생성되는 DOM)
-function tutTargetRect(tg) {
+function tutTargetRect(tg, dlg) { // dlg = 열린 창 — 창 밖 대상(맵·툴바 등)은 링을 숨긴다 (창 위 엉뚱한 곳에 뜨지 않게 — 1차 P2-3)
   if (!tg) return null;
   if (tg.dom) {
+    const win = dlg ? document.getElementById(TUT_DLG_WIN[dlg] || dlg) : null;
     for (const s of Array.isArray(tg.dom) ? tg.dom : [tg.dom]) {
-      const r = tutVisRect(s);
+      const el = document.querySelector(s), r = tutVisRect(s);
+      if (r && win && !win.contains(el) && !(dlg === 'shopOverlay' && document.getElementById('gmgOverlay'))) continue;
       if (r && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth) return { x: r.left - 6, y: r.top - 6, w: r.width + 12, h: r.height + 12, circle: false };
     }
     return null;
   }
+  if (dlg) return null; // 창이 열려 있으면 맵 대상 링은 숨김
   const R = document.getElementById('cv').getBoundingClientRect(); if (!R.width) return null; // 폰 카드 화면 = 캔버스 숨음 → 캔버스 대상 링 없음
   const kx = R.width / VW, ky = R.height / VH;
   if (tg.mapRect) { const [x0, y0, x1, y1] = tg.mapRect; return { x: R.left + x0 * kx, y: R.top + y0 * ky, w: (x1 - x0) * kx, h: (y1 - y0) * ky, circle: false }; }
@@ -15592,11 +15943,11 @@ function tutTargetRect(tg) {
   else return null;
   return { x: R.left + (x - r) * kx, y: R.top + (y - r) * ky, w: 2 * r * kx, h: 2 * r * ky, circle: true };
 }
-function tutRingSet(rc) {
+function tutRingSet(rc, over) {
   const ring = document.getElementById('tutRing');
   if (!rc) { if (!ring.hidden) ring.hidden = true; return; }
   ring.hidden = false;
-  const cls = rc.circle ? 'circle' : 'box'; if (ring.className !== cls) ring.className = cls;
+  const cls = (rc.circle ? 'circle' : 'box') + (over ? ' over' : ''); if (ring.className !== cls) ring.className = cls; // over = 토스트 덮개 위
   const st = ring.style, px = v => Math.round(v) + 'px';
   st.left = px(rc.x); st.top = px(rc.y); st.width = px(rc.w); st.height = px(rc.h);
 }
@@ -15604,27 +15955,40 @@ function tutUiReset() { // reset마다 (튜토리얼 시작 포함 — tutStart�
   const p = document.getElementById('tutPanel'), r = document.getElementById('tutRing');
   if (p) { p.hidden = true; p.classList.remove('dock'); }
   if (r) r.hidden = true;
+  tutToastHide();
   document.body.classList.remove('tutMode', 'tutMap');
   document.getElementById('summonBtn').classList.remove('tutNope');
 }
 window.addEventListener('dpd:resetui', tutUiReset);
-document.getElementById('tpNext').onclick = e => { e.currentTarget.blur(); tutAdvance(); };
 document.getElementById('tpSkip').onclick = e => { e.currentTarget.blur(); tutAdvance(); };
-document.getElementById('tpList').onclick = e => { e.currentTarget.blur(); if (S && S.tutMode) tutToList(); };
-// 다시하기 = 이 챕터 처음부터 · 나가기 = 챕터 목록 — 툴바 캡처 단계에서 가로챈다 (일반 판은 바로 통과 → 버튼 onclick 그대로)
+document.getElementById('tpQuit').onclick = e => { e.currentTarget.blur(); tutQuitAsk(); };
+document.getElementById('ttOk').onclick = e => { e.stopPropagation(); tutToastClose(); };
+document.getElementById('ttQuit').onclick = e => { e.stopPropagation(); tutQuitAsk(); };
+document.getElementById('tutToast').addEventListener('click', e => { if (!e.target.closest('button')) tutToastClose(); }); // 토스트 아무 데나 탭 = 닫기
+{ const veil = document.getElementById('tutVeil'); // 덮개: 정지 중 뒤 화면 입력을 삼키고, 누르면 토스트를 닫는다 (닫기는 click에서 — 뒤따르는 click이 새로 드러난 화면을 누르지 않게)
+  veil.addEventListener('click', e => { e.stopPropagation(); tutToastClose(); });
+  veil.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); });
+  for (const k of ['pointerdown', 'mousedown', 'touchstart', 'wheel']) veil.addEventListener(k, e => e.stopPropagation(), { passive: true }); }
+// 키: 토스트가 떠 있으면 Enter·Space·Esc = 닫기, 나머지 게임 키(A·숫자 등)는 삼킨다 — 캡처 단계(게임 키 리스너보다 먼저)
+window.addEventListener('keydown', e => {
+  if (!S || !S.tutMode || !S.tut || !S.tut.toast) return;
+  e.stopImmediatePropagation();
+  if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar' || e.key === 'Escape') { e.preventDefault(); if (!e.repeat) tutToastClose(); }
+}, true);
+// 다시하기 = 튜토리얼 처음부터 · 나가기 = 타이틀 — 툴바 캡처 단계에서 가로챈다 (일반 판은 바로 통과 → 버튼 onclick 그대로)
 document.getElementById('toolbar').addEventListener('click', e => {
   if (!S || !S.tutMode) return;
   const b = e.target.closest('#btnRestart,#btnExit'); if (!b) return;
   e.stopPropagation(); e.preventDefault();
-  if (b.id === 'btnRestart') { if (confirm('이 챕터를 처음부터 다시 할까요?')) tutStart(S.tut.ch); }
-  else if (confirm('튜토리얼 목록으로 나갈까요?')) tutToList();
+  if (b.id === 'btnRestart') { if (confirm('튜토리얼을 처음부터 다시 할까요?')) tutStart(); }
+  else tutQuitAsk();
 }, true);
-// 게임오버 창 버튼 (목숨 무한이라 도달 불가 — 안전망): '다시 시작' = 이 챕터 처음부터, '타이틀로' = 목록
+// 게임오버 창 버튼 (목숨 무한이라 도달 불가 — 안전망): '다시 시작' = 튜토리얼 처음부터, '타이틀로' = 타이틀
 document.getElementById('overlay').addEventListener('click', e => {
   if (!S || !S.tutMode) return;
   const b = e.target.closest('button'); if (!b) return;
   e.stopPropagation(); e.preventDefault();
-  if ((b.getAttribute('onclick') || '').includes('reset')) tutStart(S.tut.ch); else tutToList();
+  if ((b.getAttribute('onclick') || '').includes('reset')) tutStart(); else tutExit();
 }, true);
 
 // ==================== HUD ====================
@@ -17871,10 +18235,11 @@ document.getElementById('page').inert = true;
 document.getElementById('mobTabs').inert = true;
 document.getElementById('btnCoop').onclick = () => showTitleScreen('coop', 'btnCoopBack');
 document.getElementById('btnCoopBack').onclick = () => showTitleScreen('title', 'btnCoop');
-document.getElementById('btnTut').onclick = () => { showTitleScreen('tut', 'btnTutBack'); renderTutCards(); };
-document.getElementById('btnTutBack').onclick = () => { showTitleScreen('title', 'btnTut'); renderTutCards(); };
-document.getElementById('btnTutPlay').onclick = () => showTitleScreen('difficulty', 'btnBeginAdventure');
-document.getElementById('btnHelpTut').onclick = () => { document.getElementById('titleHelp').close(); showTitleScreen('tut', 'btnTutBack'); renderTutCards(); };
+document.getElementById('btnTut').onclick = () => tutStart(); // 10-14 2차: 챕터 목록 없이 바로 한 판 튜토리얼
+document.getElementById('btnTutBack').onclick = () => showTitleScreen('title', 'btnTut'); // #tutRow = 튜토리얼 끝 화면 전용
+document.getElementById('btnTutDonePlay').onclick = () => showTitleScreen('difficulty', 'btnBeginAdventure');
+document.getElementById('btnTutDoneTitle').onclick = () => showTitleScreen('title', 'btnTut');
+document.getElementById('btnHelpTut').onclick = () => { document.getElementById('titleHelp').close(); tutStart(); };
 document.getElementById('btnDiffBack').onclick = () => showTitleScreen('title', 'btnSolo');
 document.getElementById('btnTitleHelp').onclick = () => document.getElementById('titleHelp').showModal();
 window.addEventListener('keydown', e => {
