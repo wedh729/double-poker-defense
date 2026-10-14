@@ -2452,7 +2452,8 @@ body.mobile #tutToast .ttHead {font-size:13px;margin-bottom:2px;}
 body.mobile #tutToast .ttIc svg {width:15px;height:15px;}
 body.mobile #tutToast .ttBtns {margin-top:5px;}
 body.mobile #ttOk {min-height:30px;font-size:12px;}
-body.tutMode.tutMap #goPoker {display:none !important;} /* 맵 단계 동안 캔버스 한가운데 '포커장으로 이동'을 숨긴다 (네모 지정·클릭을 가림) */
+body.tutMode.tutMap #goPoker, body.tutMode.tutMap #pokerHandle {display:none !important;} /* 맵 단계 동안 캔버스 한가운데 '포커장으로 이동'·'포커판 ▲'을 숨긴다 (네모 지정·클릭을 가림 · 눌러도 맵 단계라 곧 내려가던 것 — 1차 P2-11) */
+body:has(#gmgOverlay) :is(#tutPanel, #tutRing) {visibility:hidden;} /* 도전 막대 창 동안은 알림·링 숨김 (창 위 '건너뛰기' 오조작 방지 — 1차 P2-4) */
 .title-link.tut-new {color:#fff0c5;background:#557540;border:2px solid #3d5b2f;box-shadow:inset 0 1px #97ad6f,0 3px #3b502c;}
 .title-link.tut-new small {color:#e6efc8;}
 #tutDone {padding:12px 14px;border-radius:14px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:13px;line-height:1.6;display:flex;flex-direction:column;gap:10px;}
@@ -15240,7 +15241,7 @@ function tutFree() { return tutFighters().filter(u => !isInRoom(u) && !duelLocke
 function tutSupply(text) { addFloat(CX, CY - 110, text, '#557540', 2.2); logMsg('튜토리얼 보급: ' + text); } // 연출에 필요한 것을 직접 줄 때 — 화면에 '보급'이라고 알린다
 function tutKeepMob(t) { // 연습 몹: 단계 동안 쓰러지지 않는 몹 하나 (전투가 그 단계보다 먼저 끝나지 않게 — 배속 버튼·딜 순위·공격 지정)
   if (S.phase !== 'wave') return;
-  if (!(t.toughM && S.monsters.includes(t.toughM))) { const m = spawnMonster(t.toughHp || 900, false, {}); m.golden = false; m.spin = 0; t.toughM = m; }
+  if (!(t.toughM && S.monsters.includes(t.toughM))) { const m = spawnMonster(t.toughHp || 900, false, {}); m.golden = false; m.spin = 0; m.born = 1; t.toughM = m; } // born = 1: 포털에서 떠오르는 연출 없이 바로 보이게 (토스트가 정지한 채 가리킨다)
   t.toughM.hp = t.toughM.max;
 }
 function tutFreeMob(t, hp) { if (t.toughM && S.monsters.includes(t.toughM)) t.toughM.hp = Math.min(t.toughM.hp, hp); t.toughM = null; } // 단계가 끝나면 = 잡을 수 있는 체력으로 (더는 되채우지 않음)
@@ -15522,7 +15523,7 @@ const TUT_STEPS = [
     toast: '같은 유닛을 모아 하나로 합치면 더 강한 영웅이 돼요. 보급으로 같은 유닛을 보내 드렸어요. 하나를 더블클릭하면 같은 종류가 한꺼번에 골라져요.',
     toastMo: '같은 유닛을 모아 하나로 합치면 더 강한 영웅이 돼요. 보급으로 같은 유닛을 보내 드렸어요. 하나를 빠르게 두 번 탭하면 같은 종류가 한꺼번에 골라져요.',
     hint: '보급된 유닛 하나를 더블클릭해요.', hintMo: '보급된 유닛 하나를 빠르게 두 번 탭해요.',
-    enter: t => { tutSelectOnly([]); hideObjInfo(); if (!t.supply) { t.supply = []; for (let k = 0; k < 5; k++) { spawnUnit(1, RACE_OF_RANK[1], false, 10); t.supply.push(S.units[S.units.length - 1]); } tutSupply('같은 유닛'); } },
+    enter: t => { tutSelectOnly([]); hideObjInfo(); if (!t.supply) { t.supply = []; for (let k = 0; k < 5; k++) { spawnUnit(1, RACE_OF_RANK[1], false, 10); const u = S.units[S.units.length - 1]; u.x = u.tx = 400 + k * 30; u.y = u.ty = 108; t.supply.push(u); } tutSupply('같은 유닛'); } }, // 보급 자리 = 울타리 위 (아래 줄은 작은 폰에서 부대 정보 창에 가려 끌 수 없었다 — phone740 실측)
     done: t => { const s = tutSupplyAlive(t); return s.length > 0 && s.every(u => u.selected); },
     target: t => { const s = tutSupplyAlive(t); return s.length ? { unit: s[0] } : null; },
     toastTarget: t => tutRect(tutSupplyAlive(t), 22) },
@@ -15631,7 +15632,7 @@ const TUT_STEPS = [
   { id: 'bossCome', view: 'map', hint: '곧 커다란 보스가 나타나요.', ok: '보스 등장!',
     enter: t => { tutEnsureWave(t, 6); tutReachFix(); },
     tick: t => tutEnsureWave(t, 6),
-    done: () => S.monsters.some(m => m.boss),
+    done: () => S.monsters.some(m => m.boss && m.born >= 1), // 다 떠오른 뒤 (스킬 토스트가 정지한 채 보스를 가리키게)
     giveUp: t => t.waveEnds >= 6,
     target: () => ({ map: TUT_Z.pen }) },
   { id: 'skill', view: 'map', hold: { wave: true }, icon: 'sword', title: '스킬 버튼',
@@ -15722,9 +15723,7 @@ function tutLatch(t, st, okText) { t.latched = true; t.okAt = performance.now();
 function tutAdvance() { // 알림의 '건너뛰기' (폰 배너 글자 버튼도) — 이 단계를 래치 처리하고 바로 다음 (다음 단계 enter가 전제를 맞춘다)
   if (!S || !S.tutMode || tutTicking) return;
   const t = S.tut, st = tutStep(); if (!st || t.toast) return;
-  if (!t.latched && st.latch) st.latch(t);
-  t.latched = true; t.pendBase = null;
-  tutGo(t.i + 1);
+  try { if (!t.latched && st.latch) st.latch(t); t.latched = true; t.pendBase = null; tutGo(t.i + 1); } catch (e) { reportLoopError('tut', e); } // 클릭 경로도 오류 보고 (1차 P2-5)
   tutModeTick();
 }
 function tutExit(screen) { exitToTitle(false, screen); DIFF_MUL = 1; DIFF_NAME = '초원'; } // 튜토리얼 판 → 타이틀 (reset이 S.tutMode를 지운다)
@@ -15741,6 +15740,11 @@ function tutCardLock(h, i) { // 잠근 라운드: 짝(금테) 카드·위 패는
 function tutDecorateCard(el, h, i, made, hand) { const st = tutStep(); if (st && st.cardHi && !S.tut.latched && st.cardHi(h, i, made, hand)) el.classList.add('tutWiggle'); }
 
 // ---- 토스트 (게임 정지) — 띄우기·닫기·자리
+function tutViewSettled(st) { // PC 포커판이 올라오는 중(슬라이드)이면 다 올라온 뒤에 — 카드·버튼 자리가 움직이는 동안 토스트·링이 엉뚱한 곳을 가리키지 않게
+  if (IS_MOBILE || st.view !== 'cards') return true;
+  const p = document.getElementById('pokerPanel');
+  return !(p.getAnimations && p.getAnimations().some(a => a.playState === 'running'));
+}
 function tutToastBlocked(st) { // 다른 연출·창이 떠 있으면 토스트는 그 뒤로 미룬다 (단계 자체가 그 창이면 예외)
   if (gbOv || document.querySelector('#cvWrap .gbxStage.ovl')) return true; // 보상 토스트(#rewardToast)는 기다리지 않고 자리만 피한다 (tutToastPlace)
   return ['crownModal', 'duelConfirm', 'reviveModal'].some(d => gameDialogVisible(d) && !(st.dlgOk && st.dlgOk.includes(d)));
@@ -15766,7 +15770,7 @@ function tutToastClose() { // [확인]·Enter·Space·Esc·토스트 탭·덮개
   const t = S.tut, st = tutStep();
   if (!t.toast || performance.now() - t.toastAt < TUT.TOAST_LOCK) return; // 뜬 직후 잠금 — 직전 행동의 탭·키·폰 고스트 클릭이 바로 닫지 않게
   t.toast = false; tutToastHide();
-  if (st && !st.done) { if (st.id === 'end') { tutFinish(); return; } t.pendBase = null; tutGo(t.i + 1); } // 알려 주기만 하는 단계 = 닫으면 다음
+  if (st && !st.done) { if (st.id === 'end') { tutFinish(); return; } t.pendBase = null; try { tutGo(t.i + 1); } catch (e) { reportLoopError('tut', e); } } // 알려 주기만 하는 단계 = 닫으면 다음
   tutModeTick(); // 정지 해제·다음 토스트를 바로
 }
 function tutToastPlace(rc) { // 대상 근처(위 → 아래 → 왼쪽 → 오른쪽), 안 되면 위 가운데 — 대상·다른 알림과 안 겹치게
@@ -15778,10 +15782,9 @@ function tutToastPlace(rc) { // 대상 근처(위 → 아래 → 왼쪽 → 오�
   const cx = rc ? rc.x + rc.w / 2 - w / 2 : 0, cy = rc ? rc.y + rc.h / 2 - h / 2 : 0;
   const cands = (rc ? [[cx, rc.y - h - G], [cx, rc.y + rc.h + G], [rc.x - w - G, cy], [rc.x + rc.w + G, cy]] : []).concat([[W / 2 - w / 2, top], [W / 2 - w / 2, H - h - M], [M, top], [W - w - M, top]]);
   const fit = ([x, y]) => [Math.round(Math.max(M, Math.min(W - w - M, x))), Math.round(Math.max(M, Math.min(H - h - M, y)))];
-  const hits = ([x, y]) => av.some(a => x < a.right && x + w > a.left && y < a.bottom && y + h > a.top);
-  let p = null;
-  for (const c of cands) { const q = fit(c); if (!hits(q)) { p = q; break; } }
-  if (!p) p = fit(cands[0]);
+  const area = ([x, y]) => av.reduce((s, a) => s + Math.max(0, Math.min(x + w, a.right) - Math.max(x, a.left)) * Math.max(0, Math.min(y + h, a.bottom) - Math.max(y, a.top)), 0);
+  let p = null, pa = Infinity;
+  for (const c of cands) { const q = fit(c), a = area(q); if (a < pa) { p = q; pa = a; if (!a) break; } } // 안 겹치는 첫 자리, 없으면 가장 적게 겹치는 자리 (작은 폰)
   if (el.style.left !== p[0] + 'px') el.style.left = p[0] + 'px';
   if (el.style.top !== p[1] + 'px') el.style.top = p[1] + 'px';
 }
@@ -15809,7 +15812,7 @@ function tutModeTickBody() {
   const need = t.latched ? null : tutViewNeed(st);
   let hold = false;
   if (t.toastWait && !t.latched) {
-    if (!need && !tutToastBlocked(st) && (!st.toastWhen || st.toastWhen(t))) tutToastShow(st, t);
+    if (!need && !tutToastBlocked(st) && tutViewSettled(st) && (!st.toastWhen || st.toastWhen(t))) tutToastShow(st, t);
     else hold = !need && !st.toastWhen;
   }
   // ④ 완료 판정 (토스트를 닫은 뒤 · 술어는 전부 상태) → 래치 = '좋아요!'(정지)
