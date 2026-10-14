@@ -5152,6 +5152,7 @@ document.getElementById('rvNo').onclick = () => { if (S.phase !== 'wave') { clos
 function grantClearBonus() { // ✅ 클리어 보너스 + ⏱️ 스피드 보너스 — endWave(싱글)와 멀티 개인 클리어(mpWaveCheck) 공용
   const bonus = 30 + S.round * 8;
   S.gold += bonus;
+  const nb = S.story && !S.story.leakR ? Math.round(bonus * STORY.NOLEAK_K) : 0; S.gold += nb; // 📖 무누수 보너스 (스피드 보너스 자리 — 시계 없는 판) · 챌린지는 0
   const tb = speedBonus();
   if (tb > 0) {
     S.gold += tb;
@@ -5160,9 +5161,9 @@ function grantClearBonus() { // ✅ 클리어 보너스 + ⏱️ 스피드 보�
     addFloat(CX, CY - 26, `스피드 +${tb}G!`, '#ffd54f', 2.2);
     rewardToast('clock', `스피드 +${tb}G · 클리어 +${bonus}G`, '#c9971a', `${Math.ceil(S.timer)}초 남기고 전멸!`); // 짜잔 결산 — 포커로 넘어가도 보인다
   } else {
-    logMsg(`스테이지 클리어! 보너스 +${bonus}G`);
-    addFloat(CX, CY, `클리어 +${bonus}G`, '#43a047', 2);
-    rewardToast('check', `클리어 +${bonus}G`, '#2e7d32', '스테이지 클리어');
+    logMsg(`스테이지 클리어! 보너스 +${bonus + nb}G`);
+    addFloat(CX, CY, `클리어 +${bonus + nb}G`, '#43a047', 2);
+    rewardToast('check', `클리어 +${bonus + nb}G`, '#2e7d32', S.story ? (nb ? '한 마리도 안 놓쳤어요' : '라운드 클리어') : '스테이지 클리어');
   }
   sfx('clear');
 }
