@@ -15674,6 +15674,7 @@ const TUT_STEPS = [
     toastWhen: t => S.monsters.some(m => m.fly && m.born >= 1) || ((t.ev.summon || 0) >= 7 && S.phase !== 'wave'), waitHint: '전투를 지켜봐요.', // 나는 몹이 다 떠오른 뒤 (전투가 이미 끝났으면 바로)
     enter: t => { tutEnsureWave(t, 7); tutHoldFly(t); tutReachFix(); tutSelectOnly([]); hideObjInfo(); if (!tutFighters().some(airPriOk)) { spawnUnit(1, RACE_OF_RANK[1], false, 10); tutSupply('활 유닛'); } },
     tick: t => { tutEnsureWave(t, 7); tutHoldFly(t); },
+    toastTarget: () => { const m = S.monsters.find(x => x.fly); return m ? { mon: m } : null; }, // 토스트가 나는 몹을 가리고 서지 않게 (사람 속도 캡처: 소환장 위 토스트 밑에 숨었다)
     done: () => S.units.some(u => !u.miner && !u.item && u.priority === 'air'),
     target: () => { if (tutSelFighters().some(airPriOk) && tutVisRect('#unitInfo .priBtn[data-pri="air"]')) return { dom: '#unitInfo .priBtn[data-pri="air"]' }; const a = tutSeeUnit(tutFree().filter(airPriOk).concat(tutFighters().filter(airPriOk))); return a ? { unit: a } : null; } },
   { id: 'airLand', view: 'map', icon: 'arrow', title: '내려앉기',
