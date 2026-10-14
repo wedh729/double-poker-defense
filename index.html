@@ -15240,7 +15240,7 @@ const TUT_Z = { move: [290, 268, 38], group: [215, 318, 42], desel: [640, 215, 2
   room: [ROOM.cx - 6, ROOM.cy + 4, 62], altar: [ALTAR.x, ALTAR.y, 46], portal: [PORTAL.x, PORTAL.y, 46], arena: [ARENA.x, ARENA.y, ARENA.r - 6] };
 function tutFighters() { return S.units.filter(u => !u.miner && !u.item); }
 function tutFree() { return tutFighters().filter(u => !isInRoom(u) && !duelLocked(u)); } // 지금 지시할 수 있는 전투 유닛 (광석 방·결투 중 제외)
-function tutSupply(text) { addFloat(CX, CY - 110, text, '#557540', 2.2); logMsg('튜토리얼 보급: ' + text); } // 연출에 필요한 것을 직접 줄 때 — 화면에 '보급'이라고 알린다
+function tutSupply(text) { addFloat(CX, CY - 110, '보급: ' + text, '#557540', 2.2); logMsg('튜토리얼 보급: ' + text); } // 연출에 필요한 것을 직접 줄 때 — 화면에 '보급'이라고 알린다 (10-14 P2 UX-2: 떠오르는 글자에도 '보급')
 function tutKeepMob(t) { // 연습 몹: 단계 동안 쓰러지지 않는 몹 하나 (전투가 그 단계보다 먼저 끝나지 않게 — 배속 버튼·딜 순위·공격 지정)
   if (S.phase !== 'wave') return;
   if (!(t.toughM && S.monsters.includes(t.toughM))) { const m = spawnMonster(t.toughHp || 900, false, {}); m.golden = false; m.spin = 0; m.born = 1; t.toughM = m; } // born = 1: 포털에서 떠오르는 연출 없이 바로 보이게 (토스트가 정지한 채 가리킨다)
@@ -15378,12 +15378,12 @@ const TUT_STEPS = [
     target: () => ({ dom: '#summonBtn' }) },
   // ② 전투 — 자동 공격·시간 안에 클리어
   Object.assign({ id: 'fight', view: 'map', icon: 'swords', title: '전투',
-    toast: '몬스터는 울타리 안에서만 돌아요. 유닛은 알아서 공격해요. 시간 안에 모두 잡으면 클리어!',
-    hint: '전투를 지켜봐요.' }, tutWaveSteps(1)),
+    toast: '몬스터는 울타리 안에서만 돌아요. 시간 안에 다 잡으면 클리어! 실전에선 놓친 만큼 목숨이 줄어요.', // 10-14 P2 UX-6: 패배 규칙 한 문장 (튜토리얼에선 목숨이 안 줄어 '실전에선')
+    hint: '전투를 지켜봐요.', ok: t => t.lastWave && t.lastWave.clear ? '클리어! 골드를 받았어요.' : '' }, tutWaveSteps(1)), // UX-9: 골드 문장은 select 토스트에서 칭찬으로 (시간 초과면 '좋아요!')
   // ③ 유닛 고르기·이동
   { id: 'select', view: 'map', icon: 'star', title: '유닛 고르기',
-    toast: '클리어하면 골드를 받아요. 이제 유닛을 움직여 봐요. 내 유닛을 클릭해 골라 보세요.',
-    toastMo: '클리어하면 골드를 받아요. 이제 유닛을 움직여 봐요. 내 유닛을 눌러 골라 보세요.',
+    toast: '이제 유닛을 움직여 봐요. 내 유닛을 클릭해 골라 보세요.',
+    toastMo: '이제 유닛을 움직여 봐요. 내 유닛을 눌러 골라 보세요.',
     hint: '내 유닛을 클릭해 골라요.', hintMo: '내 유닛을 눌러 골라요.',
     alt: t => t.lastWave && !t.lastWave.clear ? '시간이 다 됐지만 괜찮아요. 튜토리얼에선 목숨이 줄지 않아요.' : '',
     enter: () => { tutSelectOnly([]); hideObjInfo(); },
@@ -15479,14 +15479,14 @@ const TUT_STEPS = [
     done: t => S.units.filter(u => u.miner).length > t.base.miners,
     target: () => ({ dom: '#chipBody [data-go="hire"]' }) },
   { id: 'more', view: 'modal', modal: 'chip', icon: 'gift', title: '그 밖의 것들',
-    toast: '뽑기도 칩으로 해요. 결과는 운에 달렸어요. 골드 투자는 장이 열릴 때만, 비상 물자는 급할 때 골드로 사요.',
+    toast: '이 창에선 뽑기·골드 투자·비상 물자도 할 수 있어요. 나중에 천천히 둘러보세요.', // 10-14 P2 UX-9: 세 기능 설명 → '이런 게 있다' 하나
     enter: () => tutOpenChip(),
     target: () => ({ dom: '#chipBody [data-go="miner"]' }) },
   { id: 'chipClose', view: 'any', hint: '✕를 눌러 창을 닫으면 광부가 일하러 가요.',
     done: () => CM.style.display !== 'flex',
     target: () => ({ dom: '#chipClose' }) },
   { id: 'miner', view: 'map', icon: 'pick', title: '광부',
-    toast: '광부는 오른쪽 아래 광산에서 캐서 성으로 골드를 날라요. 가끔 재변경권도 캐 와요. 잠깐 지켜봐요.',
+    toast: '광부는 오른쪽 아래 광산에서 골드를 캐서 성으로 날라요. 가끔 재변경권도 캐 와요. 잠깐 지켜봐요.', // 10-14 P2 UX-14 어순
     hint: '광부가 성으로 돌아올 때까지 기다려요.', ok: '재변경권을 캐 왔어요!',
     enter: t => { t.ticketDone = false; if (CM.style.display === 'flex') closeChip(); if (!S.units.some(u => u.miner)) { spawnMiner(); tutSupply('광부'); } }, // 다음 첫 채굴 = 재변경권 (광부를 미리 고용해 판 첫 채굴을 이 단계 전에 써 버렸어도 — 리뷰 P1-1)
     done: t => S.items.reroll > t.base.reroll,
@@ -15506,8 +15506,8 @@ const TUT_STEPS = [
     done: () => S.units.some(u => u.item === 'oreGift') || (S.hunt && S.hunt.stage > 1),
     target: () => ({ map: TUT_Z.room }) },
   { id: 'gift', view: 'map', icon: 'gem', title: '보상 광석',
-    toast: '보상 광석이 나왔어요! 클릭해 고른 뒤 왼쪽 위 제물대를 우클릭해 옮겨요. 제물대에 올리면 열려요.',
-    toastMo: '보상 광석이 나왔어요! 끌어서 왼쪽 위 제물대에 놓아요. 제물대에 올리면 열려요.',
+    toast: '보상 광석은 왼쪽 위 제물대에 올리면 열려요. 클릭해 고른 뒤 제물대를 우클릭해요.', // 10-14 P2 UX-7: 바로 앞 칭찬 '보상 광석이 나왔어요!'를 되풀이하지 않게
+    toastMo: '보상 광석은 왼쪽 위 제물대에 올리면 열려요. 끌어서 제물대에 놓아요.',
     hint: t => IS_MOBILE ? '보상 광석을 끌어 제물대에 놓아요.' : t.giftU && t.giftU.selected ? '왼쪽 위 제물대를 우클릭해요.' : '보상 광석을 클릭해 골라요.',
     enter: t => { t.giftU = S.units.find(u => u.item === 'oreGift') || null; if (!t.giftU) { giveHuntReward(1); t.giftU = S.units.find(u => u.item === 'oreGift') || null; } tutSelectOnly([]); hideObjInfo(); },
     done: t => !!t.giftU && !S.units.includes(t.giftU),
@@ -15534,8 +15534,8 @@ const TUT_STEPS = [
     target: () => tutCrownOpen() ? { dom: '#crGrid' } : tutCrownU() ? { unit: tutCrownU() } : null },
   // ⑧ 강화 포털 — 같은 유닛을 모아 영웅 (+ 숨은 조합은 존재만)
   { id: 'fuse1', view: 'map', icon: 'star', title: '같은 유닛 모으기',
-    toast: '같은 유닛을 모아 합치면 영웅이 돼요. 보급한 유닛 하나를 더블클릭해 한꺼번에 골라요.',
-    toastMo: '같은 유닛을 모아 합치면 영웅이 돼요. 보급한 유닛 하나를 두 번 빠르게 탭해 골라요.',
+    toast: '같은 유닛을 모아 합치면 영웅이 돼요. 연습용으로 보급된 유닛 하나를 더블클릭해 한꺼번에 골라요.', // 10-14 P2 UX-2: '보급한' → 알림·상황 문구와 같은 '보급된'
+    toastMo: '같은 유닛을 모아 합치면 영웅이 돼요. 연습용으로 보급된 유닛 하나를 두 번 빠르게 탭해 골라요.',
     hint: '보급된 유닛 하나를 더블클릭해요.', hintMo: '보급된 유닛 하나를 빠르게 두 번 탭해요.',
     toastWhen: () => !(S.goldFlash > 0), // 대관식 금빛 글자가 사라진 뒤 (그 위에 토스트가 겹쳐 '대박'처럼 보이지 않게)
     enter: t => { tutSelectOnly([]); hideObjInfo(); if (!t.supply) { t.supply = []; for (let k = 0; k < 5; k++) { spawnUnit(1, RACE_OF_RANK[1], false, 10); const u = S.units[S.units.length - 1]; u.x = u.tx = 400 + k * 30; u.y = u.ty = 108; t.supply.push(u); } tutSupply('같은 유닛'); } }, // 보급 자리 = 울타리 위 (아래 줄은 작은 폰에서 부대 정보 창에 가려 끌 수 없었다 — phone740 실측)
@@ -15551,7 +15551,7 @@ const TUT_STEPS = [
     done: t => tutHeroN() > t.base.heroes,
     target: () => ({ map: TUT_Z.portal }) },
   { id: 'hidden', view: 'any', icon: 'book', title: '숨은 조합',
-    toast: '영웅 말고도 숨은 영웅이 있어요. 방법은 비밀! 찾으면 도감(책 버튼)에 기록돼요.',
+    toast: '떠도는 이야기로는, 이 땅 어딘가에 숨은 영웅들이 잠들어 있대요. 찾으면 도감(책 버튼)에 기록돼요.', // 10-14 유저: 소문·전설 말투로 (재료·레시피 단서 없음)
     target: () => ({ dom: '#toolbar .shopIcon[data-shop="book"]' }) },
   // 재변경권 (광부가 캐 온 것) → R3 소환
   { id: 'reroll', view: 'cards', icon: 'ticket', title: '재변경권',
@@ -15565,9 +15565,9 @@ const TUT_STEPS = [
     done: t => (t.ev.summon || 0) >= 3,
     target: () => ({ dom: '#summonBtn' }) },
   // ⑭ 편의 (R3 전투) — 배속·딜 순위
-  { id: 'speed', view: 'map', hold: { wave: true }, icon: 'ffwd', title: '빨리 감기',
-    toast: '빨리 감기 버튼으로 게임을 빠르게 할 수 있어요. 눌러 보세요.',
-    hint: '빨리 감기 버튼을 눌러요.',
+  { id: 'speed', view: 'map', hold: { wave: true }, icon: 'ffwd', title: '배속', // 10-14 P2 UX-3: 화면 말(버튼 이름·스위치 '배속 자동 해제')과 같게
+    toast: '배속 버튼으로 게임을 빠르게 할 수 있어요. 눌러 보세요.',
+    hint: '배속 버튼을 눌러요.',
     enter: t => { tutEnsureWave(t, 3); tutReachFix(); tutKeepMob(t); },
     tick: t => { tutEnsureWave(t, 3); tutKeepMob(t); },
     done: t => S.speed !== t.base.speed,
@@ -15583,7 +15583,7 @@ const TUT_STEPS = [
   Object.assign({ id: 'clear3', view: 'map', hint: '전투를 마쳐요.' }, tutWaveSteps(3), { enter: t => { tutEnsureWave(t, 3); tutFreeMob(t, 240); } }),
   // ⑨ 두 패 → 에이스 (+ 카드 고를 때 배속 해제)
   { id: 'pkslow', view: 'cards', icon: 'ffwd', title: '카드 고를 때',
-    toast: () => tutVisRect('#pkSlow') ? '카드를 고르는 동안엔 빨리 감기가 잠시 풀려요. 이 스위치로 켜고 끌 수 있어요.' : '카드를 고르는 동안엔 빨리 감기가 잠시 풀려요. 설정(톱니 버튼)에서 켜고 끌 수 있어요.',
+    toast: () => tutVisRect('#pkSlow') ? '카드를 고르는 동안엔 배속이 잠시 풀려요. 이 스위치로 켜고 끌 수 있어요.' : '카드를 고르는 동안엔 배속이 잠시 풀려요. 설정(톱니 버튼)에서 켜고 끌 수 있어요.',
     enter: t => tutEnsurePoker(t, 4),
     target: () => ({ dom: ['#pkSlow', '#bOpt'] }) },
   { id: 'double', view: 'cards', icon: 'cards', title: '두 패',
@@ -15597,8 +15597,8 @@ const TUT_STEPS = [
     target: () => ({ dom: '#summonBtn' }) },
   // ⑭ 유닛 정보 창 (R4 전투)
   { id: 'info', view: 'map', icon: 'star', title: '유닛 정보',
-    toast: '유닛을 클릭하면 정보 창이 떠요. 이름과 세기, 누구부터 칠지 정하는 버튼이 있어요. 하나 골라 보세요.',
-    toastMo: '유닛을 누르면 정보 창이 떠요. 이름과 세기, 누구부터 칠지 정하는 버튼이 있어요. 하나 골라 보세요.',
+    toast: '내 유닛 하나를 클릭해 보세요. 정보 창에 이름과 세기, 누구부터 칠지 정하는 버튼이 있어요.', // 10-14 P2 UX-4: 할 일(유닛 클릭)을 먼저 — 끝의 '하나 골라 보세요'가 버튼을 고르라는 말로 읽혔다
+    toastMo: '내 유닛 하나를 눌러 보세요. 정보 창에 이름과 세기, 누구부터 칠지 정하는 버튼이 있어요.',
     hint: '내 유닛을 클릭해 정보 창을 봐요.', hintMo: '내 유닛을 눌러 정보 창을 봐요.',
     enter: t => { tutEnsureWave(t, 4); tutReachFix(); tutSelectOnly([]); hideObjInfo(); },
     done: () => tutSelFighters().length > 0 && document.getElementById('unitInfo').style.display === 'block',
@@ -15625,7 +15625,7 @@ const TUT_STEPS = [
     done: t => (t.ev.summon || 0) >= 5,
     target: () => ({ dom: '#summonBtn' }) },
   { id: 'duelFight', view: 'map', icon: 'trophy', title: '결투',
-    toast: '챔피언이 도전자와 싸워요. 시간 안에 이기면 칩을 받아요!',
+    toast: '결투장에 들어간 내 유닛이 도전자와 싸워요. 시간 안에 이기면 칩을 받아요!', // 10-14 P2 UX-5: 화면에 없는 말 '챔피언' 대신
     hint: '결투를 지켜봐요.',
     alt: () => S.duel && !S.champion ? (tutVisRect('#duelForfeit') ? "'결투 기권'을 누르거나 유닛을 결투장에 보내요." : '결투장에 유닛을 보내 도전자와 싸워요.') : '',
     enter: t => { tutEnsureWave(t, 5); tutReachFix(); },
@@ -15685,14 +15685,14 @@ const TUT_STEPS = [
   Object.assign({ id: 'clear7', view: 'map', hint: '전투를 마쳐요.' }, tutWaveSteps(7), { enter: t => { tutEnsureWave(t, 7); tutFreeFly(120); } }),
   // ⑭ 설정·도감 → ⑮ 끝
   { id: 'opt', view: 'any', icon: 'gear', title: '설정',
-    toast: "톱니 버튼은 설정이에요. 소리 크기를 바꾸거나 '카드 고를 때 배속 해제'를 켜고 끌 수 있어요.",
+    toast: "톱니 버튼은 설정이에요. 소리 크기를 바꾸거나 '카드 고를 때 배속 자동 해제'를 켜고 끌 수 있어요.", // 10-14 P2 UX-3: 설정 창 줄 이름 그대로 인용
     enter: t => tutEnsurePoker(t, 8),
     target: () => ({ dom: '#bOpt' }) },
   { id: 'book', view: 'any', icon: 'book', title: '도감',
     toast: '책 버튼은 도감이에요. 족보 순서·숨은 조합·업적·몬스터를 볼 수 있어요.',
     target: () => ({ dom: '#toolbar .shopIcon[data-shop="book"]' }) },
   { id: 'end', view: 'any', icon: 'trophy', title: '튜토리얼 완료!', okLabel: '끝내기',
-    toast: '카드부터 결투장·보스·하늘의 몬스터까지 모두 둘러봤어요. 이제 실전에서 나만의 군단을 키워 보세요!' },
+    toast: '잘했어요! 이제 실전에 나갈 준비가 끝났어요.' }, // 10-14 P2 UX-8: 둘러본 것·다음 할 일은 끝 화면(#tutRow)이 말한다 (같은 문장 되풀이 X)
 ];
 // ---- 진입·진행·퇴장
 let tutTicking = false; // 재진입 방지: updateHUD는 구매·고용 직후 등에서도 직접 불린다 (enter가 confirmHand·toggleShop을 불러도 단계가 두 번 넘어가지 않게)
