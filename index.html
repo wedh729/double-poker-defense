@@ -15250,7 +15250,8 @@ function tutFreeMob(t, hp) { if (t.toughM && S.monsters.includes(t.toughM)) t.to
 function tutHeroN() { return S.units.filter(u => u.hero && !u.super && !isHiddenCombo(u)).length; }
 function tutSeeUnit(list) { // 링으로 짚을 유닛 = 화면에서 다른 창(딜 순위·정보 창 등)에 안 가려진 첫 유닛 (작은 폰 — phone740 실측: 딜 순위 창 밑 유닛을 짚어 누를 수 없었다)
   const R = document.getElementById('cv').getBoundingClientRect(); if (!R.width) return list[0] || null;
-  return list.find(u => document.elementFromPoint(R.left + u.x / VW * R.width, R.top + (u.y - 4) / VH * R.height) === cv) || list[0] || null;
+  const clear = u => [[0, -6], [-9, -6], [9, -6], [0, -16], [0, 4]].every(([dx, dy]) => document.elementFromPoint(R.left + (u.x + dx) / VW * R.width, R.top + (u.y + dy) / VH * R.height) === cv); // 몸통 둘레가 다 보여야
+  return list.find(clear) || list[0] || null;
 }
 function tutOpenChip() { if (CM.style.display !== 'flex') openCasino(); else if (document.getElementById('chipWin').dataset.view !== 'finance') casMenu(); }
 function tutSelFighters() { return tutFighters().filter(u => u.selected); }
