@@ -4438,7 +4438,7 @@ function startPoker(fromWave) {
   S.roomVirgin = true; // 🥚 라운드마다 광석방 첫 입장 기록 리셋
   rollEvent(); // 다음 전투 이벤트를 포커 시간에 미리 알린다
   S.pat = curPattern(); // 몬스터 등장 패턴(받침): 이 라운드 패턴 — 배너가 미리 알리고 startWave는 읽기만
-  const double = S.tutMode ? !!(S.tut.deals[S.round] && S.tut.deals[S.round].length === 2) : (S.round % 5 === 0); // [튜토리얼 10-14] 두 패 = 챕터 사양
+  const double = S.tutMode ? !!(S.tut.deals[S.round] && S.tut.deals[S.round].length === 2) : S.story ? S.storyR % 5 === 0 : (S.round % 5 === 0); // 📖 스토리 = 스테이지 안 번호 // [튜토리얼 10-14] 두 패 = 챕터 사양
   // 더블 포커: 두 패를 동시에 펼쳐놓고 서로 비교하며 교환
   S.poker = { hands: [] };
   for (let h = 0; h < (double ? 2 : 1); h++) {
@@ -4991,8 +4991,8 @@ const BOSS_ABILITY = { 25: 'gravity' };                                         
 function bossHint(sh) { return BOSS_ABILITY[sh] && BOSS_INFO[sh] && BOSS_INFO[sh][2] || ''; } // 포커 배너·정보창 한 구절 (수치 없음). 능력이 있는 모양만 — 힌트 문자열은 BOSS_INFO 셋째 원소(함수 안에서만 읽으므로 선언 순서 무관)
 const GRAV = { FIRST: 6, PERIOD: 18, TELE: 0.6, PULL_T: 1.0, LINES: 0, PILE_R: 60, MOB_HP_MUL: 1.0, TAIL: 22 }; // TAIL(10-12 유저 '추천대로') = 끌려가는 몹 뒤 이동 꼬리 최대 길이 px (사슬을 끈 뒤 견인이 화면에서 안 보였다 — 0이면 끔) // 목성 중력(= 1단계 A3 포효): 등장 +FIRST초 첫 발동, PERIOD초마다, TELE초 예고(부풀기+링+sfx), PULL_T초 견인(220px/s 조커 값), 사슬 선은 먼 LINES마리만(PILE_R 안은 사슬 없음). LINES 0(10-09 리뷰 수정): 소환장이 좁아(198×132) 사슬이 27~62px·0.2초뿐이고 몹 몸통에 덮여 안 보임(보라 41px) — 비용만 들어 끔(40 상한 안). PILE_R = 더미 반지름(보스 중심→몹 중심, 보스 r 52 + 8 = 몹이 목성 테두리에 매달린 더미. 0이면 보스 중심 = 보스 그림 아래 숨음). MOB_HP_MUL = 보정 노브(유저 확정 (가) 보정 0 → 1.0)
 const WEAK = { MUL: 1.5, T: 1.0, SHAPES: { 24: true, 26: true } };                        // 약점 창 틀: 능력 발동 T초 동안 피해 ×MUL — 화성(24)·토성(26)만(유저 확정). 1단계엔 두 보스의 능력이 없어 발동 경로 0 = 수치 영향 0
-function bossShapeFor(n) { return S && S.tutMode ? tutBossShape() : n > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(n / 10)); } // spawnMonster의 보스 shape 식과 동일(그 줄은 그대로 둔다) — 배너·노브가 보스 생성 전에 모양을 알아야 해서 · [튜토리얼 10-14] 챕터 사양 모양 (R1~9 = 19는 그림 없음)
-function bossRound(r) { return S && S.tutMode ? !!tutWave().boss : r % 10 === 0; } // [튜토리얼 10-14] 보스 라운드 판정 (startWave·포커 배너 공용 — 일반 판 값은 r % 10 === 0 그대로)
+function bossShapeFor(n) { return S && S.tutMode ? tutBossShape() : S && S.story ? storyBossShape(n) : n > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.floor(n / 10)); } // spawnMonster의 보스 shape 식과 동일(그 줄은 그대로 둔다) — 배너·노브가 보스 생성 전에 모양을 알아야 해서 · [튜토리얼 10-14] 챕터 사양 모양 (R1~9 = 19는 그림 없음)
+function bossRound(r) { return S && S.tutMode ? !!tutWave().boss : S && S.story ? S.story.map.bossR.includes(S.storyR) : r % 10 === 0; } // 📖 스토리 = 맵 bossR (스테이지 안 라운드 번호) // [튜토리얼 10-14] 보스 라운드 판정 (startWave·포커 배너 공용 — 일반 판 값은 r % 10 === 0 그대로)
 function swarmParams(t) { // 전투 경과 t(초, S.waveT) → { wb 볼 가중 0~1, wr 링 가중 0~1, spinK 회전 배율, cyc 주기 번호(-1 = 리듬 전) }. 조각 함수라 모든 경계에서 연속(위치 점프 없음)
   if (t < SWARM.START) return SWARM_FREE;
   const u = (t - SWARM.START) % SWARM.PERIOD, cyc = Math.floor((t - SWARM.START) / SWARM.PERIOD);
@@ -5015,6 +5015,7 @@ function startWave() {
   if (S.pendSand) { addFloat(CX, 130, `+${15 * S.pendSand}초!`, '#7ec8ff', 2); S.pendSand = 0; }
   S.feverUsed = false;
   S.air = null; // 공중 착지 시계는 여기서 먼저 끊는다 — 태양전 분기(아래 return)보다 앞이어야 이전 라운드 시계가 태양전에 남지 않는다 (59 §3-3 결함 ③)
+  if (S.story) { storyStartWave(); return; } // 📖 스토리: 입구에서 무리별로 나와 길을 걷는다 (태양전·결투·이벤트 없음)
   // 🌞 최종장: 하늘의 태양이 강림한다 — 잡몹 없는 독대.
   // >= 인 이유: === 이면 태양을 못 잡고 부활권으로 살아남는 순간 라운드가 151로 넘어가
   // 태양이 영영 다시 안 나오고 hellOverlay(엔딩)도 도달 불가인 무한 헬모드가 된다.
@@ -5101,11 +5102,12 @@ function spawnMonster(hp, isBoss, opt) {
     if (st >= 50 && Math.random() < 0.16) { m.shieldMax = m.shield = Math.max(1, Math.floor(hp * 0.6)); } // 🛡️ 쉴드
   }
   if (isBoss && S.round >= FINAL_ROUND) m.split = true; // 💥 보스 분열: 처치 시 5조각 (각 30% HP)
+  if (S.story) storyInitMob(m, opt); // 📖 길 위 자리·걸음 (기존 난수를 다 뽑은 뒤 — 챌린지 난수 순서 무변경)
   S.monsters.push(m);
   return m;
 }
 // ⏱️ 스피드 보너스: 남은 시간 × (1 + 라운드×0.25)G/초 — 같은 시간 광산을 돌리는 것보단 달게, 킬 수입보단 작게 (HUD 실시간 표시와 정산이 같은 공식을 쓴다)
-function speedBonus() { return S.timer > 1 && !S.reviveWave && !S.duelForfeitWave ? Math.round(S.timer * (1 + S.round * 0.25)) : 0; } // ❤️‍🩹 부활 연장전은 0 — 45초가 골드로 바뀌지 않게 · 🏳️ 결투 기권한 전투도 0 (10-13 유저: 기다렸을 때보다 더 받으면 안 됨)
+function speedBonus() { return S.timer > 1 && !S.story && !S.reviveWave && !S.duelForfeitWave ? Math.round(S.timer * (1 + S.round * 0.25)) : 0; } // ❤️‍🩹 부활 연장전은 0 — 45초가 골드로 바뀌지 않게 · 🏳️ 결투 기권한 전투도 0 (10-13 유저: 기다렸을 때보다 더 받으면 안 됨)
 // ❤️‍🩹 부활 (10-01 유저): 죽게 될 전투가 끝나는 순간(보스 생존 또는 누수로 목숨 0) 판당 1회 제안 → 수락하면 같은 전투를 45초 더.
 //    보스·몹이 그대로 남아 보스를 건너뛰지 않는다. 오늘의 시드(기록 경쟁)에선 제안하지 않는다.
 //    유저 선택 = '광고 보고 부활' — 광고 SDK는 앱 빌드에서 붙는다. 그 전(웹)은 무료 1회: ADS_READY=false, showRewardedAd()는 즉시 성공.
@@ -5113,6 +5115,7 @@ const REVIVE_SEC = 45, ADS_READY = false;
 function showRewardedAd() { return Promise.resolve(true); } // 앱: 보상형 광고 시청 완료면 true, 닫기·실패면 false
 function reviveOffer() {
   if (S.tutMode) return false; // [튜토리얼 10-14] 목숨이 줄지 않는다 — 부활 창 없음
+  if (S.story) return false; // 📖 스토리식 부활은 M3 (지금은 없음)
   if (S.multi) return false; // 🤖 멀티: 부활 없음 (왕국 HP 팀 공유)
   if (gameDialogVisible('reviveModal')) return true; // 이미 떠 있다 (중복 오픈·효과음 겹침 방지)
   if (S.reviveUsed || S.reviveArmed || dailySeed != null || S.phase !== 'wave') return false; // 🔄 봉인한 부활권(샌드박스)이 있으면 그쪽이 먼저
@@ -5175,6 +5178,7 @@ function endWave() {
   const leak = S.monsters.length;
   if (S.multi) mpEndWave(); // 🤖 멀티: 목숨 대신 레인 개체 도착·습격대 생성 (클리어 보너스는 개인 클리어 순간에)
   else if (S.tutMode) tutWaveEnd(bossAlive, leak); // [튜토리얼 10-14] 보스 실패·누수여도 목숨 그대로 (다음 단계 문구가 다독임)
+  else if (S.story) storyWaveEnd(bossAlive, leak); // 📖 목숨은 도착 때 이미 깎임 — 보스 도착 = 패배 · 안전 상한이면 남은 몹 = 도착
   else if (bossAlive) {
     // 보스를 시간 내에 못 잡으면 즉시 사망
     S.lifeLog.push({ r: S.round, d: S.life, why: '보스 실패', k: 'boss' }); // k = 판정용 키(tutGameOverLine) — 표시 문구와 분리
@@ -5202,6 +5206,7 @@ function endWave() {
       markAchv('revive');
     } else {
       S.phase = 'gameover';
+      if (S.story) { storyGameOver(); return; } // 📖 기록·오늘의 시드·최고 기록 없음 — 스테이지 문구
       recordDaily(S.round); dailyBestLabel(); // 📅 오늘의 시드 기록
       const best = recordBest(S.round);
       const isNew = S.round >= best;
@@ -5227,14 +5232,14 @@ function endWave() {
     logMsg('부활권 소멸 — 무사히 클리어! (다음을 노려야겠네)'); addFloat(CX, CY, '부활권 소멸…', '#9e9e9e', 1.5);
   }
   if (S.round === FINAL_ROUND && S.multi) mpFinalRound(); // 🤖 멀티: 멈추지 않는 배너 + 로그 (★★★ 6-7 — 헬모드·태양 문구 없음)
-  else if (S.round === FINAL_ROUND) {
+  else if (S.round === FINAL_ROUND && !S.story) { // 📖 시험 길(끝없음)이 등가 R80에 닿아도 승리 창 없음
     S.paused = true;
     document.getElementById('winMsg').textContent = DIFF_MUL >= 2 ? '지옥에서 80라운드 — 2%의 문을 열었습니다.' : DIFF_MUL >= 1.4 ? '성외곽 80라운드 — 5%의 문을 열었습니다.' : '80라운드 클리어를 축하합니다.'; // 난이도별 문구 (09-08)
     document.getElementById('winOverlay').style.display = 'flex'; syncGamePause();
     logMsg('80라운드 클리어!! 이제부터는 헬모드...');
     if (DIFF_MUL >= 2) markAchv('hell80'); else if (DIFF_MUL >= 1.4) markAchv('hard80'); // 공식 목표 달성 = R80 '클리어' 시점 (r80 '도달'과 구분)
   }
-  S.round++;
+  if (S.story) storyNextRound(); else S.round++; // 📖 스테이지 안 번호 +1 → 등가 R
   crownExpire(); // 👑 기한(CROWN_DEADLINE) 전투가 끝났는데 대관식 전이면 왕관 소멸 — 부활·게임오버 분기 뒤
   S.reviveWave = false; // ❤️‍🩹 부활 연장전 종료 — 다음 전투부터 스피드 보너스 정상
   S.duelForfeitWave = false; // 🏳️ 결투 기권한 전투 끝 — 다음 전투부터 스피드 보너스 정상
@@ -5926,7 +5931,7 @@ function update(dt) {
     if (S.multi) mpLaneFreeze(dt); // 🤖 습격대·보스도 얼어붙는다 (출발 시각을 미룬다)
   } else {
     if (!(S.tutMode && S.tut.holdWave)) { // [튜토리얼 10-14] 전투 시계·전투 경과 멈춤 단계 (스폰은 그대로)
-    S.timer -= dt;
+    if (!S.story) S.timer -= dt; // 📖 스토리는 전투 시계 없음 (90 고정 — 보스 출발·안전 상한은 S.waveT)
     S.waveT += dt; // 패턴 1단계: 시간정지(freezeT) 분기엔 없으므로 자동 동결
     }
     tenseTick(dt / S.speed); // 💓 막판 심장·시계·BGM 먹먹함 (시계가 흐를 때만 — 시간정지 중엔 이 분기를 안 탄다 · 배속은 실시간 박자 유지)
@@ -5940,9 +5945,10 @@ function update(dt) {
         const fly = step(i, q.nFly || 0, N); if (fly) q.flyDone++;
         const ward = !fly && step(i - (q.flyDone || 0), q.nWard || 0, N - (q.nFly || 0)); if (ward) q.wardDone++; // 공중을 뺀 순번 위에서 세어 공중 + 방패병 라운드(x8, R38~)도 정확히 nWard
         spawnMonster(Math.floor((fly ? q.hpFly : ward ? q.hpWard : q.hp) * (q.mobMul || 1)), false, { slot: i, slotN: N, affix: fly ? 'fly' : ward ? 'ward' : null, shield: ward ? q.shWard : 0 }); // 패턴 1단계: 잡몹만 mobMul(목성 라운드 노브, 기본 1 → 값 동일). 멀티·태양전 큐엔 mobMul 없음 → || 1
+        if (q.gaps) q.interval = q.gaps[i + 1] || q.interval; // 📖 무리 간격 (챌린지 큐엔 gaps 없음)
       }
     }
-    if (q.bossLeft > 0 && S.timer < WAVE_TIME - 5) {
+    if (q.bossLeft > 0 && (S.story ? S.waveT >= q.bossAt : S.timer < WAVE_TIME - 5)) {
       q.bossLeft = 0;
       // 보스 계수: 기본 9.4 / R40+는 mobHP ×1.45(분열 제거 보정)를 상쇄해 6.5 / R80+ 분열 보스는 본체 2.8 (조각 5×30% 포함 실효 ≈ 기존 수준)
       const bz = spawnMonster((q.hp0 || q.hp) * (S.round >= FINAL_ROUND ? 2.8 : 9.4 / splitComp(S.round)), true); // 보스는 분열 제거 보정 대상이 아니므로 splitComp를 나눠 상쇄 · 받침: 보스는 환산 전 hp0 기준(어픽스 환산 무관)
@@ -5999,6 +6005,7 @@ function update(dt) {
     }
     m.born = Math.min(1, m.born + dt * 2.5);
     if (m.fly) { const l0 = m.lift || 0; m.flapT += dt; m.lift = flyLift(m.flapT, m.phase, S.air ? S.air.k : 0) * m.born; if (m.pullT > 0 || m.returnT > 0) m.y -= m.lift - l0; } // 공중: 날개 위상·부양 (freezeT continue 아래 = 시간정지 동결) — 논리 lift = 궤도점을 들어 올림(투사체·클릭이 몸에 맞음) · × m.born = 스폰 0.4초 동안 포털에서 떠오름(10-12 ②: 56px 위에 툭 나타나지 않게) · 견인·복귀 중 이착륙 = 몸도 lift만큼 같이 올림/내림(땅 지점 연속 — 궤도 경로는 oy가 이미 −lift, 10-12 ② 크로스체크)
+    if (S.story) { storyStep(m, dt); continue; } // 📖 길 따라 걷기 — 위 공통(화상·시간정지·목성 시계·born·lift)은 그대로, 아래 궤도·견인·울타리 clamp만 대체
     m.ang += m.spin * dt * sp.spinK; // A2 휘몰이 ×3
     if (m.pullT > 0) {
       // 🃏 조커: 낫에 맞아 끌려가는 중 — 오빗 대신 조커 쪽으로 직행
@@ -6289,10 +6296,12 @@ function update(dt) {
             mat: m.boss ? matInfo(S.round).idx : m.mat, esc: m.esc, golden: false, bobP: Math.random() * 6.28, // 보스는 mat 0(물풍선) 고정이라 조각은 현재 라운드 재질로
             boss: false, born: 0.4, hell: m.hell, small: true, shield: 0, shieldMax: 0, split: false, child: true, _brk: 0, // 🪖 장비 파괴 단계 추적
           });
+          if (S.story) { const c = newborns[newborns.length - 1]; c.path = m.path; c.s = m.s; c.fi = m.fi; } // 📖 조각은 보스 자리 그대로 길 위에 (가까운 표본 찾기는 교차점에서 다른 구간을 잡을 수 있음)
         }
       }
       return false;
     }
+    if (m.arrived) return storyArrived(m); // 📖 성에 닿음 — 같은 프레임에 죽었으면 위에서 처치가 먼저 (보상)
     return true;
   });
   if (newborns.length) S.monsters = S.monsters.concat(newborns);
@@ -6306,7 +6315,7 @@ function update(dt) {
   // 조기 종료는 '소환장이 비었고 결투도 끝났을 때'만. 도전자가 남아 있으면 라운드는 계속된다
   // (유저: 소환장 몹을 다 잡아도 콜로세움에 남아 있으면 라운드가 끝나면 안 된다) — 🏳️ 10-13: 아무도 안 들어가면 기권(duelForfeit)으로 도전자를 보내 조기 종료를 풀 수 있다
   // 🤖 멀티: 개인 클리어(보너스 즉시) → 전투 종료 = 마감 또는 (나·봇 클리어 && 살아 있는 레인 개체 0)
-  if (S.multi ? mpWaveCheck(q) : S.timer <= 0 || (q.left === 0 && q.bossLeft === 0 && S.monsters.length === 0 && !S.duel)) endWave();
+  if (S.multi ? mpWaveCheck(q) : S.story ? storyWaveDone(q) : S.timer <= 0 || (q.left === 0 && q.bossLeft === 0 && S.monsters.length === 0 && !S.duel)) endWave();
 }
 function killGoldNow() { return Math.max(1, Math.round(S.round * 0.042)) * ((S.eventMods && S.eventMods.killMul) || 1) * (S.feverT > 0 ? 2 : 1); } // 0.06 → ×0.7 (경제 개편: 수동 수입 축소, 광산·이자로 축 이동) — 🤖 습격대 킬 골드(n × 이 값)도 같은 식
 
@@ -15021,7 +15030,7 @@ function renderPoker(spin) {
   if (double) {
     banner.innerHTML = `<span class="hidden-chance">★ 히든 찬스! 두 패를 비교하며 교환 — 원페어 이상 족보가 같으면 ♠ 에이스! 높은 족보 일치일수록 훨씬 강력! ★</span>`;
   } else {
-    banner.textContent = `스테이지 ${S.round} 준비 — 카드 클릭으로 교환 (각 1회)`;
+    banner.textContent = S.story ? `${S.story.map.name} — 카드 클릭으로 교환 (각 1회)` : `스테이지 ${S.round} 준비 — 카드 클릭으로 교환 (각 1회)`;
   }
   const tutLine = tutPokerLine(ranks); // 🧭 첫 판 안내: 배너 첫 줄을 한 줄 안내로 (보스·이벤트 줄은 그대로 뒤에 붙는다)
   if (tutLine) banner.innerHTML = tutLine;
@@ -15029,7 +15038,7 @@ function renderPoker(spin) {
   if (S.multi) { const w = mpPokerWarn(); if (w) banner.innerHTML += `<br><span class="poker-boss-warning">${w}</span>`; } // 🤖 멀티: 게이트 앞 레인 개체 예고 (보스·습격대)
   else if (bossRound(S.round) || (S.round >= SUN_ROUND && !S.hellCleared)) { // 09-08: 즉사 룰이 보스 클릭 팝업에만 있었다 (수치 없음, 미니멀 원칙 내) · 10-09: 보스 이름 + 능력 한 구절(bossHint, 능력 있는 보스만)
     const sun = S.round >= SUN_ROUND && !S.hellCleared, sh = bossShapeFor(S.round), bi = BOSS_INFO[sh], h = sun ? '' : bossHint(sh);
-    banner.innerHTML += `<br><span class="poker-boss-warning">${sun ? '태양 강림' : '보스 라운드 — ' + bi[0] + (h ? ': ' + h : '')} · 시간 안에 못 잡으면 끝</span>`;
+    banner.innerHTML += `<br><span class="poker-boss-warning">${sun ? '태양 강림' : '보스 라운드 — ' + bi[0] + (h ? ': ' + h : '')} · ${S.story ? '성에 닿으면 끝' : '시간 안에 못 잡으면 끝'}</span>`;
   }
   if (!S.multi && S.pat && S.pat.tag) banner.innerHTML += `<br><span class="poker-event-notice">다음 전투: ${S.pat.tag} — ${S.pat.hint}</span>`; // 몬스터 등장 패턴(받침): 태그 한 단어 + 힌트 반 줄 (수치 없음)
   if (S.event) banner.innerHTML += `<br><span class="poker-event-notice">다음 전투 이벤트: ${S.event.name} — ${S.event.desc}</span>`;
@@ -16089,9 +16098,9 @@ function updateHUD() {
   // 좌측 카지노 스테이션: 칩 있으면 활성 + 빛남
   // 칩이 없어도 비상 물자(골드)는 살 수 있으므로 카지노는 항상 열린다. 정수 칩이 있을 때만 발광
   document.querySelectorAll('.chipStation').forEach(b => { b.disabled = false; b.classList.toggle('ready', S.chips >= 1); });
-  hudSet('tRound', '' + S.round);
+  hudSet('tRound', '' + (S.story ? S.storyR : S.round)); // 📖 스토리 = 스테이지 안 번호
 
-  hudSet('tStage', stageInfo(S.round).name + (DIFF_NAME === '초원' ? '' : ` · ${DIFF_NAME}`)); // 재질명 옆에 난이도 상시 표시
+  hudSet('tStage', S.story ? S.story.map.name : stageInfo(S.round).name + (DIFF_NAME === '초원' ? '' : ` · ${DIFF_NAME}`)); // 재질명 옆에 난이도 상시 표시 · 📖 스토리 = 스테이지 이름
   // 원형 시계: 시간이 흐를수록 빨강(전투)/보라(포커)가 시계방향으로 채워진다
   refreshInfoPanelLive(); // 킬 수·스킬 쿨 실시간
   const clock = document.getElementById('clock');
@@ -18421,6 +18430,116 @@ function storyEqRound(r) { // 스테이지 안 r번째 → 챌린지 세기(S.ro
   const M = S.story.map; if (!M.req) return r;
   const [a, b] = M.req, n = M.rounds;
   return r > n ? b + (r - n) : Math.round(a + (b - a) * (r - 1) / Math.max(1, n - 1));
+}
+function storyNextRound() { // endWave의 S.round++ 자리 — 스테이지 안 번호 +1 → 등가 R (M1: 라운드 수를 넘으면 토스트 한 번 뒤 끝없이 계속, 클리어 화면은 M3)
+  S.storyR++; S.round = storyEqRound(S.storyR);
+  const M = S.story.map;
+  if (M.rounds && S.storyR === M.rounds + 1 && !S.story.endToast) { S.story.endToast = true; rewardToast('trophy', M.name, '#ffd166', '스테이지 끝 — 계속 이어져요'); }
+}
+// ---- 몹 이동 (설계 §5) — m.path(길 번호)·m.s(입구에서 잰 px)·m.v(px/게임초)·m.off(옆 오프셋)·m.fi(다음 갈림)·m.rem(성까지 남은 px = '선두' 점수)·m.occl(다리 밑)·m.arrived ----
+function storyMobV(m) { return STORY.V0 * (m.boss ? STORY.BOSS_V : (STORY.MAT_V[m.mat] != null ? STORY.MAT_V[m.mat] : 0.9)); } // 재질 걸음 표 (크기 성장 아님)
+function storyInitMob(m, opt) { // spawnMonster 끝(push 앞) — 무리 목록이 정한 입구 (보스 = 0번 입구)
+  const st = S.story, q = S.spawnQueue;
+  if (m.boss) m.shape = storyBossShape(S.round); // P0-1: 등가 R 10 미만 보스도 그림 있는 모양 (능력 bz.abil은 돌아간 뒤 이 모양으로 정해짐)
+  const di = !m.boss && q && q.doors && opt.slot != null ? q.doors[opt.slot] || 0 : 0;
+  m.path = st.doors[di % st.doors.length];
+  const P = st.P[m.path];
+  m.s = 0; m.fi = 0; m.rem = P.L; m.occl = false; m.arrived = false; m.pullS = null; m.pullK = null;
+  m.off = m.boss ? 0 : (Math.random() * 2 - 1) * P.off; // 난수는 스토리 판에서만
+  m.v = storyMobV(m);
+  m.x = P.x[0] + P.nx[0] * m.off; m.y = P.y[0] + P.ny[0] * m.off - (m.lift || 0); // 입구 포탈에서 born 0 → 1로 커지며 나옴
+}
+function storyAdopt(m) { // spawnMonster 밖에서 생긴 몹(분열 조각 등) — 빠진 길 정보만 채움 (s가 없으면 가장 가까운 표본)
+  const st = S.story;
+  if (m.s == null || m.path == null || !st.P[m.path]) {
+    let bk = 0, bs = 0, bd = Infinity; const gy = m.y + (m.lift || 0);
+    st.P.forEach((P, k) => { const s = storyNearS(P, m.x, gy), i = storyIdx(P, s), d = (P.x[i] - m.x) ** 2 + (P.y[i] - gy) ** 2; if (d < bd) { bd = d; bk = k; bs = s; } });
+    m.path = bk; m.s = bs; m.fi = 0;
+    const P = st.P[bk]; while (m.fi < P.forks.length && P.forks[m.fi].s <= m.s) m.fi++; // 이미 지난 갈림은 고르지 않음
+  }
+  if (m.fi == null) m.fi = 0;
+  if (m.off == null) m.off = 0;
+  if (m.v == null) m.v = storyMobV(m);
+  m.arrived = false; m.occl = false; m.pullS = null; m.pullK = null; m.rem = st.P[m.path].L - m.s;
+}
+function storyStep(m, dt) { // 매 서브스텝 (update 몹 루프 — 공통 부분 뒤, 궤도·울타리 clamp 대신)
+  const st = S.story;
+  if (m.s == null || m.v == null || m.path == null) storyAdopt(m);
+  let P = st.P[m.path];
+  m.returnT = 0; // 궤도 복귀 연출 없음
+  if (m.pullT > 0) { // 조커 되감기(pullK 없음)·목성 끌어모으기(pullK 'grav') — 사슬은 drawMonster가 pullT·pullX/Y로 그대로 그림
+    m.pullT -= dt;
+    const goal = m.pullS != null ? m.pullS : m.s, d = goal - m.s;
+    m.s += Math.sign(d) * Math.min(Math.abs(d), STORY.PULL_V * dt);
+    if (m.pullT <= 0) { m.pullT = 0; m.pullS = null; m.pullK = null; m.pullQuiet = false; }
+  } else m.s += m.v * dt;
+  if (m.s < 0) m.s = 0;
+  while (m.fi < P.forks.length && m.s >= P.forks[m.fi].s) { // 넘은 갈림마다 갈래 고르기 (자식 길은 갈림 지점이 s = 0)
+    const f = P.forks[m.fi++];
+    const to = f.rule === 'rand' ? f.to[(Math.random() * f.to.length) | 0] : f.to[f.k++ % f.to.length];
+    if (to !== m.path) { m.s -= f.s; if (m.pullS != null) m.pullS -= f.s; m.path = to; P = st.P[to]; m.fi = 0; } // P2-1: 끌려가던 목표도 새 길 기준으로
+  }
+  while (m.fi > 0 && m.s < P.forks[m.fi - 1].s) m.fi--; // 되감겨 갈림 앞으로 돌아가면 다시 고른다
+  if (m.s >= P.L) { m.s = P.L; m.arrived = true; } // 도착 '표시'만 — 목숨·제거는 사망 필터(storyArrived)
+  m.rem = P.L - m.s;
+  m.occl = P.cover.length ? storyCovered(P, m.s) : false;
+  const fi = Math.min(P.n - 2, m.s * 0.5), i = fi | 0, f = fi - i; // 2px 칸 + 칸 안 비율
+  const o = m.off + STORY.WOB * Math.sin(S.time * 2.3 + m.phase); // 옆 오프셋 + 작은 흔들림
+  const nx = P.nx[i] + (P.nx[i + 1] - P.nx[i]) * f, ny = P.ny[i] + (P.ny[i + 1] - P.ny[i]) * f;
+  m.x = P.x[i] + (P.x[i + 1] - P.x[i]) * f + nx * o;
+  m.y = P.y[i] + (P.y[i + 1] - P.y[i]) * f + ny * o - (m.lift || 0); // 몸 = 땅 − lift (10-12 결정: 판정은 m.y + lift = 땅)
+}
+function storyArrived(m) { // 사망 필터에서 — 보상 없이 제거. 목숨은 여기서, 패배 판정은 전투 끝 판정(storyWaveDone)
+  m.dead = true; // 날아오던 투사체 '대상 없음' 처리 · A명령·단검 표적 풀림
+  if (m.boss) S.story.bossIn = true;
+  else { S.life -= 1; S.story.leakR++; } // 잡몹 1 (방패병 2는 방패병 켤 때)
+  S.effects.push({ type: 'boom', x: HOUSE.x, y: HOUSE.y - 20, r: 30, t: 0.3 });
+  sfx('leak');
+  return false;
+}
+// ---- 라운드 흐름 (설계 §6) ----
+function storyGroupsM1(count) { // M1 임시 무리: GROUP마리씩, 무리 안 GAP(세 번째 무리마다 GAP_PACK = 뭉친 무리), 무리 사이 PAUSE, 무리마다 입구 번갈아 (본격 생성기는 M3)
+  const gaps = [], doors = [], nd = S.story.doors.length;
+  for (let i = 0; i < count; i++) { const gi = (i / STORY.GROUP) | 0, first = i % STORY.GROUP === 0;
+    gaps.push(i === 0 ? 0.3 : first ? STORY.PAUSE : gi % 3 === 2 ? STORY.GAP_PACK : STORY.GAP); doors.push(gi % nd); }
+  return { gaps, doors };
+}
+function storyStartWave() { // startWave의 공통 줄(페이즈·배속·waveT·딜 순위·왕관·피버) 뒤 — 소환장 쏟아내기 대신
+  const pat = S.pat || patNone();
+  const hp0 = Math.max(1, Math.floor(monsterHP(S.round) * STORY.HP_K)); // 등가 R 출발점 (M5에서 표로)
+  const count = Math.max(1, Math.floor(mobCount(S.round) * STORY.N_K));
+  const boss = bossRound(S.round);
+  const nFly = pat.ratio ? Math.round(count * pat.ratio) : 0, ak = nFly ? airHpKnob(S.round) : 1;
+  const hp = nFly ? Math.max(1, Math.floor(hp0 * plainMul(count, nFly, 0) * ak)) : hp0;
+  const g = storyGroupsM1(count);
+  S.timer = WAVE_TIME; // 스토리에선 줄지 않는 고정값 (시계에 묶인 것 = 꺼짐)
+  S.story.leakR = 0; S.story.bossIn = false;
+  S.spawnQueue = { left: count, hp, interval: g.gaps[0], acc: 0, bossLeft: boss ? 1 : 0, bossAt: STORY.BOSS_AT, mobMul: 1,
+    count, hp0, nFly, nWard: 0, hpFly: Math.max(1, Math.floor(hp0 * FLY_HP * ak)), hpWard: 0, shWard: 0, flyDone: 0, wardDone: 0,
+    gaps: g.gaps, doors: g.doors };
+  S.air = nFly ? { on: true, up: true, t: 0, k: 0, upT: pat.upT, downT: pat.downT } : null;
+  if (IS_MOBILE) setMobTab('battle');
+  renderPoker();
+  logMsg(`${S.story.map.name} — 몹이 길을 따라 온다${boss ? ' · 보스!' : ''}`, true);
+}
+function storyWaveDone(q) { return S.life <= 0 || S.story.bossIn || S.waveT >= STORY.CAP || (q.left === 0 && q.bossLeft === 0 && S.monsters.length === 0); } // 전투 끝: 목숨 0 · 보스 도착 · 안전 상한 · 스폰 끝 + 0마리
+function storyWaveEnd(bossAlive, leak) { // endWave 분기 — 목숨은 도착 때 이미 깎임
+  const st = S.story;
+  if (S.waveT >= STORY.CAP && leak > 0) { // 안전 상한: 남은 몹 = 도착으로 침 (보스가 남았으면 패배)
+    if (bossAlive) st.bossIn = true; else { const k = S.monsters.filter(m => !m.boss).length; S.life -= k; st.leakR += k; }
+  }
+  if (st.bossIn) { S.lifeLog.push({ r: S.storyR, d: Math.max(0, S.life), why: '보스 도착', k: 'boss' }); S.life = 0; addFloat(HOUSE.x, HOUSE.y - 70, '보스가 성에 닿았다!', '#e53935', 2.5); logMsg('보스가 성에 닿았다!', true); sfx('leak'); }
+  else if (st.leakR > 0) S.lifeLog.push({ r: S.storyR, d: st.leakR, why: '성 도착' });
+  if (S.life > 0) grantClearBonus(); // 스피드 보너스 0 (시계 없음)
+}
+function storyGameOver() { // endWave 게임오버 — 기록·오늘의 시드·최고 기록 없음
+  const M = S.story.map, fmt = v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'k' : Math.round(v);
+  const top = dpsGroups().slice(0, 6), maxD = top.length ? top[0][1].dmg : 1; // 딜 순위 위젯과 같은 묶음·이름 (챌린지 결산과 같은 그림)
+  const statsHTML = top.length ? `<div style="margin-top:12px;text-align:left;font-size:12px"><b style="color:#ffd166">이번 판 MVP: ${top[0][0]}</b>` +
+    top.map(([nm, st]) => `<div style="margin-top:5px">${nm} — 딜 ${fmt(st.dmg)} · 킬 ${st.kills}<div style="height:6px;background:#2a2340;border-radius:3px;margin-top:2px"><div style="height:100%;border-radius:3px;width:${Math.max(3, 100*st.dmg/maxD).toFixed(0)}%;background:linear-gradient(90deg,#8c5bff,#ff6b9d)"></div></div></div>`).join('') + '</div>' : '';
+  const lifeHTML = S.lifeLog.length ? `<div style="margin-top:8px;text-align:left;font-size:12px;color:#ef9a9a">목숨: ${S.lifeLog.slice(-6).map(e => `R${e.r} ${e.d > 0 ? '−' + e.d : '+' + (-e.d)} ${e.why}`).join(' · ')}</div>` : '';
+  document.getElementById('finalScore').innerHTML = `<b>${M.name}</b> — ${S.storyR}번째 무리에서 성이 무너졌어요<br>` + lifeHTML + statsHTML;
+  document.getElementById('overlay').style.display = 'flex'; syncGamePause();
 }
 // 진입 순서 = 튜토리얼과 같음: at-title → reset() → S.story → hideStartScreen → startPoker 재딜 (reset 안 첫 포커가 첫 판 안내 T1을 소진하지 않게)
 function storyStart(id, gesture) { // gesture = 클릭으로 불렸나 (다시하기 = true, URL 진입 = false — 오디오 잠금 풀기·전체 화면은 제스처 안에서만)
