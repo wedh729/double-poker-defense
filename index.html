@@ -15247,6 +15247,12 @@ function tutKeepMob(t) { // 연습 몹: 단계 동안 쓰러지지 않는 몹 �
   t.toughM.hp = t.toughM.max;
 }
 function tutFreeMob(t, hp) { if (t.toughM && S.monsters.includes(t.toughM)) t.toughM.hp = Math.min(t.toughM.hp, hp); t.toughM = null; } // 단계가 끝나면 = 잡을 수 있는 체력으로 (더는 되채우지 않음)
+function tutHoldFly(t) { // 공중 단계 동안 나는 몹이 쓰러지지 않게 (사람 속도 실측: R7 나는 몹이 약 0.7초 만에 잡혀 '공중'·'내려앉기'를 볼 틈이 없었다) — 아직 안 나온 몹은 스폰 체력부터
+  if (S.phase !== 'wave') return;
+  const q = S.spawnQueue; if (q && q.nFly && q.hpFly < t.toughHp) q.hpFly = t.toughHp;
+  for (const m of S.monsters) if (m.fly) { if (m.max < t.toughHp) m.max = t.toughHp; m.hp = m.max; }
+}
+function tutFreeFly(hp) { for (const m of S.monsters) if (m.fly) m.hp = Math.min(m.hp, hp); } // 공중 단계가 끝나면 = 잡을 수 있는 체력으로
 function tutHeroN() { return S.units.filter(u => u.hero && !u.super && !isHiddenCombo(u)).length; }
 function tutSeeUnit(list) { // 링으로 짚을 유닛 = 화면에서 다른 창(딜 순위·정보 창 등)에 안 가려진 첫 유닛 (작은 폰 — phone740 실측: 딜 순위 창 밑 유닛을 짚어 누를 수 없었다)
   const R = document.getElementById('cv').getBoundingClientRect(); if (!R.width) return list[0] || null;
@@ -15482,7 +15488,7 @@ const TUT_STEPS = [
   { id: 'miner', view: 'map', icon: 'pick', title: '광부',
     toast: '광부는 오른쪽 아래 광산에서 캐서 성으로 골드를 날라요. 가끔 재변경권도 캐 와요. 잠깐 지켜봐요.',
     hint: '광부가 성으로 돌아올 때까지 기다려요.', ok: '재변경권을 캐 왔어요!',
-    enter: () => { if (CM.style.display === 'flex') closeChip(); if (!S.units.some(u => u.miner)) { spawnMiner(); tutSupply('광부'); } },
+    enter: t => { t.ticketDone = false; if (CM.style.display === 'flex') closeChip(); if (!S.units.some(u => u.miner)) { spawnMiner(); tutSupply('광부'); } }, // 다음 첫 채굴 = 재변경권 (광부를 미리 고용해 판 첫 채굴을 이 단계 전에 써 버렸어도 — 리뷰 P1-1)
     done: t => S.items.reroll > t.base.reroll,
     target: () => { const m = S.units.find(u => u.miner); return m ? { unit: m } : null; } },
   // ⑦ 광석 방 → 보상 광석 → 제물대 → 왕관 안내·대관식
@@ -15545,7 +15551,7 @@ const TUT_STEPS = [
     done: t => tutHeroN() > t.base.heroes,
     target: () => ({ map: TUT_Z.portal }) },
   { id: 'hidden', view: 'any', icon: 'book', title: '숨은 조합',
-    toast: '서로 다른 유닛을 특별하게 모으면 숨은 영웅이 나오기도 해요. 방법은 비밀! 찾으면 도감(책 버튼)에 기록돼요.',
+    toast: '영웅 말고도 숨은 영웅이 있어요. 방법은 비밀! 찾으면 도감(책 버튼)에 기록돼요.',
     target: () => ({ dom: '#toolbar .shopIcon[data-shop="book"]' }) },
   // 재변경권 (광부가 캐 온 것) → R3 소환
   { id: 'reroll', view: 'cards', icon: 'ticket', title: '재변경권',
@@ -15665,14 +15671,17 @@ const TUT_STEPS = [
   { id: 'airPri', view: 'map', icon: 'star', title: '공중 우선',
     toast: "활·총 유닛을 골라 정보 창의 '공중' 버튼을 누르면 나는 몬스터부터 노려요. 해 보세요.",
     hint: () => tutSelFighters().some(airPriOk) ? "정보 창의 '공중' 버튼을 눌러요." : IS_MOBILE ? '활이나 총 유닛을 눌러 골라요.' : '활이나 총 유닛을 클릭해 골라요.',
-    enter: t => { tutEnsureWave(t, 7); tutReachFix(); tutSelectOnly([]); hideObjInfo(); if (!tutFighters().some(airPriOk)) { spawnUnit(1, RACE_OF_RANK[1], false, 10); tutSupply('활 유닛'); } },
+    toastWhen: t => S.monsters.some(m => m.fly && m.born >= 1) || ((t.ev.summon || 0) >= 7 && S.phase !== 'wave'), waitHint: '전투를 지켜봐요.', // 나는 몹이 다 떠오른 뒤 (전투가 이미 끝났으면 바로)
+    enter: t => { tutEnsureWave(t, 7); tutHoldFly(t); tutReachFix(); tutSelectOnly([]); hideObjInfo(); if (!tutFighters().some(airPriOk)) { spawnUnit(1, RACE_OF_RANK[1], false, 10); tutSupply('활 유닛'); } },
+    tick: t => { tutEnsureWave(t, 7); tutHoldFly(t); },
     done: () => S.units.some(u => !u.miner && !u.item && u.priority === 'air'),
     target: () => { if (tutSelFighters().some(airPriOk) && tutVisRect('#unitInfo .priBtn[data-pri="air"]')) return { dom: '#unitInfo .priBtn[data-pri="air"]' }; const a = tutSeeUnit(tutFree().filter(airPriOk).concat(tutFighters().filter(airPriOk))); return a ? { unit: a } : null; } },
   { id: 'airLand', view: 'map', icon: 'arrow', title: '내려앉기',
     toast: '나는 몬스터도 가끔 땅에 내려앉아요. 그때는 모든 유닛이 공격할 수 있어요.',
-    toastWhen: () => !S.monsters.some(m => m.fly) || (S.air && !S.air.up) || S.phase !== 'wave', waitHint: '전투를 지켜봐요.',
+    toastWhen: () => S.phase !== 'wave' || (S.air && !S.air.up && S.air.k < 0.15 && S.monsters.some(m => m.fly)) || (!S.monsters.some(m => m.fly) && !(S.spawnQueue && S.spawnQueue.left > 0)), waitHint: '전투를 지켜봐요.', // 실제로 내려앉은 뒤 (나는 몹이 없거나 전투가 끝났으면 바로)
+    tick: t => tutHoldFly(t),
     target: () => { const m = S.monsters.find(x => x.fly); return m ? { mon: m } : { map: TUT_Z.pen }; } },
-  Object.assign({ id: 'clear7', view: 'map', hint: '전투를 마쳐요.' }, tutWaveSteps(7), { enter: t => tutEnsureWave(t, 7) }),
+  Object.assign({ id: 'clear7', view: 'map', hint: '전투를 마쳐요.' }, tutWaveSteps(7), { enter: t => { tutEnsureWave(t, 7); tutFreeFly(120); } }),
   // ⑭ 설정·도감 → ⑮ 끝
   { id: 'opt', view: 'any', icon: 'gear', title: '설정',
     toast: "톱니 버튼은 설정이에요. 소리 크기를 바꾸거나 '카드 고를 때 배속 해제'를 켜고 끌 수 있어요.",
@@ -15735,7 +15744,7 @@ function tutAdvance() { // 알림의 '건너뛰기' (폰 배너 글자 버튼도
   try { if (!t.latched && st.latch) st.latch(t); t.latched = true; t.pendBase = null; tutGo(t.i + 1); } catch (e) { reportLoopError('tut', e); } // 클릭 경로도 오류 보고 (1차 P2-5)
   tutModeTick();
 }
-function tutExit(screen) { exitToTitle(false, screen); DIFF_MUL = 1; DIFF_NAME = '초원'; } // 튜토리얼 판 → 타이틀 (reset이 S.tutMode를 지운다)
+function tutExit(screen) { if (OM.style.display === 'flex') closeOpt(); exitToTitle(false, screen); DIFF_MUL = 1; DIFF_NAME = '초원'; } // 튜토리얼 판 → 타이틀 (reset이 S.tutMode를 지운다)
 function tutFinish() { tutModeMark('main'); tutExit('tut'); } // 끝 화면(#tutRow) — 새 플레이어 강조 꺼짐
 function tutQuitAsk() { if (S && S.tutMode && confirm('튜토리얼을 그만하고 타이틀로 나갈까요?')) tutExit(); }
 function tutCardLock(h, i) { // 잠근 라운드: 짝(금테) 카드·위 패는 바꾸지 못하게 (R1 = 풀하우스 단검 길 차단 · R3 = 풀하우스로만 · R4 = 아래 패만 바꿔 맞추기)
