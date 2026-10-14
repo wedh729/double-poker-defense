@@ -3702,7 +3702,13 @@ const MATERIALS = [
   { name:'목성',     col:'#cf9d6f', death:'rock'   },   // 11
   { name:'태양',     col:'#ff8a1e', death:'fire', glow:'#ff6a00' }, // 12
   { name:'블랙홀',   col:'#0d0d14', death:'void'   },   // 13
+  // 구슬 변종 1차 (10-15, 구슬몹_2026-10-14\10_구현설계.md) — 14번부터 뒤에만 붙임(8~13 = 헬 사다리, 중간 삽입 금지). VAR_ON(꺼짐)이면 스폰·도감·샌드박스에 안 나옴
+  { name:'젤리',     col:'#8fd16a', death:'splash' },   // 14 R11~20 변종 (끝자리 2·4·9)
+  { name:'밤송이',   col:'#8a5a2b', death:'rock'   },   // 15 R21~30 변종 (벗겨지면 그림만 알밤 = MAT_VIS_PEEL)
+  { name:'이끼 공',  col:'#3f7d3a', death:'thud'   },   // 16 R31~40 변종
+  { name:'눈덩이',   col:'#f4f8fb', death:'thud'   },   // 17 R41~50 변종
 ];
+const MAT_BASE_N = 14, MAT_VIS_PEEL = 40, MAT_VIS = { 40: { col: '#9c5b2e' } }; // 기본 재질 수(변종 꺼지면 도감·업적·샌드박스 14칸) · 알밤 그림 전용 번호(MATERIALS에 없음 — 2차 변종 18~21과 안 겹치게 40) · ⚠️ 아래 MAT_SIZE[MAT_VIS_PEEL] 줄보다 위여야 함(맨 위 실행문)
 // 라운드 → {재질 idx, 밴드진행도 p(0~1), 다음 재질} — 헬 이후는 8칸부터 천체 사다리
 function matInfo(n) {
   if (n <= FINAL_ROUND) { const idx = Math.min(7, Math.floor((n - 1) / 10)); return { idx, p: ((n - 1) % 10) / 9, next: idx < 7 ? idx + 1 : 8 }; }
@@ -3761,13 +3767,14 @@ function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > C
 // 재질별 크기 배율: 실제 공 크기 싱크 (야구공 작게 ~ 농구공 크게). 천체는 웅장하게
 // 2026-08-08 유저: 전체 30% 축소, 야구공(idx 4)만 20% 축소 (이미 가장 작아서 덜 줄임). 보스(52/104)는 별도 상수라 그대로.
 // 이 배열이 스프라이트 굽는 크기(matSpriteSz)와 그리는 크기(monSize) 양쪽의 유일한 원천이라 여기만 바꾸면 무손실(k=1) 유지.
-const MAT_SIZE = [0.63, 0.665, 0.784, 0.826, 0.64, 0.595, 0.77, 0.63, 0.63, 0.84, 0.805, 0.875, 0.91, 0.77];
+const MAT_SIZE = [0.63, 0.665, 0.784, 0.826, 0.64, 0.595, 0.77, 0.63, 0.63, 0.84, 0.805, 0.875, 0.91, 0.77, 0.70, 0.70, 0.80, 0.72]; // 14~17 = 구슬 변종(젤리·밤송이·이끼 공·눈덩이)
+MAT_SIZE[MAT_VIS_PEEL] = MAT_SIZE[15]; // 알밤(그림 전용 40) = 밤송이와 같은 크기 → 굽는 크기 = 그리는 크기(k = 1)
 // 크기 성장은 '재질 밴드 안'이 아니라 '사다리 전체 진행도' 기준 (2026-08-03 유저: 축구공이 농구공보다 커 보인다).
 // 🔧 2026-08-04 유저: "같은 공인데 라운드가 지날수록 커지고, 너무 커지니 화질도 나빠진다" → 성장 0.32 → 0.
 //    크기는 이제 재질(공 종류)로만 정해진다. 이 상수만 되돌리면 성장이 살아난다 (0.12 정도가 순한 맛).
 //    ⚠️ 0이 아니면 스프라이트를 확대해 그리게 되어 화질이 다시 흐려진다 (matSpriteSz는 성장을 모른다).
 const MON_GROWTH = 0;
-function monProg(m) { return Math.min(1, ((m.mat || 0) + (m.esc || 0)) / (MATERIALS.length - 1)); }
+function monProg(m) { return Math.min(1, ((m.mat || 0) + (m.esc || 0)) / (MAT_BASE_N - 1)); } // 분모 = 기본 14종 기준(13) 고정 — 변종을 MATERIALS 뒤에 붙여도 값이 안 변하게
 function monSize(m) { return (m.boss ? (m.sunBoss ? 104 : 52) : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + monProg(m) * MON_GROWTH); } // 🌞 태양 = 보스 2배
 // 🪖 몬스터 장비: esc 버킷(bucket/7)으로 장비 개수, HP 비율로 파괴 단계 — 드로우와 베이크가 같은 버킷 기준을 쓰게 공용화
 const MON_GEAR_ON = false; // 🪖 투구·어깨갑옷 (09-18 유저: 전부 삭제) — false면 gearCount 0 = 맨몸, 파괴 FX·베이크 키 변형도 자연 무동작. 되살리려면 true
@@ -3857,6 +3864,32 @@ function curPattern() { // 이번 라운드 실제 적용값: 멀티면 없음 �
   return p;
 }
 function plainMul(N, Nf, W) { return (N - FLY_HP * Nf - 4 * W) / (N - Nf - W); } // 지상 몹 HP 환산(52 §5): Nf·0.8h + W·4h(방패병 HP 2h + 보호막 2h) + (N−Nf−W)·g·h = N·h
+// ==================== 구슬 변종 1차 4종 (2026-10-15, 구슬몹_2026-10-14\10_구현설계.md — §13 반박 검토 반영) ====================
+// 스케줄 = 챌린지 밴드마다 끝자리 2·4·9 라운드 고정(랜덤 아님): 젤리 R11~20 · 밤송이 R21~30 · 이끼 공 R31~40 · 눈덩이 R41~50. 보스(x0)·멀티·튜토리얼·샌드박스·맵 미리보기·스토리엔 없음.
+// VAR_ON = 스위치 하나(출시 기본 꺼짐 — 유저가 보드를 보고 결정). 꺼지면 S.pat·스폰 큐·몹에 새 키가 안 생겨 지금과 1비트도 같다.
+//   전역 let이라 콘솔·하네스에서 VAR_ON = true 로 켬 — 포커 단계에서 켜고 S.pat = curPattern() 을 다시 부를 것(S.pat은 startPoker가 세움).
+// 피해 속성 = dealDamage 4번째 인자 el('phys' 기본 | 'fire'). 지금 불 출처 = 화염 띠(플러쉬 화염방사기 계열)·쇼군 1·2타·용암 돌 착탄·화상 도트. 얼음은 출처가 없어 미구현(영웅 갈래 때 — 설계 §5-5).
+let VAR_ON = false;
+const VAR_IN_DUEL = true; // 결투 라운드(R14·R42·R49)에도 변종 — 도전자 자신은 변종·속성 미적용. false 한 단어 → 젤리 R12·R19, 눈덩이 R44만(첫 등장도 varFirst가 따라감)
+const VAR_BANDS = [[11, 20, 14, 0.15], [21, 30, 15, 0.20], [31, 40, 16, 0.20], [41, 50, 17, 0.20]]; // [첫, 끝, 재질, 비율] — 변종 수 = round(마릿수 × 비율), 정확히 N마리(공중·방패병 자리 제외)
+const VAR_TAG = { 14: ['젤리', '잡으면 둘로 갈라져요'], 15: ['밤송이', '껍질은 불에 탁 터져요'], 16: ['이끼 공', '쉬게 두면 차올라요'], 17: ['눈덩이', '불에 녹아요'] }; // 포커 배너 한 줄(첫 등장 라운드만, 수치 없음)
+const VAR_HP = { 14: 1.00, 15: 0.97, 16: 1.05, 17: 1.10 }; // 🔧 밸런스 노브: 변종 HP = 그 라운드 지상 몹 HP × 값 — 아직 측정 전 시작값(설계 §10-5: VAR_ON만 끈 판 대비 덱 3종 평균 클리어 비율 1.00±0.03으로 확정할 것)
+const VAR_FIRE = { 16: 1.4, 17: 1.4 }; // 불 약점 배수(이끼 공·눈덩이) — 불 피해·화상 도트 모두
+const VAR_BOB = { 14: [5, 2.0], 15: [2, 1.6], 16: [0, 0], 17: [3, 1.3] }; // 통통 [높이, 빠르기] — draw 몹 루프의 MAT_BOB은 mat < 8만 읽어서 따로
+const JELLY = { PARENT: 0.5, KID: 0.5, KIDS: 2 }; // 젤리 몫 H: 본체 ⌊H/2⌋ + 조각 2개 각 ⌊본체 max/2⌋ (합 ≈ H)
+const BURR = { MUL: 0.88, PEEL_AT: 0.5 }; // 밤송이: 껍질 동안 물리 ×0.88(단단함 1등급 −12% 상당) · 체력 절반에서 벗겨짐 · 불이면 즉시
+const MOSS = { IDLE: 1.5, TICK: 0.25, SELF: 0.06, NEAR: 0.04, NEAR_R: 34, NEAR_N: 3, BUDGET: 0.5 }; // 이끼: 1.5초 안 맞으면 0.25초마다 재생 · 자기 초당 max 6% · 옆 3마리(중심 34px 안) 초당 이끼 max 4%씩 · 총량 = 이끼 max의 50%까지
+const VAR_FIRE_T = 1.5; // 불에 맞은 뒤 '불 맞음' 시간(이끼 재생 멈춤 · 김·연기 연출)
+const VAR_DEX_EL = { 15: ['phys', 'fire'], 16: ['fire'], 17: ['fire'] }; // 도감 아이콘 = 지금 있는 속성만(젤리 없음) — 그 속성으로 맞혀 봐야 밝혀짐
+function varRound(r) { // 순수 함수(S 무관): 라운드 → { vk, ratio } | null
+  const d = r % 10;
+  if (d !== 2 && d !== 4 && d !== 9) return null; // 끝자리 2·4·9만 (0 = 보스는 자동 제외)
+  if (!VAR_IN_DUEL && r % DUEL_EVERY === 0) return null; // 결투 라운드 빼는 안 (R≤50에선 duelRound와 같은 산수)
+  for (const [a, b, vk, ratio] of VAR_BANDS) if (r >= a && r <= b) return { vk, ratio };
+  return null; // R1~10·R51+·헬 = 없음
+}
+function varFirst(vk) { const b = VAR_BANDS.find(x => x[2] === vk); for (let r = b[0]; r <= b[1]; r++) if (varRound(r)) return r; return -1; } // 그 변종의 첫 등장 라운드(숫자를 박지 않음)
+function matDexN() { return VAR_ON ? MATERIALS.length : MAT_BASE_N; } // 도감·샌드박스가 보는 재질 수 — 꺼지면 14 그대로
 // 🏛️ 결투 창(window): 팝업·락인이 활성인 구간 — 도전자가 있거나, 결투 라운드 포커 중 아직 결판나지 않았을 때
 function duelWindowActive() { return !!S.duel || (S.phase === 'poker' && duelRound(S.round) && !S.duelEnded); }
 
@@ -5043,6 +5076,8 @@ function startWave() {
   // 소환장 가운데에서 우르르 쏟아지듯 (약 2초 안에 전부 등장)
   S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0, mobMul: !S.multi && boss && BOSS_ABILITY[bossShapeFor(S.round)] === 'gravity' ? GRAV.MOB_HP_MUL : 1, // 패턴 1단계: 목성 라운드 잡몹 보정 노브(기본 1.0 = 무변경, 보스 HP는 건드리지 않음)
     count, hp0, nFly, nWard, hpFly: Math.max(1, Math.floor(hp0 * FLY_HP * ak)), hpWard: hp0 * 2 * ak, shWard: hp0 * 2 * ak, flyDone: 0, wardDone: 0 }; // 받침: 스폰 순번·어픽스 분산(스폰 틱) · 방패병 = HP 2h0 + 보호막 2h0 · ak = 공중 노브(잡몹만, 기본 1)
+  const nVar = pat.vk ? Math.min(Math.round(count * pat.vr), count - nFly - nWard) : 0; // 🫧 구슬 변종(10-15): 정확히 N마리 = round(마릿수 × 비율), 공중·방패병 자리 제외 — 꺼지면 S.pat에 vk 없음 = 0
+  if (nVar > 0) Object.assign(S.spawnQueue, { nVar, vk: pat.vk, hpVar: Math.max(1, Math.floor(hp * VAR_HP[pat.vk])), varDone: 0 }); // 변종 HP = 지상 몹 1마리(hp, plainMul 환산 뒤) × 노브 — 큐 키는 변종 라운드에만(꺼짐 = 큐 모양 그대로)
   S.air = nFly ? { on: true, up: true, t: 0, k: 0, upT: pat.upT, downT: pat.downT } : null; // 공중 라운드 착지 시계: 체공 upT초 / 착지 downT초 반복 (k = 이착륙 0~1, WING.EASE초)
   if (S.multi) mpWaveStart(); // 🤖 멀티: 레인 개체 출발 + 프록시 투입 · 보스 라운드 bossLeft 0
   if (S.duel) { // 연장전(포커)까지 못 잡았으면 새 웨이브 시작에 퇴장 — 챔피언이 잠겨 있었으면 대신 사망
@@ -5100,6 +5135,7 @@ function spawnMonster(hp, isBoss, opt) {
     if (st >= 50 && Math.random() < 0.16) { m.shieldMax = m.shield = Math.max(1, Math.floor(hp * 0.6)); } // 🛡️ 쉴드
   }
   if (isBoss && S.round >= FINAL_ROUND) m.split = true; // 💥 보스 분열: 처치 시 5조각 (각 30% HP)
+  if (opt.vk && VAR_ON && !isBoss && !opt.child) varInit(m, opt.vk); // 🫧 구슬 변종(10-15): 난수(위치·재질·황금·쉴드)를 다 뽑은 뒤 덮어씀 · 소비 함수 진입점에서 스위치 확인(스폰 틱·샌드박스 버튼 공통)
   S.monsters.push(m);
   return m;
 }
@@ -5938,7 +5974,8 @@ function update(dt) {
         const step = (j, n, M) => n > 0 && Math.floor((j + 1) * n / M) > Math.floor(j * n / M);      // 정확히 n번 참, 균등 분산 (난수 없음)
         const fly = step(i, q.nFly || 0, N); if (fly) q.flyDone++;
         const ward = !fly && step(i - (q.flyDone || 0), q.nWard || 0, N - (q.nFly || 0)); if (ward) q.wardDone++; // 공중을 뺀 순번 위에서 세어 공중 + 방패병 라운드(x8, R38~)도 정확히 nWard
-        spawnMonster(Math.floor((fly ? q.hpFly : ward ? q.hpWard : q.hp) * (q.mobMul || 1)), false, { slot: i, slotN: N, affix: fly ? 'fly' : ward ? 'ward' : null, shield: ward ? q.shWard : 0 }); // 패턴 1단계: 잡몹만 mobMul(목성 라운드 노브, 기본 1 → 값 동일). 멀티·태양전 큐엔 mobMul 없음 → || 1
+        const vr = !!q.nVar && !fly && !ward && step(i - (q.flyDone || 0) - (q.wardDone || 0), q.nVar, N - (q.nFly || 0) - (q.nWard || 0)); if (vr) q.varDone++; // 🫧 구슬 변종(10-15): 공중·방패병을 뺀 순번 위에서 정확히 nVar (꺼지면 q.nVar 없음 → step도 안 부름)
+        spawnMonster(Math.floor((fly ? q.hpFly : ward ? q.hpWard : vr ? q.hpVar : q.hp) * (q.mobMul || 1)), false, { slot: i, slotN: N, affix: fly ? 'fly' : ward ? 'ward' : null, shield: ward ? q.shWard : 0, vk: vr ? q.vk : 0 }); // 패턴 1단계: 잡몹만 mobMul(목성 라운드 노브, 기본 1 → 값 동일). 멀티·태양전 큐엔 mobMul 없음 → || 1
       }
     }
     if (q.bossLeft > 0 && S.timer < WAVE_TIME - 5) {
@@ -6144,7 +6181,7 @@ function update(dt) {
           }
           const r2 = p.splash * p.splash;
           const lava = p.boulder && p.owner && p.owner.stone === 'lava'; // 🥚 용암 묻은 돌 — 착탄 화상 도트 (쇼군 화상 재사용)
-          for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y + (m.lift || 0) - gcy; if (ddx*ddx + ddy*ddy <= r2) { dealDamage(m, p.dmg, p.owner); if (lava && !airborne(m)) { m.burnT = Math.max(m.burnT || 0, 2.5); m.burnDmg = Math.max(m.burnDmg || 0, p.dmg * 0.2); } } } // 거리 = 땅 지점끼리 (지상 몹 lift 0 = 무변경)
+          for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y + (m.lift || 0) - gcy; if (ddx*ddx + ddy*ddy <= r2) { dealDamage(m, p.dmg, p.owner, lava ? 'fire' : 'phys'); if (lava && !airborne(m)) { m.burnT = Math.max(m.burnT || 0, 2.5); m.burnDmg = Math.max(m.burnDmg || 0, p.dmg * 0.2); } } } // 거리 = 땅 지점끼리 (지상 몹 lift 0 = 무변경)
         }
         return false;
       }
@@ -6310,10 +6347,12 @@ function update(dt) {
 function killGoldNow() { return Math.max(1, Math.round(S.round * 0.042)) * ((S.eventMods && S.eventMods.killMul) || 1) * (S.feverT > 0 ? 2 : 1); } // 0.06 → ×0.7 (경제 개편: 수동 수입 축소, 광산·이자로 축 이동) — 🤖 습격대 킬 골드(n × 이 값)도 같은 식
 
 // 데미지 적용: 쉴드가 있으면 쉴드부터 깎고, 넘치면 체력으로 (모든 공격이 이 함수를 거침)
-function dealDamage(m, dmg, owner) {
+//   el = 피해 속성 'phys'(기본·생략) | 'fire' (구슬 변종 10-15) — 불 출처만 'fire'를 넘긴다: 화염 띠(areaHit vis 'flame')·쇼군 1·2타·용암 돌 착탄(본탄·파편·두 번째 돌). 화상 도트는 이 함수를 안 거침(update 화상 줄)
+function dealDamage(m, dmg, owner, el) {
   if (m.entering) return; // 🌞 강림 중엔 무적 (연출 보호 — 염산·폭격 포함 전 데미지가 이 함수를 거친다)
   if (airborne(m) && !canHitAir(owner)) return; // 공중: 떠 있는 몹은 쏘는 무기만 (스플래시·전체 타격·파편·착탄 반경·슬롯 폭격 전부 이 한 줄 — 통계도 안 쌓임)
   if (m.weakT > 0) dmg *= WEAK.MUL; // 약점 창(받침 A 분기 순서: entering 무적 → [2단계 공중 return 자리] → 보스 배수(약점·토성·화성) → [장갑] → [금성 lastHitAt] → 쉴드 → 체력)
+  if (m.vk) dmg = varHit(m, dmg, el); // 구슬 변종(10-15) = [장갑]·[금성 lastHitAt] 자리 — 변종 몹만(꺼지면 m.vk 없음 = 무변경). 통계 줄보다 위라 딜 순위가 실제 피해를 센다
   if (owner) m.lastHitBy = owner;
   if (owner && owner.weapon) { const st = S.stats[owner.weapon] = S.stats[owner.weapon] || { dmg: 0, kills: 0 }; st.dmg += dmg; }
   m.hitT = 0.09; // 피격 리액션 (스쿼시 + 놀란 표정)
@@ -6323,6 +6362,17 @@ function dealDamage(m, dmg, owner) {
   } else {
     m.hp -= dmg;
   }
+}
+// ── 🫧 구슬 변종(10-15) 받침: 변종 몹(m.vk = 재질 14~17)만 도는 함수들. m.vk는 VAR_ON일 때 spawnMonster(opt.vk)에서만 생긴다 → 꺼지면 어느 것도 안 불림
+function varInit(m, vk) { // 변종 세우기 — spawnMonster가 재질·황금·쉴드 난수를 다 뽑은 뒤 덮어씀(켜도 일반 몹과 같은 난수를 같은 순서로 소비)
+  m.vk = vk; m.mat = vk; m.esc = matInfo(S.round).p; m.golden = false; // 재질·밴드 험악도 고정(밴드 끝 '다음 재질'에 뽑혔어도) · 황금 불가(모양이 먼저 읽혀야 함)
+  m.lastHitAt = S.time; m.fireT = 0; m.fxT = 0; // 마지막으로 맞은 시각(이끼 재생 시계) · '불 맞음' 끝 시각 · 연출 쓰로틀
+}
+function varHit(m, dmg, el) { // dealDamage 자리 — 반환 = 바뀐 피해
+  if (!m.vk) return dmg; // 진입점 차단
+  m.lastHitAt = S.time; // [금성 lastHitAt] 첫 사용 — 금성 재생 틀이 생기면 보스도 같은 필드
+  if (el === 'fire') m.fireT = S.time + VAR_FIRE_T;
+  return dmg;
 }
 function farthestMob(x, y, exclude, rad, skipAir) { // 반경 안에서 가장 먼 몹 — 대형 표창이 시원하게 가로지르며 팅긴다 · skipAir = 떠 있는 몹 제외(못 치는 무기의 팅김)
   let best = null, bd = -1;
@@ -6462,11 +6512,11 @@ function areaHit(u, x, y, dmg, gy) {
     for (let i = 0; i < 10; i++) { const v = 90 + Math.random()*160, aa = ang0 + (Math.random()-0.5)*1.8;
       S.parts.push({ x: u.x, y: u.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 30, g: true, t: 0.4, r: 1.5 + Math.random()*2.2, c: i%3 ? '#ff8a3d' : '#ffd54f' }); }
     for (const m of S.monsters) { const dx2 = m.x - u.x, dy2 = m.y + (m.lift || 0) - u.y; // 거리 = 땅 지점 (10-12 결정 1)
-      if (dx2*dx2 + dy2*dy2 <= R2) { dealDamage(m, dmg, u); if (!airborne(m)) { m.burnT = burnT; m.burnDmg = dmg * (asc >= 1 ? 0.4 : 0.2); } } } // 공중: 떠 있는 몹엔 화상도 안 붙음 (쇼군 ✕)
+      if (dx2*dx2 + dy2*dy2 <= R2) { dealDamage(m, dmg, u, 'fire'); if (!airborne(m)) { m.burnT = burnT; m.burnDmg = dmg * (asc >= 1 ? 0.4 : 0.2); } } } // 공중: 떠 있는 몹엔 화상도 안 붙음 (쇼군 ✕)
     if (asc >= 2) { // 🗡️ 승급2 이단 베기: 우로 벤 칼이 좌로 되돌아온다 — 2타는 공격력 50%
       S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.96, a: ang0 + 0.25, t: 0.30 + 0.16, dur: 0.30, fire: true, rev: true }); // 0.16초 늦게 시작(t>dur 동안 대기), 반대 스윕
       for (const m of S.monsters) { const dx2 = m.x - u.x, dy2 = m.y + (m.lift || 0) - u.y;
-        if (dx2*dx2 + dy2*dy2 <= R2) dealDamage(m, dmg * 0.5, u); }
+        if (dx2*dx2 + dy2*dy2 <= R2) dealDamage(m, dmg * 0.5, u, 'fire'); } // 불꽃 참격 2타 = 불 (10-15 변종 속성)
     }
     return;
   } else if (vis === 'sword') { // 🗡️ 단검: 유닛 중심 난도질 — 참격 호 최대 = 사거리
@@ -6517,7 +6567,7 @@ function areaHit(u, x, y, dmg, gy) {
       const t2 = px * nx + py * ny;                    // 스트림 축 방향 투영
       if (t2 < -6 || t2 > L + 14) continue;
       const d = Math.abs(px * ny - py * nx);           // 축에서의 수직 거리
-      if (d <= u.splash + monSize(m) * 0.5) dealDamage(m, dmg, u);
+      if (d <= u.splash + monSize(m) * 0.5) dealDamage(m, dmg, u, 'fire'); // 화염 띠 = 불 (10-15 변종 속성 — 플러쉬·영웅·에이스·슈퍼·분신 공통 길)
     }
     return;
   }
@@ -6729,7 +6779,7 @@ function markMon(i) {
     const d = JSON.parse(localStorage.getItem('dpd_mondex') || '{}');
     if (!d[i]) {
       d[i] = 1; localStorage.setItem('dpd_mondex', JSON.stringify(d));
-      if (MATERIALS.every((_, k) => monSeen(k))) markAchv('mondex');
+      if (MATERIALS.slice(0, MAT_BASE_N).every((_, k) => monSeen(k))) markAchv('mondex'); // '몬스터 도감 14종 완성' = 기본 14종 고정(변종은 도감 칸만 늘고 업적과 무관 — 10-15 Q13)
       return true;
     }
   } catch (e) {}
@@ -9822,7 +9872,7 @@ const MON_HOT = { // = 설계 M2 (OUT_HOT은 MON_LOOK.OUT_DARK/FLAME과 같은 �
   SPOT: '#c0392b', SPOT_OUT: '#840000',  // 목성 몹 대적점(현행) + 테
   VOID: '#000000',         // 블랙홀 중심
   RING_BAND: [0.80, 1.00], // 블랙홀 B안 띠 = 중심 대칭 고리(바깥 20%) — 스프라이트가 회전해도 빛 방향이 안 흔들린다
-  ROCK_CRACK: { 9: true, 11: true }, // 바위 행성(달·목성) 파손 금 = shade(c, −90) 진한 금 (밝은 몸에 흰 금은 안 보임) — C2에서 사용
+  ROCK_CRACK: { 9: true, 11: true, 17: true }, // 바위 행성(달·목성) 파손 금 = shade(c, −90) 진한 금 (밝은 몸에 흰 금은 안 보임) — C2에서 사용 · 17 눈덩이(흰 몸, 10-15)
   NO_HI: { 13: true },     // 하이라이트 생략 재질(블랙홀 — 회전 스프라이트)
 };
 const MON_BOSS = { // = 설계 M3 (SHAPES·NAME 제외). 라이브 보스 = 행성 사다리 10종 20~27(27 = 13 별칭)·15·28 — 레거시 14·10·11·12는 도달 불가(C3에서 삭제)
@@ -10442,7 +10492,7 @@ function matSprite(mat, bucket, golden, broken) {
         }
         drawMonGear(SPR_C, SPR_C, sz, monGearCount(bucket), broken, mat);
       } else {
-        const c = golden ? '#ffcf3a' : shade(MATERIALS[mat].col, -Math.round(escB * 62));
+        const c = golden ? '#ffcf3a' : shade((MATERIALS[mat] || MAT_VIS[mat]).col, -Math.round(escB * 62)); // MAT_VIS = 그림 전용 번호(40 알밤) — 0~17은 같은 값
         drawMatStatic(SPR_C, SPR_C, sz, mat, escB, c, broken);
       }
     } finally { ctx = old; }
@@ -13340,6 +13390,10 @@ const MAT_DESC = [
   '거대한 가스 행성 목성. 대적점이 눈길.',
   '이글이글 태양! 만지면 큰일나요.',
   '모든 걸 삼키는 심연, 블랙홀…',
+  '말캉말캉 젤리 공. 잡으면 작은 젤리 둘로 퐁!', // 14~17 구슬 변종 (10-15)
+  '따끔한 가시 껍질. 불에 닿으면 탁! 알밤이 돼요.',
+  '폭신한 이끼 뭉치. 가만두면 다시 차올라요.',
+  '뽀득뽀득 눈덩이. 불 앞에선 금세 녹아요.',
 ];
 function monsterAt(x, y) {
   let best = null, bd = Infinity;
@@ -14379,13 +14433,13 @@ function renderShop() {
     const itemKeys = ['timestop', 'stimpack', 'acid', 'bombard', 'revive', 'plank'];
     const items = itemKeys.map(k => btn('it_' + k, ITEM_META[k].name)).join('');
     const misc = btn('gold', '골드 +100k') + btn('chip', '칩 +10');
-    const mobs = MATERIALS.map((mt, i) => btn('mob' + i, mt.name)).join('') + btn('boss', '보스') + btn('bossS', '분열 보스');
+    const mobs = MATERIALS.slice(0, matDexN()).map((mt, i) => btn('mob' + i, mt.name)).join('') + btn('boss', '보스') + btn('bossS', '분열 보스'); // 변종 14~17은 VAR_ON일 때만
     el.innerHTML = grid('일반 유닛', units) + grid('영웅', heroes) + grid('슈퍼영웅', supers) +
       grid('♠ 에이스', aces) + grid('♠♠ 슈퍼에이스', superAces) + grid('히든', hiddens) +
       grid('광부', miners) + grid('아이템 유닛', items) + grid('몬스터 (현재 라운드 HP)', mobs) + grid('기타', misc);
     el.querySelectorAll('[data-sb]').forEach(b => b.onclick = () => {
       const v = b.dataset.sb;
-      if (v.startsWith('mob')) { const m = spawnMonster(monsterHP(S.round), false, {}); m.mat = +v.slice(3); m.esc = 0.5; }
+      if (v.startsWith('mob')) { const i = +v.slice(3), m = spawnMonster(monsterHP(S.round), false, i >= MAT_BASE_N ? { vk: i } : {}); if (i < MAT_BASE_N) m.mat = i; m.esc = 0.5; } // 변종(14~17) = spawnMonster의 varInit이 세움(VAR_ON일 때만)
       else if (v === 'boss') spawnMonster(monsterHP(S.round) * (S.round >= FINAL_ROUND ? 2.8 : 9.4 / splitComp(S.round)), true);
       else if (v === 'bossS') { const bm = spawnMonster(monsterHP(S.round) * 2.8, true); bm.split = true; }
       else if (v.startsWith('sa')) spawnUnit(+v.slice(2), RACE_OF_RANK[+v.slice(2)], true, 14, true);
@@ -14434,9 +14488,10 @@ function achvDexHTML() {
 }
 // 📚 몬스터 도감 섹션 HTML (발견: 이름+설명+색칩, 미발견: ❓ ???)
 function monDexHTML() {
-  const discovered = MATERIALS.filter((_, i) => monSeen(i)).length;
-  return `<section class="dexSec"><h3 class="dexSecH">몬스터 도감 <small>(${discovered}/${MATERIALS.length})</small></h3>` +
-    MATERIALS.map((mat, i) => {
+  const MS = MATERIALS.slice(0, matDexN()); // 변종 14~17은 VAR_ON일 때만 (꺼지면 14칸 그대로)
+  const discovered = MS.filter((_, i) => monSeen(i)).length;
+  return `<section class="dexSec"><h3 class="dexSecH">몬스터 도감 <small>(${discovered}/${MS.length})</small></h3>` +
+    MS.map((mat, i) => {
       const seen = monSeen(i);
       return `<div class="handRowG"${seen ? '' : ' style="opacity:.6"'}>
         <span class="hname"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${seen ? mat.col : '#555'};margin-right:4px"></span>${seen ? mat.name : '???'}</span>
