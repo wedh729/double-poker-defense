@@ -8648,9 +8648,10 @@ function draw() {
   ctx.save();
   // 화면 흔들림 제거 (울렁임 유발) — 타격감은 이펙트·파티클로만 표현
   if (!S.multi) drawBackdrop(); // 초원 + 스테이지별 하늘 (멀티: 지면은 메인 캔버스의 월드 베이크가 비친다 — 배경 B안)
+  if (S.story) storyDrawRoad(); // 📖 코드 흙길·개울·바위 (죽음 얼룩보다 아래)
   ctx.drawImage(decalCv, 0, 0); // 죽음 얼룩
-  // 중앙 스폰존 표시 (정적 — 매 프레임 그라데이션을 새로 만들지 않고 1회 구워 blit)
-  bakedLayer('spawnGlow', CX - 280, CY - 280, 560, 560, () => {
+  // 중앙 스폰존 표시 (정적 — 매 프레임 그라데이션을 새로 만들지 않고 1회 구워 blit) · 📖 스토리엔 소환장 없음
+  if (!S.story) bakedLayer('spawnGlow', CX - 280, CY - 280, 560, 560, () => {
     const grad = ctx.createRadialGradient(CX, CY, 10, CX, CY, 280);
     grad.addColorStop(0, 'rgba(140,120,220,0.10)');
     grad.addColorStop(1, 'rgba(140,120,220,0)');
@@ -8694,10 +8695,11 @@ function draw() {
     else drawMonster(m);
   }
   if (flyN) for (const m of S.monsters) if (m.fly && !m.lane && !(m.lift > 0.5)) drawFlyMob(m); // 낮은 공중 패스(착지했거나 막 뜨는 몹, lift ≤ 0.5): 날개(몸 뒤) → 몸, 모든 지상 몹 위(뭉친 무리 속에서도 날개가 보이게 — 10-12 실제 화면 확인). 떠 있는 몹은 아래 하늘 패스(drawBarrackCap 뒤). MAT_BOB 바운스·부풀기 래퍼 없음 (보스는 fly 없음)
+  if (S.story) storyDrawCover(); // 📖 다리판 = 지상·낮은 공중 몹 위 (떠 있는 몹은 아래 하늘 패스라 다리 위로 보임)
   // ⏳ 시간 정지: 소환장 위 얼음 틴트 오버레이
   if (S.freezeT > 0) {
     ctx.fillStyle = 'rgba(140,200,255,0.18)';
-    ctx.fillRect(PEN.x - PEN.w/2, PEN.y - PEN.h/2, PEN.w, PEN.h);
+    if (S.story) storyFreezeTint(); else ctx.fillRect(PEN.x - PEN.w/2, PEN.y - PEN.h/2, PEN.w, PEN.h); // 📖 몹마다 몸 원에
     ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.textAlign = 'left'; // 일시정지 아이콘 삭제(10-12 유저 결정 5 — 93395a2 전엔 이 자리에서 그려 울타리 재그림에 거의 가려졌음(막대 끝 2점 RS2 59px만 보임), 219077a 하늘 패스 뒤에선 다 보였음). 위 상태 줄은 뒤 그리기 상태 그대로 두려고 유지
   }
@@ -9244,6 +9246,7 @@ function bakedLayer(key, x0, y0, w, h, drawFn) {
   ctx.drawImage(c, x0, y0, w, h); // 목적지는 논리 크기 — RS transform이 디바이스로 환산
 }
 function drawBarrack() { // 울타리·라벨 전부 정적 — 통째로 베이크 (키 = 아트 로드 여부)
+  if (S.story) return; // 📖 스토리엔 소환장 없음
   const b = PEN;
   if (FENCEART.v3) { const r = m3Rect(FENCEART.meta, b.x - b.w / 2, b.y - b.h / 2, b.w, b.h, 22); bakedLayer('barrack|g', r[0], r[1], r[2], r[3], drawBarrackRaw); return; } // 🎨 V3 울타리: 그림 크기에서 베이크 사각 계산 (위 22 = 라벨 글리프)
   bakedLayer('barrack|' + (FENCEART.img ? 'f' : artSp('fence') ? 'a' : 'v'), b.x - b.w / 2 - 30, b.y - b.h / 2 - 58, b.w + 60, b.h + 94, drawBarrackRaw); // 위 여백 58 — 통짜 울타리 라벨(y0-40)의 글리프 상단이 44를 넘어 잘렸었다
@@ -9337,6 +9340,7 @@ function drawBarrackRaw() {
 //    북쪽(울타리 뒤)에 선 유닛이 울타리에 반쯤 가려져 "뒤에 서 있다"로 읽힌다 (2026-08-10 유저 요청).
 //    울타리 안엔 유닛이 못 들어가므로(이동 차단) 이 영역에 걸치는 유닛 = 전부 뒤 → 무조건 재그림이 정확하다.
 function drawBarrackCap() {
+  if (S.story) return; // 📖 스토리엔 소환장 없음
   const fp = FENCEART.img;
   if (!fp) return;
   const b = PEN, x0 = b.x - b.w / 2, y0 = b.y - b.h / 2;
@@ -9509,6 +9513,7 @@ function drawFormGlyph() {
 }
 // 적 소환 포탈: 소환장 안에 생겨 몹이 우르르 쏟아진다 (10-07 저녁 유저: 05338fc 시절 프로시저럴 붉은 포털 복원 — 쏟아지는 동안만, 끝나면 페이드아웃)
 function drawEnemyPortal() {
+  if (S.story) { storyDrawGates(); return; } // 📖 소환장 포탈 대신 길 입구마다
   const q = S.spawnQueue;
   const active = (S.phase === 'wave' && q && q.left > 0);
   S.portalA = Math.max(0, Math.min(1, (S.portalA || 0) + (active ? 0.08 : -0.05)));
@@ -18607,6 +18612,53 @@ function storyGravity(b) { // 목성 중력 = 같은 길, 보스 앞뒤 GRAV_S �
   }
   if (WEAK.SHAPES[b.shape]) b.weakT = WEAK.T; // bossGravity와 같은 줄 (목성은 해당 없음)
 }
+// ---- 그리기 (설계 §12) ----
+function storyDrawRoad() { // 그림 없는 맵(bg null) = 코드 흙길 한 장 베이크 — RS·스테이지가 바뀌면 다시 굽는다 (rsMaybe는 이 베이크를 모름)
+  if (S.story.map.bg) return; // M4: 맵 그림이 길을 대신
+  if (!storyRoadBake || storyRoadBake._rs !== RS || storyRoadBake._id !== S.story.id) storyRoadBake = storyBakeRoad();
+  ctx.drawImage(storyRoadBake, 0, 0, VW, VH); // 목적지 논리 크기 명시 (10-08 교훈 ⑤)
+}
+function storyBakeRoad() { // ① 배치 불가 지형(색 = kind: 물 파랑·바위 회색) ② 길: 가장자리 → 흙 → 가운데 결 (겹치는 길이 한 덩어리로 보이게 단계마다 전부) → 자갈 점(맵 시드 — 게임 난수 안 씀)
+  const M = S.story.map, cv = document.createElement('canvas');
+  cv.width = Math.round(VW * RS); cv.height = Math.round(VH * RS);
+  const g = cv.getContext('2d'); g.scale(RS, RS); g.lineJoin = g.lineCap = 'round';
+  const poly = pts => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); };
+  for (const nb of M.noBuild) {
+    const water = nb.kind === 'water';
+    if (nb.band) { poly(nb.band.pts); g.strokeStyle = water ? 'rgba(206,236,250,0.9)' : '#7d7d76'; g.lineWidth = nb.band.w + 6; g.stroke(); g.strokeStyle = water ? '#5aa9d6' : '#9a9a92'; g.lineWidth = nb.band.w; g.stroke(); }
+    if (nb.circle) { const [x, y, r] = nb.circle;
+      if (water) { g.fillStyle = 'rgba(206,236,250,0.9)'; g.beginPath(); g.arc(x, y, r + 3, 0, 6.283); g.fill(); g.fillStyle = '#5aa9d6'; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); }
+      else { g.fillStyle = 'rgba(0,0,0,0.18)'; g.beginPath(); g.ellipse(x + 3, y + r * 0.35, r, r * 0.55, 0, 0, 6.283); g.fill();
+        g.fillStyle = '#9a9a92'; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.fillStyle = 'rgba(255,255,255,0.22)'; g.beginPath(); g.arc(x - r * 0.3, y - r * 0.3, r * 0.45, 0, 6.283); g.fill(); } }
+    if (nb.poly) { poly(nb.poly); g.closePath(); g.fillStyle = water ? '#5aa9d6' : '#9a9a92'; g.fill(); }
+  }
+  const P = S.story.P;
+  for (const p of P) { poly(p.fp); g.strokeStyle = 'rgba(118,90,56,0.85)'; g.lineWidth = p.w + 8; g.stroke(); }
+  for (const p of P) { poly(p.fp); g.strokeStyle = '#cdb489'; g.lineWidth = p.w; g.stroke(); }
+  for (const p of P) { poly(p.fp); g.strokeStyle = 'rgba(214,190,140,0.55)'; g.lineWidth = p.w * 0.55; g.stroke(); }
+  const rnd = mulberry32(M.idx + 77); g.fillStyle = 'rgba(140,112,74,0.55)';
+  for (const p of P) for (let i = 0; i < p.n; i += 5) { const o = (rnd() * 2 - 1) * p.w * 0.4, r = 0.8 + rnd() * 1.4; g.beginPath(); g.arc(p.x[i] + p.nx[i] * o, p.y[i] + p.ny[i] * o, r, 0, 6.283); g.fill(); }
+  cv._rs = RS; cv._id = S.story.id;
+  return cv;
+}
+function storyDrawGates() { // 입구 포탈 = 적 포탈 그림 재사용 — enemyPortalFx는 CX,CY로 옮겨 그리므로 고치지 않고 바깥에서 평행이동 (멀티 공용 함수 무변경)
+  const st = S.story, q = S.spawnQueue, on = S.phase === 'wave' && q && q.left > 0;
+  st.gateA = Math.max(0.5, Math.min(1, st.gateA + (on ? 0.08 : -0.05))); // 늘 보이고(0.5) 쏟아질 때 밝게
+  for (const pi of st.doors) { const P = st.P[pi]; ctx.save(); ctx.translate(P.x[0] - CX, P.y[0] - CY); enemyPortalFx(st.gateA); ctx.restore(); }
+}
+function storyDrawCover() { // 다리판: 가림 구간을 따라 폭 w + 14 나무 띠 + 판자 결 (몹 위에 그려져 몸을 가림)
+  for (const P of S.story.P) for (const [s0, s1] of P.cover) {
+    const a = storyIdx(P, s0), b = storyIdx(P, s1), hw = P.w / 2 + 7;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'butt';
+    ctx.beginPath(); ctx.moveTo(P.x[a], P.y[a]); for (let i = a + 1; i <= b; i++) ctx.lineTo(P.x[i], P.y[i]);
+    ctx.strokeStyle = '#5b3a1e'; ctx.lineWidth = hw * 2 + 4; ctx.stroke();
+    ctx.strokeStyle = '#a0703f'; ctx.lineWidth = hw * 2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(70,44,22,0.55)'; ctx.lineWidth = 1.2; ctx.beginPath();
+    for (let i = a; i <= b; i += 3) { ctx.moveTo(P.x[i] + P.nx[i] * hw, P.y[i] + P.ny[i] * hw); ctx.lineTo(P.x[i] - P.nx[i] * hw, P.y[i] - P.ny[i] * hw); }
+    ctx.stroke(); ctx.restore();
+  }
+}
+function storyFreezeTint() { for (const m of S.monsters) { if (m.lane || (m.fly && m.lift > 0.5)) continue; ctx.beginPath(); ctx.arc(m.x, m.y, monSize(m) * m.born, 0, Math.PI * 2); ctx.fill(); } } // 시간정지 = 몹 몸 원마다 (fillStyle은 호출처 — 떠 있는 몹은 하늘 패스가 따로)
 // ---- 건물·자리 (설계 §9·§11) ----
 function storyObjAt(x, y) { // objAt 스토리판 — 제단·포털·성 + (맵에 있으면) 광석방·광산. 결투장·소환장 없음
   if (Math.abs(x - ALTAR.x) <= ALTAR.w / 2 && Math.abs(y - ALTAR.y) <= ALTAR.h / 2) return 'altar';
