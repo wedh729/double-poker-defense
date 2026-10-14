@@ -15523,6 +15523,7 @@ const TUT_STEPS = [
     toast: '같은 유닛을 모아 하나로 합치면 더 강한 영웅이 돼요. 보급으로 같은 유닛을 보내 드렸어요. 하나를 더블클릭하면 같은 종류가 한꺼번에 골라져요.',
     toastMo: '같은 유닛을 모아 하나로 합치면 더 강한 영웅이 돼요. 보급으로 같은 유닛을 보내 드렸어요. 하나를 빠르게 두 번 탭하면 같은 종류가 한꺼번에 골라져요.',
     hint: '보급된 유닛 하나를 더블클릭해요.', hintMo: '보급된 유닛 하나를 빠르게 두 번 탭해요.',
+    toastWhen: () => !(S.goldFlash > 0), // 대관식 금빛 글자가 사라진 뒤 (그 위에 토스트가 겹쳐 '대박'처럼 보이지 않게)
     enter: t => { tutSelectOnly([]); hideObjInfo(); if (!t.supply) { t.supply = []; for (let k = 0; k < 5; k++) { spawnUnit(1, RACE_OF_RANK[1], false, 10); const u = S.units[S.units.length - 1]; u.x = u.tx = 400 + k * 30; u.y = u.ty = 108; t.supply.push(u); } tutSupply('같은 유닛'); } }, // 보급 자리 = 울타리 위 (아래 줄은 작은 폰에서 부대 정보 창에 가려 끌 수 없었다 — phone740 실측)
     done: t => { const s = tutSupplyAlive(t); return s.length > 0 && s.every(u => u.selected); },
     target: t => { const s = tutSupplyAlive(t); return s.length ? { unit: s[0] } : null; },
@@ -15631,7 +15632,7 @@ const TUT_STEPS = [
     toastTarget: () => ({ dom: ['#pokerBanner .poker-boss-warning', '#summonBtn'] }) },
   { id: 'bossCome', view: 'map', hint: '곧 커다란 보스가 나타나요.', ok: '보스 등장!',
     enter: t => { tutEnsureWave(t, 6); tutReachFix(); },
-    tick: t => tutEnsureWave(t, 6),
+    tick: t => { tutEnsureWave(t, 6); const b = S.monsters.find(m => m.boss); if (b) b.hp = b.max; }, // 스킬 단계 전에 쓰러지지 않게 (2배속 실측: 떠오르는 사이에 잡혀 스킬 단계가 건너뛰어졌다)
     done: () => S.monsters.some(m => m.boss && m.born >= 1), // 다 떠오른 뒤 (스킬 토스트가 정지한 채 보스를 가리키게)
     giveUp: t => t.waveEnds >= 6,
     target: () => ({ map: TUT_Z.pen }) },
@@ -15835,6 +15836,9 @@ function tutViewNeed(st) {
   const mobPoker = IS_MOBILE && document.body.dataset.tab === 'poker';
   const toBattle = { text: "오른쪽 아래 '전투' 버튼을 눌러 전장으로 가요.", target: { dom: '#mtBattle' } };
   const dlg = tutOpenDialog();
+  const bd = S.tut && S.tut.toastWait && ['crownModal', 'duelConfirm'].find(d => gameDialogVisible(d) && !(st.dlgOk && st.dlgOk.includes(d))); // 토스트 차례인데 대관식·결투 입장 창이 떠 있다(건너뛰기 길 등) → 그 창부터 닫게
+  if (bd) return bd === 'duelConfirm' ? { text: "'입장한다'나 '그만둔다'를 눌러 창을 닫아요.", target: { dom: '#duelConfirm .dcBtns' } }
+    : crownGuideOn ? { text: '✕를 눌러 왕관 안내를 닫아요.', target: { dom: '#crGuideX' } } : { text: "종족을 고르거나 '왕관 회수'를 눌러 창을 닫아요.", target: { dom: '#crGrid' } };
   if (st.view === 'modal') { const md = TUT_MODAL[st.modal]; if (md.open()) return null; if (dlg && dlg !== md.dlg && TUT_DLG_CLOSE[dlg]) return { text: '이 창을 닫으면 튜토리얼이 이어져요.', target: { dom: TUT_DLG_CLOSE[dlg] } }; return mobPoker ? toBattle : { text: md.text(), target: md.target() }; }
   if (st.view === 'any') return null;
   if (dlg && TUT_DLG_CLOSE[dlg] && !(st.dlgOk && st.dlgOk.includes(dlg))) return { text: '이 창을 닫으면 튜토리얼이 이어져요.', target: { dom: TUT_DLG_CLOSE[dlg] } }; // 엉뚱한 때 연 도감·설정 등
