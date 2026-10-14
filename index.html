@@ -5873,7 +5873,7 @@ function update(dt) {
       u.skillT -= dt;
       u.inPen = true; // 단검 암살·분신술 모두 소환장 안에서 싸운다
       let tgt = u.assassinTgt;
-      if (!tgt || tgt.hp <= 0 || (S.story && tgt.dead) || (airborne(tgt) && !canHitAir(u))) tgt = u.assassinTgt = strongestMonster(); // 공중: 대상이 떠오르면 다시 고름 · 📖 성에 닿아 빠진 몹(dead)은 다시 고름
+      if (!tgt || tgt.hp <= 0 || (S.story && (tgt.dead || tgt.occl)) || (airborne(tgt) && !canHitAir(u))) tgt = u.assassinTgt = strongestMonster(); // 공중: 대상이 떠오르면 다시 고름 · 📖 성에 닿아 빠진 몹(dead)·다리 밑으로 들어간 몹(occl — strongestMonster와 같은 거르기)은 다시 고름
       if (tgt && S.story) storyBlink(u, tgt); // 📖 걸어가지 않고 표적 옆으로 순간 이동
       else if (tgt) { const d = Math.hypot(tgt.x - u.x, tgt.y + (tgt.lift || 0) - u.y); if (d > effRange(u) * 0.7) { u.tx = tgt.x; u.ty = tgt.y + (tgt.lift || 0); } else { u.tx = u.x; u.ty = u.y; } } // 사거리·목적지 = 그림자(땅 지점 y + lift) 기준 (10-12 ② — 착지 하강 중 공중 대상, 지상 몹 lift 0 = 무변경)
       if (u.skillT <= 0) { // 종료 → 원래 자리로 복귀
@@ -6049,7 +6049,7 @@ function update(dt) {
     // 공속 2.5배 보너스는 2026-08-04 유저 지시로 삭제 (보스 데미지 2배만 남는다). 대상 선정은 위 1890행에서 갱신되므로 영웅·분신도 이 경로.
     if (u.skillT > 0) {
       const tgt = u.assassinTgt;
-      if (tgt && tgt.hp > 0 && u.cool <= 0 && !u.moving) {
+      if (tgt && tgt.hp > 0 && !(S.story && tgt.occl) && u.cool <= 0 && !u.moving) { // 📖 다리 밑 = 직접 조준 불가 — 표적 다시 고르기(위)보다 몹 걸음(occl 갱신)이 뒤라, 이번 프레임에 막 들어간 표적은 여기서 막는다
         const d = Math.hypot(tgt.x - u.x, tgt.y + (tgt.lift || 0) - u.y); // 사거리 = 그림자 기준 (10-12 ②)
         if (d <= effRange(u) + 24) { u.cool = effCd(u); u.aimX = tgt.x; u.aimY = tgt.y; fireAt(u, tgt); }
       }
