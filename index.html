@@ -3352,7 +3352,8 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
 #comicView.tight .cbNav {width:38px;height:38px;margin-top:-19px;border-radius:19px;}
 #comicView.tight .cbNav .cbIc {width:19px;height:19px;}
 #comicView.tight .cbNext .cbDoneTx {font-size:13px;}
-#comicView.tight .cbNext.done {padding:0 12px;}
+#comicView.tight .cbNext.done {width:auto;padding:0 12px;}
+#comicView .cbNext.done {white-space:nowrap;}
 #comicView.tight .cbSkip {top:max(6px,env(safe-area-inset-top,0px));height:30px;padding:0 12px;border-radius:15px;font-size:12px;}
 #comicView.tight .cbDots {bottom:max(6px,env(safe-area-inset-bottom,0px));gap:6px;}
 #comicView.tight .cbDots i {width:7px;height:7px;}
@@ -4188,7 +4189,13 @@ const CAST = {"bird": "소문 새", "sling": "새총 꼬마", "archer": "하트 
       const mw = W * 0.44;
       if (w > mw) { fs *= mw / w; w = mw; g.font = `900 ${fs}px ${FONT}`; }
       const hw = w / 2 + fs * 0.25, hh = fs * 0.62; // 칸 밖으로 안 나가게 가운데를 민다 (기울기 무시한 대략)
-      const cx = Math.min(W - hw, Math.max(hw, num(s.x, 0.5) * W)), cy = Math.min(H - hh, Math.max(hh, num(s.y, 0.5) * H));
+      const hit = (xx, yy) => P.bubBox.some(b => Math.abs(xx - b[0]) < hw + b[2] && Math.abs(yy - b[1]) < hh + b[3]);
+      const x0 = num(s.x, 0.5) * W, y0 = num(s.y, 0.5) * H;
+      let cx = 0, cy = 0;
+      for (const [kx, ky] of [[0, 0], [0, 1], [0, -1], [-1, 0], [1, 0], [-1, 1], [1, 1], [-1, -1], [1, -1], [-2, 0], [2, 0], [-2, 1], [2, 1], [0, 2], [-1, 2], [1, 2], [-2, 2], [2, 2], [0, 0]]) { // 말풍선·캡션(DOM, 위에 뜸)에 가리면 가까운 빈자리로 비켜 남 (없으면 제자리)
+        cx = Math.min(W - hw, Math.max(hw, x0 + kx * hw * 0.9)); cy = Math.min(H - hh, Math.max(hh, y0 + ky * hh * 1.2));
+        if (!hit(cx, cy)) break;
+      }
       g.save(); g.translate(cx, cy); g.rotate(num(s.rot, 0) * Math.PI / 180);
       g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
       g.strokeStyle = '#fffaf0'; g.lineWidth = fs * 0.36; g.strokeText(s.text, 0, 0);
@@ -4271,6 +4278,10 @@ const CAST = {"bird": "소문 새", "sling": "새총 꼬마", "archer": "하트 
     return `M${f1(b1[0])},${f1(b1[1])}Q${f1(q1[0])},${f1(q1[1])} ${f1(tx)},${f1(ty)}Q${f1(q2[0])},${f1(q2[1])} ${f1(b2[0])},${f1(b2[1])}Z`;
   }
   function balloons(P) { // 글자 크기를 재서 풍선을 맞춘다. 테는 두 배 굵기로 먼저 긋고 채움을 덮어 풍선+꼬리가 한 덩이 외곽선이 되게
+    for (const e of P.el.querySelectorAll('.cbCap, .cbTitle')) { // 캡션·제목 띠 자리도 효과음이 비켜 가게 (translate(-50%)인 제목 띠는 left/top이 가운데)
+      const t = e.classList.contains('cbTitle'), w = e.offsetWidth, h = e.offsetHeight;
+      P.bubBox.push([e.offsetLeft + (t ? 0 : w / 2), e.offsetTop + (t ? 0 : h / 2), w / 2, h / 2]);
+    }
     if (!P.bubs.length) return;
     const W = P.w, H = P.h, em = st.geo.fs, sw = Math.max(2.2, em * 0.17) * 2;
     let svg = '';
@@ -4282,6 +4293,7 @@ const CAST = {"bird": "소문 새", "sling": "새총 꼬마", "archer": "하트 
       cx = rx * out * 2 + mg * 2 >= W ? W / 2 : Math.min(W - rx * out - mg, Math.max(rx * out + mg, cx));
       cy = ry * out * 2 + mg * 2 >= H ? H / 2 : Math.min(H - ry * out - mg, Math.max(ry * out + mg, cy));
       d.style.left = f1(cx) + 'px'; d.style.top = f1(cy) + 'px';
+      P.bubBox.push([cx, cy, rx * out * 0.92, ry * out * 0.85]); // 효과음 글자가 비켜 갈 자리 (drawSfx)
       const [fill, line] = BUB[b.who] || ['#fffdf6', '#2b1d10'];
       const body = shout ? spikyPath(cx, cy, rx, ry, hash(b.text)) : ovalPath(cx, cy, rx, ry);
       const tail = Array.isArray(b.tail) ? tailPath(cx, cy, rx, ry, num(b.tail[0], 0.5) * W, num(b.tail[1], 0.5) * H, em) : '';
@@ -4308,7 +4320,7 @@ const CAST = {"bird": "소문 새", "sling": "새총 꼬마", "archer": "하트 
   function makePanel(pg, box) {
     const d = box.def, W = box.w, H = box.h, e = el('div', 'cbPanel', pg);
     e.style.cssText = `left:${box.x}px;top:${box.y}px;width:${W}px;height:${H}px`;
-    const P = { def: d, el: e, c: el('canvas', '', e), svgBox: el('div', 'cbSvg', e), w: W, h: H, k: 1, segs: null, motion: false, bubs: [] };
+    const P = { def: d, el: e, c: el('canvas', '', e), svgBox: el('div', 'cbSvg', e), w: W, h: H, k: 1, segs: null, motion: false, bubs: [], bubBox: [] };
     if (d.caption && d.caption.text) el('div', 'cbCap ' + (d.caption.pos === 'bottom' ? 'bot' : 'top'), e).textContent = d.caption.text;
     if (d.title && d.title.text) { const t = el('div', 'cbTitle', e); t.style.left = num(d.title.x, 0.5) * W + 'px'; t.style.top = num(d.title.y, 0.5) * H + 'px'; el('span', '', t).textContent = d.title.text; }
     for (const b of d.bubbles || []) {
@@ -4340,7 +4352,7 @@ const CAST = {"bird": "소문 새", "sling": "새총 꼬마", "archer": "하트 
     const aw = Math.max(160, vw - 2 * side), ah = Math.max(140, vh - top - bot), pad = Math.max(5, Math.round(Math.min(aw, ah) * 0.014));
     const hS = Math.min(ah - 2 * pad, (aw - 2 * pad) / (2 * AR)), h1 = Math.min(ah - 2 * pad, (aw - 2 * pad) / AR), spread = hS >= h1 * 0.84;
     const ph = Math.max(120, Math.floor(spread ? hS : h1)), pw = Math.floor(ph * AR);
-    return { spread, pw, ph, pad, top, bot, tight, fs: Math.max(10, Math.min(22, ph * 0.034)), k: pxK() };
+    return { spread, pw, ph, pad, top, bot, tight, fs: Math.max(11, Math.min(22, ph * 0.036)), k: pxK() }; // fs = 말풍선 글자 (가로 폰 쪽 높이 ~316 → 11.4px)
   }
   function applyGeo(g) {
     st.geo = g;
