@@ -2423,9 +2423,11 @@ body.mobile .rankGauge {display:inline-flex;gap:2px;margin-left:6px;padding:3px 
   #summonBtn.tutNope {animation:nopeFx .35s;} /* 튜토리얼: 소환 단계가 아닐 때 소환 버튼 흔들림 */
   #tutRing {animation:tutRingP 1s ease-in-out infinite alternate;}
   @keyframes tutRingP {from {opacity:.55;transform:scale(.96)} to {opacity:1;transform:scale(1.04)}}
+  #tutRing.wide {animation-name:tutRingO;} /* 화면 폭 가까운 대상(폰 카드 줄)은 커지지 않고 깜빡임만 — 화면 밖으로 안 넘치게 */
+  @keyframes tutRingO {from {opacity:.55} to {opacity:1}}
 }
 /* 튜토리얼 모드 (10-14): 한 줄 알림(양피지 = #tutTip 색)·하이라이트 링·일시정지 토스트·타이틀 버튼·끝 화면 */
-#tutPanel {position:fixed;z-index:72;left:8px;top:8px;max-width:340px;padding:5px 10px;border-radius:11px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:12.5px;font-weight:700;line-height:1.4;box-shadow:0 3px 0 #6b4a2a55,0 6px 14px #0004;pointer-events:none;box-sizing:border-box;}
+#tutPanel {position:fixed;z-index:72;left:8px;top:8px;max-width:470px;padding:5px 10px;border-radius:11px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:12.5px;font-weight:700;line-height:1.4;box-shadow:0 3px 0 #6b4a2a55,0 6px 14px #0004;pointer-events:none;box-sizing:border-box;}
 #tutPanel[hidden], #tutRing[hidden], #tutVeil[hidden], #tutToast[hidden] {display:none;}
 #tutPanel button {pointer-events:auto;}
 #tutPanel .tpOk {color:#557540;}
@@ -15347,9 +15349,9 @@ function tutWaveSteps(n) { return { enter: t => { tutEnsureWave(t, n); tutReachF
 const TUT_STEPS = [
   // ① 포커 — 카드 교환·금테·족보 표·소환
   { id: 'intro', view: 'any', icon: 'cards', title: '어서 와요, 지휘관님!',
-    toast: '카드로 유닛을 뽑아 몰려오는 몬스터를 막는 게임이에요. 하나씩 알려 드릴게요. 이런 안내가 떠 있는 동안 게임은 잠시 멈춰요.' },
+    toast: '카드로 유닛을 뽑아 몬스터를 막는 게임이에요. 이 안내가 떠 있는 동안엔 게임이 멈춰요.' },
   { id: 'swap', view: 'cards', icon: 'cards', title: '카드 바꾸기',
-    toast: '같은 숫자끼리 짝이 되면 금테가 둘러져요. 금테 없는 카드를 눌러 바꿔 보세요. 카드마다 한 번씩 바꿀 수 있어요.',
+    toast: '짝이 된 카드엔 금테가 둘러져요. 금테 없는 카드를 눌러 바꿔 보세요. 카드마다 한 번!',
     hint: '금테 없는 카드를 눌러 바꿔요.',
     cardHi: (h, i, made, hand) => !hand.swapped[i] && !made.includes(i),
     done: () => !!S.poker && evalHand(S.poker.hands[0].cards) >= 3,
@@ -15400,7 +15402,7 @@ const TUT_STEPS = [
     done: t => S.upg[t.race] > t.base.upg[t.race],
     target: t => ({ dom: `#shopBody [data-upg="${t.race}"]` }) },
   { id: 'gamble', view: 'modal', modal: 'castle', icon: 'star', title: '도전 강화',
-    toast: "'+3 도전'은 크게 오르지만 실전에선 실패할 수도 있어요(튜토리얼은 꼭 성공). 누른 뒤 움직이는 막대를 가운데에서 멈춰요.",
+    toast: "'+3 도전'은 크게 오르지만 실전에선 실패할 수 있어요. 누른 뒤 막대를 가운데에서 멈춰요.",
     hint: "'+3 도전'을 누르고 막대를 가운데에서 멈춰요.",
     enter: t => { tutOpenCastle(); tutGoldFor(t.race); },
     tick: t => { if (openShop === 'castle' && castleTab !== 'upg') { castleTab = 'upg'; renderShop(); } tutGoldFor(t.race); tutScrollTo(t, `#shopBody [data-gupg="${t.race}"]`); },
@@ -15410,7 +15412,7 @@ const TUT_STEPS = [
     done: () => !openShop,
     target: () => ({ dom: '#shopClose' }) },
   { id: 'summon2', view: 'cards', summon: true, icon: 'cards', title: '새 카드',
-    toast: '전투가 끝나면 새 카드가 와요. 실전에선 카드 고르는 시간이 다 되면 지금 패로 저절로 소환돼요. 마음대로 바꿔 보고 소환해요.',
+    toast: '새 카드가 왔어요. 실전에선 고르는 시간이 다 되면 저절로 소환돼요. 바꿔 보고 소환해요.',
     hint: "카드를 바꿔 보고 '유닛 소환!'을 눌러요.",
     enter: () => { if (openShop) closeShop(); },
     tick: t => { if (S.phase === 'wave' && (t.ev.summon || 0) < 2 && (t.waveEnds || 0) < 1) tutEndWaveNow(); }, // 건너뛰기 길: 첫 전투가 아직이면 끝낸다
@@ -15462,6 +15464,7 @@ const TUT_STEPS = [
     toast: "칩으로 광부를 고용할 수 있어요. '광부 고용'을 눌러 보세요.",
     hint: "'광부 고용'을 눌러요.",
     enter: () => { if (S.chips < 1) { S.chips = 1; if (CM.style.display === 'flex') casMenu(); } tutOpenChip(); },
+    tick: () => { if (S.chips < 1 && TUT_MODAL.chip.open()) { S.chips = 1; casMenu(); tutSupply('칩'); } }, // 캡슐 뽑기 등에 칩을 써 버렸으면 다시 (고용 단계가 막히지 않게)
     done: t => S.units.filter(u => u.miner).length > t.base.miners,
     target: () => ({ dom: '#chipBody [data-go="hire"]' }) },
   { id: 'more', view: 'modal', modal: 'chip', icon: 'gift', title: '그 밖의 것들',
@@ -15479,8 +15482,8 @@ const TUT_STEPS = [
     target: () => { const m = S.units.find(u => u.miner); return m ? { unit: m } : null; } },
   // ⑦ 광석 방 → 보상 광석 → 제물대 → 왕관 안내·대관식
   { id: 'room', view: 'map', icon: 'gem', title: '광석 방',
-    toast: '오른쪽 위 돌담 방이 광석 방이에요. 유닛을 넣으면 몬스터 대신 광석을 캐요. 유닛을 골라 방 안을 우클릭해 보세요.',
-    toastMo: '오른쪽 위 돌담 방이 광석 방이에요. 유닛을 넣으면 몬스터 대신 광석을 캐요. 유닛을 끌어 방 안에 놓아 보세요.',
+    toast: '오른쪽 위 광석 방에 넣은 유닛은 광석을 캐요. 유닛을 골라 방 안을 우클릭해 보세요.',
+    toastMo: '오른쪽 위 광석 방에 넣은 유닛은 광석을 캐요. 유닛을 끌어 방 안에 놓아 보세요.',
     hint: '유닛을 골라 광석 방 안을 우클릭해요.', hintMo: '유닛을 끌어 광석 방 안에 놓아요.',
     alt: () => !IS_MOBILE && !tutSelFighters().length ? '먼저 내 유닛 하나를 클릭해 골라요.' : '',
     enter: t => { tutSelectOnly([]); hideObjInfo(); if (!t.huntSet && S.hunt && S.hunt.stage === 1) { S.hunt.max = S.hunt.hp = TUT.HUNT_HP; t.huntSet = true; } },
@@ -15520,8 +15523,8 @@ const TUT_STEPS = [
     target: () => tutCrownOpen() ? { dom: '#crGrid' } : tutCrownU() ? { unit: tutCrownU() } : null },
   // ⑧ 강화 포털 — 같은 유닛을 모아 영웅 (+ 숨은 조합은 존재만)
   { id: 'fuse1', view: 'map', icon: 'star', title: '같은 유닛 모으기',
-    toast: '같은 유닛을 모아 하나로 합치면 더 강한 영웅이 돼요. 보급으로 같은 유닛을 보내 드렸어요. 하나를 더블클릭하면 같은 종류가 한꺼번에 골라져요.',
-    toastMo: '같은 유닛을 모아 하나로 합치면 더 강한 영웅이 돼요. 보급으로 같은 유닛을 보내 드렸어요. 하나를 빠르게 두 번 탭하면 같은 종류가 한꺼번에 골라져요.',
+    toast: '같은 유닛을 모아 합치면 영웅이 돼요. 보급한 유닛 하나를 더블클릭해 한꺼번에 골라요.',
+    toastMo: '같은 유닛을 모아 합치면 영웅이 돼요. 보급한 유닛 하나를 두 번 빠르게 탭해 골라요.',
     hint: '보급된 유닛 하나를 더블클릭해요.', hintMo: '보급된 유닛 하나를 빠르게 두 번 탭해요.',
     toastWhen: () => !(S.goldFlash > 0), // 대관식 금빛 글자가 사라진 뒤 (그 위에 토스트가 겹쳐 '대박'처럼 보이지 않게)
     enter: t => { tutSelectOnly([]); hideObjInfo(); if (!t.supply) { t.supply = []; for (let k = 0; k < 5; k++) { spawnUnit(1, RACE_OF_RANK[1], false, 10); const u = S.units[S.units.length - 1]; u.x = u.tx = 400 + k * 30; u.y = u.ty = 108; t.supply.push(u); } tutSupply('같은 유닛'); } }, // 보급 자리 = 울타리 위 (아래 줄은 작은 폰에서 부대 정보 창에 가려 끌 수 없었다 — phone740 실측)
@@ -15541,7 +15544,7 @@ const TUT_STEPS = [
     target: () => ({ dom: '#toolbar .shopIcon[data-shop="book"]' }) },
   // 재변경권 (광부가 캐 온 것) → R3 소환
   { id: 'reroll', view: 'cards', icon: 'ticket', title: '재변경권',
-    toast: '광부가 캐 온 재변경권을 써 봐요. 카드를 하나 바꾼 뒤, 바꾼 카드의 작은 표를 누르면 그 카드를 한 번 더 바꿀 수 있어요.',
+    toast: '재변경권을 써 봐요. 카드를 바꾼 뒤 그 카드의 작은 표를 누르면 한 번 더 바꿔요.',
     hint: () => S.poker && S.poker.hands[0].swapped.some(Boolean) ? '바꾼 카드의 작은 표를 눌러요.' : '금테 없는 카드를 하나 바꿔요.',
     enter: t => { if (S.items.reroll < 1) { S.items.reroll = 1; tutSupply('재변경권'); if (S.phase === 'poker') renderPoker(); } t.rr0 = S.items.reroll; },
     cardHi: (h, i, made, hand) => !hand.swapped.some(Boolean) && !made.includes(i),
@@ -15573,7 +15576,7 @@ const TUT_STEPS = [
     enter: t => tutEnsurePoker(t, 4),
     target: () => ({ dom: ['#pkSlow', '#bOpt'] }) },
   { id: 'double', view: 'cards', icon: 'cards', title: '두 패',
-    toast: "가끔 두 패가 함께 와요. 두 패의 족보를 똑같이 맞추면 강한 '에이스'가 나와요. 아래 패를 바꿔 위 패와 맞춰 보세요.",
+    toast: "두 패가 왔어요! 족보를 똑같이 맞추면 강한 '에이스'가 나와요. 아래 패를 바꿔 봐요.",
     hint: '아래 패의 카드를 바꿔 위 패와 같은 족보로 맞춰요.',
     cardHi: (h, i, made, hand) => h === 1 && !hand.swapped[i] && !made.includes(i),
     done: () => S.poker.hands.length === 2 && handResult(S.poker.hands).tier >= 1,
@@ -15592,8 +15595,8 @@ const TUT_STEPS = [
   Object.assign({ id: 'clear4', view: 'map', hint: '전투를 마쳐요.' }, tutWaveSteps(4), { enter: t => tutEnsureWave(t, 4) }),
   // ⑩ 결투장 — 도전자·입장 경고·입장·도망·결투·기권
   { id: 'duel', view: 'map', icon: 'swords', title: '결투장',
-    toast: '오른쪽 원형 경기장이 결투장이에요. 이번 전투엔 도전자가 와요! 유닛 하나를 들여보내 이기면 칩을 받아요. 유닛을 골라 결투장 안을 우클릭해 보세요.',
-    toastMo: '오른쪽 원형 경기장이 결투장이에요. 이번 전투엔 도전자가 와요! 유닛 하나를 들여보내 이기면 칩을 받아요. 유닛을 끌어 결투장 안에 놓아 보세요.',
+    toast: '결투장에 도전자가 와요! 이기면 칩을 받아요. 유닛 하나를 골라 결투장 안을 우클릭해요.',
+    toastMo: '결투장에 도전자가 와요! 이기면 칩을 받아요. 유닛 하나를 끌어 결투장 안에 놓아요.',
     hint: () => IS_MOBILE ? '유닛 하나를 끌어 결투장 안에 놓아요.' : tutSelFighters().length ? '결투장 안을 우클릭해요.' : '먼저 내 유닛 하나를 클릭해 골라요.',
     enter: t => { tutEnsurePoker(t, 5); tutSelectOnly([]); hideObjInfo(); },
     done: () => gameDialogVisible('duelConfirm') || !!(S.champion && S.champion.duelOk),
@@ -15605,7 +15608,7 @@ const TUT_STEPS = [
     done: () => !!(S.champion && S.champion.duelOk),
     target: () => gameDialogVisible('duelConfirm') ? { dom: '#duelConfirm .dcBtns button' } : { map: TUT_Z.arena } },
   { id: 'flee', view: 'map', icon: 'arrow', title: '도망',
-    toast: "들어가자마자 잠깐, 결투장 아래 '도망' 버튼이 차올라요. 위험하면 눌러서 빠져나올 수 있어요. 이번엔 그대로 싸워 봐요.",
+    toast: "들어간 직후 잠깐 아래 '도망' 버튼이 차올라요. 위험하면 눌러 빠져나와요. 지금은 그대로!",
     target: () => { if (!duelFleeActive()) return { map: TUT_Z.arena }; const r = duelFleeBtnRect(); return { mapRect: [r.x, r.y, r.x + r.w, r.y + r.h] }; } },
   { id: 'duelSummon', view: 'cards', summon: true, hint: "도전자는 전투가 시작되면 나와요. '유닛 소환!'을 눌러요.",
     done: t => (t.ev.summon || 0) >= 5,
@@ -15619,12 +15622,12 @@ const TUT_STEPS = [
     done: t => !!S.duelEnded || t.waveEnds >= 5,
     target: () => S.duel && !S.champion && tutVisRect('#duelForfeit') ? { dom: '#duelForfeit' } : { map: TUT_Z.arena } },
   { id: 'forfeit', view: 'map', icon: 'lock', title: '결투 기권',
-    toast: "아무도 안 보냈는데 도전자만 남으면 전투가 끝나지 않아요. 그땐 소환장 가운데 '결투 기권'을 누르면 보상 없이 끝낼 수 있어요.",
+    toast: "도전자만 남으면 전투가 안 끝나요. 그땐 소환장 가운데 '결투 기권'으로 끝내요(보상 없음).",
     target: () => ({ map: TUT_Z.pen }) },
   Object.assign({ id: 'clear5', view: 'map', hint: '전투를 마쳐요.' }, tutWaveSteps(5), { enter: t => tutEnsureWave(t, 5) }),
   // ⑪ 보스 라운드 + ⑬ 스킬 버튼 (풀하우스 단검 암살)
   { id: 'boss', view: 'cards', summon: true, icon: 'skull', title: '보스',
-    toast: '이번 전투엔 커다란 보스가 나와요. 실전에선 시간 안에 못 잡으면 바로 끝이에요. 튜토리얼에선 걱정 마세요. 소환해 보세요.',
+    toast: '이번엔 보스가 나와요. 실전에선 시간 안에 못 잡으면 바로 끝! 지금은 괜찮아요. 소환해요.',
     hint: "'유닛 소환!'을 눌러요.",
     enter: t => tutEnsurePoker(t, 6),
     done: t => (t.ev.summon || 0) >= 6,
@@ -15829,7 +15832,8 @@ function tutModeTickBody() {
 // 화면 전환 안내 — 단계가 보여야 하는 화면과 지금 화면이 다르면 {text, target} (그동안 토스트는 미루고 게임은 진행)
 const TUT_MODAL = {
   castle: { dlg: 'shopOverlay', open: () => openShop === 'castle', text: () => IS_MOBILE ? '성을 눌러 창을 다시 열어요.' : '성을 클릭해 창을 다시 열어요.', target: () => ({ map: TUT_Z.house }) },
-  chip: { dlg: 'chipModal', open: () => CM.style.display === 'flex', text: () => "'자금운영'을 눌러 창을 다시 열어요.", target: () => ({ dom: '#stCasino' }) },
+  chip: { dlg: 'chipModal', open: () => CM.style.display === 'flex' && document.getElementById('chipWin').dataset.view === 'finance', text: () => "'자금운영'을 눌러 창을 다시 열어요.", target: () => ({ dom: '#stCasino' }),
+    wrong: () => CM.style.display === 'flex' }, // 열려 있지만 첫 화면이 아님(뽑기·투자 화면 등) → 닫고 다시 열게
 };
 const TUT_DLG_CLOSE = { shopOverlay: '#shopClose', chipModal: '#chipClose', optModal: '#optClose' };
 function tutViewNeed(st) {
@@ -15839,7 +15843,9 @@ function tutViewNeed(st) {
   const bd = S.tut && S.tut.toastWait && ['crownModal', 'duelConfirm'].find(d => gameDialogVisible(d) && !(st.dlgOk && st.dlgOk.includes(d))); // 토스트 차례인데 대관식·결투 입장 창이 떠 있다(건너뛰기 길 등) → 그 창부터 닫게
   if (bd) return bd === 'duelConfirm' ? { text: "'입장한다'나 '그만둔다'를 눌러 창을 닫아요.", target: { dom: '#duelConfirm .dcBtns' } }
     : crownGuideOn ? { text: '✕를 눌러 왕관 안내를 닫아요.', target: { dom: '#crGuideX' } } : { text: "종족을 고르거나 '왕관 회수'를 눌러 창을 닫아요.", target: { dom: '#crGrid' } };
-  if (st.view === 'modal') { const md = TUT_MODAL[st.modal]; if (md.open()) return null; if (dlg && dlg !== md.dlg && TUT_DLG_CLOSE[dlg]) return { text: '이 창을 닫으면 튜토리얼이 이어져요.', target: { dom: TUT_DLG_CLOSE[dlg] } }; return mobPoker ? toBattle : { text: md.text(), target: md.target() }; }
+  if (st.view === 'modal') { const md = TUT_MODAL[st.modal]; if (md.open()) return null;
+    if (md.wrong && md.wrong()) return { text: "✕로 이 화면을 닫고 '자금운영'을 다시 눌러요.", target: { dom: TUT_DLG_CLOSE[md.dlg] } };
+    if (dlg && dlg !== md.dlg && TUT_DLG_CLOSE[dlg]) return { text: '이 창을 닫으면 튜토리얼이 이어져요.', target: { dom: TUT_DLG_CLOSE[dlg] } }; return mobPoker ? toBattle : { text: md.text(), target: md.target() }; }
   if (st.view === 'any') return null;
   if (dlg && TUT_DLG_CLOSE[dlg] && !(st.dlgOk && st.dlgOk.includes(dlg))) return { text: '이 창을 닫으면 튜토리얼이 이어져요.', target: { dom: TUT_DLG_CLOSE[dlg] } }; // 엉뚱한 때 연 도감·설정 등
   if (st.view === 'cards') {
@@ -15935,7 +15941,7 @@ function tutTargetRect(tg, dlg) { // dlg = 열린 창 — 창 밖 대상(맵·�
     for (const s of Array.isArray(tg.dom) ? tg.dom : [tg.dom]) {
       const el = document.querySelector(s), r = tutVisRect(s);
       if (r && win && !win.contains(el) && !(dlg === 'shopOverlay' && document.getElementById('gmgOverlay'))) continue;
-      if (r && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth) return { x: r.left - 6, y: r.top - 6, w: r.width + 12, h: r.height + 12, circle: false };
+      if (r && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth) { const x0 = Math.max(2, r.left - 6), y0 = Math.max(2, r.top - 6), x1 = Math.min(innerWidth - 2, r.right + 6), y1 = Math.min(innerHeight - 2, r.bottom + 6); return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, circle: false }; } // 화면 가득한 대상(폰 카드 줄)도 링이 화면 안에
     }
     return null;
   }
@@ -15954,7 +15960,7 @@ function tutRingSet(rc, over) {
   const ring = document.getElementById('tutRing');
   if (!rc) { if (!ring.hidden) ring.hidden = true; return; }
   ring.hidden = false;
-  const cls = (rc.circle ? 'circle' : 'box') + (over ? ' over' : ''); if (ring.className !== cls) ring.className = cls; // over = 토스트 덮개 위
+  const cls = (rc.circle ? 'circle' : 'box') + (over ? ' over' : '') + (rc.w > innerWidth * 0.8 || rc.h > innerHeight * 0.8 ? ' wide' : ''); if (ring.className !== cls) ring.className = cls; // over = 토스트 덮개 위
   const st = ring.style, px = v => Math.round(v) + 'px';
   st.left = px(rc.x); st.top = px(rc.y); st.width = px(rc.w); st.height = px(rc.h);
 }
