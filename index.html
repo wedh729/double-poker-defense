@@ -15177,7 +15177,7 @@ document.getElementById('btnTutAgain').onclick = e => { tut.seen = {}; tut.off =
 // 일반 판은 S.tutMode가 undefined라 모든 분기가 원래 식 그대로(난수 순서 포함). 라운드에 묶인 시스템(몹 HP·수·보스·더블 포커·결투·공중)은 기존 헬퍼 안 분기가 tutWave()를 읽는다.
 // 한 단계 = [토스트(게임 정지) → 닫으면 한 줄 알림 + 링(게임 진행) → 행동 완료 → '좋아요!'(정지) → 다음 토스트]. 칭찬부터 다음 토스트까지 정지가 끊기지 않아
 //   2~3배속에서도 단계 사이에 전투가 흐르지 않는다 (1차 크로스체크 P1-1의 부류 전체 차단).
-const TUT = { OK_MS: 650, TOAST_LOCK: 350, WAVE_DEFAULT: { n: 6, hp: 20 }, MINER_SPD: 4, MINE_T: 1.5, HUNT_HP: 260 }; // OK_MS = '좋아요!' 실시간(ms) · TOAST_LOCK = 토스트가 뜬 직후 닫기 잠금(직전 탭·키가 바로 닫지 않게) · 광부 걸음 ×4·채굴 1.5초 · 첫 광석 체력
+const TUT = { OK_MS: 650, TOAST_LOCK: 350, HINT_WAIT: 1000, HINT_MIN: 1500, WAVE_DEFAULT: { n: 6, hp: 20 }, MINER_SPD: 4, MINE_T: 1.5, HUNT_HP: 260 }; // OK_MS = '좋아요!' 실시간(ms) · TOAST_LOCK = 토스트가 뜬 직후 닫기 잠금(직전 탭·키가 바로 닫지 않게) · 광부 걸음 ×4·채굴 1.5초 · 첫 광석 체력
 function tutWave() { return (S && S.tut && S.tut.waves[S.round]) || TUT.WAVE_DEFAULT; }
 function tutBossShape() { return tutWave().bossShape || 20; } // 보스 모양 = 사양값, 없으면 달(20)
 function tutEv(k) { if (S && S.tutMode) S.tut.ev[k] = (S.tut.ev[k] || 0) + 1; } // 상태만으로 구분 안 되는 행동 카운터 (일반 판 = 아무것도 안 함)
@@ -15252,7 +15252,7 @@ function tutHoldFly(t) { // 공중 단계 동안 나는 몹이 쓰러지지 않�
   const q = S.spawnQueue; if (q && q.nFly && q.hpFly < t.toughHp) q.hpFly = t.toughHp;
   for (const m of S.monsters) if (m.fly) { if (m.max < t.toughHp) m.max = t.toughHp; m.hp = m.max; }
 }
-function tutFreeFly(hp) { for (const m of S.monsters) if (m.fly) m.hp = Math.min(m.hp, hp); } // 공중 단계가 끝나면 = 잡을 수 있는 체력으로
+function tutFreeFly(hp) { const q = S.spawnQueue; if (q && q.hpFly > hp) q.hpFly = hp; for (const m of S.monsters) if (m.fly) m.hp = Math.min(m.hp, hp); } // 공중 단계가 끝나면 = 잡을 수 있는 체력으로 — 아직 안 나온 나는 몹(스폰 체력)도 (10-14 P2: 건너뛰기로 공중 단계를 빨리 넘기면 남은 나는 몹이 tutHoldFly가 올린 연습 몹 체력으로 나왔다)
 function tutHeroN() { return S.units.filter(u => u.hero && !u.super && !isHiddenCombo(u)).length; }
 function tutSeeUnit(list) { // 링으로 짚을 유닛 = 화면에서 다른 창(딜 순위·정보 창 등)에 안 가려진 첫 유닛 (작은 폰 — phone740 실측: 딜 순위 창 밑 유닛을 짚어 누를 수 없었다)
   const R = document.getElementById('cv').getBoundingClientRect(); if (!R.width) return list[0] || null;
@@ -15356,7 +15356,12 @@ function tutCrownOpen() { return document.getElementById('crownModal').style.dis
 function tutEnsurePoker(t, r) { if (S.phase === 'wave' && (t.ev.summon || 0) >= r - 1) tutEndWaveNow(); } // r번째 포커가 되게 — 앞 전투가 돌고 있으면 끝낸다 (건너뛰기 길)
 function tutRect(list, p) { if (!list.length) return null; return { mapRect: [Math.min(...list.map(u => u.x)) - p, Math.min(...list.map(u => u.y)) - p - 10, Math.max(...list.map(u => u.x)) + p, Math.max(...list.map(u => u.y)) + p] }; }
 function tutSupplyAlive(t) { return (t.supply || []).filter(u => S.units.includes(u)); }
-function tutWaveSteps(n) { return { enter: t => { tutEnsureWave(t, n); tutReachFix(); }, tick: t => tutEnsureWave(t, n), done: t => t.waveEnds >= n, target: () => ({ map: TUT_Z.pen }) }; }
+// 전투 끝 단계 알림 = 단계 진입 뒤 HINT_WAIT 동안은 비워 두고(곧 끝날 전투면 조용히 다음), 한번 떴으면 HINT_MIN은 남긴다
+//   (10-14 사람 속도 실측: 앞의 붙잡아 둔 단계가 끝나면 약한 몹이 곧바로 전멸해 '전투를 마쳐요'·'끝까지 잡아요'가 0~0.7초만 깜빡였다)
+function tutWaveSteps(n) { return { enter: t => { tutEnsureWave(t, n); tutReachFix(); }, tick: t => tutEnsureWave(t, n), hintWait: TUT.HINT_WAIT,
+  done: t => t.waveEnds >= n && performance.now() - t.stepAt >= TUT.HINT_WAIT + TUT.HINT_MIN,
+  giveUp: t => t.waveEnds >= n && performance.now() - t.stepAt < TUT.HINT_WAIT, // 알림이 뜨기 전에 끝남 = 칭찬 없이 다음
+  target: () => ({ map: TUT_Z.pen }) }; }
 const TUT_STEPS = [
   // ① 포커 — 카드 교환·금테·족보 표·소환
   { id: 'intro', view: 'any', icon: 'cards', title: '어서 와요, 지휘관님!',
@@ -15475,7 +15480,7 @@ const TUT_STEPS = [
     toast: "칩으로 광부를 고용할 수 있어요. '광부 고용'을 눌러 보세요.",
     hint: "'광부 고용'을 눌러요.",
     enter: () => { if (S.chips < 1) { S.chips = 1; if (CM.style.display === 'flex') casMenu(); } tutOpenChip(); },
-    tick: () => { if (S.chips < 1 && TUT_MODAL.chip.open()) { S.chips = 1; casMenu(); tutSupply('칩'); } }, // 캡슐 뽑기 등에 칩을 써 버렸으면 다시 (고용 단계가 막히지 않게)
+    tick: t => { if (S.chips < 1 && TUT_MODAL.chip.open() && S.units.filter(u => u.miner).length <= t.base.miners) { S.chips = 1; casMenu(); tutSupply('칩'); } }, // 캡슐 뽑기 등에 칩을 써 버렸으면 다시 (고용 단계가 막히지 않게) — 고용한 뒤엔 안 줌 (10-14 P2 robust P2-2: tick이 완료 판정보다 먼저 돌아 고용 직후 칩이 다시 보급됐다)
     done: t => S.units.filter(u => u.miner).length > t.base.miners,
     target: () => ({ dom: '#chipBody [data-go="hire"]' }) },
   { id: 'more', view: 'modal', modal: 'chip', icon: 'gift', title: '그 밖의 것들',
@@ -15501,6 +15506,7 @@ const TUT_STEPS = [
     done: () => tutFighters().some(u => isInRoom(u) && u.oreSlot),
     target: () => ({ map: TUT_Z.room }) },
   { id: 'mine', view: 'map', hint: '방 안 유닛이 광석을 다 캘 때까지 기다려요.', ok: '보상 광석이 나왔어요!',
+    alt: () => tutFighters().some(u => isInRoom(u)) ? '' : IS_MOBILE ? '유닛을 끌어 다시 광석 방 안에 놓아요.' : '유닛을 골라 다시 광석 방 안을 우클릭해요.', // 10-14 P2 robust P2-1: 방 안 유닛을 밖으로 빼면 '기다려요'만 남은 채 멈췄다
     enter: t => { if (!t.huntSet && S.hunt && S.hunt.stage === 1) { S.hunt.max = S.hunt.hp = TUT.HUNT_HP; t.huntSet = true; }
       if (!tutFighters().some(u => isInRoom(u))) { const u = tutFree()[0]; if (u) { u.x = u.tx = ROOM.cx; u.y = u.ty = ROOM.cy; u.moving = false; } } }, // 건너뛰기 길: 한 기를 방 안으로
     done: () => S.units.some(u => u.item === 'oreGift') || (S.hunt && S.hunt.stage > 1),
@@ -15828,6 +15834,7 @@ function tutModeTickBody() {
   // ② PC: 맵 단계(또는 닫힌 창을 다시 열 단계)면 포커판을 내린다 — 맵을 누르면 어차피 내려간다
   if (!t.latched && !IS_MOBILE && S.phase === 'poker' && !pokerPeek && (st.view === 'map' || (st.view === 'modal' && !TUT_MODAL[st.modal].open()))) { pokerPeek = true; syncPokerPanel(); }
   // ③ 토스트 차례: 화면이 맞고(카드/전장/창) 다른 연출이 없을 때 띄운다 (그 상태가 보일 때 띄우는 단계는 그때까지 게임 진행)
+  document.body.classList.toggle('tutMap', st.view === 'map' && !t.latched); // 화면 판정(#goPoker가 보이나) 전에 이 단계 기준으로 — 맵 단계 다음 첫 틱에 앞 단계의 tutMap이 남아 폰 알림이 '카드 그림 버튼' → '포커장으로 이동'으로 한 틱 깜빡였다 (10-14 사람 속도 P2)
   const need = t.latched ? null : tutViewNeed(st);
   let hold = false;
   if (t.toastWait && !t.latched) {
@@ -15877,7 +15884,8 @@ function tutCompose(st, t, need) { // 한 줄 알림 문구 {html, ok} — 토�
   if (t.latched) return { html: t.okText ? `<span class="tpOk">${dpdIconSVG('check')} ${t.okText}</span>` : '', ok: true };
   if (need) return { html: need.text, ok: false };
   if (t.toastWait) return { html: st.waitHint ? tutStr(st.waitHint, t) : '', ok: false };
-  const alt = t.alt && performance.now() - t.altT < 3000 ? t.alt : st.alt ? st.alt(t) : '';
+  if (st.hintWait && !st.toast && performance.now() - t.stepAt < st.hintWait) return { html: '', ok: false }; // 전투 끝 단계(토스트 없는 것): 진입 직후엔 비움 (tutWaveSteps)
+  const alt =t.alt && performance.now() - t.altT < 3000 ? t.alt : st.alt ? st.alt(t) : '';
   return { html: alt ? `<span class="tpAlt">${alt}</span>` : tutStr(IS_MOBILE && st.hintMo != null ? st.hintMo : st.hint, t) || '', ok: false };
 }
 const TUT_DLG = ['shopOverlay', 'chipModal', 'crownModal', 'duelConfirm', 'reviveModal', 'optModal'], TUT_DLG_WIN = { shopOverlay: 'shopWin', chipModal: 'chipWin', optModal: 'optWin' };
