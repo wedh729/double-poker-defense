@@ -2455,6 +2455,7 @@ body.mobile #tutToast .ttIc svg {width:15px;height:15px;}
 body.mobile #tutToast .ttBtns {margin-top:5px;}
 body.mobile #ttOk {min-height:30px;font-size:12px;}
 body.tutMode.tutMap #goPoker, body.tutMode.tutMap #pokerHandle {display:none !important;} /* 맵 단계 동안 캔버스 한가운데 '포커장으로 이동'·'포커판 ▲'을 숨긴다 (네모 지정·클릭을 가림 · 눌러도 맵 단계라 곧 내려가던 것 — 1차 P2-11) */
+body.storyMode [data-go="invest"], body.storyMode #tIntWrap, body.storyMode [data-valve="sand"] {display:none !important;} /* 📖 스토리 판: 투자·장 시계·시간의 모래 단추 숨김 (시계가 없는 판 — :has 안 씀, 10-02 성능 교훈) */
 body:has(#gmgOverlay) :is(#tutPanel, #tutRing) {visibility:hidden;} /* 도전 막대 창 동안은 알림·링 숨김 (창 위 '건너뛰기' 오조작 방지 — 1차 P2-4) */
 .title-link.tut-new {color:#fff0c5;background:#557540;border:2px solid #3d5b2f;box-shadow:inset 0 1px #97ad6f,0 3px #3b502c;}
 .title-link.tut-new small {color:#e6efc8;}
@@ -6673,7 +6674,7 @@ function recordBest(stage) {
   const key = 'dpd_best_' + DIFF_MUL;
   let best = readBest(key);
   if (!best && key === 'dpd_best_1') best = readBest('dpd_best'); // 구 단일 키 → 보통
-  if (S && (S.sandbox || S.multi || S.tutMode)) return best; // 🧪 샌드박스·🤖 멀티 데모·튜토리얼은 표시만, 기록 안 함
+  if (S && (S.sandbox || S.multi || S.tutMode || S.story)) return best; // 🧪 샌드박스·🤖 멀티 데모·튜토리얼·📖 스토리는 표시만, 기록 안 함
   if (stage > best) { best = stage; try { localStorage.setItem(key, String(best)); } catch (e) {} }
   return best;
 }
@@ -6687,14 +6688,14 @@ function hintSeen(id) { // 🐦 새를 잡아 들은 소문만 도감에 남는�
   try { return !!JSON.parse(localStorage.getItem('dpd_hint') || '{}')[id]; } catch (e) { return false; }
 }
 function markHint(id) {
-  if (S && (S.sandbox || S.multi || S.tutMode)) return;
+  if (S && (S.sandbox || S.multi || S.tutMode || S.story)) return;
   try { const d = JSON.parse(localStorage.getItem('dpd_hint') || '{}'); d[id] = 1; localStorage.setItem('dpd_hint', JSON.stringify(d)); } catch (e) {}
 }
 function hiddenSeen(id) {
   try { return !!JSON.parse(localStorage.getItem('dpd_hidden') || '{}')[id]; } catch (e) { return false; }
 }
 function markHidden(id) {
-  if (S && (S.sandbox || S.multi || S.tutMode)) return;
+  if (S && (S.sandbox || S.multi || S.tutMode || S.story)) return;
   try {
     const d = JSON.parse(localStorage.getItem('dpd_hidden') || '{}');
     if (!d[id]) {
@@ -6709,7 +6710,7 @@ function achvSeen(id) {
   try { return !!JSON.parse(localStorage.getItem('dpd_achv') || '{}')[id]; } catch (e) { return false; }
 }
 function markAchv(id) {
-  if (S && (S.sandbox || S.mapTest || S.multi || S.tutMode)) return; // 샌드박스·멀티맵 미리보기·🤖 멀티 데모·튜토리얼은 업적 미기록 (localStorage 오염 방지)
+  if (S && (S.sandbox || S.mapTest || S.multi || S.tutMode || S.story)) return; // 샌드박스·멀티맵 미리보기·🤖 멀티 데모·튜토리얼·📖 스토리는 업적 미기록 (localStorage 오염 방지)
   try {
     const d = JSON.parse(localStorage.getItem('dpd_achv') || '{}');
     if (!d[id]) {
@@ -6724,7 +6725,7 @@ function monSeen(i) {
   try { return !!JSON.parse(localStorage.getItem('dpd_mondex') || '{}')[i]; } catch (e) { return false; }
 }
 function markMon(i) {
-  if (S && (S.sandbox || S.multi || S.tutMode)) return;
+  if (S && (S.sandbox || S.multi || S.tutMode || S.story)) return;
   try {
     const d = JSON.parse(localStorage.getItem('dpd_mondex') || '{}');
     if (!d[i]) {
@@ -14013,7 +14014,7 @@ let openShop = null;
 function castleSeen() { try { return localStorage.getItem('dpd_castle_seen') === '1'; } catch (e) { return false; } }
 function toggleShop(id) {
   initAudio();
-  if (id === 'castle' && S && !S.castleOpened) { S.castleOpened = true; try { if (!S.multi && !S.tutMode) localStorage.setItem('dpd_castle_seen', '1'); } catch (e) {} } // 🏰 첫 오픈 뒤엔 캔버스 안내 라벨을 내린다 (브라우저 1회)
+  if (id === 'castle' && S && !S.castleOpened) { S.castleOpened = true; try { if (!S.multi && !S.tutMode && !S.story) localStorage.setItem('dpd_castle_seen', '1'); } catch (e) {} } // 🏰 첫 오픈 뒤엔 캔버스 안내 라벨을 내린다 (브라우저 1회)
   openShop = (openShop === id) ? null : id;
   document.querySelectorAll('.shopIcon').forEach(b => b.classList.toggle('open', b.dataset.shop === openShop));
   // 상점/족보를 열면 모든 것이 멈춘다 (닫으면 재개). 게임오버/승리 화면 중엔 유지
@@ -15099,7 +15100,7 @@ const tut = (() => {
 })();
 function tutSave() { try { localStorage.setItem(TUT_KEY, JSON.stringify(tut)); } catch (e) {} }
 // 타이틀 뒤 부팅 더미 판·맵 미리보기(at-title 중 reset)와 샌드박스(reset이 S.sandbox=true보다 먼저 돈다 — DIFF_NAME은 그 전에 정해짐)는 끈다
-function tutOn() { return !tut.off && S && !S.sandbox && !S.mapTest && !S.multi && dailySeed == null && DIFF_NAME !== '샌드박스' && !document.body.classList.contains('at-title') && !S.tutMode; } // [튜토리얼 10-14] 튜토리얼 판에선 첫 판 안내 전부 끔
+function tutOn() { return !tut.off && S && !S.sandbox && !S.mapTest && !S.multi && dailySeed == null && DIFF_NAME !== '샌드박스' && !document.body.classList.contains('at-title') && !S.tutMode && !S.story; } // [튜토리얼 10-14] 튜토리얼 판에선 첫 판 안내 전부 끔 · 📖 스토리 판도 (dpd_tut 저장 안 함)
 function tutNew(id) { return tutOn() && !tut.seen[id]; }
 function tutMark(id) { if (!tut.seen[id]) { tut.seen[id] = 1; tutSave(); } }
 function tutOff() {
@@ -15161,7 +15162,7 @@ function tutTick() {
 }
 // 게임오버 한 줄 — 처음 3번만, 가장 그럴듯한 이유 하나
 function tutGameOverLine() {
-  if (tut.off || S.sandbox || S.multi || S.tutMode || dailySeed != null) return '';
+  if (tut.off || S.sandbox || S.multi || S.tutMode || S.story || dailySeed != null) return '';
   let n = 0; try { n = +localStorage.getItem('dpd_go_n') || 0; } catch (e) {}
   if (n >= 3) return '';
   const last = S.lifeLog[S.lifeLog.length - 1];
@@ -18253,6 +18254,127 @@ function showTitleScreen(screen, focusId) {
   if (focusId) document.getElementById(focusId).focus({ preventScroll: true });
   syncTutTitleBtn(); // 새 플레이어 강조 (일반 판을 한 번 시작했거나 기본 조작을 마치면 꺼짐)
 }
+// ==================== 📖 스토리 모드 M0+M1 (설계 = Desktop\Claude Code\DPD\스토리_2026-10-14\10_M1_구현설계.md) ====================
+// M0(10-15): 깃발 S.story · 진입 = 디버그 URL만(?story=test · ?story=1-1 … 1-5 — 타이틀 단추는 M3 여정 지도 때) · 기록 가드 · 저장 키 dpd_story 자리
+//   · 다시하기/나가기/게임오버 단추 정리 · 건물 좌표 덮기/복원. 길 엔진·전투 규칙·챌린지 시스템 끄기는 M1 — 지금 스토리 판은 소환장 그대로 돈다.
+// 판 상태는 S.story·S.storyR(reset이 새 S로 지움 — S 리터럴엔 안 넣는다: 챌린지 S 모양 그대로). 모듈 전역은 storyApplied·storyRoadBake 둘뿐 → 'dpd:resetui'에서 정리.
+// ⚠️ 이 블록은 부팅 reset()보다 앞에 있어야 한다 (STORY_BLD0 = 로드 때 원본 · storyApplied TDZ)
+const STORY = {      // 노브 한 곳 (화면에 안 나옴)
+  V0: 60,            // 기본 걸음 px/게임초 (물풍선 = 1)
+  BOSS_V: 0.4,       // 보스 걸음 배수
+  MAT_V: [1.0, 1.1, 1.2, 1.0, 1.4, 1.1, 0.7, 0.8, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9], // 재질 idx 0~13 걸음 (천체·헬 = 0.9)
+  FILLET: 24,        // 모퉁이 둥글리기 반지름 px — 반드시 ≥ 최대 |off| + 8
+  OFF_PAD: 8,        // 옆 오프셋 범위 = ±(w/2 − OFF_PAD) → w 40이면 ±12
+  WOB: 2.5,          // 옆 흔들림 px
+  CAP: 300,          // 전투 안전 상한 (게임초, S.waveT)
+  BOSS_AT: 5,        // 보스 출발 = 전투 시작 뒤 게임초
+  GAP: 0.45, GAP_PACK: 0.18, GROUP: 8, PAUSE: 2.2, // M1 임시 무리: 8마리씩, 무리 안 간격 0.45초(세 번째 무리마다 0.18초 = 뭉친 무리), 무리 사이 2.2초
+  PEN_RK: 1.15,      // 탱크·핵·투석기 '사거리 안 전부' 반경 = effRange × 1.15
+  PULL_V: 220,       // 조커 되감기·목성 끌어모으기 속도 px/게임초
+  GRAV_S: 260, PILE_S: 34, // 목성: 같은 길에서 보스 앞뒤 260px 안 몹 → 보스 s ± 34로
+  NOLEAK_K: 0.5,     // 무누수 보너스 = 클리어 보너스 × 0.5
+  HP_K: 1, N_K: 1,   // M5 노브: 몹 HP·마릿수 배수
+  LIVES: 20,
+};
+// 맵: 논리 940×500 좌표 · 몹은 오른쪽 끝 입구(door 길 첫 점)에서 나와 왼쪽 아래 성(길 끝)으로 온다 · 이름은 22_스토리_여정설계
+const W1B = { castle: [96, 428], portal: [84, 224], altar: [240, 190], mine: false, room: false }; // 월드 1 공통 건물 (챌린지 자리)
+const STORY_MAPS = {
+  test: { name: '시험 길', world: 0, idx: 0, bg: null, skyCut: true, lives: 20, rounds: 0, req: null, bossR: [5, 10, 15, 20],
+    paths: [
+      { id: 'a', w: 40, door: true,  pts: [[905, 260], [640, 260], [640, 115], [330, 115], [330, 398], [215, 398]] },
+      { id: 'c', w: 40, door: false, pts: [[800, 260], [700, 260], [700, 398], [215, 398]] },
+      { id: 'b', w: 40, door: true,  pts: [[905, 340], [780, 340], [780, 398], [215, 398]] },
+    ],
+    forks: [{ path: 'a', at: [800, 260], to: ['a', 'c'], rule: 'alt' }],
+    cover: [{ path: 'a', from: [540, 115], to: [440, 115] }],
+    sky: [], noBuild: [],
+    bld: { castle: [150, 425], portal: [235, 275], altar: [480, 330], mine: true, room: true },
+    spawn: [480, 190], tray: null },
+  '1-1': { name: '동산', world: 1, idx: 1, bg: null, skyCut: true, lives: 20, rounds: 6, req: [1, 4], bossR: [],
+    paths: [{ id: 'a', w: 40, door: true, pts: [[905, 135], [310, 135], [310, 266], [830, 266], [830, 398], [165, 398]] }],
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [520, 334], tray: null },
+  '1-2': { name: '초원 입구', world: 1, idx: 2, bg: null, skyCut: true, lives: 20, rounds: 8, req: [3, 7], bossR: [],
+    paths: [{ id: 'a', w: 40, door: true, pts: [[905, 398], [700, 398], [700, 130], [330, 130], [330, 398], [165, 398]] }],
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [515, 300], tray: null },
+  '1-3': { name: '초원 한가운데', world: 1, idx: 3, bg: null, skyCut: true, lives: 20, rounds: 10, req: [6, 10], bossR: [],
+    paths: [{ id: 'a', w: 40, door: true, pts: [[905, 398], [790, 398], [790, 140], [650, 140], [650, 398], [510, 398], [510, 140], [370, 140], [370, 398], [165, 398]] }],
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [270, 320], tray: null },
+  '1-4': { name: '개울 건너', world: 1, idx: 4, bg: null, skyCut: true, lives: 20, rounds: 10, req: [8, 12], bossR: [],
+    paths: [{ id: 'a', w: 40, door: true, pts: [[905, 398], [720, 398], [720, 140], [380, 140], [380, 300], [250, 300], [250, 398], [165, 398]] }],
+    forks: [], cover: [], sky: [],
+    noBuild: [ { kind: 'water', band: { w: 46, pts: [[565, 75], [545, 200], [580, 320], [555, 470]] } },
+               { kind: 'rock', circle: [825, 255, 40] }, { kind: 'rock', circle: [330, 440, 30] }, { kind: 'rock', circle: [470, 330, 34] } ],
+    bld: W1B, spawn: [440, 225], tray: null },
+  '1-5': { name: '초원 끝 언덕', world: 1, idx: 5, bg: null, skyCut: true, lives: 20, rounds: 12, req: [10, 14], bossR: [12],
+    paths: [{ id: 'a', w: 40, door: true, pts: [[905, 300], [380, 300], [380, 130], [650, 130], [650, 398], [165, 398]] }],
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [515, 215], tray: null },
+};
+const STORY_KEY = 'dpd_story'; // { v: 1, clear: {}, stars: {} } — 자리만 (M3 여정 지도·별·해금에서 씀). 지금은 읽기·쓰기 호출 없음
+function storyLoad() { try { const d = JSON.parse(localStorage.getItem(STORY_KEY) || 'null'); if (d && d.v === 1) return d; } catch (e) {} return { v: 1, clear: {}, stars: {} }; }
+function storySave(d) { try { localStorage.setItem(STORY_KEY, JSON.stringify(d)); } catch (e) {} }
+const STORY_BLD0 = { // ⚠️ 로드 때 한 번 찍은 원본 — 복원은 언제나 이것으로 (스토리 안 '다시하기'가 storyStart를 거듭 불러도 덮인 값이 원본으로 저장되지 않게)
+  house: { x: HOUSE.x, y: HOUSE.y }, portal: { x: PORTAL.x, y: PORTAL.y }, portalOut: { x: PORTAL_OUT.x, y: PORTAL_OUT.y },
+  altar: { x: ALTAR.x, y: ALTAR.y }, altarOut: { x: ALTAR_OUT.x, y: ALTAR_OUT.y } };
+let storyApplied = false, storyRoadBake = null; // 건물 좌표를 덮었나 / 스토리 흙길 베이크 (M1)
+function storyNewState(id, map) { return { id, map, leakR: 0, bossIn: false, gateA: 0.5, endToast: false }; } // 길 컴파일(P·doors)은 M1
+function storyEqRound(r) { // 스테이지 안 r번째 → 챌린지 세기(S.round). M1 임시 = req 직선 보간, rounds를 넘으면 +1씩(끝없음) · req 없음(시험 길) = r
+  const M = S.story.map; if (!M.req) return r;
+  const [a, b] = M.req, n = M.rounds;
+  return r > n ? b + (r - n) : Math.round(a + (b - a) * (r - 1) / Math.max(1, n - 1));
+}
+// 진입 순서 = 튜토리얼과 같음: at-title → reset() → S.story → hideStartScreen → startPoker 재딜 (reset 안 첫 포커가 첫 판 안내 T1을 소진하지 않게)
+function storyStart(id, gesture) { // gesture = 클릭으로 불렸나 (다시하기 = true, URL 진입 = false — 오디오 잠금 풀기·전체 화면은 제스처 안에서만)
+  const map = Object.prototype.hasOwnProperty.call(STORY_MAPS, id) ? STORY_MAPS[id] : null; if (!map) return false;
+  if (gesture) { initAudio(); if (IS_MOBILE) { lockLandscape(); iosPwaHint(); } }
+  dailySeed = null; DIFF_MUL = 1; DIFF_NAME = '스토리';
+  document.body.classList.add('at-title');
+  reset();                                         // → resetTransientUI → 'dpd:resetui' → storyLeave (앞 스토리 건물 좌표 복원)
+  casTimers.forEach(clearTimeout); casTimers = []; // reset 안 첫 포커의 딜 소리 예약 — 아래 startPoker가 다시 건다
+  S.story = storyNewState(id, map);
+  S.storyR = 1; S.round = storyEqRound(1); S.life = map.lives || STORY.LIVES;
+  S.birdTimer = Infinity;                          // 힌트 새 없음
+  storyApply(map);
+  hideStartScreen();
+  document.getElementById('bSandbox').style.display = 'none';
+  S.paused = false;
+  startPoker();                                    // 스토리 라운드로 다시 딜
+  logMsg(`스토리 — ${map.name}`);
+  return true;
+}
+function storyBoot() { let q = null; try { q = new URLSearchParams(location.search).get('story'); } catch (e) {} if (q) storyStart(q, false); } // 하네스가 '?t=…&pf=…'를 붙여 열어도 됨 · 없는 이름이면 그냥 타이틀
+function storyExit(ask) { exitToTitle(ask); if (!S.story) { DIFF_MUL = 1; DIFF_NAME = '초원'; } } // 실제로 나갔을 때만(확인 창 취소면 그대로) 난이도 이름 되돌림 — tutExit 선례 (storyLeave 안에선 안 됨: 새 판 시작 함수가 reset 전에 정한 이름을 덮는다)
+function storyApply(map) { // 건물 좌표 덮기 (const 객체라 속성 대입) + 베이크 무효화 + body.storyMode
+  const b = map.bld;
+  HOUSE.x = b.castle[0]; HOUSE.y = b.castle[1];
+  PORTAL.x = b.portal[0]; PORTAL.y = b.portal[1]; PORTAL_OUT.x = PORTAL.x + 58; PORTAL_OUT.y = PORTAL.y + 18;
+  ALTAR.x = b.altar[0]; ALTAR.y = b.altar[1]; ALTAR_OUT.x = ALTAR.x + 62; ALTAR_OUT.y = ALTAR.y - 40;
+  storyApplied = true; storyBakesReset(); document.body.classList.add('storyMode');
+}
+function storyLeave() { // 'dpd:resetui' (resetTransientUI 끝 — 새 S를 만들기 전) — 나가기·다시하기·새 판·튜토리얼·멀티·맵 미리보기 전부 reset()을 지난다
+  if (!storyApplied) return; // 챌린지 경로는 여기서 끝 (베이크를 건드리지 않는다)
+  Object.assign(HOUSE, STORY_BLD0.house); Object.assign(PORTAL, STORY_BLD0.portal); Object.assign(PORTAL_OUT, STORY_BLD0.portalOut);
+  Object.assign(ALTAR, STORY_BLD0.altar); Object.assign(ALTAR_OUT, STORY_BLD0.altarOut);
+  storyApplied = false; storyBakesReset(); document.body.classList.remove('storyMode');
+}
+function storyBakesReset() { bldgLayers.clear(); sbWorldBake = null; storyRoadBake = null; } // 성·광부 길('mroad|g' 폭 = 광산 − HOUSE.x)·초원 꽃(제단·포털 회피)·대체 지면 베이크 — 다음 프레임에 다시 굽는다
+window.addEventListener('dpd:resetui', storyLeave); // mpLeave와 같은 방식 (resetTransientUI 본문은 안 고침)
+// 다시하기 = 이 스테이지 처음부터 · 나가기 = 타이틀 — 툴바 캡처 단계에서 가로챈다 (튜토리얼과 같은 방식, 일반 판은 바로 통과)
+document.getElementById('toolbar').addEventListener('click', e => {
+  if (!S || !S.story) return;
+  const b = e.target.closest('#btnRestart,#btnExit'); if (!b) return;
+  e.stopPropagation(); e.preventDefault();
+  if (b.id === 'btnRestart') { const id = S.story.id; if (confirm('이 스테이지를 처음부터 다시 할까요?')) storyStart(id, true); }
+  else storyExit(true);
+}, true);
+// 게임오버 창: '다시 시작' = 이 스테이지 처음부터 · '타이틀로' = 타이틀 (기본 onclick의 reset()은 챌린지 판으로 샌다)
+document.getElementById('overlay').addEventListener('click', e => {
+  if (!S || !S.story) return;
+  const b = e.target.closest('button'); if (!b) return;
+  const oc = b.getAttribute('onclick') || '';
+  if (!oc.includes('reset') && !oc.includes('exitToTitle')) return;
+  e.stopPropagation(); e.preventDefault();
+  if (oc.includes('reset')) storyStart(S.story.id, true); else storyExit(false);
+}, true);
 function hideStartScreen() {
   document.getElementById('startOverlay').style.display = 'none';
   document.body.classList.remove('at-title');
@@ -18365,7 +18487,7 @@ function reportLoopError(where, e) {
 // 이어하기(세이브)는 라운드 재시도 어뷰징 때문에 제거 — 새로고침/이탈 = 처음부터.
 // 진행 중 실수로 닫지 않게 브라우저 기본 경고를 띄운다.
 window.addEventListener('beforeunload', e => {
-  if (S && S.round > 1 && S.phase !== 'gameover' && !S.tutMode) { e.preventDefault(); e.returnValue = ''; } // [튜토리얼 10-14] 잃을 기록 없음
+  if (S && (S.story ? S.storyR > 1 : S.round > 1) && S.phase !== 'gameover' && !S.tutMode) { e.preventDefault(); e.returnValue = ''; } // [튜토리얼 10-14] 잃을 기록 없음 · 📖 스토리는 스테이지 안 번호로 (1-2부터 시작 등가 R이 1보다 커서 들어오자마자 경고하던 것)
 });
 try { localStorage.removeItem('dpd_save'); } catch (e) {} // 구버전 세이브 정리
 // 시작 화면: 포스터 → 난이도 선택 → 출발. 명시적인 data-name으로 설명 문구와 이름을 분리.
@@ -18447,6 +18569,7 @@ if (musicOn || sfxOn) {
   }
 }
 requestAnimationFrame(frame);
+if (document.readyState === 'loading') addEventListener('DOMContentLoaded', storyBoot); else storyBoot(); // 📖 ?story= 디버그 진입 — 뒤쪽 <script>(멀티 데모·자금 운영 v2 덮어쓰기 등)까지 다 읽힌 뒤 (파라미터 없으면 아무것도 안 함)
 </script>
 <script id="dpd-mp">
 // ==================== 🤖 멀티 오프라인 데모 — 단계 A (2인 월드에서 내 진영 플레이 + 카메라) ====================
