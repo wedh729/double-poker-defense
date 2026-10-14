@@ -18330,26 +18330,26 @@ const STORY_MAPS = {
     sky: [], noBuild: [],
     bld: { castle: [150, 425], portal: [235, 275], altar: [480, 330], mine: true, room: true },
     spawn: [480, 190], tray: null },
-  // 월드 1 = 스토리_2026-10-14\world1_maps.json (10-15 정본 — 길 폭 34 · 1-4 개울 곡선 + 연못 + 바위 옮김 · 소환 자리 1-4/1-5 옮김). 성·포털·제단 = 챌린지 자리
+  // 월드 1 = 스토리_2026-10-14\world1_maps.json (10-15 정본 — 길 폭 34 · 1-4 개울 곡선 + 연못 + 바위 옮김 · 소환 자리 1-4/1-5 옮김). 성·포털·제단 = 챌린지 자리 · castleArt = M4 성 그림(castle 우리 성 / camp 진지 — 엔진은 안 읽음)
   '1-1': { name: '동산', world: 1, idx: 1, bg: null, skyCut: true, lives: 20, rounds: 6, req: [1, 4], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, pts: [[905, 135], [310, 135], [310, 266], [830, 266], [830, 398], [165, 398]] }],
-    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [520, 334], tray: null },
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [520, 334], tray: null, castleArt: 'castle' },
   '1-2': { name: '초원 입구', world: 1, idx: 2, bg: null, skyCut: true, lives: 20, rounds: 8, req: [3, 7], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, pts: [[905, 398], [700, 398], [700, 130], [330, 130], [330, 398], [165, 398]] }],
-    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [515, 300], tray: null },
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [515, 300], tray: null, castleArt: 'camp' },
   '1-3': { name: '초원 한가운데', world: 1, idx: 3, bg: null, skyCut: true, lives: 20, rounds: 10, req: [6, 10], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, pts: [[905, 398], [790, 398], [790, 140], [650, 140], [650, 398], [510, 398], [510, 140], [370, 140], [370, 398], [165, 398]] }],
-    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [270, 320], tray: null },
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [270, 320], tray: null, castleArt: 'camp' },
   '1-4': { name: '개울 건너', world: 1, idx: 4, bg: null, skyCut: true, lives: 20, rounds: 10, req: [8, 12], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, pts: [[905, 398], [720, 398], [720, 140], [380, 140], [380, 300], [250, 300], [250, 398], [165, 398]] }],
     forks: [], cover: [], sky: [],
     noBuild: [ { kind: 'water', band: { w: 46, pts: [[570, -10], [569, 12], [568, 41], [565, 75], [560, 104], [554, 135], [549, 168], [548, 200], [553, 230], [563, 258], [573, 288], [578, 320], [577, 350], [572, 383], [566, 416], [560, 447], [556, 470], [552, 510]] } },
                { kind: 'water', circle: [645, 372, 32] },
                { kind: 'rock', circle: [825, 255, 40] }, { kind: 'rock', circle: [470, 330, 34] }, { kind: 'rock', circle: [315, 365, 26] } ],
-    bld: W1B, spawn: [455, 190], tray: null },
+    bld: W1B, spawn: [455, 190], tray: null, castleArt: 'camp' },
   '1-5': { name: '초원 끝 언덕', world: 1, idx: 5, bg: null, skyCut: true, lives: 20, rounds: 12, req: [10, 14], bossR: [12],
     paths: [{ id: 'a', w: 34, door: true, pts: [[905, 300], [380, 300], [380, 130], [650, 130], [650, 398], [165, 398]] }],
-    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [515, 190], tray: null },
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [515, 190], tray: null, castleArt: 'camp' },
 };
 const STORY_UI = {   // 논리 좌표 [x0, y0, x1, y1] — t1014s_zones.js 실측 합집합 (10-14 밤, c0b2c75) · storyCheckMaps 전용 (실행 중엔 안 읽음)
   hard:  [[440, 0, 620, 66], [0, 185, 75, 290]],          // 원형 시계(+장 시계) · 자금 운영 단추 → 길·건물 금지
