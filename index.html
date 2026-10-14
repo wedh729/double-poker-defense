@@ -15557,7 +15557,7 @@ const TUT_STEPS = [
     done: t => tutHeroN() > t.base.heroes,
     target: () => ({ map: TUT_Z.portal }) },
   { id: 'hidden', view: 'any', icon: 'book', title: '숨은 조합',
-    toast: '떠도는 이야기로는, 이 땅 어딘가에 숨은 영웅들이 잠들어 있대요. 찾으면 도감(책 버튼)에 기록돼요.', // 10-14 유저: 소문·전설 말투로 (재료·레시피 단서 없음)
+    toast: '떠도는 이야기로는, 아무도 본 적 없는 숨은 영웅들이 있대요. 찾으면 도감(책 버튼)에 기록돼요.', // 10-14 유저: 소문·전설 말투로 (재료·레시피 단서 없음) · 10-14 리뷰 F1: 장소('이 땅 어딘가에')·'잠들어' 뺌 — 맵을 뒤지는 것처럼 읽히지 않게
     target: () => ({ dom: '#toolbar .shopIcon[data-shop="book"]' }) },
   // 재변경권 (광부가 캐 온 것) → R3 소환
   { id: 'reroll', view: 'cards', icon: 'ticket', title: '재변경권',
