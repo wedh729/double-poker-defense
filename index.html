@@ -3425,7 +3425,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
   <section id="tutRow" class="adventure-panel" style="display:none" aria-labelledby="tutHeading">
     <div class="adventure-top"><span class="adventure-label">튜토리얼</span><button class="title-back" id="btnTutBack">← 타이틀</button></div>
     <div class="adventure-intro"><h2 id="tutHeading" class="adventure-heading">튜토리얼 완료!</h2><p>카드부터 결투장·보스·하늘의 몬스터까지 모두 둘러봤어요.</p></div>
-    <div id="tutDone" role="status"><p>이제 실전에서 나만의 군단을 키워 보세요. 처음엔 <b>동산</b>을 추천해요.</p><div class="tdBtns"><button type="button" class="title-primary" id="btnTutDonePlay">바로 모험 떠나기 <span class="title-arrow" aria-hidden="true">→</span></button><button type="button" class="title-link" id="btnTutDoneTitle">타이틀로</button></div></div>
+    <div id="tutDone" role="status"><p>이제 실전에서 나만의 군단을 키워 보세요. 처음엔 <b>동산</b> 난이도를 추천해요.</p><div class="tdBtns"><button type="button" class="title-primary" id="btnTutDonePlay">바로 모험 떠나기 <span class="title-arrow" aria-hidden="true">→</span></button><button type="button" class="title-link" id="btnTutDoneTitle">타이틀로</button></div></div>
   </section>
 </div>
 <dialog id="titleHelp" aria-labelledby="titleHelpHeading">
@@ -15885,7 +15885,7 @@ function tutCompose(st, t, need) { // 한 줄 알림 문구 {html, ok} — 토�
   if (need) return { html: need.text, ok: false };
   if (t.toastWait) return { html: st.waitHint ? tutStr(st.waitHint, t) : '', ok: false };
   if (st.hintWait && !st.toast && performance.now() - t.stepAt < st.hintWait) return { html: '', ok: false }; // 전투 끝 단계(토스트 없는 것): 진입 직후엔 비움 (tutWaveSteps)
-  const alt =t.alt && performance.now() - t.altT < 3000 ? t.alt : st.alt ? st.alt(t) : '';
+  const alt = t.alt && performance.now() - t.altT < 3000 ? t.alt : st.alt ? st.alt(t) : '';
   return { html: alt ? `<span class="tpAlt">${alt}</span>` : tutStr(IS_MOBILE && st.hintMo != null ? st.hintMo : st.hint, t) || '', ok: false };
 }
 const TUT_DLG = ['shopOverlay', 'chipModal', 'crownModal', 'duelConfirm', 'reviveModal', 'optModal'], TUT_DLG_WIN = { shopOverlay: 'shopWin', chipModal: 'chipWin', optModal: 'optWin' };
