@@ -3711,7 +3711,7 @@ const MATERIALS = [
   { name:'젤리',     col:'#8fd16a', death:'splash' },   // 14 R11~20 변종 (끝자리 2·4·9)
   { name:'밤송이',   col:'#8a5a2b', death:'rock'   },   // 15 R21~30 변종 (벗겨지면 그림만 알밤 = MAT_VIS_PEEL)
   { name:'이끼 공',  col:'#3f7d3a', death:'thud'   },   // 16 R31~40 변종
-  { name:'눈덩이',   col:'#f4f8fb', death:'thud'   },   // 17 R41~50 변종
+  { name:'눈덩이',   col:'#e4f0fb', death:'thud'   },   // 17 R41~50 변종 (10-15 리뷰 D1: #f4f8fb 흰색 → 살짝 하늘빛 — 야구공 크림색과 갈리고, 밴드 끝 어둡힘이 회색 대신 푸른 회색)
 ];
 const MAT_BASE_N = 14, MAT_VIS_PEEL = 40, MAT_VIS = { 40: { col: '#9c5b2e' } }; // 기본 재질 수(변종 꺼지면 도감·업적·샌드박스 14칸) · 알밤 그림 전용 번호(MATERIALS에 없음 — 2차 변종 18~21과 안 겹치게 40) · ⚠️ 아래 MAT_SIZE[MAT_VIS_PEEL] 줄보다 위여야 함(맨 위 실행문)
 // 라운드 → {재질 idx, 밴드진행도 p(0~1), 다음 재질} — 헬 이후는 8칸부터 천체 사다리
@@ -4103,6 +4103,7 @@ function resetTransientUI() {
   const rv = document.getElementById('reviveModal'); if (rv) rv.style.display = 'none'; // ❤️‍🩹 부활 제안 창도 동일
   tutTipHide(); // 🧭 첫 판 안내 말풍선
   duelAskU = null; duelLockFloatT = -10; airFloatT = -10;
+  varSeenC = null; // 🫧 구슬 변종 도감 기록 사본 — 다음 읽기 때 localStorage에서 다시 불러옴(VAR_ON은 스위치라 등록 안 함: 판마다 꺼지면 런타임 켜기가 풀림)
   window.dispatchEvent(new Event('dpd:resetui'));
 }
 function reset() {
@@ -6374,6 +6375,7 @@ function dealDamage(m, dmg, owner, el) {
 // ── 🫧 구슬 변종(10-15) 받침: 변종 몹(m.vk = 재질 14~17)만 도는 함수들. m.vk는 VAR_ON일 때 spawnMonster(opt.vk)에서만 생긴다 → 꺼지면 어느 것도 안 불림
 function varInit(m, vk) { // 변종 세우기 — spawnMonster가 재질·황금·쉴드 난수를 다 뽑은 뒤 덮어씀(켜도 일반 몹과 같은 난수를 같은 순서로 소비)
   m.vk = vk; m.mat = vk; m.esc = matInfo(S.round).p; m.golden = false; // 재질·밴드 험악도 고정(밴드 끝 '다음 재질'에 뽑혔어도) · 황금 불가(모양이 먼저 읽혀야 함)
+  m.shield = m.shieldMax = 0; // 쉴드 없음(R50+ 샌드박스 직접 소환에서 쉴드 난수가 붙던 것 — 밤송이 '절반' 판정이 쉴드를 안 봄). 난수는 이미 뽑은 뒤라 순서 그대로
   m.lastHitAt = S.time; m.fireT = 0; m.fxT = 0; // 마지막으로 맞은 시각(이끼 재생 시계) · '불 맞음' 끝 시각 · 연출 쓰로틀
   if (vk === 14) m.max = m.hp = Math.max(1, Math.floor(m.max * JELLY.PARENT)); // 젤리 본체 = 몫 H의 절반 (나머지 절반 = 잡힐 때 갈라지는 조각 2개)
   if (vk === 15) m.shell = true; // 밤송이 껍질
@@ -6452,7 +6454,7 @@ function varSplit(m, newborns) { // 젤리 본체가 잡힘 → 작은 젤리 2�
     });
   }
 }
-let varSeenC = null; // localStorage 'dpd_monel' 사본 — 도감 속성 아이콘 발견 기록(판과 무관한 영구 기록의 거울이라 resetTransientUI 대상 아님)
+let varSeenC = null; // localStorage 'dpd_monel' 사본 — 도감 속성 아이콘 발견 기록(영구 기록의 거울 · resetTransientUI가 null로 비워 다음 읽기 때 다시 불러옴)
 function varSeen(vk, el) { if (!varSeenC) { try { varSeenC = JSON.parse(localStorage.getItem('dpd_monel') || '{}') || {}; } catch (e) { varSeenC = {}; } } return !!varSeenC[vk + el]; }
 function varSee(vk, el) { // 그 속성으로 처음 맞혔을 때만 기록 — dealDamage는 가장 뜨거운 길이라 맞을 때마다 JSON.parse·setItem 금지(사본 캐시)
   const L = VAR_DEX_EL[vk]; if (!L || !L.includes(el)) return; // 도감 표에 있는 것만 (젤리 'fire' 같은 쓸모없는 키 안 씀)
@@ -10196,12 +10198,12 @@ M1_PAT[16] = function (r, c) { // 16 이끼 공 #3f7d3a — 구름 얼룩 5개(�
     ctx.beginPath(); ctx.arc((x + dx * s) * r, (y + dy * s) * r, k * s * r, 0, Math.PI * 2); ctx.fill();
   }
 };
-M1_PAT[17] = function (r, c) { // 17 눈덩이 #f4f8fb — ① 하늘 그늘: B안 띠와 같은 기하로 다시 칠함(색 = c의 R−50·G−30·B−12 = #c2daef, c에서 파생이라 그을림을 따름) ② 눈송이 점 4(위쪽엔 하나뿐) ③ 아래·오른쪽 가장자리 안쪽 작은 호 4(몸색 — 울퉁불퉁). 하이라이트는 밝기 247이라 자동 생략
-  const [R, G, B] = m1Rgb(c), sky = `rgb(${Math.max(0, R - 50)},${Math.max(0, G - 30)},${Math.max(0, B - 12)})`;
+M1_PAT[17] = function (r, c) { // 17 눈덩이 #e4f0fb — ① 하늘 그늘: B안 띠보다 넓게(밀린 원 (−0.16r, −0.19r) 0.86r — 가장 두꺼운 곳 ≈0.39r, 눈덩이만) 다시 칠함(색 = c의 R−80·G−45·B−15 = #94c3ec, c에서 파생이라 그을림을 따름) ② 눈송이 점 4(0.07~0.12r, 위쪽엔 하나뿐 — 눈처럼 안 보이게) ③ 아래·오른쪽 가장자리 안쪽 작은 호 4(몸색 — 울퉁불퉁). 하이라이트는 밝기 237.7이라 자동 생략 · 10-15 리뷰 D1: 옛 값(그늘 −50·−30·−12, 점 0.05~0.07r)은 1배·폰에서 무늬 없는 흰 공
+  const [R, G, B] = m1Rgb(c), sky = `rgb(${Math.max(0, R - 80)},${Math.max(0, G - 45)},${Math.max(0, B - 15)})`;
   ctx.fillStyle = sky; m1Circle(r); ctx.fill();
-  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(-MON_LOOK.BAND_OFF * r, -MON_LOOK.BAND_OFF_Y * r, MON_LOOK.BAND_R * r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(-0.16 * r, -0.19 * r, 0.86 * r, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = sky;
-  for (const [x, y, s] of [[0.34, -0.36, 0.07], [-0.46, 0.02, 0.06], [0.08, 0.30, 0.05], [0.44, 0.40, 0.06]]) { ctx.beginPath(); ctx.arc(x * r, y * r, s * r, 0, Math.PI * 2); ctx.fill(); }
+  for (const [x, y, s] of [[0.32, -0.38, 0.11], [-0.50, 0.02, 0.10], [0.06, 0.30, 0.12], [0.46, 0.22, 0.07]]) { ctx.beginPath(); ctx.arc(x * r, y * r, s * r, 0, Math.PI * 2); ctx.fill(); }
   ctx.strokeStyle = c; ctx.lineWidth = m1PatW(r); ctx.lineCap = 'round';
   for (let i = 0; i < 4; i++) {
     const a = 0.15 + i * 0.42;
@@ -13564,7 +13566,7 @@ function showMonsterInfo(m) {
   const mat = MATERIALS[m.mat] || { name: '수수께끼 공' };
   const bi = m.boss ? (BOSS_INFO[m.shape] || ['보스', '정체불명. 아무튼 세다.']) : null;
   const name = m.boss ? bi[0] + ' (보스)' : (m.peel ? '알밤' : m.vkKid ? '작은 젤리' : mat.name) + (m.golden ? ' (황금)' : ''); // 🫧 구슬 변종(10-15): 벗겨진 밤송이·젤리 조각 이름
-  const desc = m.boss ? `<i class="oi-quote">“${bi[1]}”</i>${m.abil && bossHint(m.shape) ? '<br><span class="tip">' + bossHint(m.shape) + '</span>' : '<br>'}<span class="oi-warn">시간 내에 못 잡으면 즉사</span>` : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…'); // 10-09: 능력 힌트 줄(bossHint, 능력 있는 보스만)
+  const desc = m.boss ? `<i class="oi-quote">“${bi[1]}”</i>${m.abil && bossHint(m.shape) ? '<br><span class="tip">' + bossHint(m.shape) + '</span>' : '<br>'}<span class="oi-warn">시간 내에 못 잡으면 즉사</span>` : m.peel ? '껍질 벗은 반질반질 알밤.' : m.vkKid ? '말캉말캉 작은 젤리.' : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…'); // 10-09: 능력 힌트 줄(bossHint, 능력 있는 보스만) · 🫧 10-15 리뷰 D2: 알밤·작은 젤리는 상태별 설명(재질 설명은 벗겨지기 전·갈라지기 전 문구라 이름·아래 줄과 어긋남)
   const hp = Math.max(0, Math.ceil(m.hp)), max = Math.max(1, Math.ceil(m.max));
   const pct = Math.max(0, Math.min(1, m.hp / m.max));
   const col = pct > 0.5 ? '#43a047' : pct > 0.25 ? '#ff9800' : '#e53935';
