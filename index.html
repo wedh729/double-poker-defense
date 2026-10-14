@@ -15248,6 +15248,10 @@ function tutKeepMob(t) { // 연습 몹: 단계 동안 쓰러지지 않는 몹 �
 }
 function tutFreeMob(t, hp) { if (t.toughM && S.monsters.includes(t.toughM)) t.toughM.hp = Math.min(t.toughM.hp, hp); t.toughM = null; } // 단계가 끝나면 = 잡을 수 있는 체력으로 (더는 되채우지 않음)
 function tutHeroN() { return S.units.filter(u => u.hero && !u.super && !isHiddenCombo(u)).length; }
+function tutSeeUnit(list) { // 링으로 짚을 유닛 = 화면에서 다른 창(딜 순위·정보 창 등)에 안 가려진 첫 유닛 (작은 폰 — phone740 실측: 딜 순위 창 밑 유닛을 짚어 누를 수 없었다)
+  const R = document.getElementById('cv').getBoundingClientRect(); if (!R.width) return list[0] || null;
+  return list.find(u => document.elementFromPoint(R.left + u.x / VW * R.width, R.top + (u.y - 4) / VH * R.height) === cv) || list[0] || null;
+}
 function tutOpenChip() { if (CM.style.display !== 'flex') openCasino(); else if (document.getElementById('chipWin').dataset.view !== 'finance') casMenu(); }
 function tutSelFighters() { return tutFighters().filter(u => u.selected); }
 function tutSelectOnly(list) { S.units.forEach(u => u.selected = list.includes(u)); updateInfoPanel(); }
@@ -15377,7 +15381,7 @@ const TUT_STEPS = [
     alt: t => t.lastWave && !t.lastWave.clear ? '시간이 다 됐지만 괜찮아요. 튜토리얼에선 목숨이 줄지 않아요.' : '',
     enter: () => { tutSelectOnly([]); hideObjInfo(); },
     done: () => tutSelFighters().length > 0,
-    target: () => { const u = tutFighters()[0]; return u ? { unit: u } : null; } },
+    target: () => { const u = tutSeeUnit(tutFighters()); return u ? { unit: u } : null; } },
   { id: 'move', view: 'map', icon: 'arrow', title: '이동',
     toast: '땅을 우클릭하면 고른 유닛이 그곳으로 걸어가요. 반짝이는 원 안을 우클릭해 보세요.',
     toastMo: '유닛을 꾹 누른 채 끌면 들어 올려져요. 반짝이는 원 안에 놓아 보세요.',
@@ -15591,7 +15595,7 @@ const TUT_STEPS = [
     hint: '내 유닛을 클릭해 정보 창을 봐요.', hintMo: '내 유닛을 눌러 정보 창을 봐요.',
     enter: t => { tutEnsureWave(t, 4); tutReachFix(); tutSelectOnly([]); hideObjInfo(); },
     done: () => tutSelFighters().length > 0 && document.getElementById('unitInfo').style.display === 'block',
-    target: () => { const a = S.units.find(u => u.hidden && !u.miner && !u.item) || tutFree()[0]; return a ? { unit: a } : null; } },
+    target: () => { const a = tutSeeUnit(S.units.filter(u => u.hidden && !u.miner && !u.item).concat(tutFree())); return a ? { unit: a } : null; } },
   Object.assign({ id: 'clear4', view: 'map', hint: '전투를 마쳐요.' }, tutWaveSteps(4), { enter: t => tutEnsureWave(t, 4) }),
   // ⑩ 결투장 — 도전자·입장 경고·입장·도망·결투·기권
   { id: 'duel', view: 'map', icon: 'swords', title: '결투장',
@@ -15662,7 +15666,7 @@ const TUT_STEPS = [
     hint: () => tutSelFighters().some(airPriOk) ? "정보 창의 '공중' 버튼을 눌러요." : IS_MOBILE ? '활이나 총 유닛을 눌러 골라요.' : '활이나 총 유닛을 클릭해 골라요.',
     enter: t => { tutEnsureWave(t, 7); tutReachFix(); tutSelectOnly([]); hideObjInfo(); if (!tutFighters().some(airPriOk)) { spawnUnit(1, RACE_OF_RANK[1], false, 10); tutSupply('활 유닛'); } },
     done: () => S.units.some(u => !u.miner && !u.item && u.priority === 'air'),
-    target: () => { if (tutSelFighters().some(airPriOk) && tutVisRect('#unitInfo .priBtn[data-pri="air"]')) return { dom: '#unitInfo .priBtn[data-pri="air"]' }; const a = tutFree().find(airPriOk) || tutFighters().find(airPriOk); return a ? { unit: a } : null; } },
+    target: () => { if (tutSelFighters().some(airPriOk) && tutVisRect('#unitInfo .priBtn[data-pri="air"]')) return { dom: '#unitInfo .priBtn[data-pri="air"]' }; const a = tutSeeUnit(tutFree().filter(airPriOk).concat(tutFighters().filter(airPriOk))); return a ? { unit: a } : null; } },
   { id: 'airLand', view: 'map', icon: 'arrow', title: '내려앉기',
     toast: '나는 몬스터도 가끔 땅에 내려앉아요. 그때는 모든 유닛이 공격할 수 있어요.',
     toastWhen: () => !S.monsters.some(m => m.fly) || (S.air && !S.air.up) || S.phase !== 'wave', waitHint: '전투를 지켜봐요.',
