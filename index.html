@@ -4140,6 +4140,7 @@ function stageInfo(n) {
 // 난이도 곡선: 1~3스테이지는 완만(10% 복리) → 4스테이지부터 대폭 상향(×1.5 점프 + 15% 복리)
 // → 50라운드부터 가속(+5% 복리) → 80라운드 이후 헬모드(진입 슬랩 후 완만한 조임 — 150R 태양전까지 도달 가능하되 극악)
 let DIFF_MUL = 1, DIFF_NAME = '초원'; // 시작 화면에서 선택 (동산 0.7 / 초원 1.0 / 성외곽 1.4 / 지옥 2.0 — 10-14 유저: 옛 쉬움·보통·어려움·지옥 이름만 바꿈, 기록 키 dpd_best_<배수>는 그대로)
+const diffLabel = n => ['동산', '초원', '성외곽', '지옥'].includes(n) ? n + ' 난이도' : n; // 10-15 유저: 게임오버 줄·상단바에서 '동산'이 난이도 이름으로 읽히게 ('튜토리얼'·'오늘의 시드'·'샌드박스'는 그대로)
 // 🌱 초반 혹(hump) (10-13 유저: "초반 난이도가 너무 쉬움 — 후반은 유지하고 초반만 살짝. 보통 기준 원페어·원페어·하이카드 3연속이면 클리어가 어려운 정도")
 //   보통: R1 ×1 (유닛 1기·첫 판) → PEAK까지 기하로 올라 ×HMAX → END까지 기하로 내려와 END부터 정확히 ×1. R1 · n ≥ END는 예전 식과 비트 단위로 같다
 //   측정(흐름 봇 — 탐욕 업글·소환장 둘레 배치·광부·포커 30초, t1013_early): 예전엔 R2~R10이 13~25초 클리어(원원하도 R3 20초) →
@@ -5214,7 +5215,7 @@ function endWave() {
       const lifeHTML = S.lifeLog.length ? `<div style="margin-top:8px;text-align:left;font-size:12px;color:#ef9a9a">목숨: ${S.lifeLog.slice(-6).map(e => `R${e.r} ${e.d > 0 ? '−' + e.d : '+' + (-e.d)} ${e.why}`).join(' · ')}</div>` : '';
       const runHTML = `<div style="margin-top:6px;text-align:left;font-size:12px;color:#cfc6f5">최고 콤보 <b>${S.maxCombo}</b> · 최고 족보 <b>${HAND_NAMES[S.bestHand]}</b>${S.aceN ? ` · ♠ 에이스 ${S.aceN}` : ''}${S.superAceN ? ` · ♠♠ 슈퍼에이스 ${S.superAceN}` : ''}${S.crownRace >= 0 ? ` · 왕관 ${RACES[S.crownRace].suit} ${RACES[S.crownRace].name}` : ''}${S.revived ? ' · 부활' : ''}</div>`;
       document.getElementById('finalScore').innerHTML =
-        `도달 스테이지: <b>${S.round}</b> (${stageInfo(S.round).name}) · ${DIFF_NAME}<br>` + tutGameOverLine() + // 🧭 처음 3번만 한 줄 힌트
+        `도달 스테이지: <b>${S.round}</b> (${stageInfo(S.round).name}) · ${diffLabel(DIFF_NAME)}<br>` + tutGameOverLine() + // 🧭 처음 3번만 한 줄 힌트
         `최고 기록: <b>${best}</b> 스테이지` + (isNew ? ' <span style="color:#ffd166">★ 신기록! ★</span>' : '') +
         runHTML + lifeHTML + statsHTML;
       diffBestLabel();
@@ -5228,7 +5229,7 @@ function endWave() {
   if (S.round === FINAL_ROUND && S.multi) mpFinalRound(); // 🤖 멀티: 멈추지 않는 배너 + 로그 (★★★ 6-7 — 헬모드·태양 문구 없음)
   else if (S.round === FINAL_ROUND) {
     S.paused = true;
-    document.getElementById('winMsg').textContent = DIFF_MUL >= 2 ? '지옥에서 80라운드 — 2%의 문을 열었습니다.' : DIFF_MUL >= 1.4 ? '성외곽 80라운드 — 5%의 문을 열었습니다.' : '80라운드 클리어를 축하합니다.'; // 난이도별 문구 (09-08)
+    document.getElementById('winMsg').textContent = DIFF_MUL >= 2 ? '지옥에서 80라운드 — 2%의 문을 열었습니다.' : DIFF_MUL >= 1.4 ? '성외곽에서 80라운드 — 5%의 문을 열었습니다.' : '80라운드 클리어를 축하합니다.'; // 난이도별 문구 (09-08)
     document.getElementById('winOverlay').style.display = 'flex'; syncGamePause();
     logMsg('80라운드 클리어!! 이제부터는 헬모드...');
     if (DIFF_MUL >= 2) markAchv('hell80'); else if (DIFF_MUL >= 1.4) markAchv('hard80'); // 공식 목표 달성 = R80 '클리어' 시점 (r80 '도달'과 구분)
@@ -16098,7 +16099,7 @@ function updateHUD() {
   document.querySelectorAll('.chipStation').forEach(b => { b.disabled = false; b.classList.toggle('ready', S.chips >= 1); });
   hudSet('tRound', '' + S.round);
 
-  hudSet('tStage', stageInfo(S.round).name + (DIFF_NAME === '초원' ? '' : ` · ${DIFF_NAME}`)); // 재질명 옆에 난이도 상시 표시
+  hudSet('tStage', stageInfo(S.round).name + (DIFF_NAME === '초원' ? '' : ` · ${diffLabel(DIFF_NAME)}`)); // 재질명 옆에 난이도 상시 표시
   // 원형 시계: 시간이 흐를수록 빨강(전투)/보라(포커)가 시계방향으로 채워진다
   refreshInfoPanelLive(); // 킬 수·스킬 쿨 실시간
   const clock = document.getElementById('clock');
