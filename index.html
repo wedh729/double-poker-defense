@@ -162,6 +162,9 @@
   .handRowG .hname .rank { display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 50%;
     background: #c9a75a; color: #fff; font-size: 11px; margin-right: 6px; }
   .handRowG .hdesc { font-size: 11px; color: #9a8a60; margin-left: auto; text-align: right; line-height: 1.5; flex: 1 1 auto; }
+  /* 구슬 변종 속성 아이콘 (도감·몹 정보창, 10-15) — 불꽃 주황 · 방패(단단함) 회청 · 아직 안 밝혀짐 = 회색 원 '?' */
+  .dexEl { font-size: 13px; vertical-align: -0.18em; } .dexEl-fire { color: #ff7a1a; } .dexEl-phys { color: #8d99a6; }
+  .dexElQ { display: inline-block; width: 13px; height: 13px; line-height: 13px; border-radius: 50%; background: #c9c2b0; color: #fff; font-size: 9px; font-weight: bold; text-align: center; vertical-align: -0.1em; margin-left: 2px; }
   .mcard { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 27px; height: 37px;
     border-radius: 4px; background: #fff; border: 1.5px solid #ccc; font-weight: 800; font-size: 11px; line-height: 1.05; margin-right: 3px; }
   .mcard.red { color: #e0355a; } .mcard.black { color: #2b3350; }
@@ -3527,6 +3530,8 @@ const DPD_ICONS = {
   'arrow-r': { d: 'M4 12h15m-6-5 5 5-5 5' },
   back:    { d: 'M14 5l-7 7 7 7' },
   shield:  { d: 'M12 3l8 3v6c0 5-8 9-8 9S4 17 4 12V6l8-3Z M8 12l3 3 5-6' },
+  flame:   { d: 'M12 3c1 3.5 5 5.4 5 9.8a5 5 0 0 1-10 0c0-2.4 1.3-3.9 2.4-4.9.1 1.9.9 2.9 1.9 3.4C10.6 9.3 10.9 6 12 3Z', // 불꽃 = 불 속성 (구슬 변종 도감·정보창 10-15)
+             fill: 'M12 3c1 3.5 5 5.4 5 9.8a5 5 0 0 1-10 0c0-2.4 1.3-3.9 2.4-4.9.1 1.9.9 2.9 1.9 3.4C10.6 9.3 10.9 6 12 3Z' },
   speed:   { d: 'M4 18a9 9 0 1 1 16 0M12 13l5-5M4 18h16 M11 13a1 1 0 1 0 2 0a1 1 0 1 0-2 0Z' },
   'speed-r': { d: 'M3 16h7m-5-5h5m-2-5h5M12 9l3-4 6 5-5 6h-5m5-7-3 6 5 5' },
   box:     { d: 'M3 7l9-4 9 4v11l-9 4-9-4V7Zm0 0 9 5 9-5M12 12v10M7 5l10 5' },
@@ -3702,7 +3707,13 @@ const MATERIALS = [
   { name:'목성',     col:'#cf9d6f', death:'rock'   },   // 11
   { name:'태양',     col:'#ff8a1e', death:'fire', glow:'#ff6a00' }, // 12
   { name:'블랙홀',   col:'#0d0d14', death:'void'   },   // 13
+  // 구슬 변종 1차 (10-15, 구슬몹_2026-10-14\10_구현설계.md) — 14번부터 뒤에만 붙임(8~13 = 헬 사다리, 중간 삽입 금지). VAR_ON(꺼짐)이면 스폰·도감·샌드박스에 안 나옴
+  { name:'젤리',     col:'#8fd16a', death:'splash' },   // 14 R11~20 변종 (끝자리 2·4·9)
+  { name:'밤송이',   col:'#8a5a2b', death:'rock'   },   // 15 R21~30 변종 (벗겨지면 그림만 알밤 = MAT_VIS_PEEL)
+  { name:'이끼 공',  col:'#3f7d3a', death:'thud'   },   // 16 R31~40 변종
+  { name:'눈덩이',   col:'#e4f0fb', death:'thud'   },   // 17 R41~50 변종 (10-15 리뷰 D1: #f4f8fb 흰색 → 살짝 하늘빛 — 야구공 크림색과 갈리고, 밴드 끝 어둡힘이 회색 대신 푸른 회색)
 ];
+const MAT_BASE_N = 14, MAT_VIS_PEEL = 40, MAT_VIS = { 40: { col: '#9c5b2e' } }; // 기본 재질 수(변종 꺼지면 도감·업적·샌드박스 14칸) · 알밤 그림 전용 번호(MATERIALS에 없음 — 2차 변종 18~21과 안 겹치게 40) · ⚠️ 아래 MAT_SIZE[MAT_VIS_PEEL] 줄보다 위여야 함(맨 위 실행문)
 // 라운드 → {재질 idx, 밴드진행도 p(0~1), 다음 재질} — 헬 이후는 8칸부터 천체 사다리
 function matInfo(n) {
   if (n <= FINAL_ROUND) { const idx = Math.min(7, Math.floor((n - 1) / 10)); return { idx, p: ((n - 1) % 10) / 9, next: idx < 7 ? idx + 1 : 8 }; }
@@ -3761,13 +3772,14 @@ function onPlank(x, y) { return S.plank && Math.abs(x - CX) < PLANK_W/2 && y > C
 // 재질별 크기 배율: 실제 공 크기 싱크 (야구공 작게 ~ 농구공 크게). 천체는 웅장하게
 // 2026-08-08 유저: 전체 30% 축소, 야구공(idx 4)만 20% 축소 (이미 가장 작아서 덜 줄임). 보스(52/104)는 별도 상수라 그대로.
 // 이 배열이 스프라이트 굽는 크기(matSpriteSz)와 그리는 크기(monSize) 양쪽의 유일한 원천이라 여기만 바꾸면 무손실(k=1) 유지.
-const MAT_SIZE = [0.63, 0.665, 0.784, 0.826, 0.64, 0.595, 0.77, 0.63, 0.63, 0.84, 0.805, 0.875, 0.91, 0.77];
+const MAT_SIZE = [0.63, 0.665, 0.784, 0.826, 0.64, 0.595, 0.77, 0.63, 0.63, 0.84, 0.805, 0.875, 0.91, 0.77, 0.70, 0.70, 0.80, 0.72]; // 14~17 = 구슬 변종(젤리·밤송이·이끼 공·눈덩이)
+MAT_SIZE[MAT_VIS_PEEL] = MAT_SIZE[15]; // 알밤(그림 전용 40) = 밤송이와 같은 크기 → 굽는 크기 = 그리는 크기(k = 1)
 // 크기 성장은 '재질 밴드 안'이 아니라 '사다리 전체 진행도' 기준 (2026-08-03 유저: 축구공이 농구공보다 커 보인다).
 // 🔧 2026-08-04 유저: "같은 공인데 라운드가 지날수록 커지고, 너무 커지니 화질도 나빠진다" → 성장 0.32 → 0.
 //    크기는 이제 재질(공 종류)로만 정해진다. 이 상수만 되돌리면 성장이 살아난다 (0.12 정도가 순한 맛).
 //    ⚠️ 0이 아니면 스프라이트를 확대해 그리게 되어 화질이 다시 흐려진다 (matSpriteSz는 성장을 모른다).
 const MON_GROWTH = 0;
-function monProg(m) { return Math.min(1, ((m.mat || 0) + (m.esc || 0)) / (MATERIALS.length - 1)); }
+function monProg(m) { return Math.min(1, ((m.mat || 0) + (m.esc || 0)) / (MAT_BASE_N - 1)); } // 분모 = 기본 14종 기준(13) 고정 — 변종을 MATERIALS 뒤에 붙여도 값이 안 변하게
 function monSize(m) { return (m.boss ? (m.sunBoss ? 104 : 52) : 19 * (MAT_SIZE[m.mat] || 1)) * (m.small ? 0.6 : 1) * (1 + monProg(m) * MON_GROWTH); } // 🌞 태양 = 보스 2배
 // 🪖 몬스터 장비: esc 버킷(bucket/7)으로 장비 개수, HP 비율로 파괴 단계 — 드로우와 베이크가 같은 버킷 기준을 쓰게 공용화
 const MON_GEAR_ON = false; // 🪖 투구·어깨갑옷 (09-18 유저: 전부 삭제) — false면 gearCount 0 = 맨몸, 파괴 FX·베이크 키 변형도 자연 무동작. 되살리려면 true
@@ -3854,9 +3866,36 @@ function curPattern() { // 이번 라운드 실제 적용값: 멀티면 없음 �
   if (p.affix && !PAT_ON[p.affix]) { p.affix = null; p.n = 0; } // 공중(ratio)은 별도 차원이라 여기서 안 건드림
   if (p.form && !PAT_ON[p.form]) p.form = null;
   const k = p.affix || p.form || (p.ratio && S.round === AIR.R0 ? 'fly' : null); if (k) { p.tag = PAT_TAG[k][0]; p.hint = PAT_TAG[k][1]; }
+  if (VAR_ON && !S.sandbox && !S.mapTest && !S.story) { const v = varRound(S.round); if (v) { p.vk = v.vk; p.vr = v.ratio; if (!k && S.round === varFirst(v.vk)) { p.tag = VAR_TAG[v.vk][0]; p.hint = VAR_TAG[v.vk][1]; } } } // 🫧 구슬 변종(10-15): 끝자리 2·4·9 고정 스케줄 — 꺼지면 S.pat에 새 키가 아예 안 생김 · 배너 한 줄은 첫 등장 라운드만(어픽스·진형·공중 첫 태그가 있으면 그쪽 우선) · S.story = 스토리 병합 대비(이 브랜치엔 없음)
   return p;
 }
 function plainMul(N, Nf, W) { return (N - FLY_HP * Nf - 4 * W) / (N - Nf - W); } // 지상 몹 HP 환산(52 §5): Nf·0.8h + W·4h(방패병 HP 2h + 보호막 2h) + (N−Nf−W)·g·h = N·h
+// ==================== 구슬 변종 1차 4종 (2026-10-15, 구슬몹_2026-10-14\10_구현설계.md — §13 반박 검토 반영) ====================
+// 스케줄 = 챌린지 밴드마다 끝자리 2·4·9 라운드 고정(랜덤 아님): 젤리 R11~20 · 밤송이 R21~30 · 이끼 공 R31~40 · 눈덩이 R41~50. 보스(x0)·멀티·튜토리얼·샌드박스·맵 미리보기·스토리엔 없음.
+// VAR_ON = 스위치 하나(출시 기본 꺼짐 — 유저가 보드를 보고 결정). 꺼지면 S.pat·스폰 큐·몹에 새 키가 안 생겨 지금과 1비트도 같다.
+//   전역 let이라 콘솔·하네스에서 VAR_ON = true 로 켬 — 포커 단계에서 켜고 S.pat = curPattern() 을 다시 부를 것(S.pat은 startPoker가 세움).
+// 피해 속성 = dealDamage 4번째 인자 el('phys' 기본 | 'fire'). 지금 불 출처 = 화염 띠(플러쉬 화염방사기 계열)·쇼군 1·2타·용암 돌 착탄·화상 도트. 얼음은 출처가 없어 미구현(영웅 갈래 때 — 설계 §5-5).
+let VAR_ON = false;
+const VAR_IN_DUEL = true; // 결투 라운드(R14·R42·R49)에도 변종 — 도전자 자신은 변종·속성 미적용. false 한 단어 → 젤리 R12·R19, 눈덩이 R44만(첫 등장도 varFirst가 따라감)
+const VAR_BANDS = [[11, 20, 14, 0.15], [21, 30, 15, 0.20], [31, 40, 16, 0.20], [41, 50, 17, 0.20]]; // [첫, 끝, 재질, 비율] — 변종 수 = round(마릿수 × 비율), 정확히 N마리(공중·방패병 자리 제외)
+const VAR_TAG = { 14: ['젤리', '잡으면 둘로 갈라져요'], 15: ['밤송이', '껍질은 불에 탁 터져요'], 16: ['이끼 공', '쉬게 두면 차올라요'], 17: ['눈덩이', '불에 녹아요'] }; // 포커 배너 한 줄(첫 등장 라운드만, 수치 없음)
+const VAR_HP = { 14: 1.00, 15: 0.97, 16: 0.65, 17: 1.00 }; // 🔧 밸런스 노브: 변종 HP = 그 라운드 지상 몹 HP × 값 — 10-15 측정 확정(같은 HEAD에서 VAR_ON만 끈 판 대비 클리어 비율 · 공중·결투 끔 · 시드 3 · 덱 물리/불 섞음/혼합 → 평균): 젤리 1.032/1.000/1.002 → 1.011 · 밤송이 1.001/0.995/0.969 → 0.988 · 이끼(시작 1.05 → 0.70 → 리뷰 F1 옆 재생 약화 뒤 0.65) 1.009/0.966/1.011 → 0.995 · 눈덩이(1.10 → 리뷰 F1 관문 뒤 1.00) 1.000/0.972/0.998 → 0.990 · 이끼·눈덩이는 화력 ½ 누수 관문(켬 누수 합 ≤ 끔 + max(2, 5%), 시드 2)도 통과하는 값 중 가장 큰 값(이끼 0.70은 물리 R39, 눈덩이 1.10은 혼합 R42·R44·물리 R49에서 넘음 — 1.00 = 불 없는 덱에겐 지상 몹과 같은 체력) (표 = 구슬몹_2026-10-14\20_밸런스보정.md §10)
+const VAR_FIRE = { 16: 1.4, 17: 1.4 }; // 불 약점 배수(이끼 공·눈덩이) — 불 피해·화상 도트 모두
+const VAR_BOB = { 14: [5, 2.0], 15: [2, 1.6], 16: [0, 0], 17: [3, 1.3] }; // 통통 [높이, 빠르기] — draw 몹 루프의 MAT_BOB은 mat < 8만 읽어서 따로
+const JELLY = { PARENT: 0.5, KID: 0.5, KIDS: 2 }; // 젤리 몫 H: 본체 ⌊H/2⌋ + 조각 2개 각 ⌊본체 max/2⌋ (합 ≈ H)
+const BURR = { MUL: 0.88, PEEL_AT: 0.5 }; // 밤송이: 껍질 동안 물리 ×0.88(단단함 1등급 −12% 상당) · 체력 절반에서 벗겨짐 · 불이면 즉시
+const MOSS = { IDLE: 1.5, TICK: 0.25, SELF: 0.06, NEAR: 0.02, NEAR_R: 34, NEAR_N: 1, BUDGET: 0.5 }; // 이끼: 1.5초 안 맞으면 0.25초마다 재생 · 자기 초당 max 6% · 바로 옆 1마리(중심 34px 안 가장 가까운) 초당 이끼 max 2% · 총량 = 이끼 max의 50%까지 — 10-15 리뷰 F1: 옆 3마리 4%씩이면 화력 낮은 판(표준 K ½)에서 반쯤 죽은 몹을 살려 둬 누수가 늘었음(불 섞음 R34 12 → 22, 혼합 R34 104 → 140, 물리 R39 88 → 98 · 시드 2 합) → 옆 1마리 2%
+const VAR_FIRE_T = 1.5; // 불에 맞은 뒤 '불 맞음' 시간(이끼 재생 멈춤 · 김·연기 연출)
+const VAR_DEX_EL = { 15: ['phys', 'fire'], 16: ['fire'], 17: ['fire'] }; // 도감 아이콘 = 지금 있는 속성만(젤리 없음) — 그 속성으로 맞혀 봐야 밝혀짐
+function varRound(r) { // 순수 함수(S 무관): 라운드 → { vk, ratio } | null
+  const d = r % 10;
+  if (d !== 2 && d !== 4 && d !== 9) return null; // 끝자리 2·4·9만 (0 = 보스는 자동 제외)
+  if (!VAR_IN_DUEL && r % DUEL_EVERY === 0) return null; // 결투 라운드 빼는 안 (R≤50에선 duelRound와 같은 산수)
+  for (const [a, b, vk, ratio] of VAR_BANDS) if (r >= a && r <= b) return { vk, ratio };
+  return null; // R1~10·R51+·헬 = 없음
+}
+function varFirst(vk) { const b = VAR_BANDS.find(x => x[2] === vk); for (let r = b[0]; r <= b[1]; r++) if (varRound(r)) return r; return -1; } // 그 변종의 첫 등장 라운드(숫자를 박지 않음)
+function matDexN() { return VAR_ON ? MATERIALS.length : MAT_BASE_N; } // 도감·샌드박스가 보는 재질 수 — 꺼지면 14 그대로
 // 🏛️ 결투 창(window): 팝업·락인이 활성인 구간 — 도전자가 있거나, 결투 라운드 포커 중 아직 결판나지 않았을 때
 function duelWindowActive() { return !!S.duel || (S.phase === 'poker' && duelRound(S.round) && !S.duelEnded); }
 
@@ -4064,6 +4103,7 @@ function resetTransientUI() {
   const rv = document.getElementById('reviveModal'); if (rv) rv.style.display = 'none'; // ❤️‍🩹 부활 제안 창도 동일
   tutTipHide(); // 🧭 첫 판 안내 말풍선
   duelAskU = null; duelLockFloatT = -10; airFloatT = -10;
+  varSeenC = null; // 🫧 구슬 변종 도감 기록 사본 — 다음 읽기 때 localStorage에서 다시 불러옴(VAR_ON은 스위치라 등록 안 함: 판마다 꺼지면 런타임 켜기가 풀림)
   window.dispatchEvent(new Event('dpd:resetui'));
 }
 function reset() {
@@ -5043,6 +5083,8 @@ function startWave() {
   // 소환장 가운데에서 우르르 쏟아지듯 (약 2초 안에 전부 등장)
   S.spawnQueue = { left: count, hp, interval: 2 / count, acc: 0, bossLeft: boss ? 1 : 0, mobMul: !S.multi && boss && BOSS_ABILITY[bossShapeFor(S.round)] === 'gravity' ? GRAV.MOB_HP_MUL : 1, // 패턴 1단계: 목성 라운드 잡몹 보정 노브(기본 1.0 = 무변경, 보스 HP는 건드리지 않음)
     count, hp0, nFly, nWard, hpFly: Math.max(1, Math.floor(hp0 * FLY_HP * ak)), hpWard: hp0 * 2 * ak, shWard: hp0 * 2 * ak, flyDone: 0, wardDone: 0 }; // 받침: 스폰 순번·어픽스 분산(스폰 틱) · 방패병 = HP 2h0 + 보호막 2h0 · ak = 공중 노브(잡몹만, 기본 1)
+  const nVar = pat.vk ? Math.min(Math.round(count * pat.vr), count - nFly - nWard) : 0; // 🫧 구슬 변종(10-15): 정확히 N마리 = round(마릿수 × 비율), 공중·방패병 자리 제외 — 꺼지면 S.pat에 vk 없음 = 0
+  if (nVar > 0) Object.assign(S.spawnQueue, { nVar, vk: pat.vk, hpVar: Math.max(1, Math.floor(hp * VAR_HP[pat.vk])), varDone: 0 }); // 변종 HP = 지상 몹 1마리(hp, plainMul 환산 뒤) × 노브 — 큐 키는 변종 라운드에만(꺼짐 = 큐 모양 그대로)
   S.air = nFly ? { on: true, up: true, t: 0, k: 0, upT: pat.upT, downT: pat.downT } : null; // 공중 라운드 착지 시계: 체공 upT초 / 착지 downT초 반복 (k = 이착륙 0~1, WING.EASE초)
   if (S.multi) mpWaveStart(); // 🤖 멀티: 레인 개체 출발 + 프록시 투입 · 보스 라운드 bossLeft 0
   if (S.duel) { // 연장전(포커)까지 못 잡았으면 새 웨이브 시작에 퇴장 — 챔피언이 잠겨 있었으면 대신 사망
@@ -5100,6 +5142,7 @@ function spawnMonster(hp, isBoss, opt) {
     if (st >= 50 && Math.random() < 0.16) { m.shieldMax = m.shield = Math.max(1, Math.floor(hp * 0.6)); } // 🛡️ 쉴드
   }
   if (isBoss && S.round >= FINAL_ROUND) m.split = true; // 💥 보스 분열: 처치 시 5조각 (각 30% HP)
+  if (opt.vk && VAR_ON && !isBoss && !opt.child) varInit(m, opt.vk); // 🫧 구슬 변종(10-15): 난수(위치·재질·황금·쉴드)를 다 뽑은 뒤 덮어씀 · 소비 함수 진입점에서 스위치 확인(스폰 틱·샌드박스 버튼 공통)
   S.monsters.push(m);
   return m;
 }
@@ -5938,7 +5981,8 @@ function update(dt) {
         const step = (j, n, M) => n > 0 && Math.floor((j + 1) * n / M) > Math.floor(j * n / M);      // 정확히 n번 참, 균등 분산 (난수 없음)
         const fly = step(i, q.nFly || 0, N); if (fly) q.flyDone++;
         const ward = !fly && step(i - (q.flyDone || 0), q.nWard || 0, N - (q.nFly || 0)); if (ward) q.wardDone++; // 공중을 뺀 순번 위에서 세어 공중 + 방패병 라운드(x8, R38~)도 정확히 nWard
-        spawnMonster(Math.floor((fly ? q.hpFly : ward ? q.hpWard : q.hp) * (q.mobMul || 1)), false, { slot: i, slotN: N, affix: fly ? 'fly' : ward ? 'ward' : null, shield: ward ? q.shWard : 0 }); // 패턴 1단계: 잡몹만 mobMul(목성 라운드 노브, 기본 1 → 값 동일). 멀티·태양전 큐엔 mobMul 없음 → || 1
+        const vr = !!q.nVar && !fly && !ward && step(i - (q.flyDone || 0) - (q.wardDone || 0), q.nVar, N - (q.nFly || 0) - (q.nWard || 0)); if (vr) q.varDone++; // 🫧 구슬 변종(10-15): 공중·방패병을 뺀 순번 위에서 정확히 nVar (꺼지면 q.nVar 없음 → step도 안 부름)
+        spawnMonster(Math.floor((fly ? q.hpFly : ward ? q.hpWard : vr ? q.hpVar : q.hp) * (q.mobMul || 1)), false, { slot: i, slotN: N, affix: fly ? 'fly' : ward ? 'ward' : null, shield: ward ? q.shWard : 0, vk: vr ? q.vk : 0 }); // 패턴 1단계: 잡몹만 mobMul(목성 라운드 노브, 기본 1 → 값 동일). 멀티·태양전 큐엔 mobMul 없음 → || 1
       }
     }
     if (q.bossLeft > 0 && S.timer < WAVE_TIME - 5) {
@@ -5964,7 +6008,7 @@ function update(dt) {
   for (const m of S.monsters) {
     m.hitT = Math.max(0, (m.hitT || 0) - dt);
     if (m.lane) { mpLanePos(m); continue; } // 🤖 레인 프록시: 위치는 결정론 경로가 덮어쓴다 (배회·펜 클램프·견인·화상 면역)
-    if (m.burnT > 0) { m.burnT -= dt; if (!airborne(m)) m.hp -= m.burnDmg * dt; } // 🔥 쇼군 화상 도트 (얼어붙어도 계속 탄다) · 공중: 착지 창에 붙은 화상은 날아오른 동안엔 안 깎임(시간은 흐름 — 쇼군·용암 ✕ 체감, pat2 크로스체크 P2)
+    if (m.burnT > 0) { m.burnT -= dt; if (!airborne(m)) m.hp -= m.vk ? varBurn(m, m.burnDmg * dt) : m.burnDmg * dt; } // 🫧 구슬 변종(10-15) 불 약점은 varBurn(꺼지면 m.vk 없음 = 식 그대로) · 🔥 쇼군 화상 도트 (얼어붙어도 계속 탄다) · 공중: 착지 창에 붙은 화상은 날아오른 동안엔 안 깎임(시간은 흐름 — 쇼군·용암 ✕ 체감, pat2 크로스체크 P2)
     if (!m.boss) { // 🪖 장비 파괴 감지: 단계가 늘어난 프레임에만 1회성 이펙트
       const brk = monBroken(m);
       if (brk > m._brk) { monGearBreakFx(m.x, m.y, monSize(m)); m._brk = brk; }
@@ -5988,6 +6032,7 @@ function update(dt) {
       continue;
     }
     if (S.freezeT > 0) continue; // 시간 정지 중엔 위치 갱신 없이 제자리
+    if (m.vk) varTick(m, dt); // 🫧 구슬 변종(10-15): 이끼 재생·불 맞음 연출 — 이 줄 위 continue 덕에 시간정지 중 멈춤
     if (m.weakT > 0) m.weakT -= dt; // 약점 창(틀) — freezeT continue 아래 = 시간정지 중 동결 (열린 채 멈춤, 토성 규칙과 동일)
     if (m.puffT > 0) m.puffT -= dt; // 능력 예고 부풀기
     if (m.abil === 'gravity' && !m.small && !m.entering && m.hp > m.max * 0.2) { // 목성 중력 (받침 A: 보스 HP 20% 아래면 능력 정지)
@@ -6144,7 +6189,7 @@ function update(dt) {
           }
           const r2 = p.splash * p.splash;
           const lava = p.boulder && p.owner && p.owner.stone === 'lava'; // 🥚 용암 묻은 돌 — 착탄 화상 도트 (쇼군 화상 재사용)
-          for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y + (m.lift || 0) - gcy; if (ddx*ddx + ddy*ddy <= r2) { dealDamage(m, p.dmg, p.owner); if (lava && !airborne(m)) { m.burnT = Math.max(m.burnT || 0, 2.5); m.burnDmg = Math.max(m.burnDmg || 0, p.dmg * 0.2); } } } // 거리 = 땅 지점끼리 (지상 몹 lift 0 = 무변경)
+          for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y + (m.lift || 0) - gcy; if (ddx*ddx + ddy*ddy <= r2) { dealDamage(m, p.dmg, p.owner, lava ? 'fire' : 'phys'); if (lava && !airborne(m)) { m.burnT = Math.max(m.burnT || 0, 2.5); m.burnDmg = Math.max(m.burnDmg || 0, p.dmg * 0.2); } } } // 거리 = 땅 지점끼리 (지상 몹 lift 0 = 무변경)
         }
         return false;
       }
@@ -6290,6 +6335,7 @@ function update(dt) {
           });
         }
       }
+      if (m.vk === 14 && !m.vkKid && S.monsters.length + newborns.length < 260) varSplit(m, newborns); // 🫧 젤리(구슬 변종 10-15): 잡으면 작은 젤리 2개 (보스 분열과 같은 상한) · 시간정지 중에도 갈라짐(조각도 제자리에 멈춰 있음)
       return false;
     }
     return true;
@@ -6310,10 +6356,12 @@ function update(dt) {
 function killGoldNow() { return Math.max(1, Math.round(S.round * 0.042)) * ((S.eventMods && S.eventMods.killMul) || 1) * (S.feverT > 0 ? 2 : 1); } // 0.06 → ×0.7 (경제 개편: 수동 수입 축소, 광산·이자로 축 이동) — 🤖 습격대 킬 골드(n × 이 값)도 같은 식
 
 // 데미지 적용: 쉴드가 있으면 쉴드부터 깎고, 넘치면 체력으로 (모든 공격이 이 함수를 거침)
-function dealDamage(m, dmg, owner) {
+//   el = 피해 속성 'phys'(기본·생략) | 'fire' (구슬 변종 10-15) — 불 출처만 'fire'를 넘긴다: 화염 띠(areaHit vis 'flame')·쇼군 1·2타·용암 돌 착탄(본탄·파편·두 번째 돌). 화상 도트는 이 함수를 안 거침(update 화상 줄)
+function dealDamage(m, dmg, owner, el) {
   if (m.entering) return; // 🌞 강림 중엔 무적 (연출 보호 — 염산·폭격 포함 전 데미지가 이 함수를 거친다)
   if (airborne(m) && !canHitAir(owner)) return; // 공중: 떠 있는 몹은 쏘는 무기만 (스플래시·전체 타격·파편·착탄 반경·슬롯 폭격 전부 이 한 줄 — 통계도 안 쌓임)
   if (m.weakT > 0) dmg *= WEAK.MUL; // 약점 창(받침 A 분기 순서: entering 무적 → [2단계 공중 return 자리] → 보스 배수(약점·토성·화성) → [장갑] → [금성 lastHitAt] → 쉴드 → 체력)
+  if (m.vk) dmg = varHit(m, dmg, el); // 구슬 변종(10-15) = [장갑]·[금성 lastHitAt] 자리 — 변종 몹만(꺼지면 m.vk 없음 = 무변경). 통계 줄보다 위라 딜 순위가 실제 피해를 센다
   if (owner) m.lastHitBy = owner;
   if (owner && owner.weapon) { const st = S.stats[owner.weapon] = S.stats[owner.weapon] || { dmg: 0, kills: 0 }; st.dmg += dmg; }
   m.hitT = 0.09; // 피격 리액션 (스쿼시 + 놀란 표정)
@@ -6323,6 +6371,95 @@ function dealDamage(m, dmg, owner) {
   } else {
     m.hp -= dmg;
   }
+}
+// ── 🫧 구슬 변종(10-15) 받침: 변종 몹(m.vk = 재질 14~17)만 도는 함수들. m.vk는 VAR_ON일 때 spawnMonster(opt.vk)에서만 생긴다 → 꺼지면 어느 것도 안 불림
+function varInit(m, vk) { // 변종 세우기 — spawnMonster가 재질·황금·쉴드 난수를 다 뽑은 뒤 덮어씀(켜도 일반 몹과 같은 난수를 같은 순서로 소비)
+  m.vk = vk; m.mat = vk; m.esc = matInfo(S.round).p; m.golden = false; // 재질·밴드 험악도 고정(밴드 끝 '다음 재질'에 뽑혔어도) · 황금 불가(모양이 먼저 읽혀야 함)
+  m.shield = m.shieldMax = 0; // 쉴드 없음(R50+ 샌드박스 직접 소환에서 쉴드 난수가 붙던 것 — 밤송이 '절반' 판정이 쉴드를 안 봄). 난수는 이미 뽑은 뒤라 순서 그대로
+  m.lastHitAt = S.time; m.fireT = 0; m.fxT = 0; // 마지막으로 맞은 시각(이끼 재생 시계) · '불 맞음' 끝 시각 · 연출 쓰로틀
+  if (vk === 14) m.max = m.hp = Math.max(1, Math.floor(m.max * JELLY.PARENT)); // 젤리 본체 = 몫 H의 절반 (나머지 절반 = 잡힐 때 갈라지는 조각 2개)
+  if (vk === 15) m.shell = true; // 밤송이 껍질
+  if (vk === 16) { m.vBudget = m.max * MOSS.BUDGET; m.vRegT = 0; } // 이끼 재생 예산(자기·옆 몹 합) · 0.25초 틱 누적
+}
+function varHit(m, dmg, el) { // dealDamage 자리 — 반환 = 바뀐 피해. 순서: 불(약점 배수·밤송이 즉시 벗김) | 물리(밤송이 껍질 ×0.88·절반 넘는 한 방에 벗김)
+  if (!m.vk) return dmg; // 진입점 차단
+  m.lastHitAt = S.time; // [금성 lastHitAt] 첫 사용 — 금성 재생 틀이 생기면 보스도 같은 필드
+  if (el === 'fire') {
+    m.fireT = S.time + VAR_FIRE_T;
+    if (VAR_FIRE[m.vk]) dmg *= VAR_FIRE[m.vk]; // 이끼 공·눈덩이 ×1.4
+    if (m.shell) varPeel(m, true, m.hp - dmg); // 밤송이: 불이면 바로 탁 — 이 한 방은 껍질 감소 없이 그대로
+    varSee(m.vk, 'fire');
+  } else if (m.shell) {
+    dmg *= BURR.MUL; // 껍질 동안 물리 ×0.88 (단단함 시스템이 생기면 '단단함 +1'로 옮기고 이 줄 삭제)
+    varSee(m.vk, 'phys');
+    if (m.hp - dmg <= m.max * BURR.PEEL_AT) varPeel(m, false, m.hp - dmg); // 이 한 방으로 절반을 넘으면 벗겨짐 (변종은 쉴드 없음 — R≤49)
+  }
+  return dmg;
+}
+function varBurn(m, d) { return d * (VAR_FIRE[m.vk] || 1); } // 화상 도트 1틱 — 불 약점 ×1.4는 여기서 한 번만(burnDmg는 varHit 전 값이라 거기서 곱하지 않음)
+function varPeel(m, byFire, hpAfter) { // 밤송이 껍질 → 알밤(그림만, m.mat 15 그대로). 상태는 늘 바뀌고, 연출(파편·링·소리)은 그 한 방에 살아남을 때만 — 벗겨지며 죽으면 죽음 팡만
+  m.shell = false; m.peel = true; m.peelHp = Math.max(1, hpAfter); // 알밤 손상 표시 기준 = 벗겨진 직후 체력
+  if (hpAfter <= 0) return;
+  const crowd = S.parts.length <= 180 ? 1 : Math.max(0.25, 180 / S.parts.length); // burstJuice 혼잡 예산과 같은 규칙 — 탱크·핵·화염 띠 한 번에 수십 마리가 같이 벗겨질 때
+  const sz = monSize(m), n = Math.max(1, Math.round(6 * crowd));
+  for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, v = 90 + Math.random() * 120; S.parts.push({ x: m.x, y: m.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 70, g: true, frag: true, t: 0.5, c: '#5d2d00', r: 2.2 + Math.random() * 2, spin: Math.random() * 6.28 }); } // 갈색 껍질 조각
+  if (byFire) for (let i = 0, k = Math.max(1, Math.round(3 * crowd)); i < k; i++) { const a = Math.random() * 6.28, v = 70 + Math.random() * 90; S.parts.push({ x: m.x, y: m.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 50, g: true, t: 0.4, c: i % 2 ? '#ffd54f' : '#ff8a3d', r: 1.4 + Math.random() * 1.2 }); } // 주황 불똥
+  if (S.effects.length < 90) S.effects.push({ type: 'boom', x: m.x, y: m.y, r: sz * 1.2, t: 0.16 }); // 작은 링 (글자 없음 — UI 미니멀)
+  sfx('thud');
+  if (S.parts.length > 500) S.parts.splice(0, S.parts.length - 500);
+}
+function varTick(m, dt) { // update 몬스터 루프 — 시간정지 continue 아래(정지 중 멈춤). 이끼 재생 + 불 맞음 연출
+  if (!m.vk || !(m.hp > 0)) return; // 같은 프레임에 화상으로 0 아래로 간 몹은 되살리지 않음
+  if (m.vk === 16 && m.vBudget > 0 && (m.vRegT += dt) >= MOSS.TICK) { // 🌿 이끼 공: 쉬게 두면 차오름
+    const T = m.vRegT; m.vRegT = 0;
+    if (S.time - m.lastHitAt >= MOSS.IDLE && S.time >= m.fireT && !(m.burnT > 0)) { // 맞는 중·불 맞음·화상 중 = 멈춤 (도트는 '맞음'으로 안 치므로 burnT 조건 따로)
+      let got = 0;
+      const a = Math.min(m.max - m.hp, MOSS.SELF * m.max * T, m.vBudget);
+      if (a > 0) { m.hp += a; m.vBudget -= a; got += a; }
+      if (m.vBudget > 0) { // 옆 몹: 중심 거리 NEAR_R 안 가까운 NEAR_N마리 — 지상 잡몹만(공중 몹은 착지해도 제외: 층 섞임 방지)
+        const R2 = MOSS.NEAR_R * MOSS.NEAR_R, near = [];
+        for (const o of S.monsters) {
+          if (o === m || o.dead || !(o.hp > 0) || !(o.hp < o.max) || o.boss || o.lane || o.entering || o.fly) continue;
+          const dx = o.x - m.x, dy = o.y - m.y, d2 = dx * dx + dy * dy;
+          if (d2 <= R2) near.push([d2, o]);
+        }
+        near.sort((p, q) => p[0] - q[0]);
+        for (let i = 0; i < near.length && i < MOSS.NEAR_N && m.vBudget > 0; i++) {
+          const o = near[i][1], b = Math.min(o.max - o.hp, MOSS.NEAR * m.max * T, m.vBudget);
+          if (b > 0) { o.hp += b; m.vBudget -= b; got += b; }
+        }
+      }
+      if (got > 0 && S.parts.length <= 300) { const ph = m.phase + S.time * 3.1, sz = monSize(m); S.parts.push({ x: m.x + Math.sin(ph) * sz * 0.5, y: m.y - sz * 0.4, vx: Math.cos(ph) * 8, vy: -34, t: 0.6, r: 1.8, c: '#9be36b' }); } // 연두 잎 점 1개가 위로 (난수 안 씀)
+    }
+  }
+  if ((m.vk === 16 || m.vk === 17) && S.time < m.fireT && S.time >= m.fxT && S.parts.length <= 300) { // 불 맞음 연출 0.3초에 한 번: 눈덩이 = 흰 김 + 하늘색 물방울 뚝 / 이끼 = 회색 연기
+    m.fxT = S.time + 0.3; const sz = monSize(m), ph = m.phase + S.time * 2.3;
+    if (m.vk === 17) {
+      S.parts.push({ x: m.x + Math.sin(ph) * sz * 0.4, y: m.y - sz * 0.6, vx: Math.cos(ph) * 10, vy: -40, t: 0.55, r: 2.6, c: '#f4f8fb' });
+      S.parts.push({ x: m.x + Math.cos(ph) * sz * 0.5, y: m.y + sz * 0.3, vx: 0, vy: 10, g: true, t: 0.45, r: 1.7, c: '#9fd2f5' });
+    } else S.parts.push({ x: m.x + Math.sin(ph) * sz * 0.4, y: m.y - sz * 0.6, vx: Math.cos(ph) * 8, vy: -30, t: 0.7, r: 2.8, c: '#8a8f87' });
+  }
+}
+function varSplit(m, newborns) { // 젤리 본체가 잡힘 → 작은 젤리 2개 (보스 분열 조각과 같은 규칙 — 사망 필터 도중이라 newborns에 객체 리터럴, 260 상한은 호출처 · 누수·킬 골드·콤보 1씩)
+  const chp = Math.max(1, Math.floor(m.max * JELLY.KID));
+  for (let i = 0; i < JELLY.KIDS; i++) {
+    const s = i ? 1 : -1;
+    newborns.push({
+      ang: m.ang + s * 0.15, baseR: m.baseR, phase: m.phase + i * 1.7, spin: m.spin, x: m.x + s * 6, y: m.y, rot: m.rot, // 본체 궤도 값 물려받기(난수 없음)
+      hp: chp, max: chp, colorIdx: m.colorIdx, inc: 0, dead: false, shape: m.shape,
+      mat: 14, esc: m.esc, golden: false, bobP: m.bobP + i * 1.3,
+      boss: false, born: 0.4, hell: m.hell, small: true, shield: 0, shieldMax: 0, split: false, child: true, _brk: 0,
+      weakT: 0, puffT: 0, pullQuiet: false, slot: null, slotN: 0, returnT: 6, // returnT: 본체 자리에서 퐁 갈라져 궤도 자리로 굴러감(조커 복귀와 같은 길 — 다음 프레임에 가운데로 순간이동하지 않게)
+      vk: 14, vkKid: true, lastHitAt: S.time, fireT: 0, fxT: 0,
+    });
+  }
+}
+let varSeenC = null; // localStorage 'dpd_monel' 사본 — 도감 속성 아이콘 발견 기록(영구 기록의 거울 · resetTransientUI가 null로 비워 다음 읽기 때 다시 불러옴)
+function varSeen(vk, el) { if (!varSeenC) { try { varSeenC = JSON.parse(localStorage.getItem('dpd_monel') || '{}') || {}; } catch (e) { varSeenC = {}; } } return !!varSeenC[vk + el]; }
+function varSee(vk, el) { // 그 속성으로 처음 맞혔을 때만 기록 — dealDamage는 가장 뜨거운 길이라 맞을 때마다 JSON.parse·setItem 금지(사본 캐시)
+  const L = VAR_DEX_EL[vk]; if (!L || !L.includes(el)) return; // 도감 표에 있는 것만 (젤리 'fire' 같은 쓸모없는 키 안 씀)
+  if (S.sandbox || S.mapTest || S.multi || S.tutMode || varSeen(vk, el)) return; // markAchv와 같은 제외 목록
+  varSeenC[vk + el] = 1; try { localStorage.setItem('dpd_monel', JSON.stringify(varSeenC)); } catch (e) {}
 }
 function farthestMob(x, y, exclude, rad, skipAir) { // 반경 안에서 가장 먼 몹 — 대형 표창이 시원하게 가로지르며 팅긴다 · skipAir = 떠 있는 몹 제외(못 치는 무기의 팅김)
   let best = null, bd = -1;
@@ -6462,11 +6599,11 @@ function areaHit(u, x, y, dmg, gy) {
     for (let i = 0; i < 10; i++) { const v = 90 + Math.random()*160, aa = ang0 + (Math.random()-0.5)*1.8;
       S.parts.push({ x: u.x, y: u.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 30, g: true, t: 0.4, r: 1.5 + Math.random()*2.2, c: i%3 ? '#ff8a3d' : '#ffd54f' }); }
     for (const m of S.monsters) { const dx2 = m.x - u.x, dy2 = m.y + (m.lift || 0) - u.y; // 거리 = 땅 지점 (10-12 결정 1)
-      if (dx2*dx2 + dy2*dy2 <= R2) { dealDamage(m, dmg, u); if (!airborne(m)) { m.burnT = burnT; m.burnDmg = dmg * (asc >= 1 ? 0.4 : 0.2); } } } // 공중: 떠 있는 몹엔 화상도 안 붙음 (쇼군 ✕)
+      if (dx2*dx2 + dy2*dy2 <= R2) { dealDamage(m, dmg, u, 'fire'); if (!airborne(m)) { m.burnT = burnT; m.burnDmg = dmg * (asc >= 1 ? 0.4 : 0.2); } } } // 공중: 떠 있는 몹엔 화상도 안 붙음 (쇼군 ✕)
     if (asc >= 2) { // 🗡️ 승급2 이단 베기: 우로 벤 칼이 좌로 되돌아온다 — 2타는 공격력 50%
       S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.96, a: ang0 + 0.25, t: 0.30 + 0.16, dur: 0.30, fire: true, rev: true }); // 0.16초 늦게 시작(t>dur 동안 대기), 반대 스윕
       for (const m of S.monsters) { const dx2 = m.x - u.x, dy2 = m.y + (m.lift || 0) - u.y;
-        if (dx2*dx2 + dy2*dy2 <= R2) dealDamage(m, dmg * 0.5, u); }
+        if (dx2*dx2 + dy2*dy2 <= R2) dealDamage(m, dmg * 0.5, u, 'fire'); } // 불꽃 참격 2타 = 불 (10-15 변종 속성)
     }
     return;
   } else if (vis === 'sword') { // 🗡️ 단검: 유닛 중심 난도질 — 참격 호 최대 = 사거리
@@ -6517,7 +6654,7 @@ function areaHit(u, x, y, dmg, gy) {
       const t2 = px * nx + py * ny;                    // 스트림 축 방향 투영
       if (t2 < -6 || t2 > L + 14) continue;
       const d = Math.abs(px * ny - py * nx);           // 축에서의 수직 거리
-      if (d <= u.splash + monSize(m) * 0.5) dealDamage(m, dmg, u);
+      if (d <= u.splash + monSize(m) * 0.5) dealDamage(m, dmg, u, 'fire'); // 화염 띠 = 불 (10-15 변종 속성 — 플러쉬·영웅·에이스·슈퍼·분신 공통 길)
     }
     return;
   }
@@ -6729,7 +6866,7 @@ function markMon(i) {
     const d = JSON.parse(localStorage.getItem('dpd_mondex') || '{}');
     if (!d[i]) {
       d[i] = 1; localStorage.setItem('dpd_mondex', JSON.stringify(d));
-      if (MATERIALS.every((_, k) => monSeen(k))) markAchv('mondex');
+      if (MATERIALS.slice(0, MAT_BASE_N).every((_, k) => monSeen(k))) markAchv('mondex'); // '몬스터 도감 14종 완성' = 기본 14종 고정(변종은 도감 칸만 늘고 업적과 무관 — 10-15 Q13)
       return true;
     }
   } catch (e) {}
@@ -8657,7 +8794,7 @@ function draw() {
   for (const m of S.monsters) {
     if (m.lane) continue; // 🤖 레인 개체는 mpDraw 월드 패스가 그린다 (다리 상판 가림 순서)
     if (m.fly) { flyN++; continue; } // 공중 몹은 아래 별도 패스(지상 몹 위)
-    const bb = (!m.boss && m.mat < 8) ? MAT_BOB[m.mat] : null;
+    const bb = (!m.boss && m.mat < 8) ? MAT_BOB[m.mat] : (m.vk ? VAR_BOB[m.vk] : null); // 🫧 구슬 변종(10-15)은 VAR_BOB (8~13 헬·천체는 m.vk 없음 = null 그대로)
     const bob = bb && bb[0] ? Math.abs(Math.sin(S.time * bb[1] + m.bobP)) * bb[0] * m.born : 0;
     const puff = monPuff(m); // 보스 능력 예고 0.6초 부풀기 (호출처 스케일 — 체력바도 같이 커지는 0.6초, 의도)
     if (puff !== 1) { ctx.save(); ctx.translate(m.x, m.y - bob); ctx.scale(puff, puff); ctx.translate(-m.x, -m.y); drawMonster(m); ctx.restore(); }
@@ -9822,7 +9959,7 @@ const MON_HOT = { // = 설계 M2 (OUT_HOT은 MON_LOOK.OUT_DARK/FLAME과 같은 �
   SPOT: '#c0392b', SPOT_OUT: '#840000',  // 목성 몹 대적점(현행) + 테
   VOID: '#000000',         // 블랙홀 중심
   RING_BAND: [0.80, 1.00], // 블랙홀 B안 띠 = 중심 대칭 고리(바깥 20%) — 스프라이트가 회전해도 빛 방향이 안 흔들린다
-  ROCK_CRACK: { 9: true, 11: true }, // 바위 행성(달·목성) 파손 금 = shade(c, −90) 진한 금 (밝은 몸에 흰 금은 안 보임) — C2에서 사용
+  ROCK_CRACK: { 9: true, 11: true, 17: true }, // 바위 행성(달·목성) 파손 금 = shade(c, −90) 진한 금 (밝은 몸에 흰 금은 안 보임) — C2에서 사용 · 17 눈덩이(흰 몸, 10-15)
   NO_HI: { 13: true },     // 하이라이트 생략 재질(블랙홀 — 회전 스프라이트)
 };
 const MON_BOSS = { // = 설계 M3 (SHAPES·NAME 제외). 라이브 보스 = 행성 사다리 10종 20~27(27 = 13 별칭)·15·28 — 레거시 14·10·11·12는 도달 불가(C3에서 삭제)
@@ -9989,6 +10126,11 @@ M1_PRE[12] = function (r, c) { // 12 태양 코로나: 12각 별(바깥 1.26r ·
   polyPath(0, 0, 12, 1.26 * r, 0, 0.95 * r); ctx.fill(); ctx.stroke();
   ctx.lineJoin = 'miter'; ctx.lineWidth = 1;
 };
+M1_PRE[15] = function (r, c) { // 15 밤송이 가시 (구슬 변종 10-15): 12갈래 별(바깥 1.20r · 안 0.92r, 0.13 돌림) 채움 shade(c, −45) + 테 m1OutCol — 몸통이 안쪽을 덮어 짧고 뾰족한 가시만 남는다(태양 코로나와 같은 방식, 갈색·더 짧게). 끝은 뾰족(miter)
+  ctx.fillStyle = shade(c, -45); ctx.strokeStyle = m1OutCol(15, c); ctx.lineWidth = Math.max(1.2, r * 0.08);
+  polyPath(0, 0, 12, 1.20 * r, 0.13, 0.92 * r); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 1;
+};
 // --- 헬 재질 패턴 6종 ---
 M1_PAT[8] = function (r, c) { M1_PAT[7](r, c); }; // 8 불타는 쇠구슬 #7a3320 — 쇠구슬의 이음선·리벳 그대로(c 파생이라 적갈색 위 진한 선). 불꽃은 M1_PRE[8]
 M1_PAT[9] = function (r, c) { // 9 달 #c6cace — 분화구 5(현행 4 자리 + 작은 1): 속 shade(c, −42) 불투명 + 테 shade(c, −90) — 쇠구슬(회색 + 십자)과 1배에서 "점"으로 갈린다
@@ -10029,6 +10171,45 @@ M1_PAT[13] = function (r, c) { // 13 블랙홀 #0d0d14 — 강착 띠: 기울인
   ctx.fillStyle = MON_HOT.VOID; ctx.beginPath(); ctx.arc(0, 0, 0.46 * r, 0, Math.PI * 2); ctx.fill();
   band(0, Math.PI); // 앞쪽 절반
   ctx.lineWidth = 1;
+};
+// --- 구슬 변종 1차 4종 + 알밤 (10-15, 구슬몹_2026-10-14\10_구현설계.md §9) — 같은 평면 2단 명암·몸통 원·눈·입·장비 없음. 얼굴로 읽히지 않게 위쪽 좌우 대칭 두 점·아래 가로 틈 금지(볼링공 교훈) ---
+M1_PAT[14] = function (r, c) { // 14 젤리 #8fd16a — 속살 원(밝은 단색) + 흰 반짝 타원 1(왼쪽 위 — 하이라이트 호와 같은 쪽) + 기포 1(오른쪽 아래 하나만)
+  ctx.fillStyle = m1Lighten(c, 0.35); ctx.beginPath(); ctx.arc(-0.08 * r, -0.06 * r, 0.60 * r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(-0.30 * r, -0.40 * r, 0.15 * r, 0.07 * r, -0.6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = m1Lighten(c, 0.6); ctx.beginPath(); ctx.arc(0.34 * r, 0.30 * r, 0.08 * r, 0, Math.PI * 2); ctx.fill();
+};
+M1_PAT[15] = function (r, c) { // 15 밤송이 #8a5a2b — 짧은 털 10개(방사, 길이 번갈아) shade(c, −60), 둥근 끝. 가시는 M1_PRE[15]
+  ctx.strokeStyle = shade(c, -60); ctx.lineWidth = m1PatW(r); ctx.lineCap = 'round';
+  for (let i = 0; i < 10; i++) {
+    const a = i * Math.PI * 2 / 10 + 0.3, r0 = i % 2 ? 0.66 : 0.58, r1 = i % 2 ? 0.84 : 0.80;
+    ctx.beginPath(); ctx.moveTo(Math.cos(a) * r0 * r, Math.sin(a) * r0 * r); ctx.lineTo(Math.cos(a) * r1 * r, Math.sin(a) * r1 * r); ctx.stroke();
+  }
+  ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+};
+M1_PAT[40] = function (r, c) { // 40 알밤(그림 전용 — 벗겨진 밤송이, m.mat은 15 그대로) #9c5b2e — 밤 엉덩이: 아래 타원 (0, 1.05r) 1.10r×0.62r 고정색 #dcc08c(야구 실밥처럼 색 고정 — 위끝 0.43r) + 경계선 shade(c, −40). 그 밖은 반질한 단색
+  ctx.fillStyle = '#dcc08c'; ctx.strokeStyle = shade(c, -40); ctx.lineWidth = Math.max(1.0, r * 0.07);
+  ctx.beginPath(); ctx.ellipse(0, 1.05 * r, 1.10 * r, 0.62 * r, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 1;
+};
+const M1_MOSS = [[-0.38, -0.30, 0.22], [0.20, -0.60, 0.11], [0.50, 0.10, 0.18], [-0.05, 0.46, 0.20], [-0.58, 0.30, 0.11]]; // 이끼 얼룩 [x, y, s] — 위쪽 두 개는 크기·높이가 달라 눈처럼 안 보임
+M1_PAT[16] = function (r, c) { // 16 이끼 공 #3f7d3a — 구름 얼룩 5개(원 3개 겹침: 중심 s · (+.6s, +.15s) .75s · (−.55s, +.2s) .7s) shade(c, +60)
+  ctx.fillStyle = shade(c, 60);
+  for (const [x, y, s] of M1_MOSS) for (const [dx, dy, k] of [[0, 0, 1], [0.6, 0.15, 0.75], [-0.55, 0.2, 0.7]]) {
+    ctx.beginPath(); ctx.arc((x + dx * s) * r, (y + dy * s) * r, k * s * r, 0, Math.PI * 2); ctx.fill();
+  }
+};
+M1_PAT[17] = function (r, c) { // 17 눈덩이 #e4f0fb — ① 하늘 그늘: B안 띠보다 넓게(밀린 원 (−0.16r, −0.19r) 0.86r — 가장 두꺼운 곳 ≈0.39r, 눈덩이만) 다시 칠함(색 = c의 R−80·G−45·B−15 = #94c3ec, c에서 파생이라 그을림을 따름) ② 눈송이 점 4(0.07~0.12r, 위쪽엔 하나뿐 — 눈처럼 안 보이게) ③ 아래·오른쪽 가장자리 안쪽 작은 호 4(몸색 — 울퉁불퉁). 하이라이트는 밝기 237.7이라 자동 생략 · 10-15 리뷰 D1: 옛 값(그늘 −50·−30·−12, 점 0.05~0.07r)은 1배·폰에서 무늬 없는 흰 공
+  const [R, G, B] = m1Rgb(c), sky = `rgb(${Math.max(0, R - 80)},${Math.max(0, G - 45)},${Math.max(0, B - 15)})`;
+  ctx.fillStyle = sky; m1Circle(r); ctx.fill();
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(-0.16 * r, -0.19 * r, 0.86 * r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = sky;
+  for (const [x, y, s] of [[0.32, -0.38, 0.11], [-0.50, 0.02, 0.10], [0.06, 0.30, 0.12], [0.46, 0.22, 0.07]]) { ctx.beginPath(); ctx.arc(x * r, y * r, s * r, 0, Math.PI * 2); ctx.fill(); }
+  ctx.strokeStyle = c; ctx.lineWidth = m1PatW(r); ctx.lineCap = 'round';
+  for (let i = 0; i < 4; i++) {
+    const a = 0.15 + i * 0.42;
+    ctx.beginPath(); ctx.arc(Math.cos(a) * 0.86 * r, Math.sin(a) * 0.86 * r, 0.12 * r, a + Math.PI - 1.0, a + Math.PI + 1.0); ctx.stroke();
+  }
+  ctx.lineCap = 'butt'; ctx.lineWidth = 1;
 };
 function m2RingBand(r, c) { // 블랙홀 B안 띠 = 중심 대칭 고리 (m1Band의 초승달 띠 대신 — 회전과 무관). 보스 블랙홀도 같은 함수
   const [a, b] = MON_HOT.RING_BAND;
@@ -10442,7 +10623,7 @@ function matSprite(mat, bucket, golden, broken) {
         }
         drawMonGear(SPR_C, SPR_C, sz, monGearCount(bucket), broken, mat);
       } else {
-        const c = golden ? '#ffcf3a' : shade(MATERIALS[mat].col, -Math.round(escB * 62));
+        const c = golden ? '#ffcf3a' : shade((MATERIALS[mat] || MAT_VIS[mat]).col, -Math.round(escB * 62)); // MAT_VIS = 그림 전용 번호(40 알밤) — 0~17은 같은 값
         drawMatStatic(SPR_C, SPR_C, sz, mat, escB, c, broken);
       }
     } finally { ctx = old; }
@@ -10524,12 +10705,12 @@ function drawFlyMob(m) {
 }
 // 재질 몹 렌더: 캐시된 스프라이트 + 라이브 오버레이(출렁/회전/화염 펄스/황금 반짝)만
 function drawMatMob(m, sz, c) {
-  const x = m.x, y = m.y, mat = m.mat || 0, esc = m.esc || 0, t = S.time;
+  const x = m.x, y = m.y, mat = m.peel ? MAT_VIS_PEEL : (m.mat || 0), esc = m.esc || 0, t = S.time; // 🫧 벗겨진 밤송이 = 알밤 그림(그림 전용 40, m.mat은 15 그대로 — 꺼지면 m.peel 없음)
   const bucket = Math.min(7, Math.floor(esc * 8));
   const sp = matSprite(mat, bucket, !!m.golden, monBroken(m));
   const k = sz / matSpriteSz(mat); // 시각 크기 → 스프라이트 스케일 (MON_GROWTH=0·일반 몹이면 정확히 1 = 무손실)
-  if (mat === 0) { // 물풍선: 출렁 (스케일로)
-    const w = 1 + 0.06 * Math.sin(t * 5 + m.phase);
+  if (mat === 0 || mat === 14) { // 물풍선·젤리(변종 10-15): 출렁 (스케일로) — 젤리는 조금 더 크고 느리게
+    const w = mat === 0 ? 1 + 0.06 * Math.sin(t * 5 + m.phase) : 1 + 0.08 * Math.sin(t * 4 + m.phase);
     ctx.save(); ctx.translate(x, y); ctx.scale(w, 2 - w);
     sprBlit(sp, -SPR_C * k, -SPR_C * k, SPR * k);
     ctx.restore();
@@ -10667,7 +10848,7 @@ function drawMonster(m) {
   }
   // 피격 스쿼시: 맞는 순간 옆으로 찌그러진다 (보스 제외 — 얼굴 클립 보호)
   const squish = !m.boss && m.hitT > 0 ? m.hitT / 0.09 : 0;
-  if (squish) { ctx.save(); ctx.translate(m.x, m.y); ctx.scale(1 + 0.16 * squish, 1 - 0.16 * squish); ctx.translate(-m.x, -m.y); }
+  if (squish) { const sq = m.vk === 14 ? 0.32 : 0.16; ctx.save(); ctx.translate(m.x, m.y); ctx.scale(1 + sq * squish, 1 - sq * squish); ctx.translate(-m.x, -m.y); } // 🫧 젤리(변종 10-15)만 2배로 찌그러짐
   if (m.hell) { // 헬모드: 붉은 기운 (미리 구운 글로우 스프라이트 — 몹 수백일 때도 가벼움)
     const gr = sz * 1.9 + 8;
     ctx.drawImage(glowSprite('hell', 'rgba(255,45,0,0.5)', 'rgba(255,45,0,0)'), m.x - gr, m.y - gr, gr * 2, gr * 2);
@@ -10680,7 +10861,7 @@ function drawMonster(m) {
     m3Boss(m.x, m.y, sz, m.shape, S.time, m.phase);
   }
   // 데미지 표현 (재질별 특성, 몬스터별 고정 시드 — 프레임마다 안 흔들림)
-  const dmgR = 1 - Math.max(0, (m.hp + m.shield) / (m.max + (m.shieldMax || 0)));
+  const dmgR = m.peel ? 1 - Math.max(0, m.hp / m.peelHp) : 1 - Math.max(0, (m.hp + m.shield) / (m.max + (m.shieldMax || 0))); // 🫧 알밤(변종 10-15)은 벗겨질 때 체력 기준 — 반질한 알밤에 바로 금이 덮이지 않게
   if (dmgR > 0.2) {
     if (!m.boss && (m.mat === 2 || m.mat === 3 || m.mat === 4)) {
       // ⚽🏀⚾ 축구공·농구공·야구공: 깨지는 게 아니라 한 곳이 터진다 (구멍 + 속이 비져나옴)
@@ -10729,8 +10910,8 @@ function drawMonster(m) {
         polyPath(px, py, 3, sz * (0.11 + dmgR * 0.09), a + i * 1.3); ctx.fill(); ctx.stroke();
       }
       ctx.lineWidth = 1;
-    } else if (!m.boss && m.mat === 0) {
-      // 🎈 물풍선: 고무라 금이 갈 수 없다 → 만화처럼 회색 쓸린 자국(#) 표시
+    } else if (!m.boss && (m.mat === 0 || m.mat === 14)) {
+      // 🎈 물풍선·젤리(변종 10-15): 말랑해서 금이 갈 수 없다 → 만화처럼 회색 쓸린 자국(#) 표시
       ctx.save(); ctx.beginPath(); ctx.ellipse(m.x, m.y, sz * 0.96, sz * 0.96, 0, 0, 6.28); ctx.clip();
       ctx.strokeStyle = shade(c, -70); // C2: 몸색 어둡힌 불투명 자국
       ctx.lineWidth = Math.max(1.4, sz * 0.09); ctx.lineCap = 'round';
@@ -13340,6 +13521,10 @@ const MAT_DESC = [
   '거대한 가스 행성 목성. 대적점이 눈길.',
   '이글이글 태양! 만지면 큰일나요.',
   '모든 걸 삼키는 심연, 블랙홀…',
+  '말캉말캉 젤리 공. 잡으면 작은 젤리 둘로 퐁!', // 14~17 구슬 변종 (10-15)
+  '따끔한 가시 껍질. 불에 닿으면 탁! 알밤이 돼요.',
+  '폭신한 이끼 뭉치. 가만두면 다시 차올라요.',
+  '뽀득뽀득 눈덩이. 불 앞에선 금세 녹아요.',
 ];
 function monsterAt(x, y) {
   let best = null, bd = Infinity;
@@ -13364,13 +13549,24 @@ const BOSS_INFO = {
   15: ['블랙홀', '들어온 손님은 많은데 후기가 하나도 없다. 이유는 묻지 마라.'],
   28: ['아포칼립스 태양', '80라운드에 본 그 태양? 내 그림자였다. 이제 진짜가 왔다.'],
 };
+function varInfoLine(m) { // 🫧 구슬 변종 정보창 한 줄 (설계 §2-2) — 아이콘 = 단색 SVG(불꽃·방패), 수치·컨셉명 없음
+  const ic = (n, el) => dpdIconSVG(n, 'dpd-icon dexEl dexEl-' + el);
+  if (m.vk === 14) return m.vkKid ? '더는 안 갈라져요' : '잡으면 둘로 갈라져요';
+  if (m.vk === 15) return m.peel ? '껍질이 벗겨졌어요' : `${ic('shield', 'phys')} 껍질이 단단해요 · ${ic('flame', 'fire')} 불에 탁 터져요`;
+  if (m.vk === 16) return `쉬게 두면 차올라요 · ${ic('flame', 'fire')} 불에 약해요`;
+  if (m.vk === 17) return `${ic('flame', 'fire')} 불에 녹아요`;
+  return '';
+}
+function varDexIcons(vk) { // 🫧 도감 속성 아이콘: 그 속성으로 맞혀 봤으면 아이콘, 아니면 회색 '?' (지금 있는 속성만 — 젤리 없음)
+  return (VAR_DEX_EL[vk] || []).map(el => varSeen(vk, el) ? dpdIconSVG(el === 'fire' ? 'flame' : 'shield', 'dpd-icon dexEl dexEl-' + el) : '<span class="dexElQ">?</span>').join('');
+}
 function showMonsterInfo(m) {
   if (m.lane) { mpLaneInfo(m); return; } // 🤖 레인 개체 (습격대·보스) 정보
   const el = document.getElementById('objInfo');
   const mat = MATERIALS[m.mat] || { name: '수수께끼 공' };
   const bi = m.boss ? (BOSS_INFO[m.shape] || ['보스', '정체불명. 아무튼 세다.']) : null;
-  const name = m.boss ? bi[0] + ' (보스)' : mat.name + (m.golden ? ' (황금)' : '');
-  const desc = m.boss ? `<i class="oi-quote">“${bi[1]}”</i>${m.abil && bossHint(m.shape) ? '<br><span class="tip">' + bossHint(m.shape) + '</span>' : '<br>'}<span class="oi-warn">시간 내에 못 잡으면 즉사</span>` : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…'); // 10-09: 능력 힌트 줄(bossHint, 능력 있는 보스만)
+  const name = m.boss ? bi[0] + ' (보스)' : (m.peel ? '알밤' : m.vkKid ? '작은 젤리' : mat.name) + (m.golden ? ' (황금)' : ''); // 🫧 구슬 변종(10-15): 벗겨진 밤송이·젤리 조각 이름
+  const desc = m.boss ? `<i class="oi-quote">“${bi[1]}”</i>${m.abil && bossHint(m.shape) ? '<br><span class="tip">' + bossHint(m.shape) + '</span>' : '<br>'}<span class="oi-warn">시간 내에 못 잡으면 즉사</span>` : m.peel ? '껍질 벗은 반질반질 알밤.' : m.vkKid ? '말캉말캉 작은 젤리.' : (MAT_DESC[m.mat] || '정체불명의 둥근 녀석…'); // 10-09: 능력 힌트 줄(bossHint, 능력 있는 보스만) · 🫧 10-15 리뷰 D2: 알밤·작은 젤리는 상태별 설명(재질 설명은 벗겨지기 전·갈라지기 전 문구라 이름·아래 줄과 어긋남)
   const hp = Math.max(0, Math.ceil(m.hp)), max = Math.max(1, Math.ceil(m.max));
   const pct = Math.max(0, Math.min(1, m.hp / m.max));
   const col = pct > 0.5 ? '#43a047' : pct > 0.25 ? '#ff9800' : '#e53935';
@@ -13380,6 +13576,7 @@ function showMonsterInfo(m) {
   if (m.split) tags.push('분열 보스 — 잡으면 5조각으로 갈라져요!');
   if (m.fly) tags.push(airborne(m) ? '공중 — 활·총·포만 닿아요' : '착지 중 — 지금은 다 닿아요'); // 몬스터 등장 패턴(받침): 수치 없음
   if (m.ward) tags.push('방패병 — 잡으면 주위 보호막이 깨져요');
+  if (m.vk) tags.push(varInfoLine(m)); // 🫧 구슬 변종(10-15) 한 줄 — 항상 보임(도감 아이콘만 발견형), 수치 없음
   if (S.pat && S.pat.form && m.slot != null) tags.push(S.pat.form === 'conga' ? '울타리를 따라 행진 중' : '두 무리로 오가는 중');
   el.innerHTML = `<b>${name}</b><br>${desc}` +
     `<div class="oi-hp">${dpdIconSVG('heart')} <b>${hp}</b> / ${max}` + // 🎨 10-05 인디고: 인라인 색 → 클래스 (체력 3색 채움은 의미 색이라 인라인 유지)
@@ -14379,13 +14576,13 @@ function renderShop() {
     const itemKeys = ['timestop', 'stimpack', 'acid', 'bombard', 'revive', 'plank'];
     const items = itemKeys.map(k => btn('it_' + k, ITEM_META[k].name)).join('');
     const misc = btn('gold', '골드 +100k') + btn('chip', '칩 +10');
-    const mobs = MATERIALS.map((mt, i) => btn('mob' + i, mt.name)).join('') + btn('boss', '보스') + btn('bossS', '분열 보스');
+    const mobs = MATERIALS.slice(0, matDexN()).map((mt, i) => btn('mob' + i, mt.name)).join('') + btn('boss', '보스') + btn('bossS', '분열 보스'); // 변종 14~17은 VAR_ON일 때만
     el.innerHTML = grid('일반 유닛', units) + grid('영웅', heroes) + grid('슈퍼영웅', supers) +
       grid('♠ 에이스', aces) + grid('♠♠ 슈퍼에이스', superAces) + grid('히든', hiddens) +
       grid('광부', miners) + grid('아이템 유닛', items) + grid('몬스터 (현재 라운드 HP)', mobs) + grid('기타', misc);
     el.querySelectorAll('[data-sb]').forEach(b => b.onclick = () => {
       const v = b.dataset.sb;
-      if (v.startsWith('mob')) { const m = spawnMonster(monsterHP(S.round), false, {}); m.mat = +v.slice(3); m.esc = 0.5; }
+      if (v.startsWith('mob')) { const i = +v.slice(3), m = spawnMonster(monsterHP(S.round), false, i >= MAT_BASE_N ? { vk: i } : {}); if (i < MAT_BASE_N) m.mat = i; m.esc = 0.5; } // 변종(14~17) = spawnMonster의 varInit이 세움(VAR_ON일 때만)
       else if (v === 'boss') spawnMonster(monsterHP(S.round) * (S.round >= FINAL_ROUND ? 2.8 : 9.4 / splitComp(S.round)), true);
       else if (v === 'bossS') { const bm = spawnMonster(monsterHP(S.round) * 2.8, true); bm.split = true; }
       else if (v.startsWith('sa')) spawnUnit(+v.slice(2), RACE_OF_RANK[+v.slice(2)], true, 14, true);
@@ -14434,12 +14631,13 @@ function achvDexHTML() {
 }
 // 📚 몬스터 도감 섹션 HTML (발견: 이름+설명+색칩, 미발견: ❓ ???)
 function monDexHTML() {
-  const discovered = MATERIALS.filter((_, i) => monSeen(i)).length;
-  return `<section class="dexSec"><h3 class="dexSecH">몬스터 도감 <small>(${discovered}/${MATERIALS.length})</small></h3>` +
-    MATERIALS.map((mat, i) => {
+  const MS = MATERIALS.slice(0, matDexN()); // 변종 14~17은 VAR_ON일 때만 (꺼지면 14칸 그대로)
+  const discovered = MS.filter((_, i) => monSeen(i)).length;
+  return `<section class="dexSec"><h3 class="dexSecH">몬스터 도감 <small>(${discovered}/${MS.length})</small></h3>` +
+    MS.map((mat, i) => {
       const seen = monSeen(i);
       return `<div class="handRowG"${seen ? '' : ' style="opacity:.6"'}>
-        <span class="hname"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${seen ? mat.col : '#555'};margin-right:4px"></span>${seen ? mat.name : '???'}</span>
+        <span class="hname"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${seen ? mat.col : '#555'};margin-right:4px"></span>${seen ? mat.name : '???'}${seen && i >= MAT_BASE_N ? ' ' + varDexIcons(i) : ''}</span>
         <span class="hdesc">${seen ? MAT_DESC[i] : ''}</span>
       </div>`;
     }).join('') + '</section>';
