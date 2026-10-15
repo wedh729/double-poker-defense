@@ -3758,7 +3758,7 @@ const COMIC = { // 대본 §9 JSON의 comics.<id>.pages 그대로 (id·note·whe
             {"who": "bird", "text": "해가 다 지면 영영 밤이래!", "x": 0.42, "y": 0.2, "tail": [0.8, 0.62], "shape": "shout"}
           ],
           "sfx": [
-            {"text": "헉!", "x": 0.3, "y": 0.42, "rot": -12}
+            {"text": "헉!", "x": 0.56, "y": 0.62, "rot": -12}
           ]
         }
       ]}
@@ -4201,12 +4201,20 @@ const CAST = {"bird": "소문 새", "sling": "새총 꼬마", "archer": "하트 
       let w = g.measureText(s.text).width;
       const mw = W * 0.44;
       if (w > mw) { fs *= mw / w; w = mw; g.font = `900 ${fs}px ${FONT}`; }
-      const hw = w / 2 + fs * 0.25, hh = fs * 0.62; // 칸 밖으로 안 나가게 가운데를 민다 (기울기 무시한 대략)
-      const hit = (xx, yy) => P.bubBox.some(b => Math.abs(xx - b[0]) < hw + b[2] && Math.abs(yy - b[1]) < hh + b[3]);
+      // 칸 밖으로 안 나가게: 글자 실제 상자(+ 흰 테 절반)를 기울인 네 모서리로 잰다 (10-15 2차 — 예전엔 기울기를 무시해 '번쩍!'이 칸 테에 잘렸다)
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      const mt = g.measureText(s.text), sw = fs * 0.18, a = num(s.rot, 0) * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), ed = Math.max(2, st.geo.ph * 0.0045) + 1; // ed = 칸 테 두께 + 1
+      const u0 = -mt.actualBoundingBoxLeft - sw, u1 = mt.actualBoundingBoxRight + sw, v0 = -mt.actualBoundingBoxAscent - sw, v1 = mt.actualBoundingBoxDescent + sw;
+      const cs = [[u0, v0], [u1, v0], [u0, v1], [u1, v1]].map(([u, v]) => [u * ca - v * sa, u * sa + v * ca]);
+      const ex0 = Math.min(...cs.map(p => p[0])), ex1 = Math.max(...cs.map(p => p[0])), ey0 = Math.min(...cs.map(p => p[1])), ey1 = Math.max(...cs.map(p => p[1]));
+      const hw = (ex1 - ex0) / 2, hh = (ey1 - ey0) / 2, mx = (ex0 + ex1) / 2, my = (ey0 + ey1) / 2;
+      const clampX = x => (ex1 - ex0 + 2 * ed >= W ? W / 2 - mx : Math.min(W - ed - ex1, Math.max(ed - ex0, x)));
+      const clampY = y => (ey1 - ey0 + 2 * ed >= H ? H / 2 - my : Math.min(H - ed - ey1, Math.max(ed - ey0, y)));
+      const hit = (xx, yy) => P.bubBox.some(b => Math.abs(xx + mx - b[0]) < hw + b[2] && Math.abs(yy + my - b[1]) < hh + b[3]);
       const x0 = num(s.x, 0.5) * W, y0 = num(s.y, 0.5) * H;
       let cx = 0, cy = 0;
       for (const [kx, ky] of [[0, 0], [0, 1], [0, -1], [-1, 0], [1, 0], [-1, 1], [1, 1], [-1, -1], [1, -1], [-2, 0], [2, 0], [-2, 1], [2, 1], [0, 2], [-1, 2], [1, 2], [-2, 2], [2, 2], [0, 0]]) { // 말풍선·캡션(DOM, 위에 뜸)에 가리면 가까운 빈자리로 비켜 남 (없으면 제자리)
-        cx = Math.min(W - hw, Math.max(hw, x0 + kx * hw * 0.9)); cy = Math.min(H - hh, Math.max(hh, y0 + ky * hh * 1.2));
+        cx = clampX(x0 + kx * hw * 0.9); cy = clampY(y0 + ky * hh * 1.2);
         if (!hit(cx, cy)) break;
       }
       g.save(); g.translate(cx, cy); g.rotate(num(s.rot, 0) * Math.PI / 180);
@@ -4329,6 +4337,10 @@ const CAST = {"bird": "소문 새", "sling": "새총 꼬마", "archer": "하트 
   function balloons(P) { // 글자 크기를 재서 풍선을 맞춘다. 테는 두 배 굵기로 먼저 긋고 채움을 덮어 풍선+꼬리가 한 덩이 외곽선이 되게
     for (const e of P.el.querySelectorAll('.cbCap, .cbTitle')) { // 캡션·제목 띠 자리도 효과음이 비켜 가게 (translate(-50%)인 제목 띠는 left/top이 가운데)
       const t = e.classList.contains('cbTitle'), w = e.offsetWidth, h = e.offsetHeight;
+      if (t) { // 제목 띠도 칸 안으로 (폰 글자 바닥값 12px에서 e2b 띠가 칸 오른쪽 테에 잘리던 것 — 10-15 2차)
+        if (w + 8 < P.w) e.style.left = f1(Math.min(P.w - w / 2 - 4, Math.max(w / 2 + 4, e.offsetLeft))) + 'px';
+        if (h + 8 < P.h) e.style.top = f1(Math.min(P.h - h / 2 - 4, Math.max(h / 2 + 4, e.offsetTop))) + 'px';
+      }
       P.bubBox.push([e.offsetLeft + (t ? 0 : w / 2), e.offsetTop + (t ? 0 : h / 2), w / 2, h / 2]);
     }
     if (!P.bubs.length) return;
