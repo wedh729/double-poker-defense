@@ -2428,7 +2428,18 @@ body.mobile .rankGauge {display:inline-flex;gap:2px;margin-left:6px;padding:3px 
 }
 /* 튜토리얼 모드 (10-14): 한 줄 알림(양피지 = #tutTip 색)·하이라이트 링·일시정지 토스트·타이틀 버튼·끝 화면 */
 #tutPanel {position:fixed;z-index:72;left:8px;top:8px;max-width:470px;padding:5px 10px;border-radius:11px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:12.5px;font-weight:700;line-height:1.4;box-shadow:0 3px 0 #6b4a2a55,0 6px 14px #0004;pointer-events:none;box-sizing:border-box;}
-#tutPanel[hidden], #tutRing[hidden], #tutVeil[hidden], #tutToast[hidden] {display:none;}
+#tutRing[hidden] {display:none;}
+/* 10-15 유저 "넘어가는 과정이 뚝뚝 끊겨": 토스트·덮개·한 줄 알림은 hidden이어도 상자를 남기고(display:block) 투명·visibility로 사라진다 = 페이드.
+   hidden 속성이 곧 논리 상태(true = 숨음, JS·하네스 그대로) · 숨는 순간 입력 통과(pointer-events none) · 숨은 동안 left/top은 전환 없이 바로(나타날 때 엉뚱한 데서 미끄러져 오지 않게 — 자리 먼저 잡고 hidden을 푼다) */
+#tutToast, #tutPanel {transition:opacity .18s ease-out, transform .18s ease-out, left .2s ease, top .2s ease;}
+#tutVeil {transition:opacity .15s ease-out;}
+#tutToast[hidden], #tutPanel[hidden], #tutVeil[hidden] {display:block;visibility:hidden;opacity:0;pointer-events:none;transition:opacity .14s ease-in, transform .14s ease-in, visibility 0s linear .14s;}
+#tutToast[hidden] {transform:translateY(6px);} #tutPanel[hidden] {transform:translateY(4px);}
+#tutPanel[hidden] button {pointer-events:none;}
+#tutRing {transition:left .18s ease-out, top .18s ease-out, width .18s ease-out, height .18s ease-out;} /* 대상이 바뀌면 미끄러지듯 (숨었다 나타날 땐 display:none에서 오므로 전환 없이 그 자리) */
+#tutSafe {position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:0;} /* 안전 영역 탐침 (tutSafe) — env 미지원이면 0 */
+@supports (padding: env(safe-area-inset-left)) { #tutSafe {padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);} }
+@media (prefers-reduced-motion: reduce) { #tutToast, #tutPanel, #tutVeil, #tutRing, #tutToast[hidden], #tutPanel[hidden], #tutVeil[hidden] {transition:none;} }
 #tutPanel button {pointer-events:auto;}
 #tutPanel .tpOk {color:#557540;}
 #tutPanel .tpOk svg {width:14px;height:14px;vertical-align:-2px;}
@@ -3454,7 +3465,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
 <div id="tutPanel" role="region" aria-label="튜토리얼 알림" hidden><span id="tpText" aria-live="polite"></span><span class="tpBtns"><button type="button" id="tpSkip">건너뛰기</button><button type="button" id="tpQuit">그만하기</button></span></div>
 <div id="tutRing" aria-hidden="true" hidden></div>
 <div id="tutVeil" hidden></div>
-<div id="tutToast" role="dialog" aria-labelledby="ttTitle" aria-describedby="ttText" hidden><div class="ttHead"><span class="ttIc" aria-hidden="true"></span><b id="ttTitle"></b></div><div id="ttText"></div><div class="ttBtns"><button type="button" id="ttQuit">튜토리얼 그만하기</button><button type="button" id="ttOk">확인</button></div></div>
+<div id="tutSafe" aria-hidden="true"></div><div id="tutToast" role="dialog" aria-labelledby="ttTitle" aria-describedby="ttText" hidden><div class="ttHead"><span class="ttIc" aria-hidden="true"></span><b id="ttTitle"></b></div><div id="ttText"></div><div class="ttBtns"><button type="button" id="ttQuit">튜토리얼 그만하기</button><button type="button" id="ttOk">확인</button></div></div>
 <!-- 칩 카지노 모달 (복권/룰렛/교환 애니메이션) -->
 <div id="chipModal"><div id="chipWin">
   <button id="chipClose" title="닫기">✕</button>
@@ -15180,7 +15191,7 @@ document.getElementById('btnTutAgain').onclick = e => { tut.seen = {}; tut.off =
 // 일반 판은 S.tutMode가 undefined라 모든 분기가 원래 식 그대로(난수 순서 포함). 라운드에 묶인 시스템(몹 HP·수·보스·더블 포커·결투·공중)은 기존 헬퍼 안 분기가 tutWave()를 읽는다.
 // 한 단계 = [토스트(게임 정지) → 닫으면 한 줄 알림 + 링(게임 진행) → 행동 완료 → '좋아요!'(정지) → 다음 토스트]. 칭찬부터 다음 토스트까지 정지가 끊기지 않아
 //   2~3배속에서도 단계 사이에 전투가 흐르지 않는다 (1차 크로스체크 P1-1의 부류 전체 차단).
-const TUT = { OK_MS: 650, TOAST_LOCK: 350, HINT_WAIT: 1000, HINT_MIN: 1500, WAVE_DEFAULT: { n: 6, hp: 20 }, MINER_SPD: 4, MINE_T: 1.5, HUNT_HP: 260 }; // OK_MS = '좋아요!' 실시간(ms) · TOAST_LOCK = 토스트가 뜬 직후 닫기 잠금(직전 탭·키가 바로 닫지 않게) · 광부 걸음 ×4·채굴 1.5초 · 첫 광석 체력
+const TUT = { OK_MS: 650, TOAST_LOCK: 350, TOAST_GAP: 220, SLOT_MS: 700, EASE_S: 0.25, HINT_WAIT: 1000, HINT_MIN: 1500, WAVE_DEFAULT: { n: 6, hp: 20 }, MINER_SPD: 4, MINE_T: 1.5, HUNT_HP: 260 }; // OK_MS = '좋아요!' 실시간(ms) · TOAST_LOCK = 토스트가 뜬 직후 닫기 잠금(직전 탭·키가 바로 닫지 않게) · 광부 걸음 ×4·채굴 1.5초 · 첫 광석 체력
 function tutWave() { return (S && S.tut && S.tut.waves[S.round]) || TUT.WAVE_DEFAULT; }
 function tutBossShape() { return tutWave().bossShape || 20; } // 보스 모양 = 사양값, 없으면 달(20)
 function tutEv(k) { if (S && S.tutMode) S.tut.ev[k] = (S.tut.ev[k] || 0) + 1; } // 상태만으로 구분 안 되는 행동 카운터 (일반 판 = 아무것도 안 함)
@@ -15709,7 +15720,8 @@ function tutNewState() {
   return { i: 0, latched: false, okAt: 0, okText: '', base: { ev: {} }, ev: {}, holdPoker: true, holdWave: false,
     deals: {}, pick: {}, lockMade: {}, lockHand: {}, waves: {}, lastWave: null, waveEnds: 0, mkt: false, forceSummon: false,
     toughM: null, toughHp: 0, race: 0, alt: '', altT: 0, html: '', slot: -1, slotT: 0, scrolled: false,
-    toast: false, toastWait: false, toastAt: 0, frozen: false, stepAt: 0, ticketDone: false, supply: null };
+    toast: false, toastWait: false, toastAt: 0, frozen: false, stepAt: 0, ticketDone: false, supply: null,
+    closedAt: 0, ttPos: null, ttSlot: null, ease: 1 }; // 10-15: 토스트 닫은 시각(다음 토스트 간격) · 토스트 자리(떠 있는 동안 고정)·직전 자리 · 재개 램프(1 = 끝)
 }
 // 진입 순서 고정: at-title → reset() → S.tutMode → hideStartScreen → 셋업(startPoker 재딜) → 첫 단계 (reset 안 첫 포커가 일반 판 첫 판 안내 T1을 쓰지 않게 — mpStart와 같은 순서)
 function tutStart() {
@@ -15786,34 +15798,60 @@ function tutToastShow(st, t) {
   document.getElementById('ttText').innerHTML = tutStr(IS_MOBILE && st.toastMo != null ? st.toastMo : st.toast, t);
   document.getElementById('ttOk').textContent = st.okLabel || '확인';
   setAttackMode(false); // A 키를 눌러 둔 채 토스트가 뜨면 닫은 뒤 첫 클릭이 공격 지정이 되지 않게
-  document.getElementById('tutVeil').hidden = false; el.hidden = false;
+  t.ttPos = null; // 자리는 같은 틱의 tutRender가 (숨은 채로) 잡고 나서 hidden을 푼다 — 10-15 ④ 나타날 때 미끄러져 오지 않게
+}
+function tutToastReveal() { // 자리를 잡은 뒤에 보이기 (페이드인) + 확인 버튼 포커스 (숨은 동안은 포커스가 안 간다)
+  const el = document.getElementById('tutToast');
+  if (!el.hidden) return;
+  void el.offsetWidth; // 숨은 상태로 left/top 확정 (전환 없이)
+  el.hidden = false; document.getElementById('tutVeil').hidden = false;
   try { document.getElementById('ttOk').focus({ preventScroll: true }); } catch (e) {}
 }
-function tutToastHide() {
+function tutToastHide(keepVeil) {
   const el = document.getElementById('tutToast'), ok = document.getElementById('ttOk');
   if (document.activeElement === ok) ok.blur();
-  el.hidden = true; document.getElementById('tutVeil').hidden = true;
+  el.hidden = true; if (!keepVeil) document.getElementById('tutVeil').hidden = true;
 }
 function tutToastClose() { // [확인]·Enter·Space·Esc·토스트 탭·덮개 탭
   if (!S || !S.tutMode) return;
   const t = S.tut, st = tutStep();
   if (!t.toast || performance.now() - t.toastAt < TUT.TOAST_LOCK) return; // 뜬 직후 잠금 — 직전 행동의 탭·키·폰 고스트 클릭이 바로 닫지 않게
-  t.toast = false; tutToastHide();
+  t.toast = false; t.closedAt = performance.now(); tutToastHide(true); // 덮개는 tutRender가 정한다 (다음 토스트가 곧 오면 덮개를 남겨 깜빡이지 않게)
   if (st && !st.done) { if (st.id === 'end') { tutFinish(); return; } t.pendBase = null; try { tutGo(t.i + 1); } catch (e) { reportLoopError('tut', e); } } // 알려 주기만 하는 단계 = 닫으면 다음
-  tutModeTick(); // 정지 해제·다음 토스트를 바로
+  tutModeTick(); // 정지 해제·다음 토스트 차례 (바로 이어지는 토스트는 TUT.TOAST_GAP 뒤 — 그동안 정지 유지)
 }
-function tutToastPlace(rc) { // 대상 근처(위 → 아래 → 왼쪽 → 오른쪽), 안 되면 위 가운데 — 대상·다른 알림과 안 겹치게
-  const el = document.getElementById('tutToast'), W = innerWidth, H = innerHeight, M = 8, G = 14;
+// 안전 영역 (가로 아이폰 다이내믹 아일랜드·둥근 모서리) — 숨은 탐침 #tutSafe의 env() 패딩을 읽는다 (커스텀 프로퍼티로 넘기는 폴백은 안 된다 — DEV_NOTES 0-g · env 미지원이면 0) · 화면 크기가 바뀔 때만 다시 읽음
+let tutSafeC = null;
+function tutSafe() {
+  const W = innerWidth, H = innerHeight;
+  if (tutSafeC && tutSafeC.W === W && tutSafeC.H === H) return tutSafeC;
+  const el = document.getElementById('tutSafe'), cs = el ? getComputedStyle(el) : null, n = k => cs ? parseFloat(cs[k]) || 0 : 0;
+  return (tutSafeC = { W, H, L: n('paddingLeft'), R: n('paddingRight'), T: n('paddingTop'), B: n('paddingBottom') });
+}
+// 10-15 유저 "토스트 위치가 휙휙 바뀌고 · 왼쪽 끝은 아이폰 아일랜드에 가려": 자리 = 안전 영역 안 '위 가운데'(폰 전투 화면은 시계 밑) → 대상(링)과 겹치면 '아래 가운데'
+//   → 둘 다 겹치면 아래 모퉁이·대상 둘레 → 그래도 겹치면 가장 적게. 직전 토스트 자리를 먼저 본다(쓸데없이 안 옮김). 떠 있는 동안은 고정 — 창 크기가 바뀌거나 링이 새로 겹칠 때만 다시(미끄러지듯)
+//   잠깐 뜨는 보상 띠·결투 예고·투자 알림은 피하지 않는다 (덮개 아래 — 그것들이 사라질 때 토스트가 옮겨 가던 원인)
+function tutToastPlace(rc, t) {
+  const el = document.getElementById('tutToast'), W = innerWidth, H = innerHeight, M = 8, G = 14, sa = tutSafe();
   const w = el.offsetWidth, h = el.offsetHeight;
-  const av = ['#rewardToast', '#duelToast.on', '#mktToast.on'].map(tutVisRect).filter(Boolean);
-  if (rc) av.push({ left: rc.x - 4, top: rc.y - 4, right: rc.x + rc.w + 4, bottom: rc.y + rc.h + 4 });
-  const top = Math.max(M, Math.round(H * 0.08));
-  const cx = rc ? rc.x + rc.w / 2 - w / 2 : 0, cy = rc ? rc.y + rc.h / 2 - h / 2 : 0;
-  const cands = (rc ? [[cx, rc.y - h - G], [cx, rc.y + rc.h + G], [rc.x - w - G, cy], [rc.x + rc.w + G, cy]] : []).concat([[W / 2 - w / 2, top], [W / 2 - w / 2, H - h - M], [M, top], [W - w - M, top]]);
-  const fit = ([x, y]) => [Math.round(Math.max(M, Math.min(W - w - M, x))), Math.round(Math.max(M, Math.min(H - h - M, y)))];
-  const area = ([x, y]) => av.reduce((s, a) => s + Math.max(0, Math.min(x + w, a.right) - Math.max(x, a.left)) * Math.max(0, Math.min(y + h, a.bottom) - Math.max(y, a.top)), 0);
-  let p = null, pa = Infinity;
-  for (const c of cands) { const q = fit(c), a = area(q); if (a < pa) { p = q; pa = a; if (!a) break; } } // 안 겹치는 첫 자리, 없으면 가장 적게 겹치는 자리 (작은 폰)
+  const x0 = sa.L + M, x1 = Math.max(x0, W - sa.R - M - w), y0 = Math.max(M, sa.T + M), y1 = Math.max(y0, H - sa.B - M - h);
+  const fit = ([x, y]) => [Math.round(Math.max(x0, Math.min(x1, x))), Math.round(Math.max(y0, Math.min(y1, y)))];
+  const ring = rc ? { left: rc.x - 4, top: rc.y - 4, right: rc.x + rc.w + 4, bottom: rc.y + rc.h + 4 } : null;
+  const area = ([x, y]) => ring ? Math.max(0, Math.min(x + w, ring.right) - Math.max(x, ring.left)) * Math.max(0, Math.min(y + h, ring.bottom) - Math.max(y, ring.top)) : 0;
+  const key = W + 'x' + H + ':' + w + 'x' + h;
+  let p = t.ttPos && t.ttPos.key === key && !area(t.ttPos.xy) ? t.ttPos.xy : null;
+  if (!p) {
+    let top = Math.max(y0, Math.round(H * 0.08));
+    if (IS_MOBILE) { const ck = tutVisRect('#clock'); if (ck && ck.top < top + h && ck.bottom > top) top = Math.round(ck.bottom) + 6; } // 폰 전투 화면: 캔버스 위 가운데 시계 밑 (8%면 시계를 덮었다)
+    const cx = (sa.L + W - sa.R) / 2 - w / 2;
+    const slots = { top: [cx, top], bot: [cx, y1], bl: [x0, y1], br: [x1, y1] };
+    if (rc) { const tx = rc.x + rc.w / 2 - w / 2, ty = rc.y + rc.h / 2 - h / 2; Object.assign(slots, { ra: [tx, rc.y - h - G], rb: [tx, rc.y + rc.h + G], rl: [rc.x - w - G, ty], rr: [rc.x + rc.w + G, ty] }); } // 마지막 수단 = 대상 둘레 (링을 덮지 않게 — c0b2c75 '공중 우선')
+    const order = ['top', 'bot', 'bl', 'br', 'ra', 'rb', 'rl', 'rr'].filter(k => slots[k]);
+    const cur = t.ttPos ? t.ttPos.slot : t.ttSlot === 'bot' ? 'bot' : null; if (cur && slots[cur]) order.unshift(cur); // 떠 있는 토스트 = 지금 자리 먼저 · 새 토스트 = 직전이 '아래 가운데'였으면 그대로 아래 (위↔아래 왕복 줄이기)
+    let best = null, ba = Infinity;
+    for (const k of order) { const q = fit(slots[k]), a = area(q); if (a < ba) { best = { slot: k, xy: q }; ba = a; if (!a) break; } }
+    t.ttPos = { key, xy: best.xy, slot: best.slot }; t.ttSlot = best.slot; p = best.xy;
+  }
   if (el.style.left !== p[0] + 'px') el.style.left = p[0] + 'px';
   if (el.style.top !== p[1] + 'px') el.style.top = p[1] + 'px';
 }
@@ -15829,7 +15867,7 @@ function tutModeTickBody() {
   if (st.tick && !t.latched) st.tick(t);
   if (!S.tutMode || S.tut !== t) return;
   // ① '좋아요!' 끝 → 다음 단계 (같은 틱에 다음 토스트까지 — 정지가 끊기지 않게)
-  if (t.latched && performance.now() - t.okAt >= TUT.OK_MS) {
+  if (t.latched && performance.now() - t.okAt >= (t.okText ? TUT.OK_MS : 0)) { // 칭찬 글자 없는 래치('' — 전투 끝 giveUp)는 기다리지 않는다 (10-15: 글자 없이 0.65초 조용히 멈췄다)
     tutGo(t.i + 1); if (!S.tutMode || S.tut !== t) return;
     st = tutStep(); if (!st) return;
     if (st.tick) st.tick(t);
@@ -15842,7 +15880,7 @@ function tutModeTickBody() {
   const need = t.latched ? null : tutViewNeed(st);
   let hold = false;
   if (t.toastWait && !t.latched) {
-    if (!need && !tutToastBlocked(st) && tutViewSettled(st) && (!st.toastWhen || st.toastWhen(t))) tutToastShow(st, t);
+    if (!need && !tutToastBlocked(st) && tutViewSettled(st) && (!st.toastWhen || st.toastWhen(t)) && performance.now() - t.closedAt >= TUT.TOAST_GAP) tutToastShow(st, t); // 토스트를 닫자마자 다음 토스트면 TUT.TOAST_GAP(앞 토스트가 사라지는 동안) 뒤에 — 10-15 ④ 같은 틱에 바뀌어 뚝 끊기던 것
     else hold = !need && !st.toastWhen;
   }
   // ④ 완료 판정 (토스트를 닫은 뒤 · 술어는 전부 상태) → 래치 = '좋아요!'(정지)
@@ -15851,7 +15889,7 @@ function tutModeTickBody() {
     else if (st.giveUp && st.giveUp(t)) tutLatch(t, st, '');
   }
   const f = !!(t.toast || t.latched || hold);
-  if (f !== t.frozen) { t.frozen = f; syncGamePause(); }
+  if (f !== t.frozen) { t.frozen = f; syncGamePause(); if (!f) t.ease = 0; } // 풀리는 순간 = 재개 램프 시작 (frame()이 TUT.EASE_S 동안 dt를 0.25 → 1로 — 멈추는 쪽은 그대로 즉시: 래치 정지가 단계 사이 상태를 지킨다)
   document.body.classList.toggle('tutMap', st.view === 'map' && !t.latched);
   tutRender(st, t, t.latched ? null : need);
 }
@@ -15904,12 +15942,15 @@ function tutBannerHTML() { // renderPoker가 부른다 (폰 카드 화면)
 function tutRender(st, t, need) {
   const panel = document.getElementById('tutPanel'), dlg = tutOpenDialog();
   const banSet = h => { if (!tutBannerMode()) return; let sp = document.getElementById('tutBanLine'); if (!sp && h) { renderPoker(); sp = document.getElementById('tutBanLine'); } if (sp && sp.__h !== h) { sp.__h = h; sp.innerHTML = h; } }; // 탭을 막 바꿨으면 배너를 한 번 다시 그린다 (문구만 바뀌면 span만 — 카드 연출 보존)
+  const veil = document.getElementById('tutVeil'), veilOn = t.toast || (!t.latched && t.toastWait && t.frozen && performance.now() - (t.closedAt || 0) < TUT.TOAST_GAP + 150); // 토스트 → 바로 다음 토스트 사이(정지 유지)엔 덮개를 남긴다 (어두움 → 밝음 → 어두움 깜빡임 X)
+  if (!veilOn && !veil.hidden) veil.hidden = true;
   if (t.toast) { // 토스트: 링 = 토스트가 가리키는 대상(덮개 위) · 한 줄 알림은 숨김
     const tg = st.toastTarget ? st.toastTarget(t) : st.target ? st.target(t) : null, rc = tutTargetRect(tg, dlg);
     if (!panel.hidden) panel.hidden = true;
     banSet('');
     tutRingSet(rc, true);
-    tutToastPlace(rc);
+    tutToastPlace(rc, t);
+    tutToastReveal();
     return;
   }
   const c = tutCompose(st, t, need);
@@ -15918,14 +15959,14 @@ function tutRender(st, t, need) {
   if (!c.html) { if (!panel.hidden) panel.hidden = true; banSet(''); }
   else if (tutBannerMode()) { if (!panel.hidden) panel.hidden = true; banSet(c.html + tutBannerBtns(c)); }
   else {
-    panel.hidden = false;
     const key = c.html + '|' + c.ok + '|' + t.i;
     if (t.html !== key) {
       t.html = key;
       document.getElementById('tpText').innerHTML = c.html;
       panel.querySelector('.tpBtns').hidden = c.ok;
     }
-    tutPlace(panel, t, dlg, rc);
+    tutPlace(panel, t, dlg, rc); // 숨은 채로도 잴 수 있다 (hidden = 투명 상자) → 자리 먼저, 그다음 보이기 (10-15 ④)
+    if (panel.hidden) { void panel.offsetWidth; panel.hidden = false; }
   }
   tutRingSet(rc, false);
 }
@@ -15943,20 +15984,24 @@ function tutPlace(panel, t, dlg, rc) { // float = 게임 화면 모퉁이(왼쪽
   } else {
     const cr = document.getElementById('cv').getBoundingClientRect();
     const R = cr.width > 0 ? cr : { left: 0, top: 0, right: W, bottom: H };
+    const ck = IS_MOBILE ? tutVisRect('#clock') : null; // 폰: 위 모퉁이 알림 폭을 캔버스 위 가운데 시계 앞까지로 (10-15 — 긴 문구가 시계에 닿아 아래로 갔다가 '좋아요!'로 짧아지면 되돌아오던 것)
+    if (ck && ck.top < R.top + 60) mw = Math.round(Math.max(160, Math.min(300, W * 0.46, Math.min(ck.left - R.left, R.right - ck.right) - 16))) + 'px';
+    if (panel.style.maxWidth !== mw) panel.style.maxWidth = mw; // 재기 전에 폭부터
     const pw = panel.offsetWidth, ph = panel.offsetHeight, sc = tutVisRect('#stCasino');
     const x0 = sc && sc.left < R.left + 8 + pw && sc.top < R.top + 8 + ph && sc.bottom > R.top + 8 ? Math.max(R.left + 8, sc.right + 8) : R.left + 8; // 왼쪽 위 '자금운영' 버튼이 캔버스 안에 있으면 그 오른쪽 하늘로
     const cands = [[x0, R.top + 8], [R.right - 8 - pw, R.top + 8], [R.left + 8, R.bottom - 8 - ph], [R.right - 8 - pw, R.bottom - 8 - ph]];
     const avoid = ['#unitInfo', '#objInfo', '#stCasino', '#dpsRank', '#skillBar', '#clock', '#duelToast.on', '#goPoker.show', '#pokerHandle.show', '#duelForfeit.show', ...(IS_MOBILE ? [] : ['#pokerPanel.up'])].map(tutVisRect).filter(Boolean); // 폰 전투 알림 티커(#mktToast)는 잠깐이라 피하지 않는다 (패널이 들썩이지 않게)
     if (rc) avoid.push({ left: rc.x - 12, top: rc.y - 12, right: rc.x + rc.w + 12, bottom: rc.y + rc.h + 12 });
     const bad = k => { const [ax, ay] = cands[k]; return avoid.some(a => ax < a.right && ax + pw > a.left && ay < a.bottom && ay + ph > a.top); };
-    let best = [0, 1, 2, 3].find(k => !bad(k)); if (best == null) best = 0;
-    if (t.slot < 0) t.slot = best;
-    else if (best !== t.slot) { if (!t.slotT) t.slotT = performance.now(); else if (performance.now() - t.slotT > 300) { t.slot = best; t.slotT = 0; } } // 깜빡임 방지
+    const best = [0, 1, 2, 3].find(k => !bad(k));
+    if (t.slot < 0 || (panel.hidden && best != null && bad(t.slot))) { t.slot = best == null ? 0 : best; t.slotT = 0; } // 숨어 있다 나타날 땐 기다리지 않고 바로 비는 자리 (보이는 동안만 깜빡임 방지 지연)
+    else if (best != null && best !== t.slot && bad(t.slot)) { if (!t.slotT) t.slotT = performance.now(); else if (performance.now() - t.slotT > TUT.SLOT_MS) { t.slot = best; t.slotT = 0; } } // 10-15: 지금 자리가 TUT.SLOT_MS 넘게 가려질 때만 옮긴다 (전엔 앞 순위 자리가 비면 0.3초 만에 되돌아가 들썩였다 · 움직이는 링이 잠깐 스쳐도)
     else t.slotT = 0;
     [x, y] = cands[t.slot];
   }
   if (panel.style.maxWidth !== mw) panel.style.maxWidth = mw;
-  x = Math.round(Math.max(4, Math.min(W - panel.offsetWidth - 4, x))); y = Math.round(Math.max(4, Math.min(H - panel.offsetHeight - 4, y)));
+  const sa = tutSafe(); // 가로 아이폰 안전 영역 안으로 (창 위 dock도)
+  x = Math.round(Math.max(sa.L + 4, Math.min(W - sa.R - panel.offsetWidth - 4, x))); y = Math.round(Math.max(sa.T + 4, Math.min(H - sa.B - panel.offsetHeight - 4, y)));
   if (panel.style.left !== x + 'px') panel.style.left = x + 'px';
   if (panel.style.top !== y + 'px') panel.style.top = y + 'px';
 }
@@ -16011,7 +16056,7 @@ document.getElementById('tutToast').addEventListener('click', e => { if (!e.targ
   for (const k of ['pointerdown', 'mousedown', 'touchstart', 'wheel']) veil.addEventListener(k, e => e.stopPropagation(), { passive: true }); }
 // 키: 토스트가 떠 있으면 Enter·Space·Esc = 닫기, 나머지 게임 키(A·숫자 등)는 삼킨다 — 캡처 단계(게임 키 리스너보다 먼저)
 window.addEventListener('keydown', e => {
-  if (!S || !S.tutMode || !S.tut || !S.tut.toast) return;
+  if (!S || !S.tutMode || !S.tut || !(S.tut.toast || !document.getElementById('tutVeil').hidden)) return; // 10-15: 토스트와 다음 토스트 사이(덮개 유지 TUT.TOAST_GAP)도 삼킨다 — 빠르게 두 번 누른 Enter·Esc가 뒤 게임에 가지 않게
   e.stopImmediatePropagation();
   if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar' || e.key === 'Escape') { e.preventDefault(); if (!e.repeat) tutToastClose(); }
 }, true);
@@ -18412,6 +18457,7 @@ function frame(now) {
   const t0 = performance.now();
   if (S.multi) mpCamTick(rawDt); // 🤖 멀티 데모: 카메라 (방향키·가장자리 스크롤 — 실시간 기준)
   if (!S.paused) {
+    if (S.tutMode && S.tut && S.tut.ease < 1) { S.tut.ease = Math.min(1, S.tut.ease + rawDt / TUT.EASE_S); dt *= 0.25 + 0.75 * S.tut.ease; } // [튜토리얼 10-15] 토스트·'좋아요!' 정지가 풀릴 때 0.25초 동안 부드럽게 출발 (뚝 끊기는 느낌 — 일반 판 = S.tutMode 없음 → 무변경)
     if (S.slowT > 0) { S.slowT = Math.max(0, S.slowT - rawDt); dt *= 0.3; } // ⛏️✨ 특별 발굴 슬로우모션 — 실시간 2초, 배속·히트스톱과 독립
     if (S.goldWhyT > 0) S.goldWhyT -= rawDt; // ✨ 대박 이유 줄 = 실시간 (배속·서브스텝과 무관 — update 안에 두면 ⏩2배속에서 1초 만에 사라진다)
     if (S.goldFlash > 0 && S.phase !== 'wave') S.goldFlash -= rawDt; // ✨ 대박 배너: 웨이브 밖(포커 페이즈)에선 update가 안 돌아 배너만 최대 60초 남고 이유 줄은 먼저 사라졌다
