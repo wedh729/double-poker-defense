@@ -15838,11 +15838,12 @@ function tutToastPlace(rc, t) {
   const w = el.offsetWidth, h = el.offsetHeight;
   const x0 = sa.L + M, x1 = Math.max(x0, W - sa.R - M - w), y0 = Math.max(M, sa.T + M), y1 = Math.max(y0, H - sa.B - M - h);
   const fit = ([x, y]) => [Math.round(Math.max(x0, Math.min(x1, x))), Math.round(Math.max(y0, Math.min(y1, y)))];
-  const ring = rc ? { left: rc.x - 4, top: rc.y - 4, right: rc.x + rc.w + 4, bottom: rc.y + rc.h + 4 } : null;
-  const obs = [ring, bgmLogOn && tutVisRect('#bgmLog')].filter(Boolean); // + BGM 디버그 로그 상자(켜 둔 때만 — 아래 가운데 토스트를 가렸다)
-  const area = ([x, y]) => obs.reduce((s, a) => s + Math.max(0, Math.min(x + w, a.right) - Math.max(x, a.left)) * Math.max(0, Math.min(y + h, a.bottom) - Math.max(y, a.top)), 0);
+  const lg = bgmLogOn && tutVisRect('#bgmLog'), rn = Math.round; // BGM 디버그 로그 상자(켜 둔 때만 — 아래 가운데 토스트를 가렸다)
+  const obs = [rc && { left: rc.x - 4, top: rc.y - 4, right: rc.x + rc.w + 4, bottom: rc.y + rc.h + 4 }, lg].filter(Boolean); // 새 자리 = 링 + 여백 4px
+  const obs0 = [rc && { left: rn(rc.x), top: rn(rc.y), right: rn(rc.x) + rn(rc.w), bottom: rn(rc.y) + rn(rc.h) }, lg].filter(Boolean); // 직전 자리 지키기 = 그려지는 링 그대로(tutRingSet 반올림, 여백 없음) — 10-15 리뷰 F1: 가로 아이폰 852 안전 영역에서 아래 가운데가 여백 4px에 1px 걸려 '유닛 소환'만 위로 갔다(위→아래→아래→위)
+  const area = ([x, y], o = obs) => o.reduce((s, a) => s + Math.max(0, Math.min(x + w, a.right) - Math.max(x, a.left)) * Math.max(0, Math.min(y + h, a.bottom) - Math.max(y, a.top)), 0);
   const key = W + 'x' + H + ':' + w + 'x' + h;
-  let p = t.ttPos && t.ttPos.key === key && !area(t.ttPos.xy) ? t.ttPos.xy : null;
+  let p = t.ttPos && t.ttPos.key === key && !area(t.ttPos.xy, obs0) ? t.ttPos.xy : null;
   if (!p) {
     const top0 = Math.max(y0, Math.round(H * 0.08)); let top = top0;
     if (IS_MOBILE) { const ck = tutVisRect('#clock'); if (ck && ck.top < top + h && ck.bottom > top) top = Math.round(ck.bottom) + 6; } // 폰 전투 화면: 캔버스 위 가운데 시계 밑 (8%면 시계를 덮었다)
@@ -15850,9 +15851,9 @@ function tutToastPlace(rc, t) {
     const slots = { top: [cx, top], bot: [cx, y1], bl: [x0, y1], br: [x1, y1], tl: [x0, top], tr: [x1, top], hl: [x0, top0], hr: [x1, top0], ht: [cx, top0] }; // h* = 시계를 덮더라도 맨 위 (링이 큰 단계 — 폰740 전투·결투 기권)
     if (rc) { const tx = rc.x + rc.w / 2 - w / 2, ty = rc.y + rc.h / 2 - h / 2; Object.assign(slots, { ra: [tx, rc.y - h - G], rb: [tx, rc.y + rc.h + G], rl: [rc.x - w - G, ty], rr: [rc.x + rc.w + G, ty] }); } // 마지막 수단 = 대상 둘레 (링을 덮지 않게 — c0b2c75 '공중 우선')
     const order = ['top', 'bot', 'bl', 'br', 'tl', 'tr', 'ra', 'rb', 'rl', 'rr', 'hl', 'hr', 'ht'].filter(k => slots[k]);
-    const cur = t.ttPos ? t.ttPos.slot : t.ttSlot === 'bot' ? 'bot' : null; if (cur && slots[cur]) order.unshift(cur); // 떠 있는 토스트 = 지금 자리 먼저 · 새 토스트 = 직전이 '아래 가운데'였으면 그대로 아래 (위↔아래 왕복 줄이기)
+    const cur = t.ttPos ? t.ttPos.slot : t.ttSlot === 'bot' || (!rc && tutBannerMode()) ? 'bot' : null; if (cur && slots[cur]) order.unshift(cur); // 떠 있는 토스트 = 지금 자리 먼저 · 새 토스트 = 직전이 '아래 가운데'였으면 그대로 아래 (위↔아래 왕복 줄이기) · 폰 카드 화면의 대상 없는 토스트(첫 인사)도 아래 = 뒤따르는 카드 토스트들과 같은 자리
     let best = null, ba = Infinity;
-    for (const k of order) { const q = fit(slots[k]), a = area(q); if (a < ba) { best = { slot: k, xy: q }; ba = a; if (!a) break; } }
+    for (const k of order) { const q = fit(slots[k]), a = area(q, k === cur ? obs0 : obs); if (a < ba) { best = { slot: k, xy: q }; ba = a; if (!a) break; } }
     t.ttPos = { key, xy: best.xy, slot: best.slot }; t.ttSlot = best.slot; p = best.xy;
   }
   if (el.style.left !== p[0] + 'px') el.style.left = p[0] + 'px';
