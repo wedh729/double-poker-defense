@@ -2435,13 +2435,13 @@ body.mobile .rankGauge {display:inline-flex;gap:2px;margin-left:6px;padding:3px 
 #tutVeil {transition:opacity .15s ease-out;}
 #tutToast[hidden], #tutPanel[hidden], #tutVeil[hidden] {display:block;visibility:hidden;opacity:0;pointer-events:none;transition:opacity .14s ease-in, transform .14s ease-in, visibility 0s linear .14s;}
 #tutToast[hidden] {transform:translateY(6px);} #tutPanel[hidden] {transform:translateY(4px);}
-#tutPanel.dock:not([hidden]) {transition:opacity .18s ease-out, transform .18s ease-out;} /* 창 위(dock)는 창을 그대로 따라붙는다 — 창이 열리며 움직이는 동안 미끄러짐이 늦게 따라와 '건너뛰기'가 손 밑에서 비켜 갔다 (skipall crownPick) */
+#tutPanel.dock:not([hidden]), #tutPanel.tpStay:not([hidden]) {transition:opacity .18s ease-out, transform .18s ease-out;} /* 창 위(dock)는 창을 그대로 따라붙는다 — 창이 열리며 움직이는 동안 미끄러짐이 늦게 따라와 '건너뛰기'가 손 밑에서 비켜 갔다 (skipall crownPick) · 같은 모퉁이 안 자리 바뀜(tpStay)도 바로 (10-15 검증 pc900 duelSummon) */
 #tutPanel[hidden] button {pointer-events:none;}
 #tutPanel {width:max-content;} /* 폭 = 글자 폭(최대 max-width) — 자동 폭(shrink-to-fit)이면 지금 left에 따라 폭이 줄어 재는 값이 틀렸다(오른쪽 끝에서 오면 187px로 재고 300px로 그려져 오른쪽 안전 영역으로 삐져나감 — 10-15 하네스) */
 #tutRing {transition:left .18s ease-out, top .18s ease-out, width .18s ease-out, height .18s ease-out;} /* 대상이 바뀌면 미끄러지듯 (숨었다 나타날 땐 display:none에서 오므로 전환 없이 그 자리) */
 #tutSafe {position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:0;} /* 안전 영역 탐침 (tutSafe) — env 미지원이면 0 */
 @supports (padding: env(safe-area-inset-left)) { #tutSafe {padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);} }
-@media (prefers-reduced-motion: reduce) { #tutToast, #tutPanel, #tutVeil, #tutRing, #tutToast[hidden], #tutPanel[hidden], #tutVeil[hidden], #tutPanel.dock:not([hidden]) {transition:none;} }
+@media (prefers-reduced-motion: reduce) { #tutToast, #tutPanel, #tutVeil, #tutRing, #tutToast[hidden], #tutPanel[hidden], #tutVeil[hidden], #tutPanel.dock:not([hidden]), #tutPanel.tpStay:not([hidden]) {transition:none;} }
 #tutPanel button {pointer-events:auto;}
 #tutPanel .tpOk {color:#557540;}
 #tutPanel .tpOk svg {width:14px;height:14px;vertical-align:-2px;}
@@ -16006,8 +16006,9 @@ function tutPlace(panel, t, dlg, rc) { // float = 게임 화면 모퉁이(왼쪽
   if (panel.style.maxWidth !== mw) panel.style.maxWidth = mw;
   const sa = tutSafe(); // 가로 아이폰 안전 영역 안으로 (창 위 dock도)
   x = Math.round(Math.max(sa.L + 4, Math.min(W - sa.R - panel.offsetWidth - 4, x))); y = Math.round(Math.max(sa.T + 4, Math.min(H - sa.B - panel.offsetHeight - 4, y)));
-  if (panel.style.left !== x + 'px') panel.style.left = x + 'px';
-  if (panel.style.top !== y + 'px') panel.style.top = y + 'px';
+  const k = dlg ? 'dock' : t.slot; // 같은 모퉁이 안에서 바뀌는 자리(글자 폭·높이 등)는 바로(.tpStay) · 모퉁이가 바뀔 때만 미끄러지듯 — 10-15 검증: 미끄러지는 0.2초 동안 '건너뛰기'가 손 밑에서 비켜 갔다
+  if (panel.style.left !== x + 'px' || panel.style.top !== y + 'px') { panel.classList.toggle('tpStay', k === t.pk); panel.style.left = x + 'px'; panel.style.top = y + 'px'; }
+  t.pk = k;
 }
 // 링 대상: {dom: 선택자|[선택자…](보이는 첫 번째)} · {map:[x,y,r]} · {mapRect:[x0,y0,x1,y1]} · {unit} · {mon} — 매 틱 실제 화면 사각형으로 (캐시 금지: 재할당·재생성되는 DOM)
 function tutTargetRect(tg, dlg) { // dlg = 열린 창 — 창 밖 대상(맵·툴바 등)은 링을 숨긴다 (창 위 엉뚱한 곳에 뜨지 않게 — 1차 P2-3)
