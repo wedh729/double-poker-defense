@@ -18304,7 +18304,7 @@ const STORY = {      // 노브 한 곳 (화면에 안 나옴)
   V0: 60,            // 기본 걸음 px/게임초 (물풍선 = 1)
   BOSS_V: 0.4,       // 보스 걸음 배수
   MAT_V: [1.0, 1.1, 1.2, 1.0, 1.4, 1.1, 0.7, 0.8, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9], // 재질 idx 0~13 걸음 (천체·헬 = 0.9)
-  FILLET: 24,        // 모퉁이 둥글리기 반지름 px — 반드시 ≥ 최대 |off| + 8
+  FILLET: 24,        // 모퉁이 둥글리기 반지름 px — 반드시 ≥ 최대 |off| + 8 · 곡선 길(curve)은 굽이 반지름 하한 (storyCheckMaps)
   OFF_PAD: 8,        // 옆 오프셋 범위 = ±(w/2 − OFF_PAD) → w 40이면 ±12
   WOB: 2.5,          // 옆 흔들림 px
   CAP: 300,          // 전투 안전 상한 (게임초, S.waveT)
@@ -18332,26 +18332,26 @@ const STORY_MAPS = {
     sky: [], noBuild: [],
     bld: { castle: [150, 425], portal: [235, 275], altar: [480, 330], mine: true, room: true },
     spawn: [480, 190], tray: null },
-  // 월드 1 = 스토리_2026-10-14\world1_maps.json (10-15 정본 — 길 폭 34 · 1-4 개울 곡선 + 연못 + 바위 옮김 · 소환 자리 1-4/1-5 옮김). 성·포털·제단 = 챌린지 자리 · castleArt = M4 성 그림(castle 우리 성 / camp 진지 — 엔진은 안 읽음)
+  // 월드 1 = 스토리_2026-10-14\world1_maps_v2.json (10-15 v2 정본 — 부드러운 곡선 길: curve: true면 pts = 조절점(길이 모두 지남, storyCurve) · 길 폭 34 · 1-4 말굽 개울 띠는 펼친 점).
+  //   모양·공략·명당(shape·strategy·spots)·교차점·띠 조절점(band.ctrl)은 JSON에만 (엔진은 안 읽음). 성·포털·제단 = 챌린지 자리 · castleArt = M4 성 그림(castle 우리 성 / camp 진지 — 엔진은 안 읽음)
   '1-1': { name: '동산', world: 1, idx: 1, bg: null, skyCut: true, lives: 20, rounds: 6, req: [1, 4], bossR: [],
-    paths: [{ id: 'a', w: 34, door: true, pts: [[905, 135], [310, 135], [310, 266], [830, 266], [830, 398], [165, 398]] }],
-    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [520, 334], tray: null, castleArt: 'castle' },
+    paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 135], [896, 135], [877, 139], [861, 150], [850, 166], [846, 185], [846, 262], [846, 340], [830, 377], [793, 393], [756, 377], [740, 340], [740, 261], [740, 182], [724, 145], [687, 129], [650, 145], [634, 182], [634, 259], [634, 336], [618, 374], [580, 390], [542, 374], [526, 336], [526, 255], [526, 180], [519, 154], [500, 135], [474, 128], [428, 128], [380, 128], [352, 135], [332, 156], [325, 183], [325, 250], [323, 312], [304, 362], [252, 391], [165, 398]] }],
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [410, 330], tray: null, castleArt: 'castle' },
   '1-2': { name: '초원 입구', world: 1, idx: 2, bg: null, skyCut: true, lives: 20, rounds: 8, req: [3, 7], bossR: [],
-    paths: [{ id: 'a', w: 34, door: true, pts: [[905, 398], [700, 398], [700, 130], [330, 130], [330, 398], [165, 398]] }],
-    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [515, 300], tray: null, castleArt: 'camp' },
+    paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 385], [868, 385], [826, 385], [801, 378], [783, 360], [776, 335], [776, 260], [776, 174], [760, 135], [721, 119], [682, 135], [666, 174], [666, 260], [666, 300], [658, 330], [636, 352], [606, 360], [560, 377], [528, 377], [497, 369], [478, 346], [470, 314], [451, 267], [404, 248], [357, 267], [338, 314], [332, 346], [308, 378], [250, 395], [165, 398]] }],
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [550, 190], tray: null, castleArt: 'camp' },
   '1-3': { name: '초원 한가운데', world: 1, idx: 3, bg: null, skyCut: true, lives: 20, rounds: 10, req: [6, 10], bossR: [],
-    paths: [{ id: 'a', w: 34, door: true, pts: [[905, 398], [790, 398], [790, 140], [650, 140], [650, 398], [510, 398], [510, 140], [370, 140], [370, 398], [165, 398]] }],
-    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [270, 320], tray: null, castleArt: 'camp' },
+    paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 215], [892, 215], [867, 222], [849, 240], [842, 265], [842, 293], [817, 353], [757, 378], [697, 353], [672, 293], [672, 265], [672, 238], [645, 171], [578, 144], [512, 171], [485, 238], [485, 298], [479, 330], [455, 368], [400, 386], [328, 368], [262, 381], [215, 395], [165, 398]] }],
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [360, 200], tray: null, castleArt: 'camp' },
   '1-4': { name: '개울 건너', world: 1, idx: 4, bg: null, skyCut: true, lives: 20, rounds: 10, req: [8, 12], bossR: [],
-    paths: [{ id: 'a', w: 34, door: true, pts: [[905, 398], [720, 398], [720, 140], [380, 140], [380, 300], [250, 300], [250, 398], [165, 398]] }],
+    paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 300], [860, 300], [822, 284], [795, 258], [752, 242], [712, 250], [686, 276], [677, 315], [672, 358], [650, 384], [622, 390], [596, 384], [576, 358], [570, 300], [563, 275], [545, 257], [520, 250], [470, 250], [420, 252], [378, 266], [348, 298], [332, 345], [302, 382], [240, 396], [165, 398]] }],
     forks: [], cover: [], sky: [],
-    noBuild: [ { kind: 'water', band: { w: 46, pts: [[570, -10], [569, 12], [568, 41], [565, 75], [560, 104], [554, 135], [549, 168], [548, 200], [553, 230], [563, 258], [573, 288], [578, 320], [577, 350], [572, 383], [566, 416], [560, 447], [556, 470], [552, 510]] } },
-               { kind: 'water', circle: [645, 372, 32] },
-               { kind: 'rock', circle: [825, 255, 40] }, { kind: 'rock', circle: [470, 330, 34] }, { kind: 'rock', circle: [315, 365, 26] } ],
-    bld: W1B, spawn: [455, 190], tray: null, castleArt: 'camp' },
+    noBuild: [ { kind: 'water', band: { w: 44, pts: [[492, 520], [492, 514], [492, 508], [492, 502], [491, 496], [491, 490], [491, 484], [491, 478], [490, 472], [490, 466], [490, 460], [490, 454], [490, 448], [490, 442], [490, 436], [490, 430], [490, 424], [490, 418], [490, 412], [490, 406], [491, 400], [491, 394], [491, 388], [492, 382], [492, 376], [493, 370], [493, 364], [493, 358], [494, 352], [494, 346], [495, 340], [496, 334], [496, 328], [497, 322], [497, 316], [498, 310], [499, 304], [499, 298], [500, 292], [500, 286], [501, 280], [501, 274], [501, 268], [501, 262], [502, 257], [502, 251], [503, 245], [504, 239], [505, 233], [506, 227], [508, 221], [510, 216], [513, 210], [516, 205], [519, 200], [523, 195], [527, 191], [531, 187], [536, 182], [540, 178], [545, 175], [549, 171], [554, 167], [559, 164], [564, 161], [569, 158], [575, 155], [580, 152], [585, 150], [591, 147], [597, 145], [602, 144], [608, 142], [614, 141], [620, 140], [626, 139], [632, 138], [638, 138], [644, 138], [650, 138], [656, 138], [662, 139], [668, 139], [674, 140], [680, 141], [685, 143], [691, 145], [697, 147], [702, 150], [707, 153], [712, 157], [716, 161], [721, 165], [725, 169], [729, 174], [733, 178], [736, 183], [739, 188], [742, 194], [745, 199], [747, 204], [749, 210], [751, 216], [752, 222], [753, 228], [753, 234], [754, 240], [754, 246], [754, 252], [754, 258], [754, 264], [754, 270], [754, 276], [754, 282], [754, 288], [754, 294], [754, 300], [754, 306], [755, 312], [755, 318], [755, 324], [755, 330], [755, 336], [756, 342], [756, 348], [756, 354], [756, 360], [756, 366], [757, 372], [757, 378], [757, 384], [757, 390], [757, 396], [757, 402], [758, 408], [758, 414], [758, 420], [758, 426], [758, 432], [759, 438], [759, 444], [759, 450], [759, 456], [760, 462], [760, 468], [760, 474], [760, 480], [761, 486], [761, 492], [761, 498], [761, 504], [762, 510], [762, 516], [762, 520]] } },
+               { kind: 'water', circle: [436, 352, 26] }, { kind: 'rock', circle: [628, 250, 26] }, { kind: 'rock', circle: [372, 180, 26] }, { kind: 'rock', circle: [255, 446, 20] } ],
+    bld: W1B, spawn: [240, 250], tray: null, castleArt: 'camp' },
   '1-5': { name: '초원 끝 언덕', world: 1, idx: 5, bg: null, skyCut: true, lives: 20, rounds: 12, req: [10, 14], bossR: [12],
-    paths: [{ id: 'a', w: 34, door: true, pts: [[905, 300], [380, 300], [380, 130], [650, 130], [650, 398], [165, 398]] }],
-    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [515, 190], tray: null, castleArt: 'camp' },
+    paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 182], [860, 182], [812, 166], [760, 151], [700, 149], [618, 149], [593, 156], [575, 174], [568, 199], [568, 240], [572, 300], [595, 342], [640, 362], [695, 362], [753, 362], [779, 355], [798, 336], [805, 310], [798, 284], [779, 265], [753, 258], [650, 257], [620, 256], [568, 256], [515, 262], [465, 285], [420, 318], [372, 352], [318, 376], [262, 388], [210, 396], [165, 398]] }],
+    forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [360, 180], tray: null, castleArt: 'camp' },
 };
 const STORY_UI = {   // 논리 좌표 [x0, y0, x1, y1] — t1014s_zones.js 실측 합집합 (10-14 밤, c0b2c75) · storyCheckMaps 전용 (실행 중엔 안 읽음)
   hard:  [[440, 0, 620, 66], [0, 185, 75, 290]],          // 원형 시계(+장 시계) · 자금 운영 단추 → 길·건물 금지
@@ -18382,7 +18382,7 @@ function storyNewState(id, map) { // 판 상태 (S.story) — 길은 진입 때 
 }
 function storyHas(k) { return !!(S && S.story && S.story.map.bld[k]); } // 광산·광석방 있음/없음 (위치는 챌린지 자리 고정)
 function storyBossShape(n) { const b = S.story.map.bossShape; return b || (n > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.max(1, Math.floor(n / 10)))); } // 보스 모양 — 등가 R 10 미만도 달(20)부터 (19는 그림·정보 없음 → 배너·그리기 예외, 설계 §19 P0-1)
-// ---- 2px 경로 표 (설계 §4) — 모퉁이 둥글리기(R = FILLET) → 호 길이 2px 표본 → 단위 법선 ----
+// ---- 2px 경로 표 (설계 §4) — 모퉁이 둥글리기(R = FILLET) 또는 곡선(curve: true — 조절점을 지나는 곡선) → 호 길이 2px 표본 → 단위 법선 ----
 function storyFillet(pts, R) { // 꼭짓점마다 반지름 R 원호로 깎은 꺾은선 (원호는 3px마다 점, 짧은 구간이면 R을 줄임) — t1014s_mapcheck.py fillet()과 같은 식
   const out = [pts[0].slice()];
   for (let k = 1; k < pts.length - 1; k++) {
@@ -18402,8 +18402,22 @@ function storyFillet(pts, R) { // 꼭짓점마다 반지름 R 원호로 깎은 �
   out.push(pts[pts.length - 1].slice());
   return out;
 }
-function storyCompile(p) { // 길 하나 → { id, w, door, L, n, x, y, nx, ny (Float32Array — i번 = s 2i, 마지막 = L), off, fp, forks, cover }
-  const fp = storyFillet(p.pts, STORY.FILLET), cum = [0];
+function storyCurve(pts) { // centripetal Catmull-Rom(α 0.5) — 조절점을 모두 지나는 곡선(curve: true 길). 양 끝 = 가상 점(2·P0 − P1)이라 첫·끝 구간 방향으로 곧게. 점 사이 ≈ 3px 이하 — tools/story_guide.py curve()와 같은 식 (t1015p_curve.js 받아들임 검사)
+  const n = pts.length, Q = [[2 * pts[0][0] - pts[1][0], 2 * pts[0][1] - pts[1][1]], ...pts, [2 * pts[n - 1][0] - pts[n - 2][0], 2 * pts[n - 1][1] - pts[n - 2][1]]];
+  const out = [pts[0].slice()], d = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+  for (let i = 1; i < n; i++) {
+    const p0 = Q[i - 1], p1 = Q[i], p2 = Q[i + 1], p3 = Q[i + 2];
+    const t01 = Math.max(1e-6, Math.sqrt(d(p0, p1))), t12 = Math.max(1e-6, Math.sqrt(d(p1, p2))), t23 = Math.max(1e-6, Math.sqrt(d(p2, p3)));
+    const m1 = [0, 1].map(k => (p2[k] - p1[k]) + t12 * ((p1[k] - p0[k]) / t01 - (p2[k] - p0[k]) / (t01 + t12)));
+    const m2 = [0, 1].map(k => (p2[k] - p1[k]) + t12 * ((p3[k] - p2[k]) / t23 - (p3[k] - p1[k]) / (t12 + t23)));
+    const K = Math.max(2, Math.ceil(Math.max(d(p1, p2), Math.hypot(m1[0], m1[1]), Math.hypot(m2[0], m2[1])) / 3));
+    for (let j = 1; j <= K; j++) { const u = j / K, u2 = u * u, u3 = u2 * u, h00 = 2 * u3 - 3 * u2 + 1, h10 = u3 - 2 * u2 + u, h01 = -2 * u3 + 3 * u2, h11 = u3 - u2;
+      out.push([h00 * p1[0] + h10 * m1[0] + h01 * p2[0] + h11 * m2[0], h00 * p1[1] + h10 * m1[1] + h01 * p2[1] + h11 * m2[1]]); }
+  }
+  return out;
+}
+function storyCompile(p) { // 길 하나 → { id, w, door, L, n, x, y, nx, ny (Float32Array — i번 = s 2i, 마지막 = L), off, fp, forks, cover } · curve: true = 곡선(storyCurve), 아니면 꺾은선 모퉁이 둥글리기
+  const fp = p.curve ? storyCurve(p.pts) : storyFillet(p.pts, STORY.FILLET), cum = [0];
   for (let k = 1; k < fp.length; k++) cum.push(cum[k - 1] + Math.hypot(fp[k][0] - fp[k - 1][0], fp[k][1] - fp[k - 1][1]));
   const L = cum[cum.length - 1], n = Math.floor(L / 2) + 2;
   const x = new Float32Array(n), y = new Float32Array(n), nx = new Float32Array(n), ny = new Float32Array(n);
@@ -18441,7 +18455,7 @@ function storyCheckMaps() { // 맵 데이터 검사 (설계 §2-3·§14) — 실
       if (p.w < 28 || p.w > 60) bad.push(tag + ' 폭 범위 밖');
       if (p.w / 2 - STORY.OFF_PAD > STORY.FILLET - 8) bad.push(tag + ' 옆 오프셋 > FILLET − 8');
       if (Math.hypot(last[0] - cs[0], last[1] - cs[1]) > 90) bad.push(tag + ' 끝점이 성에서 90px 밖');
-      for (let i = 1; i < pts.length - 2; i++) if (Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]) < STORY.FILLET * 2) bad.push(tag + ` 구간 ${i} 짧음`);
+      if (!p.curve) for (let i = 1; i < pts.length - 2; i++) if (Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]) < STORY.FILLET * 2) bad.push(tag + ` 구간 ${i} 짧음`); // 곡선 조절점은 48px보다 가까워도 됨 (굽이는 아래 반지름 검사)
       const Q = P[k], hw = p.w / 2, jump = 2 * (STORY.FILLET + Q.off) / STORY.FILLET + 0.2; // 오프셋 곡선 이웃 간격 상한 = 바깥 원호 반지름비 × 2px (+ 법선 보간 여유) — off 12면 3.2, 9면 2.95
       for (let i = 0; i < Q.n; i++) { // 화면 구역: hard·wave·tray에 길 중심선 + 반폭 금지
         for (const r of STORY_UI.hard.concat(STORY_UI.wave)) if (inR(Q.x[i], Q.y[i], r, hw)) { bad.push(`${tag} 구역 침범 [${r}] @${i * 2}`); break; }
@@ -18452,6 +18466,16 @@ function storyCheckMaps() { // 맵 데이터 검사 (설계 §2-3·§14) — 실
       }
       let see = 0; for (let i = 0; i < Q.n; i++) if (inR(Q.x[i], Q.y[i], STORY_UI.see[0], 0)) see += 2;
       if (see > 60 + 40) bad.push(`${tag} 딜 순위 자리 ${see}px`); // 성 바로 앞 마지막 40px는 허용
+      if (p.curve) { let rm = Infinity, at = 0; // 곡선 굽이 반지름 = 표본 i−3·i·i+3 외접원 ≥ FILLET (옆 오프셋 튐 상한·'오프셋 ≤ FILLET − 8'이 기대는 값)
+        for (let i = 3; i < Q.n - 3; i++) { const ax = Q.x[i - 3], ay = Q.y[i - 3], bx = Q.x[i], by = Q.y[i], cx = Q.x[i + 3], cy = Q.y[i + 3], a2 = Math.abs((bx - ax) * (cy - ay) - (by - ay) * (cx - ax));
+          if (a2 < 1e-9) continue; const r = Math.hypot(bx - cx, by - cy) * Math.hypot(ax - cx, ay - cy) * Math.hypot(ax - bx, ay - by) / (2 * a2); if (r < rm) { rm = r; at = i * 2; } }
+        if (rm < STORY.FILLET) bad.push(`${tag} 굽이 반지름 ${rm.toFixed(1)} < ${STORY.FILLET} @${at}`); }
+      if (id !== 'test' && M.bossR.length) { // 보스 맵(시험 길은 뺌): 보스 몸 원(monSize 52 + 흔들림) · 체력 막대(drawBossBar — 몸 중심 위 70, 폭 76, 높이 4 + 흔들림 여유)가 시계·스킬 바에 안 걸리게 (설계 §20-2 #4 · 10-15 유저 확정 B)
+        const br = 52 + STORY.WOB, ov = (a, r) => a[0] < r[2] && a[2] > r[0] && a[1] < r[3] && a[3] > r[1];
+        for (let i = 0; i < Q.n; i++) { const x = Q.x[i], y = Q.y[i], bar = [x - 38 - STORY.WOB, y - 70 - STORY.WOB, x + 38 + STORY.WOB, y - 66 + STORY.WOB];
+          for (const r of STORY_UI.hard.concat(STORY_UI.wave)) {
+            if (Math.hypot(Math.max(r[0] - x, 0, x - r[2]), Math.max(r[1] - y, 0, y - r[3])) < br) { bad.push(`${tag} 보스 몸 구역 [${r}] @${i * 2}`); break; }
+            if (ov(bar, r)) { bad.push(`${tag} 보스 체력 막대 구역 [${r}] @${i * 2}`); break; } } } }
     });
     for (const f of M.forks) { const k = M.paths.findIndex(p => p.id === f.path); if (k < 0) { bad.push(id + ' 갈림 부모 없음'); continue; }
       const s = storyNearS(P[k], f.at[0], f.at[1]), i = storyIdx(P[k], s); if (Math.hypot(P[k].x[i] - f.at[0], P[k].y[i] - f.at[1]) > 3) bad.push(id + ' 갈림 지점이 길 밖');
