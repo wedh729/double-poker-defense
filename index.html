@@ -16427,6 +16427,7 @@ function birdCall() {
 //    곡 전환·곡 끝 반복 모두 BGM_XF초 크로스페이드 (5곡 전부 끝이 페이드아웃이라 단순 loop는 끊겨 들린다). 로드 실패 시 합성 음악으로 복귀.
 const BGM_TRIM = { title: 1, easy: 1, normal: 1, hard: 1, hell: 0.62 }; // 곡 간 음량 정렬 — 실측 평균 −19~−20.5dB, 지옥만 −15.9dB
 const BGM_GAIN = 2.2, BGM_XF = 4; // musicGain(0.09) 대비 배율(기존 합성 음악과 비슷한 체감) · 크로스페이드 초
+const BGM_LOOP_IN = { title: 1, easy: 1.5, normal: 2, hard: 6, hell: 4.5 }; // 곡 끝 반복 때만 건너뛸 조용한 앞부분(초) — 10-15 유저 선택(반복 때 '처음으로 뛰어넘는' 느낌), 앞 8초 음량 0.5초 창 실측 · 처음 틀 때는 0초부터
 let bgm = null; // { decks:[{a,g,key,ok}], cur, failed, xfUntil }
 function bgmKeyNow() {
   if (document.body.classList.contains('at-title')) return 'title';
@@ -16482,7 +16483,9 @@ function bgmSwitch(key, xf = BGM_XF, why = '') { // 다른 덱에서 key를 처�
   const ni = bgm.cur === 0 ? 1 : 0, nd = bgm.decks[ni], od = bgm.cur >= 0 ? bgm.decks[bgm.cur] : null;
   if (bgmLogOn) bgmLog('전환(' + why + ') ' + (od && od.key ? od.key + '@' + od.a.currentTime.toFixed(1) : '-') + ' → ' + key + ' 덱' + ni);
   if (nd.key !== key) { nd.a.src = bgmSrc(key); nd.key = key; }
-  try { nd.a.currentTime = 0; } catch (e) {}
+  const at = why === '곡끝' ? (BGM_LOOP_IN[key] || 0) : 0; // 곡 끝 반복이면 조용한 앞부분 건너뛰기
+  try { nd.a.currentTime = at; } catch (e) {}
+  if (at && nd.a.readyState < 1) nd.a.addEventListener('loadedmetadata', () => { if (bgm && bgm.decks[bgm.cur] === nd && nd.a.currentTime < at) try { nd.a.currentTime = at; } catch (e) {} }, { once: true }); // 막 src를 건 덱은 길이를 알기 전엔 위치 지정이 무시될 수 있음
   bgm.cur = ni; bgm.xfUntil = AC.currentTime + xf;
   const gen = bgm.gen = (bgm.gen || 0) + 1; // 세대 토큰 — 이미 대체된 전환의 늦은 play() 결과가 최신 페이드를 지우지 않게
   const target = BGM_GAIN * (BGM_TRIM[key] || 1);
