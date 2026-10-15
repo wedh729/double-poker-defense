@@ -2455,6 +2455,7 @@ body.mobile #tutPanel .tpBtns button {min-height:22px;}
 #tutRing.circle {border-radius:50%;} #tutRing.box {border-radius:12px;}
 #tutRing.over {z-index:75;}
 #tutVeil {position:fixed;inset:0;z-index:74;background:#2a1a0a2e;} /* 토스트 동안 = 게임 정지 — 뒤 화면 입력을 삼킨다 (누르면 토스트 닫기) */
+#tutToast, #tutVeil, #tutPanel, #tutBanLine {-webkit-tap-highlight-color:transparent;} /* 10-15 검증: 누르는 순간 탭 강조(아이폰 회색·크롬 하늘색)가 토스트·덮개(화면 전체 — 누르면 닫는 click이 있다)를 덮었다 → 닫히며 사라지는 페이드 위에 번쩍임 (상속 — 안의 버튼도) */
 #tutToast {position:fixed;z-index:76;left:50%;top:12px;width:max-content;max-width:min(380px,calc(100vw - 16px));padding:10px 14px 9px;border-radius:14px;background:#fff6dc;border:2px solid #a27039;color:#5c3a1e;font-size:14px;font-weight:700;line-height:1.5;box-shadow:0 5px 0 #6b4a2a66,0 10px 26px #0006;box-sizing:border-box;cursor:pointer;}
 #tutToast .ttHead {display:flex;align-items:center;gap:7px;font-size:15px;font-weight:800;color:#4a2e14;margin-bottom:3px;}
 #tutToast .ttIc svg {width:18px;height:18px;display:block;color:#7a5530;}
