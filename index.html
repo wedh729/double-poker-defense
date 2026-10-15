@@ -9162,6 +9162,7 @@ function tenseTick(dt) {
 function tenseBeat(k) { // 쿵-쿵 한 번 (k: 0 = 15초 남음 → 1 = 끝, 갈수록 세게). 음정 없는 저음 두 번 = BGM과 화성 충돌 없음 · 콤보 '퍽'(단타)과는 리듬으로 구별
   if (!TENSE_STILL) { const c = document.getElementById('clock'); if (c.animate) c.animate([{ transform: 'translateX(-50%) scale(1.15)' }, { transform: 'translateX(-50%) scale(1)' }], { duration: 230, easing: 'cubic-bezier(.2,.7,.3,1)' }); } // #clock 기본 transform(translateX -50%, 데스크톱·모바일 공통)을 키프레임에 포함 — transform만이라 합성 단계에서 끝난다
   if (!AC || !sfxOn || document.hidden || AC.state !== 'running') return; // 멈춘 AC에 예약하면 재개 순간 쌓인 박동이 한꺼번에 터진다 (sfx와 같은 게이트)
+  if (!tenseBus) bgmLog('심장 박동'); // 🎧 디버그 로그 — 정지·전투 끝(tenseCut) 뒤 첫 박동만
   const t = AC.currentTime, bus = AC.createGain(); bus.connect(sfxGain); tenseBus = bus;
   for (const [d, a] of [[0, 1], [0.15, 0.62]]) { // 쿵(lub) · 0.15초 뒤 약한 쿵(dub)
     const v = a * (0.22 + 0.18 * k), o = AC.createOscillator(), h = AC.createOscillator(), g = AC.createGain(), gh = AC.createGain();
@@ -9175,6 +9176,7 @@ function tenseBeat(k) { // 쿵-쿵 한 번 (k: 0 = 15초 남음 → 1 = 끝, 갈
 }
 function tenseMuffle(lv) { // BGM 버스 저역통과: 0 = 원음(나이퀴스트 = 필터 완전 통과) · 1~12 = 5.2kHz → 1.4kHz (남은 12초 → 0초). musicGain(음악 토글·설정 음량 = applyVol이 씀)·덱 게인(크로스페이드)은 안 건드린다
   if (lv === tenseLv || !AC || !musicGain) return;
+  if (!lv !== !tenseLv) bgmLog(lv ? '먹먹함 시작' : '먹먹함 끝'); // 🎧 디버그 로그 (꺼져 있으면 아무것도 안 함)
   const nyq = AC.sampleRate / 2;
   if (!tenseLP) { // 첫 막판에 1회: musicGain → 필터 → 출력 (iOS 잠금 해제·덱 연결은 musicGain 앞단이라 무관). Q −3dB = 버터워스(공진 없음 → 음량은 그대로, 밝기만 깎인다)
     tenseLP = AC.createBiquadFilter(); tenseLP.type = 'lowpass'; tenseLP.Q.value = -3; tenseLP.frequency.value = nyq;
@@ -15675,7 +15677,7 @@ const TUT_STEPS = [
     done: t => (t.ev.summon || 0) >= 7,
     target: () => ({ dom: '#summonBtn' }),
     toastTarget: () => ({ dom: ['#pokerBanner .poker-event-notice', '#summonBtn'] }) },
-  { id: 'airPri', view: 'map', icon: 'star', title: '공중 우선',
+  { id: 'airPri', view: 'map', hold: { wave: true }, icon: 'star', title: '공중 우선', // 10-15 유저 "음악이 중간에 빨라지고": 나는 몹을 붙잡아 두는 동안(tutHoldFly) 전투 시계도 멈춘다 — 전엔 시계가 흘러 오래 머물면(2배속 ≈37초) 막판 심장 박동이 빨라지고 BGM이 먹먹해지다 시간 초과로 전투가 끝났다 (하네스 재현)
     toast: "활·총 유닛을 골라 정보 창의 '공중' 버튼을 누르면 나는 몬스터부터 노려요. 해 보세요.",
     hint: () => tutSelFighters().some(airPriOk) ? "정보 창의 '공중' 버튼을 눌러요." : IS_MOBILE ? '활이나 총 유닛을 눌러 골라요.' : '활이나 총 유닛을 클릭해 골라요.',
     toastWhen: t => S.monsters.some(m => m.fly && m.born >= 1) || ((t.ev.summon || 0) >= 7 && S.phase !== 'wave'), waitHint: '전투를 지켜봐요.', // 나는 몹이 다 떠오른 뒤 (전투가 이미 끝났으면 바로)
@@ -15684,7 +15686,7 @@ const TUT_STEPS = [
     toastTarget: () => { const m = S.monsters.find(x => x.fly); return m ? { mon: m } : null; }, // 토스트가 나는 몹을 가리고 서지 않게 (사람 속도 캡처: 소환장 위 토스트 밑에 숨었다)
     done: () => S.units.some(u => !u.miner && !u.item && u.priority === 'air'),
     target: () => { if (tutSelFighters().some(airPriOk) && tutVisRect('#unitInfo .priBtn[data-pri="air"]')) return { dom: '#unitInfo .priBtn[data-pri="air"]' }; const a = tutSeeUnit(tutFree().filter(airPriOk).concat(tutFighters().filter(airPriOk))); return a ? { unit: a } : null; } },
-  { id: 'airLand', view: 'map', icon: 'arrow', title: '내려앉기',
+  { id: 'airLand', view: 'map', hold: { wave: true }, icon: 'arrow', title: '내려앉기', // 시계 멈춤 = airPri와 같은 이유 (착지 시계 S.air.t는 dt로 흐르므로 내려앉기는 그대로 온다)
     toast: '나는 몬스터도 가끔 땅에 내려앉아요. 그때는 모든 유닛이 공격할 수 있어요.',
     toastWhen: () => S.phase !== 'wave' || (S.air && !S.air.up && S.air.k < 0.15 && S.monsters.some(m => m.fly)) || (!S.monsters.some(m => m.fly) && !(S.spawnQueue && S.spawnQueue.left > 0)), waitHint: '전투를 지켜봐요.', // 실제로 내려앉은 뒤 (나는 몹이 없거나 전투가 끝났으면 바로)
     tick: t => tutHoldFly(t),
@@ -15777,6 +15779,7 @@ function tutToastBlocked(st) { // 다른 연출·창이 떠 있으면 토스트�
 }
 function tutToastShow(st, t) {
   t.toastWait = false; t.toast = true; t.toastAt = performance.now();
+  bgmLog('토스트 ' + st.id); // 🎧 디버그 로그 (꺼져 있으면 아무것도 안 함) — 이상하게 들린 순간이 어느 단계였는지
   const el = document.getElementById('tutToast');
   el.querySelector('.ttIc').innerHTML = dpdIconSVG(st.icon || 'star');
   document.getElementById('ttTitle').textContent = st.title || '';
@@ -16163,6 +16166,7 @@ function applyVol(smooth) { // smooth = 슬라이더(30ms 램프로 지퍼 잡�
 const lastSfx = {};
 function initAudio() {
   if (AC) { if (AC.state === 'suspended' && audioWanted()) AC.resume(); return; }
+  try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) {} // 무음 스위치를 따르고 다른 앱 음악과 섞인다 (미지원 브라우저는 무시) · 10-15: AC를 만들기 '전'에 (가설 — 만든 뒤에 바꾸면 아이폰이 오디오 세션을 다시 잡으며 하드웨어 샘플레이트가 바뀔 수 있다. 전엔 bgmInit에서 AC 생성 뒤)
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
     sfxGain = AC.createGain(); sfxGain.gain.value = sfxLevel(); sfxGain.connect(AC.destination); // ⚙️ 기준 0.22 × 음량² (생성 직후라 .value 대입 — 이후 쓰기는 applyVol만)
@@ -16381,7 +16385,6 @@ function bgmKeyNow() {
 const bgmSrc = k => 'assets/bgm/' + k + '.mp3';
 function bgmInit() { // initAudio 안(첫 입력)에서 — 두 덱을 만들고 제스처 안에서 한 번씩 재생해 iOS 재생 잠금을 푼다
   if (bgm || !AC) return;
-  try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) {} // 무음 스위치를 따르고 다른 앱 음악과 섞인다 (미지원 브라우저는 무시)
   try {
     const decks = [0, 1].map(() => {
       const a = new Audio(); a.preload = 'none'; // 재생할 때만 받는다 (음악 OFF·안 쓰는 덱이 파일을 통째로 받지 않게 — 크로스체크 P2)
@@ -16399,8 +16402,18 @@ function bgmInit() { // initAudio 안(첫 입력)에서 — 두 덱을 만들고
       if (bgm.decks[bgm.cur] === d) bgm.retryAt = AC.currentTime + 4;
     }));
     decks.forEach(d => d.a.addEventListener('playing', () => { if (bgm) bgm.played = true; }));
+    // 10-15 (가설 — 아이폰 실기기 "음악이 중간에 빨라지고 뛰어넘고"): AC가 멈춘 동안(아이폰 'interrupted' 등) 미디어 덱만 혼자 흐르면 다시 이어질 때 밀린 만큼 건너뛸 수 있다
+    //   → AC가 running이 아니면 덱도 멈추고, 돌아오면 bgmTick이 그 자리에서 이어 튼다 (크롬은 원래 AC와 함께 멈춤 — 실측, 그래서 크롬에선 달라지는 것 없음)
+    AC.addEventListener('statechange', () => {
+      bgmLog('AC ' + AC.state + ' ' + AC.sampleRate + 'Hz');
+      if (!bgm || bgm.failed) return;
+      if (AC.state !== 'running') bgm.decks.forEach(d => { if (!d.a.paused) d.a.pause(); });
+      else bgmTick();
+    });
+    if (bgmLogOn) bgmLogHook();
+    bgmLog('BGM 준비 · AC ' + AC.state + ' ' + AC.sampleRate + 'Hz');
     bgmUnlock();
-    bgmSwitch(bgmKeyNow(), 1.2);
+    bgmSwitch(bgmKeyNow(), 1.2, '시작');
   } catch (e) { bgm = { failed: true, decks: [] }; }
 }
 function bgmUnlock() { // 사용자 제스처 안에서만 의미 — 아직 한 번도 재생 못 한 덱을 무음으로 재생→정지
@@ -16413,9 +16426,10 @@ function bgmUnlock() { // 사용자 제스처 안에서만 의미 — 아직 한
   });
 }
 ['pointerup', 'touchend', 'keydown'].forEach(ev => window.addEventListener(ev, () => { if (AC && AC.state !== 'running' && audioWanted()) AC.resume(); if (bgm && !bgm.failed && bgm.decks.some(d => !d.ok)) { bgmUnlock(); bgmTick(); } }, true)); // 터치는 손을 뗄 때(pointerup/touchend)가 제스처 — 첫 pointerdown에 만든 AC가 suspended로 남는다 (크로스체크 P1). !== 'running' = WebKit 'interrupted'(통화 뒤)도 다음 탭에 복구
-function bgmSwitch(key, xf = BGM_XF) { // 다른 덱에서 key를 처음부터 틀고 크로스페이드 (같은 곡 반복도 이 경로)
+function bgmSwitch(key, xf = BGM_XF, why = '') { // 다른 덱에서 key를 처음부터 틀고 크로스페이드 (같은 곡 반복도 이 경로) · why = 디버그 로그용 이유
   if (!bgm || bgm.failed) return;
   const ni = bgm.cur === 0 ? 1 : 0, nd = bgm.decks[ni], od = bgm.cur >= 0 ? bgm.decks[bgm.cur] : null;
+  if (bgmLogOn) bgmLog('전환(' + why + ') ' + (od && od.key ? od.key + '@' + od.a.currentTime.toFixed(1) : '-') + ' → ' + key + ' 덱' + ni);
   if (nd.key !== key) { nd.a.src = bgmSrc(key); nd.key = key; }
   try { nd.a.currentTime = 0; } catch (e) {}
   bgm.cur = ni; bgm.xfUntil = AC.currentTime + xf;
@@ -16437,8 +16451,8 @@ function bgmTick() { // 250ms 음악 타이머에서: 곡 선택·반복·일시
   const cd = bgm.decks[bgm.cur];
   if (!musicOn || document.hidden) { bgm.decks.forEach(d => { if (!d.a.paused) d.a.pause(); }); return; } // 음악 끔·앱 숨김 = 재생 정지
   const key = bgmKeyNow();
-  if (bgm.retryAt) { if (AC.currentTime < bgm.retryAt) return; bgm.retryAt = 0; bgmSwitch(key); return; } // 미디어 오류 뒤 재시도 대기
-  if (!cd || cd.key !== key) { bgmSwitch(key); return; }
+  if (bgm.retryAt) { if (AC.currentTime < bgm.retryAt) return; bgm.retryAt = 0; bgmSwitch(key, BGM_XF, '재시도'); return; } // 미디어 오류 뒤 재시도 대기
+  if (!cd || cd.key !== key) { bgmSwitch(key, BGM_XF, '곡바뀜'); return; }
   if (cd.a.paused && AC.state === 'running') { const p = cd.a.play(); if (p) p.catch(() => {}); } // 음악 켜기·앱 복귀 후 재개
   // 자가 복구 (10-07 유저 "R40 후반부터 BGM이 꺼져" — 오래 플레이하면 곡 끝 반복이 수십 번 일어나고, 그중 한 번만 막혀도 판 끝까지 무음으로 굳을 수 있었다).
   //   크로스페이드 밖에서만: ① 재생 중이어야 할 덱의 시간이 멈춤(데이터가 있는데 4초 / 버퍼링이면 10초) → 다른 덱에서 같은 곡 처음부터
@@ -16447,17 +16461,82 @@ function bgmTick() { // 250ms 음악 타이머에서: 곡 선택·반복·일시
   bgm.lastCt = ct;
   if (AC.state === 'running' && !cd.a.paused && t > bgm.xfUntil + 1) {
     bgm.still = moving ? 0 : bgm.still + 1;
-    if (bgm.still >= (cd.a.readyState >= 3 ? 16 : 40)) { bgm.still = 0; bgmSwitch(key); return; }
+    if (bgm.still >= (cd.a.readyState >= 3 ? 16 : 40)) { bgm.still = 0; bgmSwitch(key, BGM_XF, '자가복구'); return; }
     const tg = BGM_GAIN * (BGM_TRIM[key] || 1), od = bgm.decks[bgm.cur === 0 ? 1 : 0];
     if (moving && (cd.g.gain.value < tg * 0.9 || od.g.gain.value > tg * 0.1)) {
+      bgmLog('볼륨 복구');
       bgm.gen++; bgm.xfUntil = t + 1.2; // 늦게 도착한 옛 전환의 페이드가 이걸 덮지 않게
       for (const [d, v] of [[cd, tg], [od, 0]]) { d.g.gain.cancelScheduledValues(t); d.g.gain.setValueAtTime(d.g.gain.value, t); d.g.gain.linearRampToValueAtTime(v, t + 1.2); }
       setTimeout(() => { if (bgm && bgm.decks[bgm.cur] !== od) od.a.pause(); }, 1350);
     }
   } else bgm.still = 0;
   const dur = cd.a.duration;
-  if (dur > BGM_XF * 3 && cd.a.currentTime > dur - BGM_XF - 0.3 && AC.currentTime > bgm.xfUntil) bgmSwitch(key); // 곡 끝 → 같은 곡을 다른 덱에서 처음부터
+  if (dur > BGM_XF * 3 && cd.a.currentTime > dur - BGM_XF - 0.3 && AC.currentTime > bgm.xfUntil) bgmSwitch(key, BGM_XF, '곡끝'); // 곡 끝 → 같은 곡을 다른 덱에서 처음부터
 }
+// 🎧 BGM 디버그 로그 (10-15 유저 아이폰 "음악이 중간에 빨라지고 뛰어넘고" — 크롬 하네스로는 재현이 안 돼 실기기 화면으로 확인하려고). 평소엔 꺼짐: 타이머·프레임 일·리스너 없음.
+//   켜기/끄기 = 설정 창 제목 '설정'을 5번 연속 탭(2.5초 안) 또는 주소 ?bgmlog=1 / ?bgmlog=0 (홈 화면 앱은 주소를 못 바꾼다 → 탭) · 상태는 localStorage dpd_bgmlog
+//   화면 아래 가운데 작은 글자: 1줄 = AC 상태·샘플레이트·지연·오디오 세션 / 2줄 = 지금 덱 곡·시간·재생·readyState·2초 비율(덱 시간÷실제 시간)·다른 덱 음량·배속·먹먹함 / 그 아래 = 최근 사건 10개(초)
+let bgmLogOn = false, bgmLogEl = null, bgmLogTimer = null, bgmLogPrevF = 0, bgmLogSmp = [], bgmLogHooked = false;
+const bgmLogEv = [];
+try { const q = new URLSearchParams(location.search).get('bgmlog'); if (q === '1' || q === '0') localStorage.setItem('dpd_bgmlog', q); bgmLogOn = localStorage.getItem('dpd_bgmlog') === '1'; } catch (e) {}
+function bgmLog(s) {
+  if (!bgmLogOn) return;
+  bgmLogEv.push((performance.now() / 1000).toFixed(1) + ' ' + s);
+  if (bgmLogEv.length > 40) bgmLogEv.shift(); // 화면엔 최근 10개만 (bgmLogDraw)
+}
+function bgmLogHook() { // 사건 리스너 (켤 때 한 번)
+  if (bgmLogHooked || !bgm || !bgm.decks || !bgm.decks.length) return;
+  bgmLogHooked = true;
+  bgm.decks.forEach((d, i) => ['waiting', 'stalled', 'pause', 'play', 'ended', 'seeking', 'emptied', 'error', 'ratechange'].forEach(k => d.a.addEventListener(k, () => bgmLog('덱' + i + ' ' + k + ' @' + d.a.currentTime.toFixed(1) + (k === 'ratechange' ? ' x' + d.a.playbackRate : '')))));
+}
+function bgmLogDraw() {
+  if (!bgmLogOn || !bgmLogEl) return;
+  const L = [];
+  if (!AC) L.push('AC 없음 (아직 첫 입력 전)');
+  else {
+    const ses = navigator.audioSession ? navigator.audioSession.type : '-';
+    L.push(`AC ${AC.state} ${AC.sampleRate}Hz 지연 ${Math.round((AC.baseLatency || 0) * 1000)}/${Math.round((AC.outputLatency || 0) * 1000)}ms 세션 ${ses} 음악 ${musicOn ? '켬' : '끔'}`);
+    if (bgm && bgm.decks && bgm.decks.length) {
+      const cd = bgm.decks[bgm.cur], od = bgm.decks[bgm.cur === 0 ? 1 : 0], now = performance.now() / 1000;
+      if (cd) {
+        const ct = cd.a.currentTime, run = !cd.a.paused && AC.state === 'running';
+        const p = bgmLogSmp[bgmLogSmp.length - 1];
+        if (p && p.i === bgm.cur && p.run && run) { const dw = now - p.w, dc = ct - p.c; if (dw < 1.5 && Math.abs(dc - dw) > 0.35) bgmLog(`덱 시간 튐 ${dc >= dw ? '+' : ''}${(dc - dw).toFixed(2)}s (덱${bgm.cur} ${p.c.toFixed(1)}→${ct.toFixed(1)})`); }
+        bgmLogSmp.push({ w: now, c: ct, i: bgm.cur, run }); while (bgmLogSmp.length && now - bgmLogSmp[0].w > 2.2) bgmLogSmp.shift();
+        const f = bgmLogSmp[0], ratio = f && f !== bgmLogSmp[bgmLogSmp.length - 1] && f.i === bgm.cur && now - f.w > 0.4 ? ((ct - f.c) / (now - f.w)).toFixed(2) : '-';
+        L.push(`덱${bgm.cur} ${cd.key || '-'} ${ct.toFixed(1)}/${(cd.a.duration || 0).toFixed(0)}s ${cd.a.paused ? '멈춤' : '재생'} rs${cd.a.readyState} 비율 ${ratio} 다른덱 ${od ? od.g.gain.value.toFixed(2) : '-'} 배속 ${S ? S.speed : '-'} 먹먹 ${tenseLv}`);
+      }
+    } else L.push(bgm && bgm.failed ? 'BGM 실패 → 합성 음악' : 'BGM 덱 없음');
+  }
+  bgmLogEl.textContent = L.concat(bgmLogEv.slice(-10)).join('\n');
+}
+function bgmLogRaf(now) { // 프레임 공백 300ms 넘음 (숨김 복귀 직후는 뺀다)
+  if (!bgmLogOn) { bgmLogPrevF = 0; return; }
+  if (bgmLogPrevF && now - bgmLogPrevF > 300 && !document.hidden) bgmLog('프레임 공백 ' + Math.round(now - bgmLogPrevF) + 'ms');
+  bgmLogPrevF = now; requestAnimationFrame(bgmLogRaf);
+}
+function bgmLogVis(e) { if (!bgmLogOn) return; bgmLogPrevF = 0; bgmLog(e.type + (e.type === 'visibilitychange' ? ' ' + document.visibilityState : '')); }
+function bgmLogSet(on) {
+  bgmLogOn = on;
+  try { localStorage.setItem('dpd_bgmlog', on ? '1' : '0'); } catch (e) {}
+  if (on) {
+    if (!bgmLogEl) { bgmLogEl = document.createElement('div'); bgmLogEl.id = 'bgmLog'; bgmLogEl.style.cssText = 'position:fixed;left:50%;bottom:calc(2px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9999;pointer-events:none;max-width:calc(100vw - 24px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));overflow:hidden;padding:3px 7px;border-radius:6px;background:#000000b0;color:#fff;font:10px/1.3 monospace;white-space:pre;'; document.body.appendChild(bgmLogEl); }
+    bgmLogHook();
+    ['visibilitychange', 'pagehide', 'pageshow'].forEach(k => (k === 'visibilitychange' ? document : window).addEventListener(k, bgmLogVis));
+    if (!bgmLogTimer) bgmLogTimer = setInterval(bgmLogDraw, 500);
+    bgmLogPrevF = 0; requestAnimationFrame(bgmLogRaf);
+    bgmLog('로그 켬');
+    bgmLogDraw();
+  } else {
+    if (bgmLogEl) { bgmLogEl.remove(); bgmLogEl = null; }
+    clearInterval(bgmLogTimer); bgmLogTimer = null;
+    ['visibilitychange', 'pagehide', 'pageshow'].forEach(k => (k === 'visibilitychange' ? document : window).removeEventListener(k, bgmLogVis));
+    bgmLogEv.length = 0; bgmLogSmp = [];
+  }
+}
+{ let n = 0, t0 = 0; // 설정 창 제목 5번 연속 탭 = 로그 켜기/끄기 (창 안이라 배경 클릭 닫기와 무관)
+  document.getElementById('optTitle').addEventListener('click', () => { const now = performance.now(); if (now - t0 > 2500) n = 0; if (!n) t0 = now; if (++n >= 5) { n = 0; bgmLogSet(!bgmLogOn); } }); }
+if (bgmLogOn) bgmLogSet(true);
 // 음악·타격음 켜기/끄기 — 툴바 토글과 설정 창 슬라이더(0 = 끄기)가 같은 함수를 쓴다 (⚙️ 10-13 #3)
 function setMusicOn(on) {
   initAudio();
