@@ -2435,11 +2435,13 @@ body.mobile .rankGauge {display:inline-flex;gap:2px;margin-left:6px;padding:3px 
 #tutVeil {transition:opacity .15s ease-out;}
 #tutToast[hidden], #tutPanel[hidden], #tutVeil[hidden] {display:block;visibility:hidden;opacity:0;pointer-events:none;transition:opacity .14s ease-in, transform .14s ease-in, visibility 0s linear .14s;}
 #tutToast[hidden] {transform:translateY(6px);} #tutPanel[hidden] {transform:translateY(4px);}
+#tutPanel.dock:not([hidden]) {transition:opacity .18s ease-out, transform .18s ease-out;} /* 창 위(dock)는 창을 그대로 따라붙는다 — 창이 열리며 움직이는 동안 미끄러짐이 늦게 따라와 '건너뛰기'가 손 밑에서 비켜 갔다 (skipall crownPick) */
 #tutPanel[hidden] button {pointer-events:none;}
+#tutPanel {width:max-content;} /* 폭 = 글자 폭(최대 max-width) — 자동 폭(shrink-to-fit)이면 지금 left에 따라 폭이 줄어 재는 값이 틀렸다(오른쪽 끝에서 오면 187px로 재고 300px로 그려져 오른쪽 안전 영역으로 삐져나감 — 10-15 하네스) */
 #tutRing {transition:left .18s ease-out, top .18s ease-out, width .18s ease-out, height .18s ease-out;} /* 대상이 바뀌면 미끄러지듯 (숨었다 나타날 땐 display:none에서 오므로 전환 없이 그 자리) */
 #tutSafe {position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:0;} /* 안전 영역 탐침 (tutSafe) — env 미지원이면 0 */
 @supports (padding: env(safe-area-inset-left)) { #tutSafe {padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);} }
-@media (prefers-reduced-motion: reduce) { #tutToast, #tutPanel, #tutVeil, #tutRing, #tutToast[hidden], #tutPanel[hidden], #tutVeil[hidden] {transition:none;} }
+@media (prefers-reduced-motion: reduce) { #tutToast, #tutPanel, #tutVeil, #tutRing, #tutToast[hidden], #tutPanel[hidden], #tutVeil[hidden], #tutPanel.dock:not([hidden]) {transition:none;} }
 #tutPanel button {pointer-events:auto;}
 #tutPanel .tpOk {color:#557540;}
 #tutPanel .tpOk svg {width:14px;height:14px;vertical-align:-2px;}
@@ -9173,7 +9175,7 @@ function tenseTick(dt) {
 function tenseBeat(k) { // 쿵-쿵 한 번 (k: 0 = 15초 남음 → 1 = 끝, 갈수록 세게). 음정 없는 저음 두 번 = BGM과 화성 충돌 없음 · 콤보 '퍽'(단타)과는 리듬으로 구별
   if (!TENSE_STILL) { const c = document.getElementById('clock'); if (c.animate) c.animate([{ transform: 'translateX(-50%) scale(1.15)' }, { transform: 'translateX(-50%) scale(1)' }], { duration: 230, easing: 'cubic-bezier(.2,.7,.3,1)' }); } // #clock 기본 transform(translateX -50%, 데스크톱·모바일 공통)을 키프레임에 포함 — transform만이라 합성 단계에서 끝난다
   if (!AC || !sfxOn || document.hidden || AC.state !== 'running') return; // 멈춘 AC에 예약하면 재개 순간 쌓인 박동이 한꺼번에 터진다 (sfx와 같은 게이트)
-  if (!tenseBus) bgmLog('심장 박동'); // 🎧 디버그 로그 — 정지·전투 끝(tenseCut) 뒤 첫 박동만
+  if (!tenseBus) bgmLog('심장 박동'); // 디버그 로그 — 정지·전투 끝(tenseCut) 뒤 첫 박동만
   const t = AC.currentTime, bus = AC.createGain(); bus.connect(sfxGain); tenseBus = bus;
   for (const [d, a] of [[0, 1], [0.15, 0.62]]) { // 쿵(lub) · 0.15초 뒤 약한 쿵(dub)
     const v = a * (0.22 + 0.18 * k), o = AC.createOscillator(), h = AC.createOscillator(), g = AC.createGain(), gh = AC.createGain();
@@ -9187,7 +9189,7 @@ function tenseBeat(k) { // 쿵-쿵 한 번 (k: 0 = 15초 남음 → 1 = 끝, 갈
 }
 function tenseMuffle(lv) { // BGM 버스 저역통과: 0 = 원음(나이퀴스트 = 필터 완전 통과) · 1~12 = 5.2kHz → 1.4kHz (남은 12초 → 0초). musicGain(음악 토글·설정 음량 = applyVol이 씀)·덱 게인(크로스페이드)은 안 건드린다
   if (lv === tenseLv || !AC || !musicGain) return;
-  if (!lv !== !tenseLv) bgmLog(lv ? '먹먹함 시작' : '먹먹함 끝'); // 🎧 디버그 로그 (꺼져 있으면 아무것도 안 함)
+  if (!lv !== !tenseLv) bgmLog(lv ? '먹먹함 시작' : '먹먹함 끝'); // 디버그 로그 (꺼져 있으면 아무것도 안 함)
   const nyq = AC.sampleRate / 2;
   if (!tenseLP) { // 첫 막판에 1회: musicGain → 필터 → 출력 (iOS 잠금 해제·덱 연결은 musicGain 앞단이라 무관). Q −3dB = 버터워스(공진 없음 → 음량은 그대로, 밝기만 깎인다)
     tenseLP = AC.createBiquadFilter(); tenseLP.type = 'lowpass'; tenseLP.Q.value = -3; tenseLP.frequency.value = nyq;
@@ -15791,7 +15793,7 @@ function tutToastBlocked(st) { // 다른 연출·창이 떠 있으면 토스트�
 }
 function tutToastShow(st, t) {
   t.toastWait = false; t.toast = true; t.toastAt = performance.now();
-  bgmLog('토스트 ' + st.id); // 🎧 디버그 로그 (꺼져 있으면 아무것도 안 함) — 이상하게 들린 순간이 어느 단계였는지
+  bgmLog('토스트 ' + st.id); // 디버그 로그 (꺼져 있으면 아무것도 안 함) — 이상하게 들린 순간이 어느 단계였는지
   const el = document.getElementById('tutToast');
   el.querySelector('.ttIc').innerHTML = dpdIconSVG(st.icon || 'star');
   document.getElementById('ttTitle').textContent = st.title || '';
@@ -15829,7 +15831,7 @@ function tutSafe() {
   return (tutSafeC = { W, H, L: n('paddingLeft'), R: n('paddingRight'), T: n('paddingTop'), B: n('paddingBottom') });
 }
 // 10-15 유저 "토스트 위치가 휙휙 바뀌고 · 왼쪽 끝은 아이폰 아일랜드에 가려": 자리 = 안전 영역 안 '위 가운데'(폰 전투 화면은 시계 밑) → 대상(링)과 겹치면 '아래 가운데'
-//   → 둘 다 겹치면 아래 모퉁이·대상 둘레 → 그래도 겹치면 가장 적게. 직전 토스트 자리를 먼저 본다(쓸데없이 안 옮김). 떠 있는 동안은 고정 — 창 크기가 바뀌거나 링이 새로 겹칠 때만 다시(미끄러지듯)
+//   → 둘 다 겹치면 아래·위 모퉁이·대상 둘레 → 그래도 겹치면 가장 적게. 직전 토스트 자리를 먼저 본다(쓸데없이 안 옮김). 떠 있는 동안은 고정 — 창 크기가 바뀌거나 링이 새로 겹칠 때만 다시(미끄러지듯)
 //   잠깐 뜨는 보상 띠·결투 예고·투자 알림은 피하지 않는다 (덮개 아래 — 그것들이 사라질 때 토스트가 옮겨 가던 원인)
 function tutToastPlace(rc, t) {
   const el = document.getElementById('tutToast'), W = innerWidth, H = innerHeight, M = 8, G = 14, sa = tutSafe();
@@ -15841,12 +15843,12 @@ function tutToastPlace(rc, t) {
   const key = W + 'x' + H + ':' + w + 'x' + h;
   let p = t.ttPos && t.ttPos.key === key && !area(t.ttPos.xy) ? t.ttPos.xy : null;
   if (!p) {
-    let top = Math.max(y0, Math.round(H * 0.08));
+    const top0 = Math.max(y0, Math.round(H * 0.08)); let top = top0;
     if (IS_MOBILE) { const ck = tutVisRect('#clock'); if (ck && ck.top < top + h && ck.bottom > top) top = Math.round(ck.bottom) + 6; } // 폰 전투 화면: 캔버스 위 가운데 시계 밑 (8%면 시계를 덮었다)
     const cx = (sa.L + W - sa.R) / 2 - w / 2;
-    const slots = { top: [cx, top], bot: [cx, y1], bl: [x0, y1], br: [x1, y1] };
+    const slots = { top: [cx, top], bot: [cx, y1], bl: [x0, y1], br: [x1, y1], tl: [x0, top], tr: [x1, top], hl: [x0, top0], hr: [x1, top0], ht: [cx, top0] }; // h* = 시계를 덮더라도 맨 위 (링이 큰 단계 — 폰740 전투·결투 기권)
     if (rc) { const tx = rc.x + rc.w / 2 - w / 2, ty = rc.y + rc.h / 2 - h / 2; Object.assign(slots, { ra: [tx, rc.y - h - G], rb: [tx, rc.y + rc.h + G], rl: [rc.x - w - G, ty], rr: [rc.x + rc.w + G, ty] }); } // 마지막 수단 = 대상 둘레 (링을 덮지 않게 — c0b2c75 '공중 우선')
-    const order = ['top', 'bot', 'bl', 'br', 'ra', 'rb', 'rl', 'rr'].filter(k => slots[k]);
+    const order = ['top', 'bot', 'bl', 'br', 'tl', 'tr', 'ra', 'rb', 'rl', 'rr', 'hl', 'hr', 'ht'].filter(k => slots[k]);
     const cur = t.ttPos ? t.ttPos.slot : t.ttSlot === 'bot' ? 'bot' : null; if (cur && slots[cur]) order.unshift(cur); // 떠 있는 토스트 = 지금 자리 먼저 · 새 토스트 = 직전이 '아래 가운데'였으면 그대로 아래 (위↔아래 왕복 줄이기)
     let best = null, ba = Infinity;
     for (const k of order) { const q = fit(slots[k]), a = area(q); if (a < ba) { best = { slot: k, xy: q }; ba = a; if (!a) break; } }
@@ -16518,7 +16520,7 @@ function bgmTick() { // 250ms 음악 타이머에서: 곡 선택·반복·일시
   const dur = cd.a.duration;
   if (dur > BGM_XF * 3 && cd.a.currentTime > dur - BGM_XF - 0.3 && AC.currentTime > bgm.xfUntil) bgmSwitch(key, BGM_XF, '곡끝'); // 곡 끝 → 같은 곡을 다른 덱에서 처음부터
 }
-// 🎧 BGM 디버그 로그 (10-15 유저 아이폰 "음악이 중간에 빨라지고 뛰어넘고" — 크롬 하네스로는 재현이 안 돼 실기기 화면으로 확인하려고). 평소엔 꺼짐: 타이머·프레임 일·리스너 없음.
+// BGM 디버그 로그 (10-15 유저 아이폰 "음악이 중간에 빨라지고 뛰어넘고" — 크롬 하네스로는 재현이 안 돼 실기기 화면으로 확인하려고). 평소엔 꺼짐: 타이머·프레임 일·리스너 없음.
 //   켜기/끄기 = 설정 창 제목 '설정'을 5번 연속 탭(2.5초 안) 또는 주소 ?bgmlog=1 / ?bgmlog=0 (홈 화면 앱은 주소를 못 바꾼다 → 탭) · 상태는 localStorage dpd_bgmlog
 //   화면 아래 가운데 작은 글자: 1줄 = AC 상태·샘플레이트·지연·오디오 세션 / 2줄 = 지금 덱 곡·시간·재생·readyState·2초 비율(덱 시간÷실제 시간)·다른 덱 음량·배속·먹먹함 / 그 아래 = 최근 사건 10개(초)
 let bgmLogOn = false, bgmLogEl = null, bgmLogTimer = null, bgmLogPrevF = 0, bgmLogSmp = [], bgmLogHooked = false;
