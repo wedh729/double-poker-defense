@@ -5440,7 +5440,9 @@ function spawnJoker(x, y) {
     // 실측 몹200 군집 DPS 6,510(쇼군의 11배!)이었다 — splash 60이 밀집 군집을 통째로 갈아버림.
     // dmg 24는 아직 쇼군의 1.25배(852 vs 680)라 16으로 → 568 ≈ 쇼군의 0.84배. 조커의 값어치는 딜이 아니라 견인 스킬(아군 광역 셋업).
     // 08-13 유저: 공속 20% 하향 (cd 0.4→0.5) — 대신 플러쉬(화염방사기) 상향으로 광역 축 재분배
-    dmg: 16, cd: 0.5, range: 110, splash: 28, bounce: 0, atk: 'area', proj: null, vis: 'scythe',
+    // 10-16 유저 "조커가 플러쉬 2기보다 현저히 약하다 · 범위도 더 넓은데": 판정을 그림대로 앞쪽 부채꼴(사거리 안 ±60°, areaHit 'scythe')로 바꾸고 dmg 16→19 (플러쉬 2기의 ≈1.3배 목표 — 유저 지정).
+    //   splash 28은 이제 판정에 안 쓴다 (예전 '겨냥한 몹 둘레 원' 반경) — 정보창·결투 등 다른 곳이 읽을 수 있어 값만 남김
+    dmg: 19, cd: 0.5, range: 110, splash: 28, bounce: 0, atk: 'area', proj: null, vis: 'scythe',
     pierce: 0, shards: 0, shardFrac: 0, weapon: '히든 영웅 조커', cool: 0, selected: true, walk: 0, speed: 85,
     jokerCd: 0, jokerT: 0, // 🃏 견인 액티브 스킬 (쿨 60초 · 지속 15초)
   });
@@ -6506,11 +6508,21 @@ function areaHit(u, x, y, dmg, gy) {
     }
     return;
   } else if (vis === 'scythe') {
-    // 🃏 조커: 유닛 중심으로 낫이 사거리 안을 쓸어담는다 — 이펙트 최대 반경 = 사거리 (견인 범위와 일치, 밖으로 안 삐져나감)
-    const R = effRange(u), ang0 = Math.atan2(y - u.y, x - u.x);
-    S.effects.push({ type:'slash', x: u.x, y: u.y, r: R, a: ang0, t: 0.45, dur: 0.45, joker: true });
-    S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.88, a: ang0 + 0.35, t: 0.55, dur: 0.55, joker: true }); // 뒤따르는 보라 잔상 (사거리 안)
+    // 🃏 조커: 낫이 '앞쪽 부채꼴'(조커 중심 · 반지름 = 사거리 · 겨냥 방향 ±JOKER_ARC)을 쓸고, 그 안의 몹을 전부 벤다 (10-16 유저: 그림 = 범위)
+    //   전엔 그림은 조커 둘레를 사거리까지 크게(≈212°) 쓸었는데 실제 피해는 겨냥한 몹(대개 소환장 가장자리) 둘레 반경 28 원 안만 — 그 절반은 소환장 밖 빈 땅이라
+    //   같은 자리 실측(몹 200·80, 60초) 플러쉬 2기의 0.54·0.62배 · 단련 14 조커 ≈ 포카드 91.4였다. 부채꼴 ±60° + 공격력 16→19 = 1.28·1.38배 (견인 15초 쓰면 1.63·1.82배)
+    const R = effRange(u), R2 = R * R, ang0 = Math.atan2(gy - u.y, x - u.x); // 판정 = 땅 지점 (10-12 결정 1)
+    S.effects.push({ type:'slash', x: u.x, y: u.y, r: R, a: ang0 + 0.3, sw: JOKER_SW, t: 0.45, dur: 0.45, joker: true }); // 초승달(회전 기준 −0.95~0.35)이 a ± sw로 쓸고 지나간 자리 = ang0 ± JOKER_ARC (그림 = 판정)
+    S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.88, a: ang0 + 0.3, sw: JOKER_SW, t: 0.55, dur: 0.55, joker: true }); // 뒤따르는 보라 잔상 (같은 부채꼴 안)
     for (let i = 0; i < 9; i++) { const v = 60 + Math.random()*110, aa = ang0 + (Math.random()-0.5)*1.5; S.parts.push({ x: u.x, y: u.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.3, r: 1.3 + Math.random()*2.2, c: '#8c5bff' }); }
+    for (const m of S.monsters) {
+      const dx = m.x - u.x, dy = m.y + (m.lift || 0) - u.y; // 거리·방향 = 땅 지점 (공중 몹은 dealDamage가 거른다 — 조커 낫 ✕)
+      if (dx * dx + dy * dy > R2) continue;
+      let da = Math.atan2(dy, dx) - ang0; da -= Math.round(da / (2 * Math.PI)) * 2 * Math.PI; // −π~π
+      if (Math.abs(da) <= JOKER_ARC) dealDamage(m, dmg, u);
+    }
+    if ((u.jokerT || 0) > 0) jokerPull(u);
+    return;
   } else if (vis === 'flame') {
     // 🔥 불길 = 유닛마다 일렁이는 불꽃 줄기 1개 (10-07 유저: 렉 — 예전엔 한 발마다 불꽃 파티클 18~28개). 노즐 끝 → 사거리 끝, 폭 ≈ 판정 반폭
     const wt = weaponTip(u), lead = Math.max(0, (wt.x - mz.x) * Math.cos(a) + (wt.y - mz.y) * Math.sin(a)); // 🎯 노즐 끝에서 — 앞선 만큼 짧게 (판정 띠 끝 = 불길 끝 유지)
@@ -6558,18 +6570,21 @@ function areaHit(u, x, y, dmg, gy) {
       if (u.shogun && !airborne(m)) { m.burnT = 1.5; m.burnDmg = dmg * ((u.ascend || 0) >= 1 ? 0.4 : 0.2); } // 🔥 화상 도트 (승급1: 2배) · 공중엔 안 붙음
     }
   }
-  if (u.joker && (u.jokerT || 0) > 0) { // 🃏 견인은 이제 액티브 스킬 중에만 (2026-08-08 유저: 상시 패시브는 사기 — 쿨 60초·지속 15초)
-    const pr = effRange(u), pr2 = pr * pr, asc = u.ascend || 0;
-    const pt = asc >= 2 ? 0.7 : 0.45, cap = asc >= 2 ? 280 : asc >= 1 ? 140 : 70;
-    const inR = [];
-    for (const m of S.monsters) {
-      if (airborne(m)) continue; // 공중: 조커 낫 ✕ = 견인도 ✕
-      const jx = m.x - u.x, jy = m.y + (m.lift || 0) - u.y, d2 = jx * jx + jy * jy; // 견인 범위 = 땅 지점 (10-12 결정 1 — 착지 하강 중 공중 몹)
-      if (d2 <= pr2) inR.push([d2, m]);
-    }
-    if (inR.length > cap) inR.sort((a, b) => a[0] - b[0]);
-    for (let i = 0; i < Math.min(cap, inR.length); i++) { const m = inR[i][1]; m.pullT = pt; m.pullX = u.x; m.pullY = u.y; m.pullQuiet = false; }
+}
+// 🃏 조커 낫 판정 부채꼴 (10-16 유저: 그림 = 범위) — 조커 중심 · 반지름 = 사거리 · 겨냥 방향 ±JOKER_ARC.
+//   JOKER_SW = 슬래시 초승달(회전 기준 상대각 −0.95~0.35, 폭 1.3)이 a = 겨냥 + 0.3에서 ±sw로 쓸 때 덮는 각이 정확히 ±JOKER_ARC가 되는 진폭: 2·sw + 1.3 = 2·ARC
+const JOKER_ARC = Math.PI / 3, JOKER_SW = JOKER_ARC - 0.65;
+function jokerPull(u) { // 🃏 견인은 액티브 스킬 중에만 (2026-08-08 유저: 상시 패시브는 사기 — 쿨 60초·지속 15초) · 낫을 휘두를 때마다 사거리 안(둘레 전체)을 끌어당긴다
+  const pr = effRange(u), pr2 = pr * pr, asc = u.ascend || 0;
+  const pt = asc >= 2 ? 0.7 : 0.45, cap = asc >= 2 ? 280 : asc >= 1 ? 140 : 70;
+  const inR = [];
+  for (const m of S.monsters) {
+    if (airborne(m)) continue; // 공중: 조커 낫 ✕ = 견인도 ✕
+    const jx = m.x - u.x, jy = m.y + (m.lift || 0) - u.y, d2 = jx * jx + jy * jy; // 견인 범위 = 땅 지점 (10-12 결정 1 — 착지 하강 중 공중 몹)
+    if (d2 <= pr2) inR.push([d2, m]);
   }
+  if (inR.length > cap) inR.sort((a, b) => a[0] - b[0]);
+  for (let i = 0; i < Math.min(cap, inR.length); i++) { const m = inR[i][1]; m.pullT = pt; m.pullX = u.x; m.pullY = u.y; m.pullQuiet = false; }
 }
 // 파편: 명중 지점에서 돌조각이 사방으로 튀며 주변 몹에 소량 데미지
 function spawnShards(p) {
@@ -8855,7 +8870,7 @@ function draw() {
       if (e.t > e.dur) continue; // 지연 참격(이단 베기 반환타): 아직 시작 전
       // 대검 참격: 초승달 크레센트 3겹 (모션 블러 잔상, 진행에 따라 쓸고 지나감)
       const pr = e.dur ? 1 - e.t / e.dur : 0.5;
-      const sweep = (e.rev ? 1.2 - pr * 2.4 : -1.2 + pr * 2.4); // rev = 반대 방향으로 되돌아오는 베기
+      const sw = e.sw || 1.2, sweep = (e.rev ? sw - pr * 2 * sw : -sw + pr * 2 * sw); // rev = 반대 방향으로 되돌아오는 베기 · sw = 쓰는 진폭 (기본 ±1.2 · 🃏 조커는 판정 부채꼴에 맞춰 JOKER_SW)
       const al = Math.min(1, e.t * 5);
       ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.a + sweep);
       for (let k = 0; k < 3; k++) {
