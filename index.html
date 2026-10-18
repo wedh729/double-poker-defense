@@ -2361,6 +2361,18 @@ html body.mobile #toolbar #btnFull::before {width:13px;height:13px;}
 #goPoker:focus-visible {outline:3px solid #805f2f;outline-offset:3px;}
 body.mobile #goPoker {min-height:0;padding:6px 14px;font-size:13px;border-radius:12px;}
 body.mobile #goPoker b {font-size:11px;}
+/* 📖 스토리 M2 (10-19): '포커장으로 이동' = 하늘 모퉁이(놓을 수 없는 자리 — 명당을 안 가림, 1-4 btn200) · [출발!] = 원형 시계와 대기석 사이(장 시계 자리 — 스토리에선 숨김) · 월드 1은 자금 운영 단추 숨김 (20 §2-3 경제 단계) */
+body.storyMode #goPoker {left:1.5%;top:2%;transform:none;}
+body.storyMode #goPoker:active {transform:translateY(2px);}
+#storyGo {position:absolute;left:53.617%;top:1.2%;width:11.702%;height:11.2%;min-height:40px;z-index:8;display:none;padding:0 6px;border:1px solid #1f5a24;border-radius:14px;background:linear-gradient(#5cc55f,#2e8b36);color:#fffbea;font-size:20px;font-weight:900;letter-spacing:1px;box-shadow:0 0 0 2px #fff3cfcc,inset 0 1px 0 #a6eaa0,0 4px 0 #1f5a24,0 7px 14px #0006;cursor:pointer;white-space:nowrap;font-family:inherit;}
+#storyGo.show {display:block;animation:storyGoGlow 1.6s ease-in-out infinite;}
+#storyGo:active {transform:translateY(2px);box-shadow:0 0 0 2px #fff3cfcc,0 2px 0 #1f5a24;}
+#storyGo:focus-visible {outline:3px solid #805f2f;outline-offset:3px;}
+body.mobile #storyGo {font-size:16px;border-radius:11px;}
+.mobile[data-tab="poker"] #storyGo {display:none !important;}
+@keyframes storyGoGlow {0%,100%{filter:none;}50%{filter:brightness(1.13);}}
+@media (prefers-reduced-motion: reduce) {#storyGo.show {animation:none;}}
+body.storyW1 #stCasino {display:none !important;}
 /* 🏳️ 결투 기권 (10-13 유저 #4): 도전자만 남으면 #goPoker와 같은 자리(소환장 가운데 — 전투 중엔 비어 있다). 보조 버튼 톤(#duelConfirm '그만둔다')이라 빨간 주 행동(#goPoker)과 구분 */
 #duelForfeit {position:absolute;left:46.81%;top:50%;transform:translate(-50%,-50%);z-index:8;display:none;align-items:center;gap:6px;min-height:43px;padding:9px 20px;border:1px solid #b18951;border-radius:15px;background:linear-gradient(#efd29e,#dbb67b);color:#654625;font-size:15px;font-weight:800;box-shadow:0 0 0 2px #fff3cfcc,inset 0 1px 0 #fff0c5,0 4px 0 #a27b44,0 8px 18px #0006;cursor:pointer;white-space:nowrap;font-family:inherit;}
 #duelForfeit.show {display:flex;}
@@ -5067,7 +5079,7 @@ function monBroken(m) { // 갑옷이 먼저 부서지고(broken1) 투구가 나�
 // ☁️ 하늘 모퉁이 (2026-08-08 유저 테스트 요청): 좌상단을 라운드로 잘라 하늘로 — 해·달이 초원이 아니라 하늘에 뜬다.
 // 지상이 아니므로 유닛 통행 불가 (blockSky). 없애려면 SKY_CUT = null 한 줄.
 const SKY_CUT = { rx: 265, ry: 175 };
-function inSky(x, y) { if (!SKY_CUT || (S && (S.multi || (S.story && !S.story.map.skyCut))) || x < 0 || y < 0) return false; const nx = x / SKY_CUT.rx, ny = y / SKY_CUT.ry; return nx * nx + ny * ny < 1; }
+function inSky(x, y) { if (S && S.story && S.story.map.skyCut && S.story.map.skyPoly) return storyPtInPoly(x, y, S.story.map.skyPoly); /* 📖 10-19 M2: 그림 맵 = 그림 속 하늘·절벽 다각형 (41 P2-1) */ if (!SKY_CUT || (S && (S.multi || (S.story && !S.story.map.skyCut))) || x < 0 || y < 0) return false; const nx = x / SKY_CUT.rx, ny = y / SKY_CUT.ry; return nx * nx + ny * ny < 1; }
 const PORTAL = { x: 84, y: 224, r: 34 }; // 강화 포털: 같은 유닛 FUSE_N기(10-18 유저: 3)를 넣으면 영웅 (하늘 모퉁이에 밀려 y 78 → 224)
 const PORTAL_OUT = { x: PORTAL.x + 58, y: PORTAL.y + 18 }; // 합성 산출 지점 = 포털 오른쪽 아래 (09-30: 포털 밑은 딜 순위 위젯 자리 — 크로스체크 P1). 포털 중심 거리 60.7 < GATHER 64 = 기존(60)과 같은 합성 반경 의미
 const WAVE_TIME = 90, POKER_TIME = 60;
@@ -5778,9 +5790,10 @@ function startPoker(fromWave) {
 // 🃏 포커 UI가 가려진 포커 페이즈(데스크톱 판 내림 · 모바일 전투 탭)면 버튼 표시 + 남은 포커 시간
 function updateGoPoker() {
   const b = document.getElementById('goPoker');
-  const on = S.phase === 'poker' && !S.mapTest && (IS_MOBILE ? document.body.dataset.tab !== 'poker' : pokerPeek);
+  const on = S.phase === 'poker' && !S.mapTest && (IS_MOBILE ? document.body.dataset.tab !== 'poker' : pokerPeek) && !(S.story && S.story.m2 && S.story.m2.prep); // 📖 M2: 배치 준비엔 [출발!]이 대신
   if (b.classList.contains('show') !== on) b.classList.toggle('show', on);
   if (on) hudSet('goPokerT', Math.max(0, Math.ceil(S.pokerTimer)));
+  storyGoSync(); // 📖 M2: [출발!] (스토리 판에서 처음 필요할 때 만듦 — 챌린지는 바로 return)
 }
 document.getElementById('goPoker').onclick = () => {
   if (S.phase !== 'poker') return;
@@ -5798,7 +5811,7 @@ function updateDuelForfeit() {
 document.getElementById('duelForfeit').onclick = duelForfeit;
 function swapCard(h, i) {
   const hand = S.poker.hands[h];
-  if (S.phase !== 'poker' || hand.swapped[i]) return;
+  if (S.phase !== 'poker' || hand.swapped[i] || (S.story && S.story.m2 && S.story.m2.prep)) return; // 📖 M2: 소환한 뒤(배치 준비)엔 교환 없음
   const before = evalHand(hand.cards);
   hand.swapped[i] = true;
   hand.cards[i] = (S.tutMode && tutPick(h, i, hand)) || hand.deck.pop(); // [튜토리얼 10-14] 목표 족보로 가는 카드 고르기 (일반 판 = 덱 꼬리 그대로)
@@ -5809,7 +5822,7 @@ function swapCard(h, i) {
 }
 function ticketReswap(h, i) {
   const hand = S.poker.hands[h];
-  if (S.phase !== 'poker' || S.items.reroll <= 0 || !hand.swapped[i]) return;
+  if (S.phase !== 'poker' || S.items.reroll <= 0 || !hand.swapped[i] || (S.story && S.story.m2 && S.story.m2.prep)) return; // 📖 M2: 배치 준비엔 재변경 없음
   S.items.reroll--;
   const before = evalHand(hand.cards);
   hand.cards[i] = (S.tutMode && tutPick(h, i, hand)) || hand.deck.pop(); // [튜토리얼 10-14]
@@ -5903,6 +5916,7 @@ function handResult(hands) {
 }
 function confirmHand() {
   if (S.phase !== 'poker') return;
+  if (S.story && storyM2().prep) { storyDepart(); return; } // 📖 M2: 소환한 뒤 두 번째 = [출발!] (포커 시계 끝 자동 소환 루프·소환 단추 '출발!' 공용)
   if (S.tutMode && !tutCanSummon()) { tutNopeSummon(); return; } // [튜토리얼 10-14] 소환 단계가 아니면 막는다 (라운드가 단계보다 앞서 가지 않게)
   if (S.round === 2 && S.r1High && tutNew('t4') && (IS_MOBILE ? document.body.dataset.tab === 'poker' : !pokerPeek)) tutMark('t4'); // 🧭 포커 화면이 보이는 채 소환했으면 T4 봄
   S.tutStep = 0; S.tutHold = false; // 🧭 T1·T2는 첫 소환으로 끝 (기록은 보여 준 순간에 이미 했다)
@@ -5953,7 +5967,7 @@ function confirmHand() {
     logMsg(`에이스 카드 보너스! 새총 ${aceBonus}기 지급`);
     addFloat(CX, CY - 96, `보너스 새총 +${aceBonus}`, '#ffd166', 1.6);
   }
-  startWave();
+  if (S.story) storyPrepStart(); else startWave(); // 📖 M2: 소환 → 대기석 → 배치 준비([출발!] 또는 포커 시계 끝에 출발)
   tutEv('summon'); // [튜토리얼 10-14] 소환 횟수 (일반 판 = 즉시 return)
 }
 
@@ -5961,7 +5975,7 @@ function confirmHand() {
 function spawnUnit(rank, race, hidden, keyRank, superAce) {
   const i = S.units.length;
   let x = CX + (i % 8 - 3.5) * 34, y = Math.min(CY + 130 + Math.floor(i / 8) * 30, 440); // y 클램프 440: 캔버스 아래로 안 숨고, 광부 갓길(상단 모서리 y≈465)도 발끝이 안 닿는다
-  if (S.story) ({ x, y } = storyFreeSpot()); // 📖 맵 소환 자리 둘레 빈 땅 (M2 대기석이 오면 안 씀)
+  if (S.story) ({ x, y } = storyTrayPt()); // 📖 M2: 소환 = 대기석 (이름 글자가 대기석 칸 밑에 뜨게 — 유닛은 storyTraySweep이 대기석으로)
   const w = WEAPONS[rank];
   const kr = keyRank || 14;
   S.units.push({
@@ -6200,13 +6214,13 @@ const GACHA_COL = { gachaHero:'#c9a227', gachaAce:'#e91e8c', gachaAceHero:'#8c5b
 function spawnItemUnit(key) {
   const meta = ITEM_META[key];
   let x = CX + (Math.random() - 0.5) * 70, y = CY + 150; // 난수는 먼저 뽑는다 (챌린지 순서 그대로)
-  if (S.story) ({ x, y } = storyFreeSpot()); // 📖 맵 소환 자리 둘레 빈 땅
+  if (S.story) ({ x, y } = storyTrayPt()); // 📖 M2: 아이템도 대기석으로 (누르면 사용)
   S.units.push({ x, y, tx: x, ty: y, item: key, race: null, tier: -2, hidden: false, hero: false, miner: false,
     keyRank: 14, keyLabel: meta.icon, kills: 0, jx: (Math.random() - 0.5) * 40, jy: (Math.random() - 0.5) * 40,
     forceTarget: null, attackMine: false, amove: false, hold: false, priority: 'near', selected: false, walk: 0, moving: false, speed: 70,
     cool: 0, dmg: 0, cd: 1, range: 0, splash: 0, bounce: 0, atk: 'none', proj: null, vis: null, pierce: 0, shards: 0, shardFrac: 0,
     weapon: meta.name });
-  addFloat(x, y - 26, `${meta.name} 등장! 제물대로 옮기세요`, '#ffd166', 2);
+  addFloat(x, y - 26, S.story ? `${meta.name} — 대기석에서 누르면 사용` : `${meta.name} 등장! 제물대로 옮기세요`, '#ffd166', 2); // 📖 M2: 스토리 아이템 = 누르면 사용
 }
 // ⛏️👑 광산 특별 발굴 (08-15 유저 — 재변경권과 배타적 단일 롤 사다리, 희귀한 것부터)
 const MINER_SPECIALS = [
@@ -6613,7 +6627,8 @@ function pushOutOfPen(u) {
 function clampTargetPos(x, y) {
   if (S.multi) { x = Math.max(6, Math.min(934, x)); y = Math.max(6, Math.min(494, y)); } // 🤖 멀티 수로 규칙: 이동 목표는 내 기지 안 (issueMove 진형·어택땅·A명령 추격·dropGrab 공통 관문)
   if (onPlank(x, y)) return { x, y }; // 🪵 나무판자 위는 이동 목표 허용(소환장 안이어도)
-  if (SKY_CUT && x < SKY_CUT.rx + 20 && y < SKY_CUT.ry + 20) { // ☁️ 하늘(좌상단)을 찍으면 절벽 끝으로
+  if (S.story && S.story.map.skyPoly) { const cx2 = Math.max(1, x), cy2 = Math.max(1, y); if (inSky(cx2, cy2)) ({ x, y } = storySkyOut(cx2, cy2)); } // 📖 10-19 M2: 그림 맵 하늘 다각형 → 절벽 선 바로 밖
+  else if (SKY_CUT && x < SKY_CUT.rx + 20 && y < SKY_CUT.ry + 20) { // ☁️ 하늘(좌상단)을 찍으면 절벽 끝으로
     // 음수·(0,0) 좌표도 1px로 밀어 넣고 투영 — 0×k=0이라 (0,0)은 투영이 무력화됐고, 음수는 inSky 가드에 걸러져
     // 무보정 목표가 되어 유닛이 림에서 0.6초 제자리걸음했다 (크로스체크)
     const cx2 = Math.max(1, x), cy2 = Math.max(1, y);
@@ -6904,12 +6919,14 @@ function updatePortal() {
   // 수집 반경은 시각 포털보다 넉넉하게 (길로틴 등 10기 레시피가 유닛 분리 때문에 안 들어가는 문제 방지)
   const GATHER = PORTAL.r + 30;
   const pop = FUSE_POPUP && !S.tutMode && !S.story; // 🌀 작은 창을 쓰는 판 (튜토리얼은 창 없이 바로 · 스토리는 옛 자동 3합성 — 스토리 포털 '히든 전용'은 M2, 10-19 크로스체크 P1-2)
+  const has = S.story ? f => S.units.some(f) || storyM2().tray.some(f) : f => S.units.some(f); // 히든 '1기 제한' — 📖 M2: 대기석 히든도 셈 (챌린지 = S.units.some 그대로)
   let open = false; // 같이하기 창이 열린 채 도는 프레임 — 큰 히든 레시피만 판정 (창을 띄우는 판정은 건너뜀)
   if (pop) {
     for (const u of S.units) if (u.fuseHold && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) >= GATHER + 16) delete u.fuseHold; // 수집 반경 밖으로 나가면 '그대로 두기' 풀림 → 다시 들어오면 다시 묻는다 · 해제는 반경 +16 여유 (밀려서 가장자리를 넘나드는 깜빡임 방지 — 10-19 크로스체크 P2-5)
     if (fuseAsk) { fuseAskTick(); if (!fuseAsk) return; open = true; } // 혼자하기는 정지라 여기 안 옴 · 같이하기: 창이 열린 동안에도 큰 레시피가 완성되면 그쪽이 먼저 (창은 닫힘 — 10-19 크로스체크 P2-3)
   }
-  const inP = S.units.filter(u => fuseKey(u) && !u.grabbed && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) < GATHER); // 집힌 채 지나가는 유닛은 재료가 아니다 (놓으면 다음 프레임 정상 합성)
+  const inP = S.story ? S.units.filter(u => storyM2().portal.has(u) && fuseKey(u)) // 📖 M2: 스토리 포털 재료 = 대기석에서 끌어 넣은 유닛만 (둘레에 놓인 유닛은 아님)
+    : S.units.filter(u => fuseKey(u) && !u.grabbed && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) < GATHER); // 집힌 채 지나가는 유닛은 재료가 아니다 (놓으면 다음 프레임 정상 합성)
   const ask = u => !u.fuseHold && !u.moving; // 🌀 일반 합성 창의 재료 = 멈춰 선 유닛만 (그대로 두기·걷는 유닛 제외) — 자동 히든 판정은 inP 전부 · 슬롯·시간술사는 아래 따로(찾기 = 그대로 두기만 뺀 전부, 창 = 멈춘 셋)
   if (!S.tutMode) { // [튜토리얼 10-14] 튜토리얼 판은 히든 조합 판정을 건너뛴다 (표준 합성만)
   // 히든 조합 먼저 체크: 일반 원페어 ×1 + 투페어 ×2 + 트리플 ×3
@@ -6917,7 +6934,7 @@ function updatePortal() {
   const byT = {};
   normals.forEach(u => (byT[u.tier] = byT[u.tier] || []).push(u));
   // ⚔️ 길로틴 (원1+투2+트3+포4=10기) — 갬블러와 원1투2트3을 공유하므로 먼저 체크. 1기 제한.
-  if (!S.units.some(u => u.execute) &&
+  if (!has(u => u.execute) &&
       (byT[1] || []).length >= 1 && (byT[2] || []).length >= 2 && (byT[3] || []).length >= 3 && (byT[7] || []).length >= 4) {
     const used = [byT[1][0], byT[2][0], byT[2][1], byT[3][0], byT[3][1], byT[3][2], byT[7][0], byT[7][1], byT[7][2], byT[7][3]];
     fuseAskYield();
@@ -6931,7 +6948,7 @@ function updatePortal() {
   // 🎰 슬롯머신 (같은 숫자 트리플×3). 갬블러(원1투2트3)보다 먼저 체크 — 의도적으로 모은 동일 숫자 트리플 3개가
   // 갬블러 레시피에 뺏기지 않도록. 1기 제한. · 🌀 10-18: 작은 창 = 멈춰 선 같은 숫자 트리플 3 → '?' 카드 (그대로 두기면 아래 갬블러 등 재료로 남음)
   //   10-19 크로스체크 P1-1: 찾기는 아래 자동 판정과 같은 유닛(걷는 유닛 포함 — 그대로 두기만 뺌) · 창은 셋이 멈췄을 때 · 걷는 동안엔 아래(갬블러·콰르텟)를 미룸 = 옛 '슬롯 먼저'
-  if (!S.units.some(u => u.slot)) {
+  if (!has(u => u.slot)) {
     const byRank = {};
     (byT[3] || []).forEach(u => { if (!pop || !u.fuseHold) (byRank[u.keyRank] = byRank[u.keyRank] || []).push(u); });
     const slotKey = Object.keys(byRank).find(k => byRank[k].length >= 3);
@@ -6942,7 +6959,7 @@ function updatePortal() {
       return;
     }
   }
-  if (!S.units.some(u => u.gamble) &&
+  if (!has(u => u.gamble) &&
       (byT[1] || []).length >= 1 && (byT[2] || []).length >= 2 && (byT[3] || []).length >= 3) {
     const used = [byT[1][0], byT[2][0], byT[2][1], byT[3][0], byT[3][1], byT[3][2]];
     fuseAskYield();
@@ -6954,7 +6971,7 @@ function updatePortal() {
     return;
   }
   // 💰 고물상 (하이카드×3 + 원페어×3 + 투페어×3 = 9기, 상향). 1기 제한.
-  if (!S.units.some(u => u.junk) && (byT[0] || []).length >= 3 && (byT[1] || []).length >= 3 && (byT[2] || []).length >= 3) {
+  if (!has(u => u.junk) && (byT[0] || []).length >= 3 && (byT[1] || []).length >= 3 && (byT[2] || []).length >= 3) {
     const used = [byT[0][0], byT[0][1], byT[0][2], byT[1][0], byT[1][1], byT[1][2], byT[2][0], byT[2][1], byT[2][2]];
     fuseAskYield();
     S.units = S.units.filter(u => !used.includes(u));
@@ -6965,7 +6982,7 @@ function updatePortal() {
     return;
   }
   // 🔥 쇼군 (풀하우스×3 + 플러쉬×3 = 6기, 상향). 1기 제한.
-  if (!S.units.some(u => u.shogun) && (byT[6] || []).length >= 3 && (byT[5] || []).length >= 3) {
+  if (!has(u => u.shogun) && (byT[6] || []).length >= 3 && (byT[5] || []).length >= 3) {
     const used = [byT[6][0], byT[6][1], byT[6][2], byT[5][0], byT[5][1], byT[5][2]];
     fuseAskYield();
     S.units = S.units.filter(u => !used.includes(u));
@@ -6976,7 +6993,7 @@ function updatePortal() {
     return;
   }
   // 📯 콰르텟 (원·투·트·스트 각 2기 = 8기, 상향). 1기 제한.
-  if (!S.units.some(u => u.quartet) &&
+  if (!has(u => u.quartet) &&
       (byT[1] || []).length >= 2 && (byT[2] || []).length >= 2 && (byT[3] || []).length >= 2 && (byT[4] || []).length >= 2) {
     const used = [byT[1][0], byT[1][1], byT[2][0], byT[2][1], byT[3][0], byT[3][1], byT[4][0], byT[4][1]];
     fuseAskYield();
@@ -6988,7 +7005,7 @@ function updatePortal() {
     return;
   }
   // ⏳ 시간술사 (스트레이트×3). 1기 제한. · 🌀 10-18: 작은 창 = 멈춰 선 스트레이트 3 → '?' 카드 · 10-19: 찾기·미룸은 슬롯과 같은 규칙
-  if (!S.units.some(u => u.chrono)) {
+  if (!has(u => u.chrono)) {
     const s4 = (byT[4] || []).filter(u => !pop || !u.fuseHold);
     if (s4.length >= 3) {
       if (!pop) { makeChrono([s4[0], s4[1], s4[2]]); return; }
@@ -6998,7 +7015,7 @@ function updatePortal() {
     }
   }
   // 🃏 조커 (원페어+투페어+트리플 영웅 각 JOKER_HN — 10-18 유저: 각1 → 각2) — 갬블러 등과 달리 티어1/2/3 "영웅"이 재료. 1기 제한. 그대로 두기 영웅도 재료
-  if (!S.units.some(u => u.joker)) {
+  if (!has(u => u.joker)) {
     const heroesIn = inP.filter(u => u.hero && !u.hidden && !u.super && !u.ace && !isHiddenCombo(u)); // 에이스 영웅·히든 유닛은 조커 재료로 안 먹힘
     const hs = t => heroesIn.filter(u => u.tier === t).slice(0, JOKER_HN); // 레시피 상향: 원페어·투페어·트리플 영웅 (성능 대비 재료가 너무 쌌음)
     const h0 = hs(1), h1 = hs(2), h2 = hs(3);
@@ -7015,6 +7032,7 @@ function updatePortal() {
   }
   } // [튜토리얼 10-14] 히든 판정 블록 끝
   if (open) return; // 같이하기 창이 열린 채 — 창을 띄우는 일반 판정은 없음
+  if (S.story) return; // 📖 M2: 스토리 포털 = 히든 전용 — 같은 유닛 셋이 모여도 영웅이 되지 않음 (영웅은 눌러 합치기로만, 설계 §5)
   const groups = {};
   inP.forEach(u => { if (pop && !ask(u)) return; const k = fuseKey(u); (groups[k] = groups[k] || []).push(u); }); // 🌀 작은 창 = 멈춰 선 유닛끼리만 센다
   for (const k in groups) {
@@ -7044,7 +7062,7 @@ function updateAltar() {
       gachaMiner: useGachaMiner, gachaSuperHero: useGachaSuperHero, upgCoupon: useUpgCoupon })[it.item](); } // 🛒 비상 물자 3종 + 👑 뽑기권 6종 + ⚔️ 쿠폰도 제물대 발동
     updateInfoPanel();
   }
-  if (S.tutMode || S.units.some(u => u.catapult)) return; // 이미 투석기 존재 · [튜토리얼 10-14] 튜토리얼은 제물 흡수 없음 (아이템 발동은 위에서 그대로)
+  if (S.tutMode || S.units.some(u => u.catapult) || (S.story && storyM2().tray.some(u => u.catapult))) return; // 이미 투석기 존재 (📖 M2: 대기석 투석기도) · [튜토리얼 10-14] 튜토리얼은 제물 흡수 없음 (아이템 발동은 위에서 그대로)
   const highs = S.units.filter(u => u.tier === 0 && !u.hero && !u.hidden && !u.miner && !u.moving && !u.grabbed && // 이동 중(통과)·집힌 채 공중 통과는 제외 — 제물대에 멈춘 하이카드만 소모
     Math.abs(u.x - ALTAR.x) <= ALTAR.w/2 && Math.abs(u.y - ALTAR.y) <= ALTAR.h/2);
   if (!highs.length) return;
@@ -7091,6 +7109,7 @@ function updateStoneDip() {
 // ==================== 게임 루프 ====================
 function update(dt) {
   S.time += dt;
+  if (S.story) storyTraySweep(); // 📖 M2: 새로 생긴 유닛(소환·뽑기·복사권·왕관 회수 등) → 대기석 (싸우기 전에)
   // 📈 투자 시장 사이클: 400초마다 30초 개장. 10초 전 예고 → 개장 → 마감 (서브스텝 중복 발동은 플래그로 차단)
   // 게임오버 가드 (크로스체크): 사망 화면은 S.paused를 안 켜므로 이 블록이 계속 돌아 죽은 화면 뒤에서 chirp·coin이 반복 재생됐다
   if (S.phase !== 'gameover' && !(S.tutMode && !S.tut.mkt) && !S.story) { // [튜토리얼 10-14] 장은 챕터가 켤 때만 · 📖 스토리엔 투자 시장 없음
@@ -7208,6 +7227,7 @@ function update(dt) {
         if (a.miner !== b.miner || !!a.item !== !!b.item) continue; // ⛏️ 광부·🎁 아이템 ↔ 전투유닛 유령 통과 (아이템이 병력에 밀려 제물대로 들어가 오발동하던 문제 — 크로스체크)
         let dx = b.x - a.x, dy = b.y - a.y;
         if (dx * dx + dy * dy < MINSEP * MINSEP) {
+          if (S.story && storySepFixed(a, b, dx, dy)) continue; // 📖 M2: 놓은·넣어 둔 유닛은 안 밀림 (놓을 때 20px 간격 검사)
           let d = Math.hypot(dx, dy);
           if (d < 0.01) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d = Math.hypot(dx, dy) || 1; }
           const push = (MINSEP - d) / 2, nx = dx / d, ny = dy / d;
@@ -7255,7 +7275,7 @@ function update(dt) {
   for (const q of U) {
     if (!q.quartet) continue;
     const qr = effRange(q), cap = (q.ascend || 0) >= 1 ? 7 : 5, f = (q.ascend || 0) >= 2 ? 0.769 : 0.833;
-    U.filter(v => v !== q && !v.miner && !v.item && !v.clone && !v.junk) // 고물상 제외 — 지원가끼리 서로 버프 금지 (08-15 유저)
+    U.filter(v => v !== q && !v.miner && !v.item && !v.clone && !v.junk && !(S.story && storyParked(v))) // 고물상 제외 — 지원가끼리 서로 버프 금지 (08-15 유저) · 📖 포털·제단 유닛 제외
       .map(v => [Math.hypot(v.x - q.x, v.y - q.y), v])
       .filter(([d]) => d <= qr)
       .sort((a, b) => a[0] - b[0])
@@ -7266,7 +7286,7 @@ function update(dt) {
   for (const j of U) {
     if (!j.junk) continue;
     const jr = effRange(j), cap = (j.ascend || 0) >= 1 ? 7 : 5, mul = (j.ascend || 0) >= 2 ? 1.35 : 1.2;
-    U.filter(v => v !== j && !v.miner && !v.item && !v.clone && !v.quartet) // 콰르텟 제외 — 지원가끼리 서로 버프 금지 (08-15 유저)
+    U.filter(v => v !== j && !v.miner && !v.item && !v.clone && !v.quartet && !(S.story && storyParked(v))) // 콰르텟 제외 — 지원가끼리 서로 버프 금지 (08-15 유저) · 📖 포털·제단 유닛 제외
       .map(v => [Math.hypot(v.x - j.x, v.y - j.y), v])
       .filter(([d]) => d <= jr)
       .sort((a, b) => a[0] - b[0])
@@ -7276,8 +7296,10 @@ function update(dt) {
   updateMutter(dt); // 💬 히든 혼잣말
   updatePortal();
   updateAltar();
+  if (S.story) storyTraySweep(); // 📖 M2: 포털에서 난 히든 영웅·제단 투석기 → 대기석 (이번 틱에 싸우지 않게)
   updateStoneDip(); // 🥚 투석기 폭포 이스터에그
   updateFusableHint();
+  if (S.story) storyFusableHint(); // 📖 M2: 합칠 수 있음 = 맵에 놓인 것 + 대기석
   assignOreSlots();
   // 🥚 이스터에그: 이번 라운드 광석방 "첫 입장"이 하이카드 1기 단독이면 → 하이카드 에이스 강림 (게임당 1회)
   if (S.roomVirgin) {
@@ -7334,7 +7356,7 @@ function update(dt) {
   if (S.phase === 'poker') {
     // 포커 중에도 전투 유닛은 광산을 때려 레이어를 깎을 수 있다(골드는 광부 배달로만)
     for (const u of S.units) {
-      if (u.miner || u.item || u.grabbed) continue; // 전투 루프와 같은 규칙 — 집힌 유닛은 공중에서 광석을 캐지 않는다
+      if (u.miner || u.item || u.grabbed || (S.story && storyParked(u))) continue; // 전투 루프와 같은 규칙 — 집힌 유닛은 공중에서 광석을 캐지 않는다 · 📖 포털·제단 유닛
       u.cool -= dt;
       if (updateDuelFight(u)) continue; // 🏛️ 조기 전멸로 이어진 결투: 포커 페이즈에도 챔피언은 계속 싸운다
       // 광석 방 안이면 광석을 때린다 (정원 내 자격 유닛만). 광산 채굴은 광부 전담 — 전투 유닛은 안 캔다.
@@ -7347,7 +7369,7 @@ function update(dt) {
     if (S.tutHold && (S.units.length || S.time > S.tutHoldT)) S.tutHold = false;
     if (!S.tutHold && !(S.tutMode && S.tut.holdPoker)) S.pokerTimer -= dt; // [튜토리얼 10-14] 포커 시계 멈춤 단계
     if (S.pokerTimer <= 0) {
-      logMsg('포커 시간 종료 — 현재 패로 자동 소환!');
+      logMsg(S.story && storyM2().prep ? '포커 시간 종료 — 출발!' : '포커 시간 종료 — 현재 패로 자동 소환!'); // 📖 M2: 소환한 뒤면 자동 출발 (소환 전이면 아래 루프가 소환 → 출발 둘 다)
       let guard = 3;
       while (S.phase === 'poker' && guard-- > 0) confirmHand();
     }
@@ -7474,7 +7496,7 @@ function update(dt) {
   }
   // 유닛 명령/공격 처리 (이동 중엔 발사 불가)
   for (const u of S.units) {
-    if (u.miner || u.item || u.grabbed) continue; // 광부는 updateMiner에서, 아이템 유닛은 전투 안 함, 집힌 유닛은 공중
+    if (u.miner || u.item || u.grabbed || (S.story && storyParked(u))) continue; // 광부는 updateMiner에서, 아이템 유닛은 전투 안 함, 집힌 유닛은 공중 · 📖 포털·제단에 넣어 둔 유닛은 싸우지 않음
     u.cool -= dt;
     // 🗡️ 풀하우스 스킬 발동 중: 최강 몹에게만 달라붙어 때린다 (대상 고정이 스킬의 값어치 — 보스 ×2가 그대로 실린다).
     // 공속 2.5배 보너스는 2026-08-04 유저 지시로 삭제 (보스 데미지 2배만 남는다). 대상 선정은 위 1890행에서 갱신되므로 영웅·분신도 이 경로.
@@ -8367,6 +8389,7 @@ function drawLabel(text, x, y, size, col) {
 // ☁️ 하늘 절벽: 유닛이 하늘로 들어가면 절벽 가장자리로 라디얼 밀어내기 (발 디딜 땅이 없다)
 function blockSky(u) {
   if (!inSky(u.x, u.y)) return;
+  if (S && S.story && S.story.map.skyPoly) { const p = storySkyOut(u.x, u.y); u.x = p.x; u.y = p.y; return; } // 📖 10-19 M2: 하늘 다각형의 절벽 선 바로 밖으로
   const d = Math.sqrt((u.x / SKY_CUT.rx) ** 2 + (u.y / SKY_CUT.ry) ** 2) || 1e-4;
   const k = 1.015 / d;
   u.x *= k; u.y *= k;
@@ -10185,6 +10208,7 @@ function drawDuelist() {
   }
 }
 function draw() {
+  if (S.story) storyTraySweep(); // 📖 M2: 정지 중에 생긴 유닛도 맵에 그려지지 않게 (뽑기 개봉·복사권 등)
   ctx.clearRect(0, 0, VW, VH);
   ctx.save();
   // 화면 흔들림 제거 (울렁임 유발) — 타격감은 이펙트·파티클로만 표현
@@ -10201,7 +10225,7 @@ function draw() {
   });
   if (!S.multi) drawMinerRoad(); // 광부 갓길 (건물들보다 아래 레이어) — 멀티는 월드 베이크에 이미 있다 (반투명 겹칠 방지)
   drawCastle();
-  if (!S.castleOpened) { ctx.textAlign = 'center'; drawLabel('성 — 클릭해 강화', HOUSE.x, HOUSE.y + 58, 11); ctx.textAlign = 'left'; } // 09-08: 강화창 진입 경로가 어디에도 안내되지 않았다 (R1은 업글 1회로 갈리는 설계). 브라우저 1회 안내(dpd_castle_seen)
+  if (!S.castleOpened) { ctx.textAlign = 'center'; drawLabel('성 — 클릭해 강화', HOUSE.x, HOUSE.y + (S.story ? -66 : 58), 11); ctx.textAlign = 'left'; } // 📖 M2: 스토리는 성 위 (1-2 성 (81,444)이면 밑 라벨 y 502가 캔버스 밖 — M4 판단 ③) // 09-08: 강화창 진입 경로가 어디에도 안내되지 않았다 (R1은 업글 1회로 갈리는 설계). 브라우저 1회 안내(dpd_castle_seen)
   drawMine();
   drawOreRoom();
   drawBarrack();
@@ -10250,6 +10274,7 @@ function draw() {
   const excDrawOrder = S.units.filter(u => u.exc).sort((a, b) => a.y - b.y);
   for (let pass = 0; pass < 2; pass++) for (const u of pass === 0 ? excDrawOrder : S.units) { // 🌀 분신은 반투명 + 보라 잔광으로 본체와 구분
     if (u.grabbed || !!u.exc !== (pass === 0)) continue; // 🖐️ 집힌 유닛은 맨 위에 (루프 뒤에서)
+    if (S.story && storyParked(u)) { storyDrawParked(u); continue; } // 📖 M2: 포털·제단에 넣어 둔 유닛 = 작게
     const rec = /바주카/.test(u.weapon || '') ? (u.atkAnim || 0) : 0; // 🚀 바주카 반동: 발사 순간 몸이 뒤로 뒤뚱
     const sq = u.dropT > 0 ? Math.sin(u.dropT / 0.3 * Math.PI) * 0.22 : 0; // 🖐️ 툭 착지: 발을 기준으로 납작해졌다 튀어오르는 스쿼시 — drawUnit이 몸통에만 적용 (사거리·선택 링은 그대로)
     if (rec > 0.05) {
@@ -10653,13 +10678,14 @@ function draw() {
     ctx.restore(); ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.lineWidth = 1;
   }
   // 드래그 박스 (집어 옮기는 중엔 부대지정이 아니므로 안 그린다)
-  if (drag && drag.moved && !drag.grab) {
+  if (drag && drag.moved && !drag.grab && !drag.tray) { // 📖 M2: 대기석에서 끄는 중도 박스 아님
     ctx.strokeStyle = '#5b48d0'; ctx.setLineDash([5,4]);
     ctx.strokeRect(Math.min(drag.x0,drag.x1), Math.min(drag.y0,drag.y1), Math.abs(drag.x1-drag.x0), Math.abs(drag.y1-drag.y0));
     ctx.setLineDash([]);
     ctx.fillStyle = 'rgba(91,72,208,0.08)';
     ctx.fillRect(Math.min(drag.x0,drag.x1), Math.min(drag.y0,drag.y1), Math.abs(drag.x1-drag.x0), Math.abs(drag.y1-drag.y0));
   }
+  if (S.story) storyDrawUI(); // 📖 M2: 대기석 · 끄는 중 사거리 원 · 합치기 반짝 (모든 것 위)
   ctx.restore(); // 흔들림 변환 해제
   if (!S.multi) drawScreenFx(); // 멀티는 mpDraw가 화면 공간에 1회
 }
@@ -14858,6 +14884,7 @@ function issueAttack(px, py) {
     return;
   }
   // 빈 땅 클릭 → 어택땅 (이동하다 적 만나면 교전)
+  if (S.story) return; // 📖 M2: 놓은 유닛은 고정 — 어택땅(걸어가기) 없음 (몹 지정 = 사거리 안에서 집중은 위에서 그대로)
   sel.forEach((u, i) => {
     if (duelLocked(u)) { duelLockFloat(u); return; } // 🔒 결투 락인 중엔 명령 무시
     const cols = Math.ceil(Math.sqrt(sel.length));
@@ -14897,12 +14924,14 @@ function mpos(e) {
 function pressStart(x, y) {
   pokerPeekOnMapUse(); // 포커 중 맵을 누르면 포커판이 먼저 비켜선다 (클릭 자체는 그대로 처리)
   drag = { x0: x, y0: y, x1: x, y1: y, moved: false };
+  if (S.story) storyPress(drag, x, y); // 📖 M2: 대기석 띠를 눌렀나 (끌어 놓기·누르면 사용·넘겨 보기)
 }
 function pressMove(x, y) {
   if (!drag) return;
   drag.x1 = x; drag.y1 = y;
   // 탭/드래그 판정: 터치는 손가락 떨림이 커서 임계값을 넉넉하게 (모바일은 화면 0.4배 축소라 24 ≈ 물리 10px)
   if (Math.hypot(drag.x1 - drag.x0, drag.y1 - drag.y0) > (S.multi ? mpSlop(IS_MOBILE ? 24 : 6) : (IS_MOBILE ? 24 : 6))) drag.moved = true; // 🤖 멀티: 임계를 화면 거리로 (줌아웃에서 떨림이 드래그가 되지 않게)
+  if (drag.tray) storyDragMove(drag, x, y); // 📖 M2: 대기석 유닛 끌기
 }
 cv.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
@@ -15048,6 +15077,7 @@ function objAt(x, y) {
 }
 function pressEnd() {
   if (!drag) return;
+  if (S.story && storyRelease(drag)) { drag = null; updateInfoPanel(); return; } // 📖 M2: 대기석 누름·끌어 놓기·합치기 고르기 (새 잡기·선택보다 먼저)
   if (!drag.moved && hitDuelFleeBtn(drag.x0, drag.y0)) { duelFlee(); drag = null; return; } // 🏃 도망 버튼 — 유닛 선택보다 먼저
   if (!drag.moved && tryCatchBird(drag.x0, drag.y0)) { drag = null; return; } // 🐦 새 잡기 우선
   if (attackMode && !drag.moved) {
@@ -15088,7 +15118,7 @@ window.addEventListener('mouseup', e => {
 // 🖐️ 집어 옮기기 (09-18 유저 지정): 유닛을 누른 채 끌면 공중에 매달려(바둥바둥) 손가락을 따라오고, 놓으면 그 자리에 툭 떨어진다.
 //    여러 기(선택 부대)면 손가락 주위로 모였다가 놓을 때 겹치지 않게 격자로 퍼진다. 아이템(왕관·뽑기권)도 집어 제물대에 놓을 수 있다.
 let grabPos = null; // 손가락 위치(캔버스 좌표) — update()가 매 프레임 집힌 유닛을 이쪽으로 끌어당긴다
-function grabbable(u) { return !u.miner && !u.catapult && !duelLocked(u); }
+function grabbable(u) { return !S.story && !u.miner && !u.catapult && !duelLocked(u); } // 📖 M2: 스토리는 놓은 유닛을 다시 집지 않는다 (대기석에서 끌어 놓기만)
 function startGrab(hit) {
   const group = hit.selected ? S.units.filter(u => u.selected && grabbable(u)) : [hit];
   if (!hit.selected) { S.units.forEach(u => u.selected = false); hit.selected = true; }
@@ -15118,6 +15148,7 @@ function dropGrab(group, px, py) {
   updateInfoPanel();
 }
 function issueMove(px, py) {
+  if (S.story) return; // 📖 M2: 놓은 유닛은 고정 — 우클릭 이동 없음
   const p = clampTargetPos(px, py);
   const sel = S.units.filter(u => u.selected && !u.miner && !u.catapult); // 광부/투석기는 이동 명령 무시
   const cols = Math.ceil(Math.sqrt(sel.length));
@@ -15179,7 +15210,7 @@ cv.addEventListener('touchstart', e => {
   longPressFired = false;
   clearTimeout(longPressTimer);
   if (hitDuelFleeBtn(p.x, p.y)) return; // 🏃 도망 버튼 위 롱프레스가 어택땅으로 새지 않게 — touchend의 히트테스트가 처리 (크로스체크 P2)
-  if (drag.grabCand) return; // 🖐️ 유닛 위 = 집기 후보: 롱프레스(어택땅)를 걸지 않는다 — 400ms 머뭇거린 뒤 끌면 어택땅과 집기가 동시에 나갔다 (크로스체크 P2). 몹·빈 땅 롱프레스는 그대로
+  if (drag.grabCand || drag.tray || drag.pickTap) return; // 📖 M2: 대기석 누름·합치기 고르는 중도 롱프레스 없음 · 🖐️ 유닛 위 = 집기 후보: 롱프레스(어택땅)를 걸지 않는다 — 400ms 머뭇거린 뒤 끌면 어택땅과 집기가 동시에 나갔다 (크로스체크 P2). 몹·빈 땅 롱프레스는 그대로
   longPressTimer = setTimeout(() => {
     longPressFired = true;
     issueAttack(p.x, p.y);
@@ -15206,6 +15237,7 @@ cv.addEventListener('touchend', e => {
   if (drag.grab) { const q = touchPos(e); dropGrab(drag.grab, q.x, q.y); drag = null; longPressFired = false; lastTapTime = 0; lastTapPos = null; return; }
   if (longPressFired) { longPressFired = false; drag = null; return; } // 롱프레스가 이미 처리함
   if (drag && drag.moved) { pressEnd(); return; } // 드래그 박스 선택
+  if (drag && (drag.tray || drag.pickTap)) { pressEnd(); return; } // 📖 M2: 대기석 탭·합치기 고르기 탭 — 더블탭(같은 종류 선택)으로 새지 않게
   const p = touchPos(e);
   if (hitDuelFleeBtn(p.x, p.y)) { duelFlee(); drag = null; return; } // 🏃 도망 버튼 — 유닛 선택보다 먼저
   if (tryCatchBird(p.x, p.y)) { drag = null; lastTapTime = 0; lastTapPos = null; return; } // 🐦 새 잡기 우선(유닛 이동보다 먼저)
@@ -15230,6 +15262,7 @@ cv.addEventListener('touchcancel', e => {
   clearTimeout(longPressTimer);
   longPressFired = false;
   if (drag && drag.grab) dropGrab(drag.grab, grabPos ? grabPos.x : drag.x1, grabPos ? grabPos.y : drag.y1); // 🖐️ 터치가 끊기면 그 자리에 내려놓는다
+  if (drag && drag.tray && drag.tray.u) drag.tray.u.grabbed = false; // 📖 M2: 끌던 대기석 유닛은 대기석에 그대로
   drag = null;
 });
 // 10-06 유저(PC 1280×800 포커 판 올라옴): 상태창이 💰 자금운영·📊 딜 순위에 덮이고 위 끝이 잘렸다 →
@@ -15239,7 +15272,7 @@ cv.addEventListener('touchcancel', e => {
 //   세로 위치는 슬라이드(0.34초)의 도착 지점으로 계산 — 판이 오르내리는 도중에 좌우로 흔들리지 않게 (모바일은 슬라이드 없음 = 실제 위치)
 function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 않게 좌/우로 자동 전환
   const el = document.getElementById('unitInfo'), dps = document.getElementById('dpsRank');
-  const sel = (el && el.style.display !== 'none') ? S.units.filter(u => u.selected) : [];
+  const sel = (el && el.style.display !== 'none') ? (S.story ? storySel() : S.units.filter(u => u.selected)) : []; // 📖 M2: 대기석 유닛 = 칸 자리
   if (!sel.length) { if (dps.style.visibility) dps.style.visibility = ''; if (el) { el.classList.remove('uiNoRoom'); if (el.style.maxHeight) el.style.maxHeight = ''; } return; }
   const PC_MAX = 220, MIN_ROOM = 48; // 원문 PC 상한(unitinfo.css max-height) · 제목 줄(위 여백 12 + 21)+아래 여백 12 실측 = 45 → 48
   const cv = document.getElementById('cv');
@@ -15322,7 +15355,7 @@ function unitTraits(u) {
 }
 function updateInfoPanel() {
   const el = document.getElementById('unitInfo');
-  const sel = S.units.filter(u => u.selected);
+  const sel = S.story ? storySel() : S.units.filter(u => u.selected); // 📖 M2: 맵 선택 없으면 대기석에서 누른 유닛
   if (sel.length === 0) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   // 🎨 10-04 GPT 인디고 상태창(dpd_unitinfo_1003): 구조·class·data-*만 요청서 7장 계약으로 — 문구·이모지·숫자·조건은 그대로, 색은 CSS가 담당
@@ -15336,7 +15369,7 @@ function updateInfoPanel() {
     const compStr = Object.entries(comp).map(([w, n]) => `${w} ×${n}`).join(', ');
     const byTier = {};
     sel.filter(u => !u.hidden && !u.hero && !u.miner).forEach(u => byTier[u.tier] = (byTier[u.tier] || 0) + 1);
-    const canFuse = Object.values(byTier).some(n => n >= FUSE_N);
+    const canFuse = !S.story && Object.values(byTier).some(n => n >= FUSE_N); // 📖 M2: 스토리는 '포털로 이동' 안내 없음 (눌러 합치기)
     const airSel = sel.filter(airPriOk);
     const commonPri = sel.every(u => u.priority === sel[0].priority) ? (sel[0].priority || 'near') : (airSel.length && airSel.every(u => u.priority === 'air') ? 'air' : ''); // 공중(10-12 결정 2) = 대공 유닛 전원이 공중이면 눌림 표시(나머지 유닛은 기존 우선 그대로)
     // 🗡️ 풀하우스 라인 부대: 전원 쿨 준비됐을 때만 일제 발동 (1기라도 쿨타임이면 회색 비활성)
@@ -15344,7 +15377,7 @@ function updateInfoPanel() {
     const st6 = skillAllLabel(skUnits);
     const skHTML = skUnits.length === 0 ? '' :
       `<button type="button" id="skillAllBtn" class="shopBtn ui-skill" data-skill="fullhouse" ${skillAttrs(st6.state, !st6.allReady)}>${st6.label}</button>`;
-    el.innerHTML = `<div class="ui-head"><b class="ui-name">부대 선택: ${sel.length}기</b></div><div class="ui-comp">${compStr}</div><div class="ui-help">${IS_MOBILE ? '유닛을 끌어 옮기기 · 빈 땅 탭 = 선택 해제 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}</div>` +
+    el.innerHTML = `<div class="ui-head"><b class="ui-name">부대 선택: ${sel.length}기</b></div><div class="ui-comp">${compStr}</div><div class="ui-help">${S.story ? (IS_MOBILE ? '빈 땅 탭 = 선택 해제 · 몹을 길게 눌러 공격 지정' : 'A키+몹 클릭 = 공격 지정') : IS_MOBILE ? '유닛을 끌어 옮기기 · 빈 땅 탭 = 선택 해제 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}</div>` +
       (sel.some(u => !u.miner) ? priorityRow(commonPri, airSel.length > 0 && !S.multi) : '') + // 멀티 = 공중 몹 없음(결정 3) → '공중' 버튼 없음
       skHTML +
       (canFuse ? `<div class="ui-fuse">같은 유닛 ${FUSE_N}기! 좌측 포털로 이동시키면 강화!</div>` : '') +
@@ -15413,6 +15446,7 @@ function updateInfoPanel() {
     (u.slot ? slotRow(u) : '') +
     ((!u.miner && !isHiddenCombo(u) && S.items.copier > 0) ? `<button type="button" id="copyBtn" class="shopBtn ui-copy">유닛 복사기 사용 (${S.items.copier}) <span class="ui-rate" data-tier="${u.super ? 'super' : u.hero ? 'hero' : 'unit'}">성공률 ${Math.round(copyRate(u)*100)}%</span></button>` : '') +
     deselBtnHTML();
+  if (S.story) storyInfoExtra(el, u); // 📖 M2: [합치기] · 대기석·포털·제단 유닛은 스킬 단추 없음
   wirePriorityButtons(el);
   wireDesel(el);
   placeInfoPanel();
@@ -15427,7 +15461,7 @@ function updateInfoPanel() {
 function deselBtnHTML() { return `<button type="button" id="deselBtn" title="선택 해제" aria-label="선택 해제">✕</button>`; }
 function wireDesel(el) {
   const b = el.querySelector('#deselBtn');
-  if (b) b.onclick = () => { S.units.forEach(u => u.selected = false); updateInfoPanel(); };
+  if (b) b.onclick = () => { S.units.forEach(u => u.selected = false); if (S.story) storyDeselect(); updateInfoPanel(); }; // 📖 M2: ✕ = 대기석 선택·합치기 고르기도 취소
 }
 // ⭐ 히든 영웅 단련 (종족 업글 대체 성장축 — 10000G 시작, 상한 Lv.30 = 총 공격력 ×5.5)
 // ×1.2 → ×1.3 (2026-08-08 유저: 투자 복리로 돈 버는 속도가 빨라져 단련이 너무 쉬웠다). Lv10 62k→138k, Lv20 383k→1.9M.
@@ -15503,7 +15537,7 @@ function skillAllLabel(sk) { // 부대 일괄 스킬 라벨 (렌더·실시간 �
 function refreshInfoPanelLive() {
   const el = document.getElementById('unitInfo');
   if (!el || el.style.display === 'none') return;
-  const sel = S.units.filter(u => u.selected);
+  const sel = S.story ? storySel() : S.units.filter(u => u.selected); // 📖 M2
   const k = document.getElementById('ipKills');
   if (k && sel.length === 1) { const v = String(sel[0].kills || 0); if (k.textContent !== v) k.textContent = v; }
   const sb = document.getElementById('skillBtn');
@@ -15582,7 +15616,7 @@ const SKILL_KINDS = [
   { k: 'slot',     icon: 'slot',   name: '대박 폭격', has: u => !!u.slot,   ready: u => !(u.slotCd > 0), rem: u => u.slotCd || 0, tot: u => (u.ascend || 0) >= 2 ? 55 : 75, on: () => false, act: activateSlot },
 ];
 const skillBtns = {}; // k → 버튼 요소 (판이 바뀌어도 유닛이 없으면 아래에서 지워진다)
-function skillUnits(K) { return S.phase === 'gameover' ? [] : S.units.filter(u => !u.clone && !u.item && !u.miner && K.has(u)); }
+function skillUnits(K) { return S.phase === 'gameover' ? [] : S.units.filter(u => !u.clone && !u.item && !u.miner && K.has(u) && !(S.story && storyParked(u))); } // 📖 M2: 포털·제단 유닛 제외 (대기석 유닛은 S.units 밖)
 function skillUsable(K, u) { return K.ready(u) && !u.grabbed && !duelLocked(u); } // 🖐️ 집힌 유닛·🏛️ 결투에 묶인 챔피언 제외 (크로스체크 P1: 챔피언이 암살·분신술에 걸리면 5초 동안 도전자를 못 때려 결투에 진다)
 function updateSkillBar() {
   const bar = document.getElementById('skillBar'); if (!bar || !S) return;
@@ -15632,7 +15666,7 @@ function airPriOk(u) { return !u.miner && !u.item && canHitAir(u); } // '공중'
 function wirePriorityButtons(el) {
   el.querySelectorAll('.priBtn').forEach(btn => btn.onclick = () => {
     const v = btn.dataset.pri;
-    S.units.forEach(u => { if (u.selected && !u.miner && (v !== 'air' || airPriOk(u))) u.priority = v; }); // 공중: 여러 기 선택이면 대공 가능 유닛만 바꾸고 나머지는 기존 우선 유지
+    (S.story ? storySel() : S.units.filter(u => u.selected)).forEach(u => { if (!u.miner && (v !== 'air' || airPriOk(u))) u.priority = v; }); // 공중: 여러 기 선택이면 대공 가능 유닛만 바꾸고 나머지는 기존 우선 유지 · 📖 M2: 대기석 유닛도 (놓기 전에 정해 둠)
     updateInfoPanel();
   });
 }
@@ -16658,6 +16692,12 @@ function renderPoker(spin) {
     btn.style.display = 'none';
     bar.style.display = 'none';
     document.getElementById('pkSlow').style.display = 'none'; // ⏩ 배속 자동 해제 토글도 카드 고를 때만 (모바일 포커 탭은 전투 중에도 패널이 보인다)
+    return;
+  }
+  if (S.story && S.story.m2 && S.story.m2.prep) { // 📖 M2: 소환한 뒤 배치 준비 — 카드 없이 소환 단추 = '출발!' (포커 시계는 계속 흐름 → 끝나면 자동 출발)
+    banner.textContent = `${S.story.map.name} — 대기석 유닛을 맵에 놓고 출발!`;
+    cardsEl.innerHTML = ''; btn.style.display = ''; btn.textContent = '출발!'; bar.style.display = '';
+    document.getElementById('pkSlow').style.display = 'none';
     return;
   }
   btn.style.display = '';
@@ -17799,7 +17839,7 @@ function updateHUD() {
       (tb > 0 ? ' · <span style="color:#c9a227" title="지금 전멸시키면 받는 스피드 보너스">' + dpdIconSVG('clock') + '+' + tb + 'G</span>' : ''));
   } else if (S.phase === 'poker') {
     frac = 1 - S.pokerTimer / POKER_TIME; col = '#8c5bff';
-    hudSetHtml('tPhase', '포커 페이즈'); // 두 분기가 __hud 키를 공유해도 문자열이 절대 안 겹쳐 안전
+    hudSetHtml('tPhase', S.story && S.story.m2 && S.story.m2.prep ? '배치 준비' : '포커 페이즈'); // 두 분기가 __hud 키를 공유해도 문자열이 절대 안 겹쳐 안전 · 📖 M2: 소환한 뒤 = 배치 준비
     document.getElementById('pokerTimerFill').style.width = (S.pokerTimer / POKER_TIME * 100) + '%';
   }
   const deg = Math.round(Math.max(0, Math.min(1, frac)) * 360); // 🔋 1° 단위 + 바뀔 때만 쓰기 — 소수 각도를 매 틱 재기록하면 20Hz 리페인트 (90초 웨이브의 1° = 0.25초)
@@ -20080,14 +20120,15 @@ const STORY_MAPS = {
     bld: { castle: [150, 425], portal: [235, 275], altar: [480, 330], mine: true, room: true },
     spawn: [480, 190], tray: null },
   // 월드 1 = 스토리_2026-10-14\world1_maps_v2.json 정본 (10-19 M4 통합: 10-15 v3 길 + 1-1~1-5 GPT 그림에 맞춘 길·교차·noBuild 띠 — 1-3·1-4 10-16 · 1-5 10-18 그림 맞춤) — curve: true면 pts = 조절점(길이 모두 지남, storyCurve) · 길 폭 34
-  //   bg = 그 맵 GPT 그림(1880×1000 webp, 스테이지 들어갈 때만 받음 — storyBgLoad) · 1-2만 건물 자리 다름(그림 네모 자리). 모양·공략·명당(shape·strategy·spots)·교차점(cross)·언덕 단(terrain)·맞춤 메모(_fit)·띠 조절점(band.ctrl)은 JSON에만 (엔진은 안 읽음) · castleArt = 성 그림 자리(castle 우리 성 / camp 진지 — 엔진은 아직 안 읽음)
-  '1-1': { name: '동산', world: 1, idx: 1, bg: 'assets/story/w1_1-1.webp?v=1', skyCut: true, lives: 20, rounds: 6, req: [1, 4], bossR: [],
+  //   bg = 그 맵 GPT 그림(1880×1000 webp, 스테이지 들어갈 때만 받음 — storyBgLoad) · 1-2만 건물 자리 다름(그림 네모 자리).
+  //   skyPoly(10-19 M2) = 그림 속 좌상단 하늘·산·절벽 띠의 바깥 경계 (tools\story_sky.py — 41 크로스체크 P2-1: SKY_CUT 타원이 그림 풀밭을 막던 것) · skyCut이면 타원 대신 이 다각형으로 '못 들어감'(inSky·blockSky)·'못 놓음'(storyPlaceWhy). 모양·공략·명당(shape·strategy·spots)·교차점(cross)·언덕 단(terrain)·맞춤 메모(_fit)·띠 조절점(band.ctrl)은 JSON에만 (엔진은 안 읽음) · castleArt = 성 그림 자리(castle 우리 성 / camp 진지 — 엔진은 아직 안 읽음)
+  '1-1': { name: '동산', world: 1, idx: 1, bg: 'assets/story/w1_1-1.webp?v=1', skyCut: true, skyPoly: [[0, 0], [269, 0], [263, 8], [243, 16], [243, 40], [226, 52], [225, 60], [201, 64], [196, 148], [164, 152], [164, 164], [100, 168], [31, 184], [31, 192], [16, 204], [15, 232], [0, 239]], lives: 20, rounds: 6, req: [1, 4], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 135], [896, 135], [877, 139], [861, 150], [850, 166], [846, 185], [846, 262], [846, 340], [830, 377], [793, 393], [756, 377], [740, 340], [740, 261], [740, 182], [724, 145], [687, 129], [650, 145], [634, 182], [634, 259], [634, 336], [618, 374], [580, 390], [542, 374], [526, 336], [526, 255], [526, 180], [519, 154], [500, 135], [474, 128], [428, 128], [380, 128], [352, 135], [332, 156], [325, 183], [325, 250], [323, 312], [304, 362], [252, 391], [165, 398]] }],
     forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [410, 330], tray: null, castleArt: 'castle' },
-  '1-2': { name: '초원 입구', world: 1, idx: 2, bg: 'assets/story/w1_1-2.webp?v=1', skyCut: true, lives: 20, rounds: 8, req: [3, 7], bossR: [],
+  '1-2': { name: '초원 입구', world: 1, idx: 2, bg: 'assets/story/w1_1-2.webp?v=1', skyCut: true, skyPoly: [[0, 0], [190, 0], [190, 20], [185, 32], [153, 40], [153, 76], [141, 92], [75, 116], [65, 124], [58, 148], [0, 154]], lives: 20, rounds: 8, req: [3, 7], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 385], [868, 385], [826, 385], [801, 378], [783, 360], [776, 335], [776, 260], [776, 174], [760, 135], [721, 119], [682, 135], [666, 174], [666, 260], [666, 300], [658, 330], [636, 352], [606, 360], [560, 377], [528, 377], [497, 369], [478, 346], [470, 314], [451, 267], [404, 248], [357, 267], [338, 314], [332, 346], [308, 378], [250, 395], [165, 414]] }],
     forks: [], cover: [], sky: [], noBuild: [], bld: { castle: [81, 444], portal: [78, 263], altar: [211, 216], mine: false, room: false }, spawn: [550, 190], tray: null, castleArt: 'camp' },
-  '1-3': { name: '초원 한가운데', world: 1, idx: 3, bg: 'assets/story/w1_1-3.webp?v=1', skyCut: true, lives: 20, rounds: 10, req: [6, 10], bossR: [],
+  '1-3': { name: '초원 한가운데', world: 1, idx: 3, bg: 'assets/story/w1_1-3.webp?v=1', skyCut: true, skyPoly: [[0, 0], [259, 0], [259, 12], [241, 24], [187, 32], [187, 112], [183, 116], [158, 120], [152, 136], [136, 144], [131, 152], [88, 164], [29, 172], [27, 180], [0, 191]], lives: 20, rounds: 10, req: [6, 10], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 396], [850, 388], [800, 388], [746, 396], [685, 381], [657, 361], [650, 334], [665, 299], [685, 287], [719, 286], [820, 280], [865, 273], [901, 237], [898, 200], [875, 173], [841, 161], [792, 162], [772, 162], [682, 152], [620, 138], [558, 128], [496, 136], [478, 146], [434, 201], [392, 237], [360, 290], [325, 306], [306, 327], [281, 368], [266, 382], [200, 399], [165, 398]] }],
     forks: [], cover: [], sky: [],
     noBuild: [
@@ -20096,7 +20137,7 @@ const STORY_MAPS = {
       { kind: 'rock', band: { w: 24, pts: [[412, 282], [418, 282], [424, 282], [430, 282], [436, 284], [441, 286], [447, 288], [452, 291], [456, 293]] } },
     ],
     bld: W1B, spawn: [540, 340], tray: null, castleArt: 'camp' },
-  '1-4': { name: '개울 건너', world: 1, idx: 4, bg: 'assets/story/w1_1-4.webp?v=1', skyCut: true, lives: 20, rounds: 10, req: [8, 12], bossR: [],
+  '1-4': { name: '개울 건너', world: 1, idx: 4, bg: 'assets/story/w1_1-4.webp?v=1', skyCut: true, skyPoly: [[0, 0], [253, 0], [251, 12], [187, 28], [185, 40], [175, 48], [175, 100], [151, 108], [150, 112], [83, 132], [77, 156], [19, 172], [19, 180], [0, 184]], lives: 20, rounds: 10, req: [8, 12], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 262], [884, 254], [852, 254], [794, 254], [768, 282], [756, 332], [740, 364], [712, 378], [669, 382], [616, 362], [600, 327], [600, 262], [604, 221], [596, 182], [558, 154], [489, 162], [472, 188], [466, 224], [481, 299], [474, 330], [446, 362], [392, 376], [371, 372], [323, 374], [288, 402], [285, 407], [250, 433], [201, 429], [172, 412]] }],
     forks: [], cover: [], sky: [],
     noBuild: [
@@ -20107,7 +20148,7 @@ const STORY_MAPS = {
       { kind: 'rock', circle: [704, 165, 16] },
     ],
     bld: W1B, spawn: [360, 200], tray: null, castleArt: 'camp' },
-  '1-5': { name: '초원 끝 언덕', world: 1, idx: 5, bg: 'assets/story/w1_1-5.webp?v=1', skyCut: true, lives: 20, rounds: 12, req: [10, 14], bossR: [12],
+  '1-5': { name: '초원 끝 언덕', world: 1, idx: 5, bg: 'assets/story/w1_1-5.webp?v=1', skyCut: true, skyPoly: [[0, 0], [251, 0], [250, 60], [209, 76], [209, 92], [204, 104], [197, 108], [197, 120], [191, 128], [147, 132], [146, 140], [138, 144], [137, 156], [126, 164], [122, 176], [40, 184], [38, 220], [18, 228], [15, 244], [0, 246]], lives: 20, rounds: 12, req: [10, 14], bossR: [12],
     paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 145], [879, 145], [839, 156], [806, 194], [807, 237], [808, 281], [800, 320], [760, 359], [690, 368], [642, 367], [590, 358], [564, 330], [560, 270], [560, 196], [580, 164], [610, 151], [658, 150], [692, 163], [710, 202], [694, 237], [647, 256], [618, 256], [565, 256], [533, 254], [467, 241], [437, 221], [381, 220], [340, 251], [321, 322], [281, 370], [254, 384], [211, 396], [165, 398]] }],
     forks: [], cover: [], sky: [],
     noBuild: [
@@ -20411,7 +20452,8 @@ function storyGravity(b) { // 목성 중력 = 같은 길, 보스 앞뒤 GRAV_S �
 // ---- M4 맵 그림 (10-19) — bg = GPT 그림 1880×1000 webp. 스테이지에 들어갈 때만 받는다(첫 화면·챌린지 다운로드 0) · 한 장만 쥠 · 받는 중·실패 = 낮 배경 + 코드 흙길 ----
 let storyBg = null; // { src, img, bake, failed, q } — 마지막으로 들어간 그림 맵 하나 (다시하기·같은 맵 재진입은 그대로 씀)
 function storyBgLoad(map) { // storyApply에서 — 같은 그림이면 그대로, 다른 그림이면 바꿔 받음 (옛 것은 놓아 줌)
-  if (!map.bg || (storyBg && storyBg.src === map.bg && !storyBg.failed)) return;
+  if (!map.bg) { storyBg = null; return; } // 10-19 M2 (41 크로스체크 P2-2): 그림 없는 맵(시험 길)에 들어가도 앞 맵 그림을 놓아 줌
+  if (storyBg && storyBg.src === map.bg && !storyBg.failed) return;
   const b = storyBg = { src: map.bg, img: null, bake: null, failed: false, q: false }, im = new Image();
   im.onload = () => { if (storyBg !== b) return; b.img = im; needRedraw = true; storyBgQueue(b); };
   im.onerror = () => { if (storyBg === b) b.failed = true; }; // 실패 = 이 판은 대체 바탕 (다시 들어오면 다시 받음)
@@ -20552,13 +20594,14 @@ function storyApply(map) { // 건물 좌표 덮기 (const 객체라 속성 대�
   PORTAL.x = b.portal[0]; PORTAL.y = b.portal[1]; PORTAL_OUT.x = PORTAL.x + 58; PORTAL_OUT.y = PORTAL.y + 18;
   ALTAR.x = b.altar[0]; ALTAR.y = b.altar[1]; ALTAR_OUT.x = ALTAR.x + 62; ALTAR_OUT.y = ALTAR.y - 40;
   storyApplied = true; storyBakesReset(); document.body.classList.add('storyMode'); document.body.classList.toggle('storyNoMine', !b.mine);
+  document.body.classList.toggle('storyW1', map.world === 1); // 10-19 M2: 월드 1 = 자금 운영 단추 숨김 (20 §2-3·§10-6 경제 단계 — 광부·칩은 월드 2부터)
   storyBgLoad(map); // M4 맵 그림 — 여기서만 받는다 (10-19)
 }
 function storyLeave() { // 'dpd:resetui' (resetTransientUI 끝 — 새 S를 만들기 전) — 나가기·다시하기·새 판·튜토리얼·멀티·맵 미리보기 전부 reset()을 지난다
   if (!storyApplied) return; // 챌린지 경로는 여기서 끝 (베이크를 건드리지 않는다)
   Object.assign(HOUSE, STORY_BLD0.house); Object.assign(PORTAL, STORY_BLD0.portal); Object.assign(PORTAL_OUT, STORY_BLD0.portalOut);
   Object.assign(ALTAR, STORY_BLD0.altar); Object.assign(ALTAR_OUT, STORY_BLD0.altarOut);
-  storyApplied = false; storyBakesReset(); document.body.classList.remove('storyMode', 'storyNoMine');
+  storyApplied = false; storyBakesReset(); document.body.classList.remove('storyMode', 'storyNoMine', 'storyW1');
   if (storyBg) setTimeout(() => { if (!S.story) storyBg = null; }, 0); // 맵 그림 놓아 주기 (10-19) — 다시하기·다음 스테이지는 같은 호출 안에서 S.story가 다시 서므로 그대로
 }
 function storyBakesReset() { bldgLayers.clear(); sbWorldBake = null; storyRoadBake = null; } // 성·광부 길('mroad|g' 폭 = 광산 − HOUSE.x)·초원 꽃(제단·포털 회피)·대체 지면 베이크 — 다음 프레임에 다시 굽는다
@@ -20580,6 +20623,379 @@ document.getElementById('overlay').addEventListener('click', e => {
   e.stopPropagation(); e.preventDefault();
   if (oc.includes('reset')) storyStart(S.story.id, true); else storyExit(false);
 }, true);
+// ==================== 📖 스토리 M2 — 대기석 · 끌어 놓기(고정) · [출발!] · 눌러 합치기 · 포털에 넣기 · 아이템 누르면 사용 (10-19, 설계 = 스토리_2026-10-14\50_M2_구현설계.md) ====================
+// 판 상태 = S.story.m2 (storyM2()가 처음 쓸 때 만든다 — storyNewState·storyStart는 그대로) · 챌린지·튜토리얼·멀티는 S.story가 없어 이 블록을 안 탄다
+//   대기석 유닛 = S.units 밖(m2.tray) → 싸움·이동·충돌·딜 순위·스킬 바에 안 잡힘. 소환·합성·뽑기·히든·투석기·복사권 등 S.units에 새로 생긴 유닛은
+//   storyTraySweep 한 곳이 대기석으로 옮긴다 (update 처음·포털/제단 판정 뒤·draw 처음·소환 끝)
+//   맵에 놓은 유닛·포털에 넣은 유닛·제단에 올린 유닛 = WeakSet — copyUnit(Object.assign) 사본이 '놓임'을 물려받지 않게 (사본은 대기석으로)
+const STORY_M2 = {
+  TRAY: [620, 0, 940, 70], N: 8, SLOT: 38, // 대기석 띠 = STORY_UI.tray (10-15 유저 확정) · 칸 8 × 38 — 넘치면 넘겨 보기(◀·▶ 칸)
+  GO: [504, 6, 614, 62],         // [출발!] 자리 = 장 시계 자리(스토리에선 숨김 — 원형 시계와 대기석 사이) · CSS #storyGo 퍼센트와 같은 값
+  GO_BAN: [500, 0, 620, 72],     // [출발!] 둘레 놓기 금지 (폰은 단추가 높이 40px로 커져 y 72까지)
+  ROAD_VIS: 1.3,   // 보이는 길 반폭 = 데이터 w/2 × 1.3 (10-15·16 유저 — 그림 속 흙길이 데이터 34보다 넓다) · 맵 필드 roadVis로 맵마다 바꿀 수 있음
+  BODY: 11, EDGE: 12, EDGE_B: 22, SEP: 20, DOOR_R: 30, // 유닛 몸 · 화면 가장자리 (아래는 발이 안 잘리게 22) · 다른 유닛 간격(= MINSEP) · 입구 포탈 반지름(enemyPortalFx)
+  LIFT: 44,        // 손가락으로 끌 때 놓일 자리 = 손가락 위 44 (손가락에 안 가리게 — 마우스는 커서 자리)
+  K: 0.95,         // 대기석 칸 유닛 그림 배율 (맵 위와 거의 같은 크기)
+  FLY: 380,        // 대기석으로 날아드는 빛 (ms)
+};
+function storyM2() { const st = S.story; return st.m2 || (st.m2 = { tray: [], page: 0, prep: false, sel: null, pick: null, hint: false, placed: new WeakSet(), portal: new WeakSet(), altar: new WeakSet(), fx: [] }); }
+function storyOnMap(u) { const m = S.story.m2; return !!m && (m.placed.has(u) || m.portal.has(u) || m.altar.has(u)); }
+function storyParked(u) { const m = S.story.m2; return !!m && (m.portal.has(u) || m.altar.has(u)); } // 포털·제단에 넣어 둔 유닛 — 싸우지 않음·스킬 없음 (스토리만)
+// ---- 대기석 ----
+function storyTraySweep() { // S.units에 새로 생긴(놓이지 않은) 유닛 → 대기석 (분신·광부 제외) — 반환 = 옮긴 수
+  if (!S || !S.story) return 0;
+  let n = 0, sel = false;
+  for (let i = 0; i < S.units.length; i++) {
+    const u = S.units[i];
+    if (u.clone || u.miner || storyOnMap(u)) continue;
+    S.units.splice(i--, 1); if (u.selected) sel = true;
+    storyTrayAdd(u); n++;
+  }
+  if (sel) updateInfoPanel(); // 합성·히든 영웅은 selected로 태어난다 → 정보창 닫힘
+  return n;
+}
+function storyTrayAdd(u, noFx) {
+  const m = storyM2();
+  if (!noFx) m.fx.push({ x0: u.x, y0: u.y, u, t0: performance.now() });
+  u.selected = false; u.grabbed = false; u.moving = false; u.forceTarget = null; u.amove = false; u.attackMine = false; u.fusable = false; u.dropT = 0;
+  u.skillT = 0; u.inPen = false; u.assassinTgt = null; u.altarIntent = false; delete u.fuseHold; // 복사본이 이어받은 스킬·포털 상태 정리
+  if (!m.tray.includes(u)) m.tray.push(u);
+}
+function storyTrayPages() { // 넘겨 보기 쪽 [시작, 끝) — 첫 쪽 8칸(넘치면 7 + ▶) · 다음 쪽부터 ◀ + 6 + ▶ · 끝 쪽 ◀ + 7
+  const n = storyM2().tray.length, N = STORY_M2.N, pages = []; let s = 0;
+  for (;;) { const cap = pages.length ? N - 1 : N; if (n - s <= cap) { pages.push([s, n]); break; } pages.push([s, s + cap - 1]); s += cap - 1; }
+  return pages;
+}
+function storyTrayCells() { // 보이는 칸 [{ k, u } | { k, prev } | { k, next }]
+  const m = storyM2(), pages = storyTrayPages(), out = [];
+  m.page = Math.max(0, Math.min(m.page, pages.length - 1));
+  const [s, e] = pages[m.page]; let k = 0;
+  if (m.page > 0) out.push({ k: k++, prev: true });
+  for (let i = s; i < e; i++) out.push({ k: k++, u: m.tray[i] });
+  if (m.page < pages.length - 1) out.push({ k: STORY_M2.N - 1, next: true });
+  return out;
+}
+function storyCellRect(k) { const T = STORY_M2.TRAY, x0 = T[0] + (T[2] - T[0] - STORY_M2.N * STORY_M2.SLOT) / 2 + k * STORY_M2.SLOT; return [x0, T[1] + 4, x0 + STORY_M2.SLOT, T[3] - 4]; }
+function storyTrayHit(x, y) { // 대기석 띠를 눌렀나 — 칸 / 띠 안 빈 곳 = { k: -1 } (누름은 먹지만 아무 일 없음) / 밖 = null
+  const T = STORY_M2.TRAY; if (!S.story || x < T[0] || x > T[2] || y < T[1] || y > T[3]) return null;
+  for (const c of storyTrayCells()) { const r = storyCellRect(c.k); if (x >= r[0] && x < r[2]) return c; }
+  return { k: -1 };
+}
+function storyTrayCellOf(u) { return storyTrayCells().find(c => c.u === u) || null; }
+function storyTrayTarget(u) { // 대기석에서 이 유닛이 보이는 자리 (안 보이는 쪽이면 ▶ 칸·띠 가운데)
+  const c = storyTrayCellOf(u) || storyTrayCells().find(c => c.next), r = c ? storyCellRect(c.k) : null;
+  return r ? { x: (r[0] + r[2]) / 2, y: (r[1] + r[3]) / 2 } : { x: (STORY_M2.TRAY[0] + STORY_M2.TRAY[2]) / 2, y: 35 };
+}
+function storyTrayPt() { // 소환 자리 = 다음 빈 칸 바로 밑 — spawnUnit의 이름 글자(addFloat)가 대기석 밑에 뜨게 (유닛은 곧 storyTraySweep이 대기석으로)
+  const m = storyM2(), n = m.tray.length + S.units.filter(u => !u.clone && !u.miner && !storyOnMap(u)).length, r = storyCellRect(Math.min(STORY_M2.N - 1, n));
+  return { x: (r[0] + r[2]) / 2, y: STORY_M2.TRAY[3] + 26 };
+}
+// ---- 놓을 수 있는 곳 (설계 §4 — 순수 판정: 하네스가 10px 격자로 훑어 '놓을 수 있는 칸 %') ----
+function storyPtInPoly(x, y, P) { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const xi = P[i][0], yi = P[i][1], xj = P[j][0], yj = P[j][1]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; }
+function storySkyEdgeNear(x, y) { // 하늘 다각형의 '절벽 선'(화면 가장자리 x=0·y=0 위 변은 뺌)에서 가장 가까운 점 { x, y, d }
+  const P = S.story.map.skyPoly; let best = null;
+  for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; if ((a[0] === 0 && b[0] === 0) || (a[1] === 0 && b[1] === 0)) continue;
+    const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / l2)) : 0, px = a[0] + dx * t, py = a[1] + dy * t, d = Math.hypot(x - px, y - py);
+    if (!best || d < best.d) best = { x: px, y: py, d }; }
+  return best;
+}
+function storySkyOut(x, y) { // 하늘 다각형 안 점 → 절벽 선 바로 바깥 (blockSky·clampTargetPos 스토리판)
+  const e = storySkyEdgeNear(x, y); if (!e) return { x, y };
+  let ux = e.x - x, uy = e.y - y, l = Math.hypot(ux, uy); if (l < 1e-6) { ux = 0.6; uy = 0.8; l = 1; }
+  return { x: e.x + ux / l * 1.5, y: e.y + uy / l * 1.5 };
+}
+function storySkyBan(x, y, pad) { // 하늘(그림 맵 = skyPoly, 아니면 SKY_CUT 타원) + 몸
+  const M = S.story.map; if (!M.skyCut) return false;
+  if (M.skyPoly) { if (storyPtInPoly(x, y, M.skyPoly)) return true; const e = storySkyEdgeNear(x, y); return !!e && e.d < pad; }
+  const nx = x / (SKY_CUT.rx + pad), ny = y / (SKY_CUT.ry + pad); return nx * nx + ny * ny < 1;
+}
+function storyBldPad(x, y, p) { // 건물 자리(storyObjAt과 같은 크기) + 몸 → 건물 이름 / null
+  if (Math.abs(x - ALTAR.x) <= ALTAR.w / 2 + p && Math.abs(y - ALTAR.y) <= ALTAR.h / 2 + p) return 'altar';
+  if (Math.hypot(x - PORTAL.x, y - PORTAL.y) < PORTAL.r + 12 + p) return 'portal';
+  if (storyHas('room') && Math.abs(x - ROOM.cx) <= ROOM.w / 2 + p && Math.abs(y - ROOM.cy) <= ROOM.h / 2 + p) return 'room';
+  if (Math.abs(x - HOUSE.x) < 48 + p && Math.abs(y - HOUSE.y + 8) < 52 + p) return 'castle';
+  if (storyHas('mine') && Math.abs(x - MINE_POS.x) < 52 + p && Math.abs(y - MINE_POS.y) < 55 + p) return 'mine';
+  return null;
+}
+function storyPlaceWhy(x, y, u) { // 못 놓는 이유 ('' = 놓을 수 있음) — edge·ui·sky·road·door·rock/water·bld·unit
+  const C = STORY_M2, b = C.BODY, st = S.story, M = st.map;
+  if (x < C.EDGE || x > VW - C.EDGE || y < C.EDGE || y > VH - C.EDGE_B) return 'edge';
+  for (const r of [C.TRAY, ...STORY_UI.hard, C.GO_BAN]) if (x > r[0] - b && x < r[2] + b && y > r[1] - b && y < r[3] + b) return 'ui'; // 대기석 띠 · 늘 누르는 UI(원형 시계·자금 운영 자리) · [출발!]
+  if (storySkyBan(x, y, b)) return 'sky';
+  const vk = M.roadVis || C.ROAD_VIS;
+  for (const P of st.P) { const lim = P.w / 2 * vk + b, l2 = lim * lim; for (let i = 0; i < P.n; i++) { const dx = P.x[i] - x, dy = P.y[i] - y; if (dx * dx + dy * dy < l2) return 'road'; } } // 그림 속 보이는 길 폭 + 몸
+  for (const di of st.doors) { const P = st.P[di]; if (Math.hypot(P.x[0] - x, P.y[0] - y) < C.DOOR_R + b) return 'door'; }
+  for (const nb of M.noBuild) {
+    const k = nb.kind || 'noBuild';
+    if (nb.circle && Math.hypot(x - nb.circle[0], y - nb.circle[1]) < nb.circle[2] + b) return k;
+    if (nb.band) { const p = nb.band.pts; for (let i = 1; i < p.length; i++) if (storySegDist(x, y, p[i - 1], p[i]) < nb.band.w / 2 + b) return k; }
+    if (nb.poly) { if (storyPtInPoly(x, y, nb.poly)) return k; for (let i = 0; i < nb.poly.length; i++) if (storySegDist(x, y, nb.poly[i], nb.poly[(i + 1) % nb.poly.length]) < b) return k; }
+  }
+  if (storyBldPad(x, y, b)) return 'bld';
+  for (const v of S.units) { if (v === u || v.clone) continue; const hx = v.skillT > 0 && v.homeX != null ? v.homeX : v.x, hy = v.skillT > 0 && v.homeY != null ? v.homeY : v.y; if (Math.hypot(hx - x, hy - y) < C.SEP) return 'unit'; } // 암살·분신 중이면 돌아올 제자리 기준
+  return '';
+}
+function storyCanPlace(x, y, u) { return !storyPlaceWhy(x, y, u); }
+// ---- 끌어 놓기 결과 ----
+function storyDropAt(x, y, u) { // 손을 떼면 무엇이 되나 — { kind: 'place'|'portal'|'altar'|'tray'|null, ok, why }
+  const T = STORY_M2.TRAY;
+  if (x >= T[0] && x <= T[2] && y >= T[1] && y <= T[3]) return { kind: 'tray', ok: true, why: '' }; // 대기석 위 = 그대로 (빨강 아님)
+  const o = storyObjAt(x, y);
+  if (o === 'portal') return { kind: 'portal', ok: storyPortalOk(u), why: '' };
+  if (o === 'altar') return { kind: 'altar', ok: storyAltarOk(u), why: '' };
+  if (u.item) return { kind: null, ok: false, why: 'item' }; // 아이템은 맵에 못 놓음 (누르면 사용 · 제단에 끌어도 사용)
+  const why = storyPlaceWhy(x, y, u);
+  return { kind: why ? null : 'place', ok: !why, why };
+}
+function storyDrop(u, x, y) { // 놓기 — 못 놓는 곳·대기석 위 = 대기석으로 돌아감 (아무 일 없음) · 반환 = 무엇이 됐나
+  const t = storyDropAt(x, y, u);
+  if (!t.ok || !t.kind || t.kind === 'tray') return null;
+  if (t.kind === 'portal') storyPortalIn(u);
+  else if (t.kind === 'altar') storyAltarIn(u);
+  else storyPlaceAt(u, x, y);
+  return t.kind;
+}
+function storyTrayTake(u) { const m = storyM2(), i = m.tray.indexOf(u); if (i >= 0) m.tray.splice(i, 1); if (m.sel === u) m.sel = null; }
+function storyPlaceAt(u, x, y, quiet) { // 맵에 놓기 = 그 스테이지 끝까지 고정 (다시 집기·이동·판매 없음) — 끌어 놓기·하네스 공용 (판정은 부르는 쪽: storyCanPlace)
+  const m = storyM2(); storyTrayTake(u);
+  if (!S.units.includes(u)) S.units.push(u);
+  m.placed.add(u);
+  u.x = u.tx = x; u.y = u.ty = y; u.moving = false; u.grabbed = false; u.selected = false; u.cool = 0; u.forceTarget = null; u.amove = false;
+  if (quiet) return u;
+  u.dropT = 0.3;
+  for (let k = 0; k < 5; k++) { const a2 = Math.random() * 6.28, v = 30 + Math.random() * 50; S.parts.push({ x, y: y + 12, vx: Math.cos(a2) * v, vy: -Math.abs(Math.sin(a2)) * v * 0.5, t: 0.3, r: 1.5 + Math.random() * 1.5, c: '#c8b48a' }); } // 착지 흙먼지 (dropGrab과 같은 그림)
+  sfx('thud');
+  return u;
+}
+function storyPortalOk(u) { return !u.item && !!fuseKey(u); } // 포털이 받나 = 챌린지 포털 재료 규칙(fuseKey) — 슈퍼·히든·아이템·광부·분신은 안 받음 (넣으면 영영 못 꺼내니)
+function storyPortalIn(u) { // 포털에 넣기 = 고정 (못 꺼냄 · 싸우지 않음) — 히든 레시피가 다 모이면 updatePortal이 히든을 만들고, 히든은 대기석으로
+  const m = storyM2(); storyTrayTake(u);
+  const n = S.units.filter(v => m.portal.has(v)).length, ring = (n >> 3) & 1, a = (n % 8) * Math.PI / 4 + (ring ? Math.PI / 8 : 0), r = ring ? 40 : 24;
+  u.x = u.tx = PORTAL.x + Math.cos(a) * r; u.y = u.ty = PORTAL.y + Math.sin(a) * r * 0.7; // 포털 둘레에 작게 모임 (수집 반경 안)
+  u.moving = false; u.grabbed = false; u.selected = false; u.cool = 0; u.forceTarget = null;
+  m.portal.add(u); S.units.push(u);
+  S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 26, t: 0.3 }); sfx('pick');
+}
+function storyAscendFits(v, nd) { return !v.miner && !v.item && !v.clone && !isHiddenCombo(v) && (nd.hero ? (v.hero && !v.super && !v.ace && (nd.tier == null || v.tier === nd.tier)) : (v.tier === nd.tier && !v.hero && !v.hidden)); } // ascendPool과 같은 제물 조건 (제단 자리만 뺌)
+function storyAltarOk(u) { // 제단이 받나: 아이템(= 사용) · 하이카드(투석기가 아직 없으면 제물) · 맵에 놓인 히든 영웅의 다음 승급 제물
+  if (u.item) return true;
+  if (S.tutMode) return false;
+  const m = storyM2(), cat = S.units.some(v => v.catapult) || m.tray.some(v => v.catapult);
+  if (u.tier === 0 && !u.hero && !u.hidden && !isHiddenCombo(u) && !cat) return true;
+  for (const h of S.units) { const k = ascendKey(h); if (!k || (h.ascend || 0) >= 2 || !m.placed.has(h)) continue; if (ASCEND_DEFS[k][h.ascend || 0].needs.some(nd => storyAscendFits(u, nd))) return true; }
+  return false;
+}
+function storyAltarIn(u) { // 제단에 올리기 — 하이카드 제물은 곧바로(updateAltar) · 승급 제물은 승급 단추가 쓸 때까지 제단 위에서 기다림 (못 꺼냄 · 싸우지 않음)
+  if (u.item) { storyUseItem(u); return; }
+  const m = storyM2(); storyTrayTake(u);
+  const n = S.units.filter(v => m.altar.has(v)).length;
+  u.x = u.tx = ALTAR.x + ((n % 3) - 1) * 16; u.y = u.ty = ALTAR.y + ((((n / 3) | 0) % 3) - 1) * 18; // 제단 위 (onAltar 안)
+  u.moving = false; u.grabbed = false; u.selected = false; u.cool = 0; u.forceTarget = null;
+  m.altar.add(u); S.units.push(u);
+  sfx('pick');
+  updateAltar();
+  updateInfoPanel();
+}
+function storyUseItem(u) { // 대기석 아이템 = 누르면 사용 (스토리 예외 — 챌린지는 제물대로 옮겨야 함) · 발동 표는 updateAltar 그대로 (제단 자리에 올려 바로 판정)
+  const m = storyM2(); storyTrayTake(u);
+  u.x = u.tx = ALTAR.x; u.y = u.ty = ALTAR.y; u.moving = false; u.grabbed = false; u.altarIntent = true;
+  S.units.push(u); m.altar.add(u); // 스윕에 안 쓸려 가게 — 곧바로 updateAltar가 소모 (뽑기 결과·왕관 회수 등은 S.units로 와서 스윕이 대기석으로)
+  updateAltar();
+  const i = S.units.indexOf(u); if (i >= 0) { S.units.splice(i, 1); m.altar.delete(u); storyTrayAdd(u, true); } // 안전망: 소모 안 됐으면 그대로 대기석
+  updateInfoPanel();
+}
+// ---- 눌러 합치기 (설계 §5) — 유닛 누름 → [합치기] → 반짝이는 같은 유닛 2마리 더 누름 → 영웅·슈퍼는 대기석으로 ----
+function storyFuseCands(key) { const m = storyM2(); return S.units.filter(v => m.placed.has(v) && fuseKey(v) === key).concat(m.tray.filter(v => fuseKey(v) === key)); } // 재료 = 맵에 놓인 것 + 대기석 (포털·제단·분신·아이템·히든·슈퍼는 아님)
+function storyCanFuse(u) { const k = fuseKey(u); if (!k) return false; const c = storyFuseCands(k); return c.includes(u) && c.length >= FUSE_N; }
+function storyPickStart(u) { if (!storyCanFuse(u)) return; storyM2().pick = { key: fuseKey(u), list: [u] }; sfx('pick'); updateInfoPanel(); }
+function storyPickCancel() { const m = S && S.story && S.story.m2; if (m && m.pick) { m.pick = null; updateInfoPanel(); } }
+function storyPickTap(v) { // 고르는 중 누른 유닛 — 반짝이는(같은 키) 유닛이면 고름 → FUSE_N번째에 합성 (true) · 아니면 false (부르는 쪽이 취소하고 원래 누름으로)
+  const p = storyM2().pick; if (!p) return false;
+  if (p.list.includes(v)) return true; // 이미 고른 유닛 = 그대로
+  if (fuseKey(v) !== p.key || !storyFuseCands(p.key).includes(v)) return false;
+  p.list.push(v); sfx('pick');
+  if (p.list.length >= FUSE_N) storyFuse(p.list); else updateInfoPanel();
+  return true;
+}
+function storyFuse(list) { // 합성 식 = 챌린지 포털 합성과 같은 함수 fuseGroup (에이스·슈퍼에이스·카드 가중 평균·로그·업적) — '재료를 고른다'만 다름
+  const m = storyM2(), key = fuseKey(list[0]), cands = storyFuseCands(key);
+  m.pick = null; m.sel = null;
+  if (list.length !== FUSE_N || !list.every(v => cands.includes(v))) { updateInfoPanel(); return null; }
+  const from = list.map(v => ({ x: v.x, y: v.y - 8 })); // 빛이 출발하는 자리 (맵 자리 · 대기석 칸)
+  m.tray = m.tray.filter(v => !list.includes(v)); // 대기석 재료 (맵 재료는 fuseGroup이 S.units에서 뺌 — 자리는 빈 땅)
+  const e0 = S.effects.length, p0 = S.parts.length, f0 = S.floats.length;
+  fuseGroup(list);
+  S.effects.length = e0; S.parts.length = p0; // 포털 자리 폭발·파편은 빼고 (눌러 합치기는 포털 밖에서)
+  const born = S.units[S.units.length - 1];
+  storyTraySweep(); // 영웅·슈퍼 → 대기석
+  m.page = 1e9; // 새 영웅이 보이는 쪽(끝 쪽)으로
+  m.fx = m.fx.filter(f => f.u !== born);
+  const to = storyTrayTarget(born);
+  for (let i = f0; i < S.floats.length; i++) { S.floats[i].x = to.x; S.floats[i].y = STORY_M2.TRAY[3] + 22; } // '영웅 탄생!' 글자도 대기석 밑에
+  for (const p of from) m.fx.push({ x0: p.x, y0: p.y, u: born, t0: performance.now() });
+  updateInfoPanel();
+  return born;
+}
+// ---- 배치 준비 · [출발!] (설계 §1) — 소환 → 대기석 → 놓기 → [출발!](또는 포커 시계 끝) → 몹 출발 · S.phase는 'poker' 그대로 (m2.prep) ----
+function storyPrepStart() { // confirmHand 끝 (startWave 대신)
+  const m = storyM2(); m.prep = true;
+  storyTraySweep();
+  if (IS_MOBILE) setMobTab('battle'); else { pokerPeek = true; syncPokerPanel(); } // 대기석·맵·[출발!]이 보이게 (PC 포커판이 y 137~500을 덮는다)
+  renderPoker(); updateGoPoker();
+  if (!m.hint) { m.hint = true; logMsg('대기석 유닛을 끌어 맵에 놓고 <b>출발!</b>을 누르세요 — 한 번 놓은 자리는 스테이지 끝까지 그대로 (대기석 유닛은 전투 중에도 놓을 수 있어요)'); }
+}
+function storyDepart() { // [출발!] · 포커 시계 끝 (confirmHand 두 번째) — 배치 준비 끝 → startWave → storyStartWave (하네스도 이걸 부름)
+  if (!S || !S.story || S.phase !== 'poker') return false;
+  const m = storyM2(); if (!m.prep) return false;
+  m.prep = false; storyPickCancel();
+  startWave();
+  return true;
+}
+let storyGoEl = null; // #storyGo — 스토리 판에서 처음 필요할 때 만든다 (챌린지 DOM 무변경)
+function storyGoSync() { // updateGoPoker(20Hz)가 부름 — 배치 준비 동안만 보임
+  const on = !!(S && S.story && S.phase === 'poker' && !S.mapTest && S.story.m2 && S.story.m2.prep);
+  if (!storyGoEl) { if (!on) return; storyGoEl = document.createElement('button'); storyGoEl.type = 'button'; storyGoEl.id = 'storyGo'; storyGoEl.textContent = '출발!'; storyGoEl.title = '몹 출발 — 대기석 유닛은 전투 중에도 놓을 수 있어요'; storyGoEl.onclick = () => storyDepart(); document.getElementById('cvWrap').appendChild(storyGoEl); }
+  if (storyGoEl.classList.contains('show') !== on) storyGoEl.classList.toggle('show', on);
+}
+// ---- 정보창·선택 ----
+function storySel() { // 스토리 선택 = 맵에서 고른 유닛들 · 없으면 대기석에서 누른 한 마리
+  const s = S.units.filter(u => u.selected), m = S.story.m2;
+  if (!m) return s;
+  if (s.length) { m.sel = null; return s; }
+  if (m.sel && !m.tray.includes(m.sel)) m.sel = null;
+  return m.sel ? [m.sel] : [];
+}
+function storyDeselect() { const m = S.story.m2; if (m) { m.sel = null; m.pick = null; } }
+function storyInfoExtra(el, u) { // 정보창 덧붙임: [합치기] (같은 유닛이 맵+대기석에 FUSE_N 이상) · 대기석·포털·제단 유닛은 스킬 단추 없음 (싸우지 않는 자리)
+  const m = storyM2();
+  if (m.tray.includes(u) || storyParked(u)) el.querySelectorAll('#skillBtn,#chronoBtn,#jokerBtn,#slotSkillBtn').forEach(b => b.remove());
+  if (!storyCanFuse(u)) return;
+  const b = document.createElement('button'); b.type = 'button'; b.id = 'storyFuseBtn'; b.className = 'shopBtn ui-skill'; b.dataset.skill = 'fuse';
+  b.dataset.state = m.pick ? 'active' : 'ready'; b.disabled = !!m.pick;
+  b.textContent = m.pick ? '고르는 중… 반짝이는 같은 유닛을 누르세요' : '합치기';
+  b.onclick = () => storyPickStart(u);
+  el.insertBefore(b, el.querySelector('#deselBtn'));
+}
+function storyFusableHint() { // 주황 오라(합칠 수 있음) = 맵에 놓인 것 + 대기석의 같은 키 FUSE_N 이상 (updateFusableHint 뒤 덮어씀) · 포털·제단 유닛은 아님
+  const m = S.story.m2; if (!m) return;
+  const cnt = {}, add = u => { const k = fuseKey(u); if (k) cnt[k] = (cnt[k] || 0) + 1; };
+  for (const u of S.units) if (m.placed.has(u)) add(u);
+  for (const u of m.tray) add(u);
+  for (const u of S.units) { const k = m.placed.has(u) && fuseKey(u); u.fusable = !!k && cnt[k] >= FUSE_N; }
+  for (const u of m.tray) { const k = fuseKey(u); u.fusable = !!k && cnt[k] >= FUSE_N; }
+}
+function storySepFixed(a, b, dx, dy) { // 유닛 분리(MINSEP)에서 놓은·넣어 둔 유닛은 안 밀림 (설계 20 §2-1) — 둘 다 고정이면 그대로, 하나만이면 다른 쪽이 다 비킴 · true = 처리함
+  const fa = storyOnMap(a), fb = storyOnMap(b);
+  if (!fa && !fb) return false;
+  if (fa && fb) return true;
+  let d = Math.hypot(dx, dy); if (d < 0.01) { dx = 0.6; dy = 0.8; d = 1; }
+  const push = STORY_M2.SEP - d, nx = dx / d, ny = dy / d;
+  if (fa) { b.x += nx * push; b.y += ny * push; } else { a.x -= nx * push; a.y -= ny * push; }
+  return true;
+}
+// ---- 입력 (pressStart·pressMove·pressEnd 안에서 — PC 마우스·폰 터치 같은 길) ----
+function storyPress(dr, x, y) { // 대기석 띠를 눌렀나 · 고르는 중이면 롱프레스(어택땅)를 안 건다
+  const c = storyTrayHit(x, y);
+  if (c) dr.tray = { c, u: c.u || null, go: false, px: x, py: y, tgt: null };
+  if (storyM2().pick) dr.pickTap = true;
+}
+function storyDragMove(dr, x, y) { // 대기석 유닛을 끌기 시작·계속 — 놓일 자리 = 마우스 자리 / 손가락 위 LIFT
+  const g = dr.tray; if (!g || !g.u) return;
+  if (!g.go) { if (!dr.moved) return; g.go = true; storyPickCancel(); storyM2().sel = null; g.u.grabbed = true; sfx('pick'); updateInfoPanel(); }
+  const lift = dr.tid != null ? STORY_M2.LIFT * Math.max(0, Math.min(1, (VH - y) / 60)) : 0; // 손가락: 화면 아래 60px에선 띄움을 줄여 맨 아래 땅에도 닿게
+  g.px = Math.max(0, Math.min(VW, x)); g.py = Math.max(0, Math.min(VH, y - lift));
+  g.tgt = storyDropAt(g.px, g.py, g.u);
+}
+function storyRelease(dr) { // pressEnd 맨 앞 — 처리했으면 true (대기석 누름·끌어 놓기·고르는 중 누름)
+  const m = storyM2(), g = dr.tray;
+  if (g) {
+    if (g.go) { g.u.grabbed = false; if (m.tray.includes(g.u)) storyDrop(g.u, g.px, g.py); return true; } // 못 놓는 곳 = 대기석으로 돌아감 (아무 일 없음)
+    if (!dr.moved && g.c) storyTrayTap(g.c);
+    return true; // 띠 안에서 시작한 끌기(빈 칸·화살표) = 아무 일 없음
+  }
+  if (m.pick) { const v = !dr.moved ? unitAt(dr.x0, dr.y0) : null; if (v && storyPickTap(v)) return true; storyPickCancel(); } // 고르는 중: 반짝이는 유닛 = 고름 · 다른 유닛·빈 땅 = 취소 (그 누름은 아래 원래 처리로)
+  m.sel = null; // 맵을 누르면 대기석 선택은 풀림 (맵 선택은 원래 처리)
+  return false;
+}
+function storyTrayTap(c) { // 대기석 칸 누름 — ◀▶ = 넘겨 보기 · 아이템 = 사용 · 유닛 = 선택(정보창) · 고르는 중이면 고르기
+  const m = storyM2();
+  if (c.prev || c.next) { m.page += c.prev ? -1 : 1; sfx('pick'); return; }
+  const u = c.u; if (!u) return;
+  if (m.pick) { if (storyPickTap(u)) return; storyPickCancel(); }
+  if (u.item) { storyUseItem(u); return; }
+  S.units.forEach(v => v.selected = false); m.sel = u; hideObjInfo();
+}
+window.addEventListener('keydown', e => { if (e.key === 'Escape' && S && S.story && S.story.m2 && S.story.m2.pick) storyPickCancel(); }); // Esc = 합치기 고르기 취소
+// ---- 그리기 (draw 끝 — 화면 UI라 모든 것 위) ----
+function storyDrawMini(u, cx, cy, k) { ctx.save(); ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-cx, -cy); drawUnit(u, 0); ctx.restore(); } // 게임 그림 함수(drawUnit)를 줄여서
+function storyDrawParked(u) { storyDrawMini(u, u.x, u.y, 0.7); } // 포털·제단에 넣어 둔 유닛 = 작게
+function storyDrawRoadInRange(x, y, R) { // 끄는 동안 사거리 안에 드는 길 구간을 밝게 (숫자 없이)
+  const r2 = R * R, vk = S.story.map.roadVis || STORY_M2.ROAD_VIS;
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const P of S.story.P) {
+    ctx.beginPath(); let on = false;
+    for (let i = 0; i < P.n; i++) { const dx = P.x[i] - x, dy = P.y[i] - y; if (dx * dx + dy * dy <= r2) { if (on) ctx.lineTo(P.x[i], P.y[i]); else { ctx.moveTo(P.x[i], P.y[i]); on = true; } } else on = false; }
+    ctx.strokeStyle = 'rgba(255,236,140,0.42)'; ctx.lineWidth = P.w * vk; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; ctx.setLineDash([6, 7]); ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+function storyBadge(x, y, n) { ctx.fillStyle = '#ffd54f'; ctx.strokeStyle = '#6d4c00'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 7, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#4e3500'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(String(n), x, y + 3.5); ctx.textAlign = 'left'; } // 합치기 ①② 표시
+function storyDrawUI() {
+  const m = S.story.m2; if (!m) return;
+  const now = performance.now(), T = STORY_M2.TRAY, g = drag && drag.tray && drag.tray.go ? drag.tray : null, pick = m.pick, pul = 0.5 + 0.5 * Math.sin(S.time * 7 + now * 0.004);
+  const cand = pick ? storyFuseCands(pick.key) : null;
+  ctx.save();
+  if (cand) for (const u of cand) { if (!S.units.includes(u)) continue; // 합치기 고르는 중: 맵 위 같은 유닛 반짝 · 고른 유닛 ①②
+    const i = pick.list.indexOf(u); ctx.strokeStyle = i >= 0 ? '#ffd54f' : `rgba(255,213,79,${(0.35 + 0.55 * pul).toFixed(2)})`; ctx.lineWidth = i >= 0 ? 3 : 2.5;
+    ctx.beginPath(); ctx.arc(u.x, u.y, 21 + (i >= 0 ? 0 : 2 * pul), 0, 6.283); ctx.stroke(); if (i >= 0) storyBadge(u.x + 15, u.y - 25, i + 1); }
+  // 대기석 띠 (그림의 덤불·바위 자리 위 — 유닛이 묻히지 않게 반투명 남색 판)
+  ctx.fillStyle = 'rgba(26,20,48,0.66)'; roundRect(T[0] + 2, T[1] + 1, T[2] - T[0] - 4, T[3] - T[1] - 2, 12); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,236,190,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+  for (let k = 0; k < STORY_M2.N; k++) { const r = storyCellRect(k); ctx.fillStyle = 'rgba(255,250,236,0.13)'; roundRect(r[0] + 2, r[1] + 2, r[2] - r[0] - 4, r[3] - r[1] - 4, 7); ctx.fill(); ctx.strokeStyle = 'rgba(255,250,236,0.22)'; ctx.lineWidth = 1; ctx.stroke(); }
+  for (const c of storyTrayCells()) {
+    const r = storyCellRect(c.k), cx = (r[0] + r[2]) / 2, cy = (r[1] + r[3]) / 2;
+    if (c.prev || c.next) { // 넘겨 보기 ◀ ▶ (숫자 없이)
+      const dir = c.prev ? -1 : 1, hot = c.next && m.fx.length > 0;
+      ctx.fillStyle = hot ? `rgba(255,236,150,${(0.6 + 0.4 * pul).toFixed(2)})` : 'rgba(255,250,236,0.9)'; ctx.strokeStyle = 'rgba(40,30,60,0.8)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(cx + dir * 8, cy); ctx.lineTo(cx - dir * 6, cy - 11); ctx.lineTo(cx - dir * 6, cy + 11); ctx.closePath(); ctx.fill(); ctx.stroke(); continue;
+    }
+    const u = c.u, ci = cand ? cand.indexOf(u) : -1, pi = pick ? pick.list.indexOf(u) : -1;
+    if (m.sel === u) { ctx.strokeStyle = '#8effa8'; ctx.lineWidth = 2.4; roundRect(r[0] + 2, r[1] + 2, r[2] - r[0] - 4, r[3] - r[1] - 4, 7); ctx.stroke(); }
+    if (ci >= 0) { ctx.strokeStyle = pi >= 0 ? '#ffd54f' : `rgba(255,213,79,${(0.35 + 0.6 * pul).toFixed(2)})`; ctx.lineWidth = 2.6; roundRect(r[0] + 1.5, r[1] + 1.5, r[2] - r[0] - 3, r[3] - r[1] - 3, 7); ctx.stroke(); }
+    if (g && g.u === u) continue; // 끄는 중인 유닛 = 칸은 비어 보임
+    u.x = u.tx = cx; u.y = u.ty = cy + 2; // 대기석 유닛 자리 = 칸 가운데 (그림·정보창 자리에만 쓰임 — 싸움·충돌엔 안 씀)
+    storyDrawMini(u, cx, cy + 2, STORY_M2.K);
+    if (u.hero) { ctx.fillStyle = u.super ? '#ff6b9d' : '#ffd54f'; storyStar(r[0] + 8, r[1] + 8, 4.2); } // 영웅·슈퍼 표시 (글자 없이)
+    else if (u.hidden || u.superAce) { ctx.fillStyle = '#e91e8c'; ctx.beginPath(); ctx.moveTo(r[0] + 8, r[1] + 3.5); ctx.lineTo(r[0] + 11.5, r[1] + 8); ctx.lineTo(r[0] + 8, r[1] + 12.5); ctx.lineTo(r[0] + 4.5, r[1] + 8); ctx.closePath(); ctx.fill(); } // 에이스 = 분홍 마름모
+    if (pi >= 0) storyBadge(r[2] - 8, r[1] + 9, pi + 1);
+  }
+  // 대기석으로 날아드는 빛 (소환·합성·뽑기·히든)
+  m.fx = m.fx.filter(f => { const p = (now - f.t0) / STORY_M2.FLY; if (p >= 1 || p < 0) return false;
+    const to = storyTrayTarget(f.u), mx = (f.x0 + to.x) / 2, my = Math.min(f.y0, to.y) - 40, q = 1 - p, x = q * q * f.x0 + 2 * q * p * mx + p * p * to.x, y = q * q * f.y0 + 2 * q * p * my + p * p * to.y;
+    ctx.fillStyle = `rgba(255,236,150,${(0.9 * (1 - p * 0.5)).toFixed(2)})`; ctx.beginPath(); ctx.arc(x, y, 5.5 - p * 2, 0, 6.283); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(x, y, 2.4, 0, 6.283); ctx.fill(); return true; });
+  if (g) storyDrawDrag(g);
+  ctx.restore();
+}
+function storyStar(x, y, r) { ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); }
+function storyDrawDrag(g) { // 끄는 중: 사거리 원 + 사거리 안 길 밝게 · 못 놓으면 빨강 · 포털·제단 위면 반짝 (받을 수 있을 때)
+  const u = g.u, x = g.px, y = g.py, t = g.tgt || storyDropAt(x, y, u), pul = 0.5 + 0.5 * Math.sin(performance.now() * 0.012);
+  if (t.kind === 'portal' || t.kind === 'altar') {
+    ctx.strokeStyle = t.ok ? `rgba(${t.kind === 'portal' ? '200,150,255' : '255,213,79'},${(0.55 + 0.45 * pul).toFixed(2)})` : 'rgba(255,82,82,0.9)'; ctx.lineWidth = 4;
+    if (t.kind === 'portal') { ctx.beginPath(); ctx.arc(PORTAL.x, PORTAL.y, PORTAL.r + 8 + 3 * pul, 0, 6.283); ctx.stroke(); }
+    else { roundRect(ALTAR.x - ALTAR.w / 2 - 6, ALTAR.y - ALTAR.h / 2 - 6, ALTAR.w + 12, ALTAR.h + 12, 10); ctx.stroke(); }
+  } else if (t.kind !== 'tray' && !u.item) {
+    const R = effRange(u);
+    storyDrawRoadInRange(x, y, R);
+    ctx.setLineDash([7, 5]); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(15,20,32,0.5)'; ctx.beginPath(); ctx.arc(x, y, R, 0, 6.283); ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = t.ok ? '#ffffff' : '#ff5252'; ctx.beginPath(); ctx.arc(x, y, R, 0, 6.283); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (!t.ok && t.kind !== 'tray') { ctx.fillStyle = 'rgba(255,60,60,0.38)'; ctx.beginPath(); ctx.ellipse(x, y + 12, 17, 8, 0, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#ff5252'; ctx.lineWidth = 2; ctx.stroke(); }
+  u.x = u.tx = x; u.y = u.ty = y; u.grabbed = true;
+  ctx.globalAlpha = t.ok ? 1 : 0.8; drawGrabbedUnit(u); ctx.globalAlpha = 1;
+  if (!t.ok && t.kind !== 'tray') { ctx.fillStyle = 'rgba(255,40,40,0.28)'; ctx.beginPath(); ctx.arc(x, y - 18, 17, 0, 6.283); ctx.fill(); } // 유닛도 빨갛게
+}
 function hideStartScreen() {
   document.getElementById('startOverlay').style.display = 'none';
   document.body.classList.remove('at-title');
