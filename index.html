@@ -15486,7 +15486,7 @@ function updateInfoPanel() {
     const airSel = sel.filter(airPriOk);
     const commonPri = sel.every(u => u.priority === sel[0].priority) ? (sel[0].priority || 'near') : (airSel.length && airSel.every(u => u.priority === 'air') ? 'air' : ''); // 공중(10-12 결정 2) = 대공 유닛 전원이 공중이면 눌림 표시(나머지 유닛은 기존 우선 그대로)
     // 🗡️ 풀하우스 라인 부대: 전원 쿨 준비됐을 때만 일제 발동 (1기라도 쿨타임이면 회색 비활성)
-    const skUnits = sel.filter(u => u.tier === 6 && !u.clone && !u.miner);
+    const skUnits = sel.filter(u => u.tier === 6 && !u.clone && !u.miner && !(S.story && storyParked(u))); // 📖 포털·제단에 넣어 둔 유닛은 빼기 (10-19 51 크로스체크 P2-1 — 이 줄·아래 onclick·refreshInfoPanelLive 셋 같게)
     const st6 = skillAllLabel(skUnits);
     const skHTML = skUnits.length === 0 ? '' :
       `<button type="button" id="skillAllBtn" class="shopBtn ui-skill" data-skill="fullhouse" ${skillAttrs(st6.state, !st6.allReady)}>${st6.label}</button>`;
@@ -15499,7 +15499,7 @@ function updateInfoPanel() {
     wireDesel(el);
     const gb = el.querySelector('#skillAllBtn');
     if (gb) gb.onclick = () => { // 클릭 시점의 선택을 재계산 (렌더 시점 캡처가 낡는 것 방지 — Opus)
-      S.units.filter(u => u.selected && u.tier === 6 && !u.clone && !u.miner).forEach(u => activateSkill(u));
+      S.units.filter(u => u.selected && u.tier === 6 && !u.clone && !u.miner && !(S.story && storyParked(u))).forEach(u => activateSkill(u));
       updateInfoPanel();
     };
     return;
@@ -15662,7 +15662,7 @@ function refreshInfoPanelLive() {
   }
   const gb = document.getElementById('skillAllBtn');
   if (gb && sel.length > 1) {
-    const st6 = skillAllLabel(sel.filter(u => u.tier === 6 && !u.clone && !u.miner));
+    const st6 = skillAllLabel(sel.filter(u => u.tier === 6 && !u.clone && !u.miner && !(S.story && storyParked(u))));
     if (gb.textContent !== st6.label) gb.textContent = st6.label;
     if (gb.disabled !== !st6.allReady) gb.disabled = !st6.allReady;
     setSkillState(gb, st6.state); // 글자색은 CSS가 data-state로 (예전 매 프레임 style.color 인라인 쓰기 제거)
@@ -20955,6 +20955,11 @@ function storyPickTap(v) { // 고르는 중 누른 유닛 — 반짝이는(같�
   if (p.list.length >= FUSE_N) storyFuse(p.list); else updateInfoPanel();
   return true;
 }
+function storyPickAt(x, y) { // 고르는 중 맵 누름 판정 — 반짝이는(같은 키·맵에 놓인) 유닛 가운데 HIT_R 안 가장 가까운 것 먼저 · 없으면 unitAt 그대로 (10-19 51 크로스체크 P1-1: 폰 HIT_R 40 > 놓기 간격 20이라 배열에서 먼저 나온 옆 유닛이 잡혀 취소되던 것) · 대기석 유닛은 x·y가 칸 자리라 안 봄
+  const m = storyM2(); let best = null, bd = HIT_R;
+  for (const v of S.units) { if (!m.placed.has(v) || fuseKey(v) !== m.pick.key) continue; const d = Math.hypot(v.x - x, v.y - y); if (d < bd) { bd = d; best = v; } }
+  return best || unitAt(x, y);
+}
 function storyFuse(list) { // 합성 식 = 챌린지 포털 합성과 같은 함수 fuseGroup (에이스·슈퍼에이스·카드 가중 평균·로그·업적) — '재료를 고른다'만 다름
   const m = storyM2(), key = fuseKey(list[0]), cands = storyFuseCands(key);
   m.pick = null; m.sel = null;
@@ -21052,16 +21057,17 @@ function storyRelease(dr) { // pressEnd 맨 앞 — 처리했으면 true (대기
     if (!dr.moved && g.c) storyTrayTap(g.c);
     return true; // 띠 안에서 시작한 끌기(빈 칸·화살표) = 아무 일 없음
   }
-  if (m.pick) { const v = !dr.moved ? unitAt(dr.x0, dr.y0) : null; if (v && storyPickTap(v)) return true; storyPickCancel(); } // 고르는 중: 반짝이는 유닛 = 고름 · 다른 유닛·빈 땅 = 취소 (그 누름은 아래 원래 처리로)
+  if (m.pick) { const v = !dr.moved ? storyPickAt(dr.x0, dr.y0) : null; if (v && storyPickTap(v)) return true; storyPickCancel(); } // 고르는 중: 반짝이는 유닛 = 고름 · 다른 유닛·빈 땅 = 취소 (그 누름은 아래 원래 처리로)
   m.sel = null; // 맵을 누르면 대기석 선택은 풀림 (맵 선택은 원래 처리)
   return false;
 }
 function storyTrayTap(c) { // 대기석 칸 누름 — ◀▶ = 넘겨 보기 · 아이템 = 사용 · 유닛 = 선택(정보창) · 고르는 중이면 고르기
   const m = storyM2();
   if (c.prev || c.next) { m.page += c.prev ? -1 : 1; sfx('pick'); return; }
+  if (m.useLock && m.useLock.k === c.k && performance.now() - m.useLock.t < 350) return; // 10-19 51 크로스체크 P2-2: 아이템을 쓴 칸을 350ms 안에 또 누름(더블탭·더블클릭) = 무시 — 칸이 당겨져 옆 아이템까지 쓰이던 것 · 실시간 (게임 시계는 정지·배속에 따라 달라서)
   const u = c.u; if (!u) return;
   if (m.pick) { if (storyPickTap(u)) return; storyPickCancel(); }
-  if (u.item) { storyUseItem(u); return; }
+  if (u.item) { m.useLock = { k: c.k, t: performance.now() }; storyUseItem(u); return; }
   S.units.forEach(v => v.selected = false); m.sel = u; hideObjInfo();
 }
 window.addEventListener('keydown', e => { if (e.key === 'Escape' && S && S.story && S.story.m2 && S.story.m2.pick) storyPickCancel(); }); // Esc = 합치기 고르기 취소
