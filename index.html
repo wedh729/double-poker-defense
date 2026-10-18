@@ -5568,7 +5568,7 @@ function fuseAskBusy() { // 다른 창·뽑기 연출 중엔 겹쳐 열지 않�
 }
 function fuseAskOpen(units, kind) {
   if (S.phase === 'gameover' || fuseAskBusy()) return;
-  const u = units[0], w = WEAPONS[u.tier], now = performance.now(), hid = kind === 'slot' || kind === 'chrono';
+  const u = units.find(v => v.keyLabel !== 'B') || units[0], w = WEAPONS[u.tier], now = performance.now(), hid = kind === 'slot' || kind === 'chrono'; // 이름 줄 대표 = 빽스트레이트가 아닌 유닛 (셋 다 빽이면 '빽스트레이트')
   fuseAsk = { units, kind, at: now, auto: S.multi ? now + FUSE_AUTO_MS : 0 };
   const m = document.getElementById('fuseModal'), hb = document.getElementById('fuseHid');
   m.querySelector('.dcTitle').textContent = `같은 유닛 ${units.length}마리`;
