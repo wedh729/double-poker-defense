@@ -3451,7 +3451,7 @@ body.mobile #storyRow {max-height:calc(100dvh - 12px - env(safe-area-inset-top,0
 body.mobile #overlay .soStar {width:36px;height:36px;}
 .title-actions {width:min(100%,640px);} /* 타이틀 아래 줄 단추 5개(스토리 +1)가 PC에서 한 줄에 들도록 (예전 520) */
 @media (max-width:650px) {
-  .title-secondary #btnStory {flex-basis:100%;max-width:240px;} /* 세로 폰: 스토리 단추는 한 줄 따로 (나머지 넷은 예전처럼 한 줄) */
+  .title-secondary::before {content:'';order:1;flex-basis:100%;height:0;} .title-secondary > button:not(#btnStory) {order:2;} /* 세로 폰: 스토리 단추 한 줄 따로 → 나머지 넷은 예전처럼 한 줄 */
   #storyRow {--smH:clamp(200px,34dvh,270px);border-width:8px;border-radius:21px;padding:0 12px 14px;gap:12px;}
   #storyRow .adventure-top {margin:0 -12px;padding:10px 10px 12px;min-height:56px;border-radius:11px 11px 0 0;gap:6px;}
   #storyRow .adventure-label {font-size:10px;letter-spacing:.4px;padding-left:4px;}
@@ -20538,7 +20538,7 @@ function storyStarsHTML(n, cls) { let h = ''; for (let i = 0; i < 3; i++) h += `
 // ---- 끝 창(#overlay)·부활 창(#reviveModal) 빌려 쓰기 — 판이 리셋되면(storyLeave) 원래 글로 ----
 const STORY_OV0 = (() => { const ov = document.getElementById('overlay'), bs = [...ov.querySelectorAll('button')], f = k => bs.find(b => (b.getAttribute('onclick') || '').includes(k)), h = ov.querySelector('h2');
   return { h, a: f('reset'), b: f('exitToTitle'), ht: h.textContent, at: f('reset').textContent, bt: f('exitToTitle').textContent }; })();
-const STORY_RV0 = document.querySelector('#reviveModal .dcBody').innerHTML;
+const STORY_RV0 = { body: document.querySelector('#reviveModal .dcBody').innerHTML, yes: document.getElementById('rvYes').textContent }; // 부활 창 원래 글 (챌린지 reviveOffer는 열 때 '부활' 단추 글만 다시 씀)
 let storyOvOn = false, storyRvOn = false;
 function storyOverlayMode(mode, next) { // 'clear' = [다음 스테이지](다음이 없으면 숨김) · [지도로] / 'fail' = [다시하기] · [지도로]
   const o = STORY_OV0; storyOvOn = true;
@@ -20548,7 +20548,7 @@ function storyOverlayMode(mode, next) { // 'clear' = [다음 스테이지](다�
 }
 function storyUiRestore() {
   if (storyOvOn) { const o = STORY_OV0; storyOvOn = false; o.h.textContent = o.ht; o.a.textContent = o.at; o.b.textContent = o.bt; o.a.style.display = ''; }
-  if (storyRvOn) { storyRvOn = false; document.querySelector('#reviveModal .dcBody').innerHTML = STORY_RV0; }
+  if (storyRvOn) { storyRvOn = false; document.querySelector('#reviveModal .dcBody').innerHTML = STORY_RV0.body; document.getElementById('rvYes').textContent = STORY_RV0.yes; }
 }
 // ---- 부활 (스테이지당 1번 — S.reviveUsed는 판마다 새 S라 다시하기 = 다시 1번) ----
 function storyReviveOffer() { // reviveOffer 스토리 갈래: 질 때(목숨 0 · 보스 성 도착 · 안전 상한에 남은 몹이 목숨 이상) 일시정지 + 창 — [포기]는 챌린지 rvNo 그대로(reviveUsed → endWave → 실패 창)
