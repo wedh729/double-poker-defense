@@ -20729,12 +20729,13 @@ function storyCardOpen(id) {
   for (const v of th.mats) art.appendChild(storyThingArt('mat', v, 46));
   for (const v of th.bosses) art.appendChild(storyThingArt('boss', v, 58));
   card.dataset.id = id; smCardFor = id;
-  document.getElementById('smCardWrap').hidden = false;
+  document.getElementById('smCardWrap').hidden = false; smCardBack(true); // 카드 = 모달: 뒤 지도·위 줄·아래 줄은 inert (Tab이 카드 밖으로 안 새게)
   try { card.querySelector(op ? '.smGo' : '.smX').focus({ preventScroll: true }); } catch (e) {}
 }
+function smCardBack(on) { for (const el of [document.getElementById('smScroll'), document.getElementById('smFoot'), document.querySelector('#storyRow .adventure-top')]) if (el) el.inert = on; }
 function storyCardClose(back) { // 열려 있었으면 닫고 true (back = 그 깃발로 초점)
   const wrap = document.getElementById('smCardWrap'); if (!wrap || wrap.hidden) return false;
-  wrap.hidden = true; document.getElementById('smCard').innerHTML = '';
+  wrap.hidden = true; document.getElementById('smCard').innerHTML = ''; smCardBack(false);
   const f = back && smFlagEl(smCardFor); smCardFor = null;
   if (f) try { f.focus({ preventScroll: true }); } catch (e) {}
   return true;
