@@ -4249,15 +4249,17 @@ function monsterHP(n) {
 const TICKET_HP_COMP = 1.2;
 const CROWN_HP_COMP = 1.08;
 // 🌀 몹 체력 노브 — 10-19 C맞춤(유저가 고르면 병합 · 30_3마리합성_결과 10·12절): 3마리 합성 뒤 쉬워진 중·후반을 SUPER_CD(0.78)와 한 쌍으로 되돌림
-//   [시작 라운드, 배수] — 측정과 같은 띠 계단: R11~25 ×1.09 · R26~40 ×1.275 · R41 이후 ×1.337 (R51+·헬·태양도 같은 값 — 50R 시뮬 밖이라 가정)
+//   측정 값 = 띠 계단 R11~25 ×1.09 · R26~40 ×1.275 · R41~50 ×1.337 → 경계(R11·R26·R41)에 계단이 안 지게 [라운드, 배수] 점 사이 선형 보간:
+//   띠 중심(R18·R33·R45.5)에 측정 값 · R10까지 1(측정 때 R11부터 걸었음) · 마지막 점 뒤 = 마지막 값 (R51+·헬·태양도 ×1.337 — 50R 시뮬 밖이라 가정)
 //   걸리는 곳 = monsterHP를 쓰는 전부(일반 몹·보스·공중·방패병·태양·샌드박스·같이하기 소환장·레인 보스·봇 웨이브) = 측정 때 바꿔 끼운 자리. 결투(duelHP)는 따로라 안 걸림
-//   챌린지만: 스토리(S.story — M5에서 따로)·튜토리얼(S.tutMode — monsterHP 첫 줄에서 먼저 return)은 1. 되돌리려면 표를 [] 로
-const FUSE_HP_KNOB = [[11, 1.09], [26, 1.275], [41, 1.337]];
+//   챌린지만: 스토리(S.story — M5에서 따로)·튜토리얼(S.tutMode — monsterHP 첫 줄에서 먼저 return)은 1. 되돌리려면 표를 [[1, 1]] 로
+const FUSE_HP_KNOB = [[10, 1], [18, 1.09], [33, 1.275], [45.5, 1.337]];
 function fuseHpKnob(n) {
   if (S && (S.story || S.tutMode)) return 1;
-  let k = 1;
-  for (const [r, m] of FUSE_HP_KNOB) if (n >= r) k = m;
-  return k;
+  const P = FUSE_HP_KNOB;
+  if (n <= P[0][0]) return P[0][1];
+  for (let i = 1; i < P.length; i++) if (n <= P[i][0]) { const [a, ka] = P[i - 1], [b, kb] = P[i]; return ka + (kb - ka) * (n - a) / (b - a); }
+  return P[P.length - 1][1];
 }
 // 분열 제거 보정 계수: R39까지 1.0 → R55에서 1.45로 선형 증가 (보스는 분열과 무관하므로 이 값으로 나눠 상쇄한다)
 function splitComp(n) { return 1 + 0.45 * Math.max(0, Math.min(1, (n - 39) / 16)); }
