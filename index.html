@@ -3382,6 +3382,97 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
 #comicView.navBot.tight .cbNav {margin-top:0;bottom:max(6px,env(safe-area-inset-bottom,0px));}
 #comicView.navBot.tight .cbDots {bottom:calc(max(6px,env(safe-area-inset-bottom,0px)) + 15px);}
 </style>
+<style id="dpd-story-m3">
+/* 📖 스토리 M3 (10-19) — 여정 지도 #storyRow(나무 틀·양피지 = woodland 선택 창과 같은 재료) · 스테이지 카드(= 부활 창 재료) · 끝 창 별. --smH = 지도 높이(화면마다), 지도 폭 = 높이 × 2380/300 */
+#startOverlay[data-screen="story"]::after {background:rgba(216,239,247,.72);backdrop-filter:blur(8px);}
+#storyRow {--smH:clamp(190px,calc(100dvh - 236px),360px);position:relative;width:min(1120px,100%);color:#432a1c;border:10px solid #88522b;border-radius:25px;padding:0 22px 16px;gap:14px;
+  background:linear-gradient(115deg,#f5e2b4 0%,#efd59e 60%,#e8c78c 100%);box-shadow:inset 0 0 0 2px #ffe9b4,inset 0 0 18px #b07a3730,0 0 0 2px #60371d,0 5px 0 2px #573b24,0 23px 65px #24312766;isolation:isolate;}
+#storyRow .adventure-top {margin:0 -22px;padding:13px 20px 14px;min-height:64px;border-radius:14px 14px 0 0;border-bottom:3px solid #7f4c27;color:#ffedc0;
+  background:linear-gradient(#9d673ab8,#714b2be6),var(--dpd-file-art-1) center 40%/400px;box-shadow:inset 0 2px #dfb86c,inset 0 -1px #c39052;}
+#storyRow .adventure-label {color:#ffedc0;font-size:12px;letter-spacing:1.2px;text-shadow:0 2px #5c371e;padding-left:5px;}
+#storyRow .title-back {min-height:37px;border:1px solid #e1b976;border-radius:10px;color:#fff1c9;background:#4d3925a6;box-shadow:inset 0 1px #f6d09b24,0 2px #54331f;font-size:12px;}
+#storyRow .title-back:hover {background:#45301de8;}
+#storyRow button:focus-visible {outline:3px solid #315b48;outline-offset:3px;}
+#smScroll {height:var(--smH);overflow-x:auto;overflow-y:hidden;border-radius:14px;background:#f2deae;box-shadow:inset 0 0 0 2px #c79f63,inset 0 0 26px #8a5a2a40;
+  scrollbar-width:thin;scrollbar-color:#b88a4f transparent;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x;}
+#smMap {position:relative;height:100%;width:calc(var(--smH) * 7.9333);} /* 2380 ÷ 300 */
+#smMap > svg {position:absolute;inset:0;width:100%;height:100%;display:block;}
+.smFlag {position:absolute;height:21%;aspect-ratio:1;width:auto;padding:0;margin:0;border:0;border-radius:8px;background:none;color:#c8432f;cursor:pointer;transform:translate(-21%,-90%);isolation:isolate;-webkit-tap-highlight-color:transparent;}
+.smFlag.is-boss {height:25%;}
+.smFlag .smFlagIc {display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 2px 0 #5c371e66);transform-origin:21% 90%;}
+.smFlag.is-open .smFlagIc {animation:smSway 2.6s ease-in-out infinite;}
+.smFlag.is-clear {color:#2f6fbf;}
+.smFlag.is-lock {color:#9b8e7b;cursor:default;}
+.smFlag.is-lock .smFlagIc {opacity:.5;filter:none;}
+.smFlag.is-next::before {content:'';position:absolute;z-index:-1;left:21%;top:92%;width:150%;height:48%;transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(closest-side,#b6dc7eee,#557540aa 55%,#55754000);animation:smGlow 1.5s ease-in-out infinite;}
+.smFlag:hover .smFlagIc {filter:drop-shadow(0 2px 0 #5c371e66) brightness(1.08);}
+.smFlagStars {position:absolute;left:21%;top:95%;display:flex;gap:1px;transform:translateX(-50%);pointer-events:none;}
+.smFS {display:block;width:calc(var(--smH) * 0.062);height:calc(var(--smH) * 0.062);color:#c9a26a;}
+.smFS.on {color:#f0b429;filter:drop-shadow(0 1px 0 #7a4f1a);}
+.smFS svg, .smCS svg, .soStar svg {display:block;width:100%;height:100%;}
+.smFlagLock {position:absolute;left:44%;top:28%;width:42%;height:42%;color:#6b5a44;}
+.smFlagLock svg {display:block;width:100%;height:100%;}
+@keyframes smSway {0%,100% {transform:rotate(0deg) skewY(0deg);} 50% {transform:rotate(-3deg) skewY(-4deg);}}
+@keyframes smGlow {0%,100% {opacity:.45;transform:translate(-50%,-50%) scale(.85);} 50% {opacity:1;transform:translate(-50%,-50%) scale(1.08);}}
+.smFoot {display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;min-height:40px;}
+.smFootT {display:inline-flex;align-items:center;gap:6px;color:#705333;font-size:13px;font-weight:800;}
+.smFootIc {width:18px;height:18px;color:#7a4f27;}
+#storyRow .smComic {min-height:36px;padding:6px 14px;color:#674526;background:linear-gradient(#fce7b5,#e7c37c);border:1px solid #a6793c;border-radius:10px;font-size:12px;box-shadow:inset 0 1px #fff5d2,0 2px #a5793f;}
+#storyRow .smComic:hover {background:#ffebbd;}
+#smCardWrap {position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:12px;border-radius:15px;background:#3c281566;}
+#smCardWrap[hidden] {display:none;}
+#smCard {position:relative;box-sizing:border-box;width:min(380px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;text-align:center;padding:16px 22px 20px;color:#432a1c;border:5px solid #a27039;border-radius:17px;
+  background:linear-gradient(125deg,#fff1c150,transparent 38%,#bf893212),linear-gradient(#f1d6a0,#e8c68b);box-shadow:inset 0 0 0 1px #fff0c2,0 0 0 2px #674023,0 7px 0 #57371f88,0 18px 50px #17251666;}
+#smCard .smX {position:absolute;top:8px;right:8px;width:34px;height:34px;display:grid;place-items:center;padding:0;border:1px solid #b18951;border-radius:10px;background:#f3d9a6;color:#654625;cursor:pointer;}
+#smCard .smX svg {width:16px;height:16px;}
+#smCard .smCW {font-size:11px;font-weight:800;letter-spacing:.6px;color:#7a5a32;}
+#smCard h3 {margin:2px 0 6px;font-size:26px;font-weight:900;letter-spacing:-1px;color:#482e1c;text-shadow:0 1px #fff2d2;}
+.smCStars {display:flex;justify-content:center;gap:6px;margin-bottom:10px;}
+.smCS {display:block;width:30px;height:30px;color:#c9a26a;}
+.smCS.on {color:#f0b429;filter:drop-shadow(0 2px 0 #8a5a1c);}
+.smSee {display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 8px 8px;margin:0 0 14px;border:1px dashed #b08a4f;border-radius:12px;background:#fff3d24d;}
+.smSeeT {font-size:12px;font-weight:800;color:#705333;}
+.smSeeArt {display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;min-height:46px;}
+.smThing {display:block;width:46px;height:46px;background:none;border-radius:0;box-shadow:none;cursor:inherit;} /* 전역 canvas 규칙(흰 바탕·둥근 모서리·조준 커서) 덮기 */
+.smThing.boss {width:58px;height:58px;}
+#smCard .smGo {min-width:200px;min-height:50px;gap:22px;font-size:17px;border:2px solid #405b2f;border-radius:13px;color:#fff5d3;background:linear-gradient(#7c9550,#567b3d 55%,#466637);
+  box-shadow:inset 0 0 0 1px #bcc484,0 4px 0 #33472a;text-shadow:0 2px #2f4e2d;}
+#smCard .smGo:hover {background:linear-gradient(#8ea95f,#658d49 55%,#52773e);}
+.smLockMsg {display:flex;align-items:center;justify-content:center;gap:6px;margin:0;font-size:13px;font-weight:800;color:#7a5a32;}
+.smLockMsg .smLockIc {width:18px;height:18px;}
+#overlay .soStars {display:inline-flex;gap:8px;margin:6px 0 2px;}
+#overlay .soStar {display:block;width:46px;height:46px;color:#c9a26a;}
+#overlay .soStar.on {color:#f0b429;filter:drop-shadow(0 3px 0 #8a5a1c);}
+#overlay .soMsg {font-size:1.12em;font-weight:900;color:#5a3a1a!important;}
+#overlay .soNews {font-weight:800;color:#3d6a2e!important;}
+#overlay .soLine {font-size:.9em;color:#7c5e37!important;}
+body.mobile #storyRow {max-height:calc(100dvh - 12px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));flex-shrink:0;}
+body.mobile #overlay .soStar {width:36px;height:36px;}
+.title-actions {width:min(100%,640px);} /* 타이틀 아래 줄 단추 5개(스토리 +1)가 PC에서 한 줄에 들도록 (예전 520) */
+@media (max-width:650px) {
+  .title-secondary #btnStory {flex-basis:100%;max-width:240px;} /* 세로 폰: 스토리 단추는 한 줄 따로 (나머지 넷은 예전처럼 한 줄) */
+  #storyRow {--smH:clamp(200px,34dvh,270px);border-width:8px;border-radius:21px;padding:0 12px 14px;gap:12px;}
+  #storyRow .adventure-top {margin:0 -12px;padding:10px 10px 12px;min-height:56px;border-radius:11px 11px 0 0;gap:6px;}
+  #storyRow .adventure-label {font-size:10px;letter-spacing:.4px;padding-left:4px;}
+  #storyRow .title-back {padding:7px 9px;font-size:11px;min-height:35px;white-space:nowrap;}
+}
+@media (max-height:560px) and (min-width:651px) {
+  #storyRow {--smH:calc(100dvh - 146px);border-width:7px;border-radius:20px;padding:0 16px 8px;gap:8px;}
+  #storyRow .adventure-top {margin:0 -16px;min-height:42px;padding:5px 14px 6px;border-radius:11px 11px 0 0;}
+  #storyRow .title-back {min-height:30px;padding:5px 10px;}
+  .smFoot {min-height:32px;gap:6px;}
+  #storyRow .smComic {min-height:30px;padding:4px 12px;}
+  #smCard {padding:10px 18px 12px;}
+  #smCard h3 {font-size:21px;margin:0 0 4px;}
+  .smCS {width:24px;height:24px;}
+  .smCStars {margin-bottom:6px;}
+  .smSee {padding:6px 8px;margin-bottom:8px;gap:4px;}
+  .smSeeArt {min-height:38px;}
+  .smThing {width:38px;height:38px;} .smThing.boss {width:46px;height:46px;}
+  #smCard .smGo {min-height:42px;}
+}
+</style>
 </head>
 <body class="at-title">
 <div id="page">
@@ -3485,6 +3576,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
     <div class="title-actions">
       <button class="title-primary" id="btnSolo">시작하기 <span class="title-arrow" aria-hidden="true">→</span></button>
       <div class="title-secondary">
+        <button class="title-link" id="btnStory">스토리</button>
         <button class="title-link" id="btnTut">튜토리얼</button>
         <button class="title-link" id="btnCoop">같이하기 <small>준비 중</small></button>
         <button class="title-link" id="btnSandbox">샌드박스</button>
@@ -3520,6 +3612,13 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
     <div class="adventure-top"><span class="adventure-label">튜토리얼</span><button class="title-back" id="btnTutBack">← 타이틀</button></div>
     <div class="adventure-intro"><h2 id="tutHeading" class="adventure-heading">튜토리얼 완료!</h2><p>카드부터 결투장·보스·하늘의 몬스터까지 모두 둘러봤어요.</p></div>
     <div id="tutDone" role="status"><p>이제 실전에서 나만의 군단을 키워 보세요. 처음엔 <b>동산</b> 난이도를 추천해요.</p><div class="tdBtns"><button type="button" class="title-primary" id="btnTutDonePlay">바로 모험 떠나기 <span class="title-arrow" aria-hidden="true">→</span></button><button type="button" class="title-link" id="btnTutDoneTitle">타이틀로</button></div></div>
+  </section>
+  <!-- 📖 스토리 M3 (10-19) 여정 지도 — 그림·깃발은 storyMapRender가 채움 · 스테이지 카드 #smCardWrap -->
+  <section id="storyRow" class="adventure-panel" style="display:none" aria-labelledby="storyHeading">
+    <div class="adventure-top"><span class="adventure-label" id="storyHeading">카드 군단의 여정</span><button class="title-back" id="btnStoryBack">← 돌아가기</button></div>
+    <div id="smScroll"><div id="smMap"></div></div>
+    <div class="smFoot" id="smFoot"></div>
+    <div id="smCardWrap" hidden><div id="smCard" role="dialog" aria-modal="true" aria-labelledby="smCardName"></div></div>
   </section>
 </div>
 <dialog id="titleHelp" aria-labelledby="titleHelpHeading">
@@ -4724,6 +4823,7 @@ const DPD_ICONS = {
              fill: 'M12 3l2.8 5.8 6.2.9-4.5 4.4 1.1 6.2L12 17.4l-5.6 2.9 1.1-6.2L3 9.7l6.2-.9Z' },
   check:   { d: 'M5 12l5 5L20 7' },
   lock:    { d: 'M8 10h8a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3Z M8 10V7a4 4 0 0 1 8 0v3m-4 5v2' },
+  flag:    { d: 'M5 21V3.5 M5 4.5h12l-2.6 4 2.6 4H5', fill: 'M4 2.8h2v18.7H4Z M6 3.6h12.6l-3 4.9 3 4.9H6Z' }, // 깃발 = 스토리 여정 지도 스테이지 (10-19 M3)
   // 창·버튼 (v2·로스터 어댑터에서 옮김)
   arrow:   { d: 'M4 12h15m-6-6 6 6-6 6' },
   'arrow-r': { d: 'M4 12h15m-6-5 5 5-5 5' },
@@ -6365,7 +6465,7 @@ const REVIVE_SEC = 45, ADS_READY = false;
 function showRewardedAd() { return Promise.resolve(true); } // 앱: 보상형 광고 시청 완료면 true, 닫기·실패면 false
 function reviveOffer() {
   if (S.tutMode) return false; // [튜토리얼 10-14] 목숨이 줄지 않는다 — 부활 창 없음
-  if (S.story) return false; // 📖 스토리식 부활은 M3 (지금은 없음)
+  if (S.story) return storyReviveOffer(); // 📖 스토리 부활 = 스테이지당 1번 (10-19 M3 — 같은 창, 숫자 없는 글)
   if (S.multi) return false; // 🤖 멀티: 부활 없음 (왕국 HP 팀 공유)
   if (gameDialogVisible('reviveModal')) return true; // 이미 떠 있다 (중복 오픈·효과음 겹침 방지)
   if (S.reviveUsed || S.reviveArmed || dailySeed != null || S.phase !== 'wave') return false; // 🔄 봉인한 부활권(샌드박스)이 있으면 그쪽이 먼저
@@ -6385,6 +6485,7 @@ document.getElementById('rvYes').onclick = () => {
   showRewardedAd().then(ok => {
     if (gen !== gameGen || S.reviveUsed) return; // 그 사이 재시작·나가기
     if (!ok) { yes.disabled = no.disabled = false; return; } // 광고를 끝까지 못 봤다 — 다시 누르거나 포기
+    if (S.story) { storyReviveYes(); return; } // 📖 스토리 (10-19 M3): 목숨을 처음의 절반으로 · 보스는 입구로 — 시계 연장 없음
     S.reviveUsed = S.revived = S.reviveWave = true;
     S.timer += REVIVE_SEC;
     closeRevive();
@@ -6490,7 +6591,7 @@ function endWave() {
     logMsg('80라운드 클리어!! 이제부터는 헬모드...');
     if (DIFF_MUL >= 2) markAchv('hell80'); else if (DIFF_MUL >= 1.4) markAchv('hard80'); // 공식 목표 달성 = R80 '클리어' 시점 (r80 '도달'과 구분)
   }
-  if (S.story) storyNextRound(); else S.round++; // 📖 스테이지 안 번호 +1 → 등가 R
+  if (S.story) { if (storyNextRound()) return; } else S.round++; // 📖 스테이지 안 번호 +1 → 등가 R · 마지막 라운드를 지켜 냈으면 클리어 창에서 끝 (포커로 안 감 — 10-19 M3)
   crownExpire(); // 👑 기한(CROWN_DEADLINE) 전투가 끝났는데 대관식 전이면 왕관 소멸 — 부활·게임오버 분기 뒤
   S.reviveWave = false; // ❤️‍🩹 부활 연장전 종료 — 다음 전투부터 스피드 보너스 정상
   S.duelForfeitWave = false; // 🏳️ 결투 기권한 전투 끝 — 다음 전투부터 스피드 보너스 정상
@@ -8075,7 +8176,7 @@ function hiddenSeen(id) {
   try { return !!JSON.parse(localStorage.getItem('dpd_hidden') || '{}')[id]; } catch (e) { return false; }
 }
 function markHidden(id) {
-  if (S && (S.sandbox || S.multi || S.tutMode || S.story)) return;
+  if (S && (S.sandbox || S.multi || S.tutMode)) return; // 📖 스토리는 히든 도감 기록 허용 (10-19 M3) — 업적은 markAchv가 계속 막음
   try {
     const d = JSON.parse(localStorage.getItem('dpd_hidden') || '{}');
     if (!d[id]) {
@@ -8105,7 +8206,7 @@ function monSeen(i) {
   try { return !!JSON.parse(localStorage.getItem('dpd_mondex') || '{}')[i]; } catch (e) { return false; }
 }
 function markMon(i) {
-  if (S && (S.sandbox || S.multi || S.tutMode || S.story)) return;
+  if (S && (S.sandbox || S.multi || S.tutMode)) return; // 📖 스토리는 몹 도감 기록 허용 (10-19 M3) — 업적은 markAchv가 계속 막음
   try {
     const d = JSON.parse(localStorage.getItem('dpd_mondex') || '{}');
     if (!d[i]) {
@@ -16693,11 +16794,11 @@ function tutModeData() { try { const d = JSON.parse(localStorage.getItem(TUTM_KE
 function tutModeDone(id) { return !!tutModeData().done[id]; }
 function tutModeMark(id) { const d = tutModeData(); d.done[id] = 1; try { localStorage.setItem(TUTM_KEY, JSON.stringify(d)); } catch (e) {} }
 function tutIsNewPlayer() { return !tut.off && Object.keys(tut.seen).length === 0 && !tutModeDone('main'); } // 기존 첫 판 안내 객체 재사용: 일반 판을 한 번 시작하면 seen.t1이 생겨 꺼진다 · 튜토리얼을 끝까지 하면 꺼진다
-function syncTutTitleBtn() {
-  const b = document.getElementById('btnTut'); if (!b) return;
-  const on = tutIsNewPlayer();
+function syncTutTitleBtn() { // 10-19 M3: 초록 '처음이라면' 표시 = 스토리 단추로 옮김 (튜토리얼 단추는 표시 없이 그대로) — 처음 온 사람 = 스토리 1-1부터
+  const b = document.getElementById('btnStory'); if (!b) return;
+  const on = tutIsNewPlayer() && storyIsEmpty(); // 챌린지 기록·첫 판 안내·튜토리얼 끝 기록 없음 + 스토리 저장 비어 있음
   b.classList.toggle('tut-new', on);
-  const h = on ? '튜토리얼 <small>처음이라면</small>' : '튜토리얼';
+  const h = on ? '스토리 <small>처음이라면</small>' : '스토리';
   if (b.innerHTML !== h) b.innerHTML = h;
 }
 // 맵 구역(캔버스 논리 좌표 x, y, 반지름) — 유닛은 길찾기 없이 곧장 걸어 울타리에 걸리면 멈춘다(하네스 실측: 소환 자리 → 울타리 너머 목표 = 울타리 아래에서 정지)
@@ -19853,6 +19954,7 @@ function showTitleScreen(screen, focusId) {
   document.getElementById('diffRow').style.display = screen === 'difficulty' ? 'flex' : 'none';
   document.getElementById('coopRow').style.display = screen === 'coop' ? 'flex' : 'none';
   document.getElementById('tutRow').style.display = screen === 'tut' ? 'flex' : 'none'; // 튜토리얼 챕터 목록 (10-14)
+  document.getElementById('storyRow').style.display = screen === 'story' ? 'flex' : 'none'; // 📖 여정 지도 (10-19 M3)
   overlay.scrollTop = 0;
   if (focusId) document.getElementById(focusId).focus({ preventScroll: true });
   syncTutTitleBtn(); // 새 플레이어 강조 (일반 판을 한 번 시작했거나 기본 조작을 마치면 꺼짐)
@@ -19876,6 +19978,7 @@ const STORY = {      // 노브 한 곳 (화면에 안 나옴)
   PULL_V: 220,       // 조커 되감기·목성 끌어모으기 속도 px/게임초
   GRAV_S: 260, PILE_S: 34, // 목성: 같은 길에서 보스 앞뒤 260px 안 몹 → 보스 s ± 34로
   NOLEAK_K: 0.5,     // 무누수 보너스 = 클리어 보너스 × 0.5
+  REVIVE_STARS: 2,   // 부활을 쓴 판의 별 상한 (10-19 M3 설계자 기본값 — 메인 판단 거리: 3이면 상한 없음)
   BOMB_N: 8,         // 예약 긴급 폭격 = 이번 전투 몹이 이만큼 나오고(첫 무리 = GROUP) 보스 라운드면 보스도 나온 뒤 (10-15 리뷰 ENG-1 — 시점은 유저 확인 거리)
   HP_K: 1, N_K: 1,   // M5 노브: 몹 HP·마릿수 배수
   LIVES: 20,
@@ -19939,9 +20042,10 @@ const STORY_UI = {   // 논리 좌표 [x0, y0, x1, y1] — t1014s_zones.js 실�
   see:   [[0, 225, 205, 410]],                            // 딜 순위 기본 크기 → 길이 60px 넘게 지나가지 않게
   tray:  [620, 0, 940, 70],                                // M2 대기석 기본 자리 → 길·입구 금지
 };
-const STORY_KEY = 'dpd_story'; // { v: 1, clear: {}, stars: {} } — 자리만 (M3 여정 지도·별·해금에서 씀). 지금은 읽기·쓰기 호출 없음
-function storyLoad() { try { const d = JSON.parse(localStorage.getItem(STORY_KEY) || 'null'); if (d && d.v === 1) return d; } catch (e) {} return { v: 1, clear: {}, stars: {} }; }
-function storySave(d) { try { localStorage.setItem(STORY_KEY, JSON.stringify(d)); } catch (e) {} }
+const STORY_KEY = 'dpd_story'; // { v: 1, clear: { '1-1': true }, stars: { '1-1': 1~3 }, seen: { prologue: true, w1end: true } } — 10-19 M3: 클리어·별(더 좋은 기록만)·본 만화. 읽기는 storyDataGet(메모리 사본) 한 곳
+function storyLoad() { let d = null; try { d = JSON.parse(localStorage.getItem(STORY_KEY) || 'null'); } catch (e) {} const o = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+  return d && d.v === 1 ? { v: 1, clear: o(d.clear), stars: o(d.stars), seen: o(d.seen) } : { v: 1, clear: {}, stars: {}, seen: {} }; }
+function storySave(d) { try { localStorage.setItem(STORY_KEY, JSON.stringify(d)); } catch (e) {} } // 저장이 막혀도(사생활 보호 모드 등) 메모리 사본으로 그 세션은 그대로 진행
 const STORY_BLD0 = { // ⚠️ 로드 때 한 번 찍은 원본 — 복원은 언제나 이것으로 (스토리 안 '다시하기'가 storyStart를 거듭 불러도 덮인 값이 원본으로 저장되지 않게)
   house: { x: HOUSE.x, y: HOUSE.y }, portal: { x: PORTAL.x, y: PORTAL.y }, portalOut: { x: PORTAL_OUT.x, y: PORTAL_OUT.y },
   altar: { x: ALTAR.x, y: ALTAR.y }, altarOut: { x: ALTAR_OUT.x, y: ALTAR_OUT.y } };
@@ -19957,10 +20061,11 @@ function storyNewState(id, map) { // 판 상태 (S.story) — 길은 진입 때 
   for (const Pp of P) Pp.forks.sort((a, b) => a.s - b.s);
   for (const c of map.cover) { const Pp = P[at(c.path)]; if (!Pp) continue; const a = storyNearS(Pp, c.from[0], c.from[1]), b = storyNearS(Pp, c.to[0], c.to[1]); Pp.cover.push([Math.min(a, b), Math.max(a, b)]); }
   const doors = P.map((p, k) => p.door ? k : -1).filter(k => k >= 0);
-  return { id, map, P, doors: doors.length ? doors : [0], leakR: 0, bossIn: false, gateA: 0.5, endToast: false };
+  return { id, map, P, doors: doors.length ? doors : [0], leakR: 0, bossIn: false, gateA: 0.5,
+    leakAll: 0, bossArr: null, end: null }; // 10-19 M3: 스테이지 전체 놓친 몹(별 ★★★) · 성에 닿은 보스(부활 때 입구로 되돌림) · 끝 모드('clear' | 'fail')
 }
 function storyHas(k) { return !!(S && S.story && S.story.map.bld[k]); } // 광산·광석방 있음/없음 (위치는 챌린지 자리 고정)
-function storyBossShape(n) { const b = S.story.map.bossShape; return b || (n > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.max(1, Math.floor(n / 10)))); } // 보스 모양 — 등가 R 10 미만도 달(20)부터 (19는 그림·정보 없음 → 배너·그리기 예외, 설계 §19 P0-1)
+function storyBossShape(n, M = S.story.map) { const b = M.bossShape; return b || (n > FINAL_ROUND ? 15 : 19 + Math.min(8, Math.max(1, Math.floor(n / 10)))); } // M = 맵 (10-19 M3: 여정 지도 카드는 판 밖이라 맵을 넘김) // 보스 모양 — 등가 R 10 미만도 달(20)부터 (19는 그림·정보 없음 → 배너·그리기 예외, 설계 §19 P0-1)
 // ---- 2px 경로 표 (설계 §4) — 모퉁이 둥글리기(R = FILLET) 또는 곡선(curve: true — 조절점을 지나는 곡선) → 호 길이 2px 표본 → 단위 법선 ----
 function storyFillet(pts, R) { // 꼭짓점마다 반지름 R 원호로 깎은 꺾은선 (원호는 3px마다 점, 짧은 구간이면 R을 줄임) — t1014s_mapcheck.py fillet()과 같은 식
   const out = [pts[0].slice()];
@@ -20062,15 +20167,16 @@ function storyCheckMaps() { // 맵 데이터 검사 (설계 §2-3·§14) — 실
   }
   return bad;
 }
-function storyEqRound(r) { // 스테이지 안 r번째 → 챌린지 세기(S.round). M1 임시 = req 직선 보간, rounds를 넘으면 +1씩(끝없음) · req 없음(시험 길) = r
-  const M = S.story.map; if (!M.req) return r;
+function storyEqRound(r, M = S.story.map) { // 스테이지 안 r번째 → 챌린지 세기(S.round). M1 임시 = req 직선 보간, rounds를 넘으면 +1씩(시험 길 끝없음) · req 없음(시험 길) = r · M = 맵 (10-19 M3: 지도 카드용)
+  if (!M.req) return r;
   const [a, b] = M.req, n = M.rounds;
   return r > n ? b + (r - n) : Math.round(a + (b - a) * (r - 1) / Math.max(1, n - 1));
 }
-function storyNextRound() { // endWave의 S.round++ 자리 — 스테이지 안 번호 +1 → 등가 R (M1: 라운드 수를 넘으면 토스트 한 번 뒤 끝없이 계속, 클리어 화면은 M3)
-  S.storyR++; S.round = storyEqRound(S.storyR);
+function storyNextRound() { // endWave의 S.round++ 자리 — 스테이지 안 번호 +1 → 등가 R · 10-19 M3: 마지막 라운드(rounds)를 목숨 남기고 끝냄 = 스테이지 클리어 → true (endWave가 포커로 안 가고 끝) · 시험 길(rounds 0) = 끝없음
   const M = S.story.map;
-  if (M.rounds && S.storyR === M.rounds + 1 && !S.story.endToast) { S.story.endToast = true; rewardToast('trophy', M.name, '#ffd166', '스테이지 끝 — 계속 이어져요'); }
+  if (M.rounds && S.storyR >= M.rounds) { storyStageClear(); return true; }
+  S.storyR++; S.round = storyEqRound(S.storyR);
+  return false;
 }
 // ---- 몹 이동 (설계 §5) — m.path(길 번호)·m.s(입구에서 잰 px)·m.v(px/게임초)·m.off(옆 오프셋)·m.fi(다음 갈림)·m.rem(성까지 남은 px = '선두' 점수)·m.occl(다리 밑)·m.arrived ----
 function storyMobV(m) { return STORY.V0 * (m.boss ? STORY.BOSS_V : (STORY.MAT_V[m.mat] != null ? STORY.MAT_V[m.mat] : 0.9)); } // 재질 걸음 표 (크기 성장 아님)
@@ -20127,7 +20233,7 @@ function storyStep(m, dt) { // 매 서브스텝 (update 몹 루프 — 공통 �
 }
 function storyArrived(m) { // 사망 필터에서 — 보상 없이 제거. 목숨은 여기서, 패배 판정은 전투 끝 판정(storyWaveDone)
   m.dead = true; // 날아오던 투사체 '대상 없음' 처리 · A명령·단검 표적 풀림
-  if (m.boss) S.story.bossIn = true;
+  if (m.boss) { S.story.bossIn = true; S.story.bossArr = m; } // 부활 때 이 보스를 입구로 되돌림 (10-19 M3)
   else { S.life -= 1; S.story.leakR++; } // 잡몹 1 (방패병 2는 방패병 켤 때)
   S.effects.push({ type: 'boom', x: HOUSE.x, y: HOUSE.y - 20, r: 30, t: 0.3 });
   sfx('leak');
@@ -20167,15 +20273,13 @@ function storyWaveEnd(bossAlive, leak) { // endWave 분기 — 목숨은 도착 
   }
   if (st.bossIn) { S.lifeLog.push({ r: S.storyR, d: Math.max(0, S.life), why: '보스 도착', k: 'boss' }); S.life = 0; addFloat(HOUSE.x, HOUSE.y - 70, '보스가 성에 닿았다!', '#e53935', 2.5); logMsg('보스가 성에 닿았다!', true); sfx('leak'); }
   else if (st.leakR > 0) S.lifeLog.push({ r: S.storyR, d: st.leakR, why: '성 도착' });
-  if (S.life > 0) grantClearBonus(); // 스피드 보너스 0 (시계 없음)
+  st.leakAll += st.leakR; // 스테이지 전체 놓친 몹 (안전 상한 보정 뒤 — 별 ★★★ 판정, 10-19 M3)
+  if (S.life > 0 && !(st.map.rounds && S.storyR >= st.map.rounds)) grantClearBonus(); // 스피드 보너스 0 (시계 없음) · 마지막 라운드는 클리어 창이 대신 (10-19 M3)
 }
-function storyGameOver() { // endWave 게임오버 — 기록·오늘의 시드·최고 기록 없음
-  const M = S.story.map, fmt = v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'k' : Math.round(v);
-  const top = dpsGroups().slice(0, 6), maxD = top.length ? top[0][1].dmg : 1; // 딜 순위 위젯과 같은 묶음·이름 (챌린지 결산과 같은 그림)
-  const statsHTML = top.length ? `<div style="margin-top:12px;text-align:left;font-size:12px"><b style="color:#ffd166">이번 판 MVP: ${top[0][0]}</b>` +
-    top.map(([nm, st]) => `<div style="margin-top:5px">${nm} — 딜 ${fmt(st.dmg)} · 킬 ${st.kills}<div style="height:6px;background:#2a2340;border-radius:3px;margin-top:2px"><div style="height:100%;border-radius:3px;width:${Math.max(3, 100*st.dmg/maxD).toFixed(0)}%;background:linear-gradient(90deg,#8c5bff,#ff6b9d)"></div></div></div>`).join('') + '</div>' : '';
-  const lifeHTML = S.lifeLog.length ? `<div style="margin-top:8px;text-align:left;font-size:12px;color:#ef9a9a">목숨: ${S.lifeLog.slice(-6).map(e => `R${e.r} ${e.d > 0 ? '−' + e.d : '+' + (-e.d)} ${e.why}`).join(' · ')}</div>` : '';
-  document.getElementById('finalScore').innerHTML = `<b>${M.name}</b> — ${S.storyR}번째 무리에서 성이 무너졌어요<br>` + lifeHTML + statsHTML;
+function storyGameOver() { // endWave 게임오버 = 실패 화면 (10-19 M3: 숫자 없는 글 · [다시하기] = 이 스테이지 처음부터 · [지도로]) — 기록·오늘의 시드·최고 기록 없음
+  const M = S.story.map; S.story.end = 'fail';
+  storyOverlayMode('fail', null);
+  document.getElementById('finalScore').innerHTML = `<b>${M.name}</b>에서 성이 무너졌어요<br><span class="soLine">이 스테이지를 처음부터 다시 할 수 있어요</span>`;
   document.getElementById('overlay').style.display = 'flex'; syncGamePause();
 }
 // ---- 전투 규칙 (설계 §8 — 스토리만) ----
@@ -20360,7 +20464,13 @@ function storyStart(id, gesture) { // gesture = 클릭으로 불렸나 (다시�
   return true;
 }
 function storyBoot() { let q = null; try { q = new URLSearchParams(location.search).get('story'); } catch (e) {} if (q) storyStart(q, false); } // 하네스가 '?t=…&pf=…'를 붙여 열어도 됨 · 없는 이름이면 그냥 타이틀
-function storyExit(ask) { exitToTitle(ask); if (!S.story) { DIFF_MUL = 1; DIFF_NAME = '초원'; } } // 실제로 나갔을 때만(확인 창 취소면 그대로) 난이도 이름 되돌림 — tutExit 선례 (storyLeave 안에선 안 됨: 새 판 시작 함수가 reset 전에 정한 이름을 덮는다)
+function storyExit(ask) { // 나가기·끝 창 [지도로] = 여정 지도 (10-19 M3 — 예전엔 타이틀) · 실제로 나갔을 때만(확인 창 취소면 그대로) 난이도 이름 되돌림 — tutExit 선례 (storyLeave 안에선 안 됨: 새 판 시작 함수가 reset 전에 정한 이름을 덮는다)
+  const id = S.story && S.story.id;
+  exitToTitle(ask);
+  if (S.story) return;
+  DIFF_MUL = 1; DIFF_NAME = '초원';
+  storyMapShow(id);
+}
 function storyApply(map) { // 건물 좌표 덮기 (const 객체라 속성 대입) + 베이크 무효화 + body.storyMode
   const b = map.bld;
   HOUSE.x = b.castle[0]; HOUSE.y = b.castle[1];
@@ -20370,6 +20480,7 @@ function storyApply(map) { // 건물 좌표 덮기 (const 객체라 속성 대�
   storyBgLoad(map); // M4 맵 그림 — 여기서만 받는다 (10-19)
 }
 function storyLeave() { // 'dpd:resetui' (resetTransientUI 끝 — 새 S를 만들기 전) — 나가기·다시하기·새 판·튜토리얼·멀티·맵 미리보기 전부 reset()을 지난다
+  storyUiRestore(); // 끝 창·부활 창 글을 빌려 썼으면 원래대로 (10-19 M3 — 안 빌렸으면 아무 일 없음)
   if (!storyApplied) return; // 챌린지 경로는 여기서 끝 (베이크를 건드리지 않는다)
   Object.assign(HOUSE, STORY_BLD0.house); Object.assign(PORTAL, STORY_BLD0.portal); Object.assign(PORTAL_OUT, STORY_BLD0.portalOut);
   Object.assign(ALTAR, STORY_BLD0.altar); Object.assign(ALTAR_OUT, STORY_BLD0.altarOut);
@@ -20386,15 +20497,254 @@ document.getElementById('toolbar').addEventListener('click', e => {
   if (b.id === 'btnRestart') { const id = S.story.id; if (confirm('이 스테이지를 처음부터 다시 할까요?')) storyStart(id, true); }
   else storyExit(true);
 }, true);
-// 게임오버 창: '다시 시작' = 이 스테이지 처음부터 · '타이틀로' = 타이틀 (기본 onclick의 reset()은 챌린지 판으로 샌다)
+// 끝 창(#overlay): 첫 단추(onclick reset) = 실패면 [다시하기](이 스테이지 처음부터) · 클리어면 [다음 스테이지] — 둘째 단추(exitToTitle) = [지도로] (기본 onclick의 reset()은 챌린지 판으로 샌다 · 10-19 M3 글·갈래)
 document.getElementById('overlay').addEventListener('click', e => {
   if (!S || !S.story) return;
   const b = e.target.closest('button'); if (!b) return;
   const oc = b.getAttribute('onclick') || '';
   if (!oc.includes('reset') && !oc.includes('exitToTitle')) return;
   e.stopPropagation(); e.preventDefault();
-  if (oc.includes('reset')) storyStart(S.story.id, true); else storyExit(false);
+  if (!oc.includes('reset')) { storyExit(false); return; }
+  if (S.story.end !== 'clear') { storyStart(S.story.id, true); return; }
+  const nx = storyNextId(S.story.id);
+  if (nx && storyOpen(nx)) storyStart(nx, true); else storyExit(false); // 다음 스테이지가 없거나 잠겼으면(단추는 숨겨 둠 — 방어) 지도로
 }, true);
+// ==================== 📖 스토리 M3 (10-19) — 여정 지도 · 타이틀 '스토리' 단추 · 해금 · 별 · 클리어/실패 창 · 부활 · 만화 연결 · 저장 ====================
+// 설계 = Desktop\Claude Code\DPD\스토리_2026-10-14\60_M3_구현설계.md (§0 확정 표가 기준)
+// 지도 = #startOverlay 안 화면 'story'(#storyRow — 양피지 SVG + 깃발 단추) · 뒤는 타이틀처럼 멈춘 더미 판. 스테이지 끝 = #overlay(게임오버 창)를 클리어/실패 글로 빌려 씀(판이 리셋되면 storyUiRestore가 원래 글로)
+// 해금 = 같은 월드 앞 스테이지 클리어(순차) · 다음 월드 = 앞 월드 마지막(보스) 스테이지 클리어 · 맵 데이터 없는 월드(지금 2~5) = '곧 열려요'
+// 별 = 놓친 몹 0 ★★★ · 남은 목숨 ≥ 처음의 절반 ★★ · 그 밖 ★ · 부활 쓴 판은 최대 STORY.REVIVE_STARS · 화면 글 = 숫자·확률·내부 이름 없음(스테이지·월드 이름만)
+const STORY_WORLDS = [ // 22_스토리_여정설계 §2 — 이름만 화면에 · tint = 지도 바탕 물(초록 → 노을 → 보라 → 검정 → 붉음)
+  { name: '초원 길', tint: '#8cc063' }, { name: '저무는 길', tint: '#f08a4b' }, { name: '적의 성 외곽', tint: '#8d6cb5' }, { name: '적의 성 안', tint: '#3b3446' }, { name: '지하와 지옥', tint: '#c2412b' }];
+const STORY_END_COMIC = { 1: 'w1end' };                                   // 그 월드 마지막 스테이지를 처음 깨고 지도에 돌아오면 여는 만화
+const STORY_COMIC_NAMES = { prologue: '처음 이야기', w1end: '초원 길 끝' }; // [만화 다시 보기] 단추 글 (본 만화만)
+let storyData = null; // dpd_story 메모리 사본 = 정본 (저장이 막혀도 이 세션은 해금·별 그대로)
+function storyDataGet() { return storyData || (storyData = storyLoad()); }
+function storyIsEmpty() { const d = storyDataGet(); return !Object.keys(d.clear).length && !Object.keys(d.seen).length; }
+function storySeen(id) { const d = storyDataGet(); if (d.seen[id]) return; d.seen[id] = true; storySave(d); }
+function storyStages(w) { return Object.keys(STORY_MAPS).filter(id => STORY_MAPS[id].world === w).sort((a, b) => STORY_MAPS[a].idx - STORY_MAPS[b].idx); } // 시험 길(world 0)은 지도에 없음
+function storyOpen(id) { // 해금 — 월드 1 첫 스테이지는 언제나 · 같은 월드 앞 스테이지를 깼거나 · 월드 첫 스테이지면 앞 월드 마지막(보스) 스테이지를 깼거나
+  const M = Object.prototype.hasOwnProperty.call(STORY_MAPS, id) ? STORY_MAPS[id] : null; if (!M || !M.world) return false;
+  const d = storyDataGet(), list = storyStages(M.world), i = list.indexOf(id);
+  if (i > 0) return !!d.clear[list[i - 1]];
+  if (M.world === 1) return true;
+  const pv = storyStages(M.world - 1); return pv.length > 0 && !!d.clear[pv[pv.length - 1]];
+}
+function storyNextId(id) { const M = STORY_MAPS[id]; if (!M || !M.world) return null; const list = storyStages(M.world), i = list.indexOf(id); if (i >= 0 && i < list.length - 1) return list[i + 1]; const nx = storyStages(M.world + 1); return nx.length ? nx[0] : null; }
+function storyFrontier() { const d = storyDataGet(); for (let w = 1; w <= STORY_WORLDS.length; w++) for (const id of storyStages(w)) if (!d.clear[id] && storyOpen(id)) return id; return null; } // 지금 할 차례 (다 깼으면 null)
+function storyJosa(w, a, b) { const c = w.charCodeAt(w.length - 1); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? a : b; } // 조사만: 받침 있으면 a(이·을) 없으면 b(가·를)
+function storyStarsNow() { const st = S.story, L0 = st.map.lives || STORY.LIVES; let n = st.leakAll === 0 ? 3 : S.life * 2 >= L0 ? 2 : 1; if (S.revived) n = Math.min(n, STORY.REVIVE_STARS); return n; }
+function storyStarsHTML(n, cls) { let h = ''; for (let i = 0; i < 3; i++) h += `<i class="${cls}${i < n ? ' on' : ''}">${dpdIconSVG('star', 'smStarIc', i < n ? { fill: true } : { sw: 2.2 })}</i>`; return h; } // 받은 별 = 채운 별 · 못 받은 칸 = 빈 별 (숫자 없음)
+// ---- 끝 창(#overlay)·부활 창(#reviveModal) 빌려 쓰기 — 판이 리셋되면(storyLeave) 원래 글로 ----
+const STORY_OV0 = (() => { const ov = document.getElementById('overlay'), bs = [...ov.querySelectorAll('button')], f = k => bs.find(b => (b.getAttribute('onclick') || '').includes(k)), h = ov.querySelector('h2');
+  return { h, a: f('reset'), b: f('exitToTitle'), ht: h.textContent, at: f('reset').textContent, bt: f('exitToTitle').textContent }; })();
+const STORY_RV0 = document.querySelector('#reviveModal .dcBody').innerHTML;
+let storyOvOn = false, storyRvOn = false;
+function storyOverlayMode(mode, next) { // 'clear' = [다음 스테이지](다음이 없으면 숨김) · [지도로] / 'fail' = [다시하기] · [지도로]
+  const o = STORY_OV0; storyOvOn = true;
+  o.h.textContent = mode === 'clear' ? '스테이지 클리어!' : o.ht;
+  o.a.textContent = mode === 'clear' ? '다음 스테이지' : '다시하기'; o.a.style.display = mode === 'clear' && !next ? 'none' : '';
+  o.b.textContent = '지도로';
+}
+function storyUiRestore() {
+  if (storyOvOn) { const o = STORY_OV0; storyOvOn = false; o.h.textContent = o.ht; o.a.textContent = o.at; o.b.textContent = o.bt; o.a.style.display = ''; }
+  if (storyRvOn) { storyRvOn = false; document.querySelector('#reviveModal .dcBody').innerHTML = STORY_RV0; }
+}
+// ---- 부활 (스테이지당 1번 — S.reviveUsed는 판마다 새 S라 다시하기 = 다시 1번) ----
+function storyReviveOffer() { // reviveOffer 스토리 갈래: 질 때(목숨 0 · 보스 성 도착 · 안전 상한에 남은 몹이 목숨 이상) 일시정지 + 창 — [포기]는 챌린지 rvNo 그대로(reviveUsed → endWave → 실패 창)
+  if (gameDialogVisible('reviveModal')) return true;
+  if (S.reviveUsed || S.phase !== 'wave') return false;
+  const st = S.story, boss = S.monsters.some(m => m.boss), cap = S.waveT >= STORY.CAP;
+  if (!(S.life <= 0 || st.bossIn || (cap && (boss || S.life - S.monsters.filter(m => !m.boss).length <= 0)))) return false;
+  const yes = document.getElementById('rvYes'), no = document.getElementById('rvNo');
+  yes.textContent = ADS_READY ? '광고 보고 부활' : '부활'; yes.disabled = no.disabled = false;
+  storyRvOn = true;
+  document.querySelector('#reviveModal .dcBody').innerHTML = '이 스테이지에서 한 번, 다시 일어설 수 있다.<br>목숨을 되찾고 이 전투를 이어 간다.' + (st.bossIn || boss ? '<br>보스는 입구로 돌아간다.' : '');
+  document.getElementById('reviveModal').style.display = 'block';
+  tutTipHide(); syncGamePause(); sfx('leak');
+  return true;
+}
+function storyBossBack(m) { // 보스를 입구(0번 입구 길 처음)로 — 성에 닿아 빠진 보스면 다시 넣음 · 위치는 다음 storyStep이 s로 다시 셈
+  const st = S.story, k = st.doors[0], P = st.P[k];
+  m.dead = false; m.arrived = false; m.path = k; m.s = 0; m.fi = 0; m.rem = P.L; m.occl = false;
+  m.pullT = 0; m.pullS = null; m.pullK = null; m.pullQuiet = false;
+  m.x = P.x[0] + P.nx[0] * (m.off || 0); m.y = P.y[0] + P.ny[0] * (m.off || 0) - (m.lift || 0);
+  if (!S.monsters.includes(m)) S.monsters.push(m);
+  storyPuff(m.x, m.y);
+}
+function storyReviveYes() { // [부활] (광고 확인 뒤 — rvYes): 목숨을 처음의 절반으로(그보다 많으면 그대로) · 보스(성에 닿았거나 길 위)는 입구로 · 다른 몹은 그대로 · 안전 상한이었으면 시간 여유 다시
+  const st = S.story, half = Math.ceil((st.map.lives || STORY.LIVES) / 2), l0 = S.life;
+  S.reviveUsed = S.revived = true;
+  S.life = Math.max(S.life, half);
+  if (S.life !== l0) S.lifeLog.push({ r: S.storyR, d: -(S.life - l0), why: '부활' });
+  const back = st.bossArr ? [st.bossArr] : [];
+  for (const m of S.monsters) if (m.boss && !back.includes(m)) back.push(m);
+  for (const m of back) storyBossBack(m);
+  st.bossIn = false; st.bossArr = null;
+  if (S.waveT >= STORY.CAP) S.waveT = STORY.CAP / 2;
+  closeRevive();
+  addFloat(HOUSE.x, HOUSE.y - 70, '부활!', '#43a047', 2.5); sfx('hero');
+  logMsg('<b>부활!</b> 목숨을 되찾고 이 전투를 이어 간다 (스테이지마다 한 번)', true);
+}
+// ---- 스테이지 클리어 (storyNextRound — 마지막 라운드를 목숨 남기고 끝냄) ----
+function storyStageClear() { // 별 · 저장(더 좋은 별만) · 클리어 창 — 판은 게임오버와 같은 '끝난 판'(S.phase 'gameover': update·창 함수들의 gameover 가드 그대로, 배경은 계속 흐름)
+  const st = S.story, stars = storyStarsNow(), d = storyDataGet(), first = !d.clear[st.id], best0 = d.stars[st.id] || 0;
+  d.clear[st.id] = true; if (stars > best0) d.stars[st.id] = stars; storySave(d);
+  S.phase = 'gameover'; st.end = 'clear'; st.stars = stars;
+  const nx = storyNextId(st.id), nxOn = !!nx && storyOpen(nx);
+  storyOverlayMode('clear', nxOn);
+  const msg = stars >= 3 ? '한 마리도 안 놓쳤어요!' : stars === 2 ? (S.revived ? '다시 일어나 끝까지 지켜 냈어요' : '성을 튼튼하게 지켜 냈어요') : '아슬아슬하게 지켜 냈어요';
+  const tip = stars >= 3 ? '' : S.revived ? '쓰러지지 않고 지키면 별을 더 받아요' : stars === 2 ? '한 마리도 안 놓치면 별이 가득 차요' : '목숨을 더 지키면 별이 늘어요';
+  const nn = nxOn ? STORY_MAPS[nx].name : '', news = first && nxOn ? `「${nn}」${storyJosa(nn, '이', '가')} 열렸어요` : !first && stars > best0 ? '별이 늘었어요' : '';
+  const fs = document.getElementById('finalScore');
+  fs.innerHTML = `<b>${st.map.name}</b><br><span class="soStars" role="img" aria-label="${['', '별 하나', '별 둘', '별 셋'][stars]}">${storyStarsHTML(stars, 'soStar')}</span><br><span class="soMsg">${msg}</span>`
+    + (news ? `<br><span class="soNews">${news}</span>` : '') + (tip ? `<br><span class="soLine">${tip}</span>` : '');
+  document.getElementById('overlay').style.display = 'flex'; syncGamePause();
+  if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) fs.querySelectorAll('.soStar.on').forEach((el, i) => { try { el.animate([{ transform: 'scale(0.2) rotate(-40deg)', opacity: 0 }, { transform: 'scale(1.25)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }], { duration: 420, delay: 180 + i * 170, easing: 'ease-out', fill: 'backwards' }); } catch (e) {} }); // #overlay 안은 CSS animation 꺼짐(wd-completion) → WAAPI
+  sfx('jackpot');
+  logMsg(`<b>${st.map.name}</b> 클리어!`, true);
+}
+// ---- 여정 지도 (논리 2380 × 300 — 성 자리 180 + 월드 다섯 × 440, 월드마다 깃발 다섯 물결) ----
+const SM = { W: 2380, H: 300, X0: 180, WW: 440, gate: [140, 236], end: [2356, 166],
+  Y: [[216, 146, 208, 132, 182], [124, 196, 136, 208, 158], [210, 140, 200, 128, 176], [122, 194, 134, 204, 160], [206, 138, 198, 128, 170]] };
+function smPt(w, i) { return [SM.X0 + w * SM.WW + 52 + i * 84, SM.Y[w][i]]; } // 월드 w(0~4) i번째 깃발 발끝
+function smSegs(P) { const f = v => +v.toFixed(1), out = []; // 점을 지나는 매끈한 길 (균일 Catmull-Rom → 3차 베지어 조각)
+  for (let i = 0; i < P.length - 1; i++) { const a = P[Math.max(0, i - 1)], b = P[i], c = P[i + 1], d = P[Math.min(P.length - 1, i + 2)];
+    out.push(`C${f(b[0] + (c[0] - a[0]) / 6)} ${f(b[1] + (c[1] - a[1]) / 6)} ${f(c[0] - (d[0] - b[0]) / 6)} ${f(c[1] - (d[1] - b[1]) / 6)} ${c[0]} ${c[1]}`); }
+  return out; }
+function smWorldOpen(w) { const L = storyStages(w + 1); return L.length > 0 && storyOpen(L[0]); } // 그 월드 첫 스테이지가 열렸나 (데이터 없으면 잠금)
+function smSvg(reach) { // reach = 갈색(지나온) 길 조각 수 · 잠긴 월드 = 흐림 + 자물쇠 + '곧 열려요'
+  const { W, H, X0, WW } = SM, pts = [SM.gate], ico = (n, x, y, s, col, fill) => `<path d="${(fill ? DPD_ICONS[n].fill : DPD_ICONS[n].d)}" transform="translate(${x} ${y}) scale(${s / 24})" ${fill ? `fill="${col}"` : `fill="none" stroke="${col}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"`}/>`;
+  for (let w = 0; w < 5; w++) for (let i = 0; i < 5; i++) pts.push(smPt(w, i));
+  pts.push(SM.end);
+  const seg = smSegs(pts), m0 = `M${pts[0][0]} ${pts[0][1]}`, rx = w => X0 + w * WW;
+  let s = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true" focusable="false"><defs><linearGradient id="smTint" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="0">`;
+  STORY_WORLDS.forEach((o, w) => { s += `<stop offset="${((rx(w) + (w ? 50 : -X0)) / W).toFixed(3)}" stop-color="${o.tint}"/><stop offset="${((rx(w + 1) - 50) / W).toFixed(3)}" stop-color="${o.tint}"/>`; });
+  s += `</linearGradient></defs><rect width="${W}" height="${H}" fill="#f2deae"/><rect width="${W}" height="${H}" fill="url(#smTint)" opacity=".26"/>`;
+  for (const [x, y, a, b] of [[300, 40, 120, 30], [760, 270, 150, 26], [1240, 52, 140, 28], [1700, 262, 160, 30], [2160, 60, 130, 26], [90, 70, 80, 22]]) s += `<ellipse cx="${x}" cy="${y}" rx="${a}" ry="${b}" fill="#c99a5a" opacity=".12"/>`; // 양피지 얼룩
+  // 월드 장식 (그림만 — 흐린 단색)
+  const bush = (x, y, k) => `<g fill="#5f8f3e" opacity=".42"><circle cx="${x}" cy="${y}" r="${11 * k}"/><circle cx="${x + 13 * k}" cy="${y + 2 * k}" r="${9 * k}"/><circle cx="${x - 12 * k}" cy="${y + 3 * k}" r="${8 * k}"/></g>`;
+  s += bush(232, 284, 1) + bush(392, 288, 1.2) + bush(556, 282, 0.9) + bush(318, 74, 0.8) + bush(476, 62, 1) + bush(46, 112, 0.9);
+  s += `<g opacity=".5"><circle cx="1010" cy="92" r="28" fill="#f6a35c"/><path d="M968 106h84" stroke="#d48446" stroke-width="5" stroke-linecap="round"/></g><g opacity=".42"><path d="M712 292v-22M884 290v-20M790 70v-18" stroke="#7a4f27" stroke-width="4" stroke-linecap="round"/><circle cx="712" cy="264" r="13" fill="#d9822b"/><circle cx="884" cy="264" r="12" fill="#c86f2a"/><circle cx="790" cy="46" r="11" fill="#d9822b"/></g>`;
+  s += `<g fill="none" stroke="#5d4a6e" stroke-width="4" stroke-linecap="round" opacity=".38"><path d="M1090 280l18-16 14 14 16-18 14 16 16-14"/><path d="M1300 62l16-16 14 14 16-18 14 16"/><path d="M1440 284l14-14 14 12 16-16"/></g><path d="M1210 92v-34h8v-8h6v8h8v34z" fill="#5d4a6e" opacity=".3"/>`;
+  s += `<g fill="#2e2838" opacity=".32"><path d="M1560 96V58l9-14 9 14v38z"/><path d="M1590 96V40l12-18 12 18v56z"/><path d="M1626 96V62l9-12 9 12v34z"/><path d="M1552 96h100v10h-100z"/><path d="M1820 290v-30l9-12 9 12v30z"/><path d="M1846 290v-42l11-16 11 16v42z"/></g>`;
+  s += `<g fill="#d2452c" opacity=".36"><path d="M1990 292c-10-14 2-22 6-34 6 14 16 18 8 34z"/><path d="M2120 292c-12-16 2-26 8-40 6 16 18 22 8 40z"/><path d="M2270 292c-10-14 2-22 6-32 6 12 14 18 8 32z"/><path d="M2210 70c-8-10 2-18 5-26 5 10 12 14 6 26z"/></g>`;
+  // 길: 흐린 점선 전체 → 지나온 길(밝은 흙 띠 + 갈색 점선)
+  s += `<path d="${m0}${seg.join('')}" fill="none" stroke="#9c8b72" stroke-width="5" stroke-linecap="round" stroke-dasharray="0.1 11" opacity=".55"/>`;
+  if (reach > 0) { const dg = m0 + seg.slice(0, reach).join(''); s += `<path d="${dg}" fill="none" stroke="#ead2a0" stroke-width="18" stroke-linecap="round" opacity=".8"/><path d="${dg}" fill="none" stroke="#7a4f27" stroke-width="6" stroke-linecap="round" stroke-dasharray="0.1 11"/>`; }
+  // 우리 성 (게임 성 그림 축소) + 그림자
+  s += `<ellipse cx="86" cy="262" rx="58" ry="9" fill="#5c3d1d" opacity=".18"/><image href="assets/mapart/camp_castle.webp?v=1" x="16" y="128" width="140" height="140" preserveAspectRatio="xMidYMax meet"/>`;
+  // 잠긴 월드: 깃발(흐림) → 안개 → 이름 · 자물쇠 · '곧 열려요'
+  for (let w = 0; w < 5; w++) {
+    const on = smWorldOpen(w), cx = rx(w) + WW / 2, nm = STORY_WORLDS[w].name;
+    if (!on) { if (!storyStages(w + 1).length) for (let i = 0; i < 5; i++) { const [x, y] = smPt(w, i); s += ico('flag', x - 9, y - 40, 44, '#8f8371', true); }
+      s += `<rect x="${rx(w)}" y="0" width="${WW}" height="${H}" fill="#efe1bf" opacity=".5"/>`; }
+    const tw = nm.length * 21 + 8;
+    s += `<text x="${cx + (on ? 0 : 14)}" y="38" text-anchor="middle" font-size="21" font-weight="800" fill="${on ? '#4c3a1c' : '#8a7a62'}" stroke="#f6e8c6" stroke-width="5" paint-order="stroke" stroke-linejoin="round">${nm}</text>`;
+    if (!on) s += ico('lock', cx - tw / 2 - 12, 18, 24, '#8a7a62', false) + `<text x="${cx + 14}" y="60" text-anchor="middle" font-size="14" font-weight="700" fill="#8a7a62" stroke="#f6e8c6" stroke-width="4" paint-order="stroke">곧 열려요</text>`;
+  }
+  return s + '</svg>';
+}
+function smFlagEl(id) { return id ? document.querySelector(`#smMap .smFlag[data-id="${id}"]`) : null; }
+function storyMapRender() { // 지도 다시 그리기 (SVG + 깃발 단추 + 아래 줄)
+  const d = storyDataGet(), front = storyFrontier(), map = document.getElementById('smMap');
+  let flags = '', reach = 0, k = 0;
+  for (let w = 0; w < 5; w++) { const L = storyStages(w + 1);
+    for (let i = 0; i < 5; i++, k++) { const id = L[i]; if (!id) continue;
+      const M = STORY_MAPS[id], [x, y] = smPt(w, i), cl = !!d.clear[id], op = storyOpen(id), n = d.stars[id] || 0;
+      if (op) reach = k + 1;
+      flags += `<button type="button" class="smFlag ${cl ? 'is-clear' : op ? 'is-open' : 'is-lock'}${id === front ? ' is-next' : ''}${M.bossR.length ? ' is-boss' : ''}" data-id="${id}" style="left:${(x / SM.W * 100).toFixed(3)}%;top:${(y / SM.H * 100).toFixed(3)}%" title="${M.name}" aria-label="${M.name}${cl ? ' — 깬 곳' : op ? ' — 열린 곳' : ' — 잠김'}">`
+        + dpdIconSVG('flag', 'smFlagIc', { fill: true }) + (cl ? `<span class="smFlagStars">${storyStarsHTML(n, 'smFS')}</span>` : '') + (op ? '' : `<span class="smFlagLock">${dpdIconSVG('lock', 'smLockIc', { sw: 2.4 })}</span>`) + '</button>'; } }
+  map.innerHTML = smSvg(reach) + flags;
+  storyFootRender();
+}
+function storyFootRender() { // 아래 줄: 본 만화 [다시 보기] — 아직 없으면 고르는 법 한 줄
+  const d = storyDataGet(), ids = Object.keys(STORY_COMIC_NAMES).filter(k => d.seen[k]), el = document.getElementById('smFoot');
+  el.innerHTML = ids.length ? `<span class="smFootT">${dpdIconSVG('book', 'smFootIc')}만화 다시 보기</span>` + ids.map(k => `<button type="button" class="title-link smComic" data-comic="${k}">${STORY_COMIC_NAMES[k]}</button>`).join('')
+    : `<span class="smFootT">${dpdIconSVG('flag', 'smFootIc', { fill: true })}깃발을 눌러 갈 곳을 골라요</span>`;
+}
+function storyMapScrollTo(el) { const sc = document.getElementById('smScroll'); if (!el || !sc) return; sc.scrollLeft = el.offsetLeft < sc.clientWidth * 0.8 ? 0 : el.offsetLeft - sc.clientWidth * 0.42; } // 첫 화면 안이면 성부터 보이게 (맨 왼쪽)
+function storyMapShow(focusId) { // 여정 지도 열기 (타이틀 화면 안 'story') — 미뤄 둔 월드 끝 만화가 있으면 그 위에 연다
+  storyCardClose(false);
+  storyMapRender();
+  showTitleScreen('story', null);
+  const f = smFlagEl(focusId) || smFlagEl(storyFrontier()) || smFlagEl(storyStages(1).slice(-1)[0]);
+  storyMapScrollTo(f);
+  try { (f || document.getElementById('btnStoryBack')).focus({ preventScroll: true }); } catch (e) {}
+  storyComicPending();
+}
+// ---- 만화 연결 (openComic(id, onDone) — 끝·건너뛰기·Esc면 onDone 한 번, 판 리셋으로 닫히면 안 부름) ----
+function storyComicPending() { // 그 월드 마지막 스테이지를 깼는데 끝 만화를 아직 안 봤으면 (지도 위에서) 연다 — 처음 깬 직후·새로 고침 뒤 모두
+  if (typeof openComic !== 'function' || comicCovers()) return;
+  const d = storyDataGet();
+  for (const [w, cid] of Object.entries(STORY_END_COMIC)) { const L = storyStages(+w);
+    if (L.length && d.clear[L[L.length - 1]] && !d.seen[cid]) { openComic(cid, () => { storySeen(cid); if (document.getElementById('startOverlay').dataset.screen === 'story') storyFootRender(); }); return; } }
+}
+function storyGo(id) { // 스테이지 카드 [출발] — 소리 잠금 풀기·전체 화면은 지금(클릭 제스처 안): 만화 onDone은 페이드 끝이라 제스처 밖일 수 있다
+  if (!storyOpen(id)) return;
+  initAudio(); if (IS_MOBILE) { lockLandscape(); iosPwaHint(); }
+  storyCardClose(false);
+  if (STORY_MAPS[id].world === 1 && STORY_MAPS[id].idx === 1 && !storyDataGet().seen.prologue && typeof openComic === 'function') { // 1-1 처음 = 프롤로그 만화 → 시작
+    let done = false; const go = () => { if (done) return; done = true; storySeen('prologue'); storyStart(id, false); }; // 없는 만화면 openComic이 false + onDone 예약 → 두 번 안 돌게
+    if (!openComic('prologue', go)) go();
+    return;
+  }
+  storyStart(id, false);
+}
+// ---- 스테이지 카드 (이름 · 받은 별 · '이 맵에 나오는 것' 그림만 · [출발]) ----
+function storyMapThings(M) { // 그 스테이지 라운드에서 나오는 재질(나오는 순서) + 보스 모양 — spawnMonster(밴드 재질 + 밴드 끝 다음 재질)·storyInitMob(storyBossShape)과 같은 식, 판 밖이라 맵을 넘김
+  const mats = [], bosses = [];
+  for (let r = 1; r <= Math.max(1, M.rounds); r++) { const n = storyEqRound(r, M), mi = matInfo(n);
+    if (!mats.includes(mi.idx)) mats.push(mi.idx);
+    if (mi.p > 0.6 && !mats.includes(mi.next)) mats.push(mi.next);
+    if (M.bossR.includes(r)) { const sh = storyBossShape(n, M); if (!bosses.includes(sh)) bosses.push(sh); } }
+  return { mats, bosses };
+}
+function storyThingArt(kind, v, px) { // 카드 그림 한 칸 — 게임 그림 함수(drawMatStatic·m3Boss)에 잠깐 바꿔 낀 ctx·S로 (만화 withGame과 같은 방식, finally에서 꼭 되돌림)
+  const k = Math.min(2, Math.max(1, window.devicePixelRatio || 1)), c = document.createElement('canvas'), n = Math.round(px * k);
+  c.width = c.height = n; c.className = 'smThing' + (kind === 'boss' ? ' boss' : '');
+  const g = c.getContext('2d'); g.setTransform(k, 0, 0, k, n / 2, n / 2);
+  const oc = ctx, oS = S; ctx = g; S = Object.assign({}, oS || {}, { time: 0, projs: [] });
+  try { if (kind === 'boss') m3Boss(0, 0, px * 0.33, v, 0, 0); else drawMatStatic(0, 0, px * 0.36, v, 0, MATERIALS[v].col); } catch (e) { console.error('story card art', e); }
+  finally { ctx = oc; S = oS; }
+  return c;
+}
+let smCardFor = null; // 카드가 열린 깃발 (닫으면 그 깃발로 초점)
+function storyCardOpen(id) {
+  const M = STORY_MAPS[id]; if (!M) return;
+  const op = storyOpen(id), n = storyDataGet().stars[id] || 0, w = STORY_WORLDS[M.world - 1], card = document.getElementById('smCard'), th = storyMapThings(M);
+  card.innerHTML = `<button type="button" class="smX" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>`
+    + `<div class="smCW">${w ? w.name : ''}</div><h3 id="smCardName">${M.name}</h3>`
+    + `<div class="smCStars" role="img" aria-label="${['아직 별 없음', '별 하나', '별 둘', '별 셋'][n]}">${storyStarsHTML(n, 'smCS')}</div>`
+    + `<div class="smSee"><span class="smSeeT">이 맵에 나오는 것</span><div class="smSeeArt"></div></div>`
+    + (op ? `<button type="button" class="title-primary smGo">출발 <span class="title-arrow" aria-hidden="true">→</span></button>` : `<p class="smLockMsg">${dpdIconSVG('lock', 'smLockIc', { sw: 2.2 })}앞 스테이지를 깨면 열려요</p>`);
+  const art = card.querySelector('.smSeeArt');
+  for (const v of th.mats) art.appendChild(storyThingArt('mat', v, 46));
+  for (const v of th.bosses) art.appendChild(storyThingArt('boss', v, 58));
+  card.dataset.id = id; smCardFor = id;
+  document.getElementById('smCardWrap').hidden = false;
+  try { card.querySelector(op ? '.smGo' : '.smX').focus({ preventScroll: true }); } catch (e) {}
+}
+function storyCardClose(back) { // 열려 있었으면 닫고 true (back = 그 깃발로 초점)
+  const wrap = document.getElementById('smCardWrap'); if (!wrap || wrap.hidden) return false;
+  wrap.hidden = true; document.getElementById('smCard').innerHTML = '';
+  const f = back && smFlagEl(smCardFor); smCardFor = null;
+  if (f) try { f.focus({ preventScroll: true }); } catch (e) {}
+  return true;
+}
+document.getElementById('btnStory').onclick = () => storyMapShow();
+document.getElementById('btnStoryBack').onclick = () => { storyCardClose(false); showTitleScreen('title', 'btnStory'); };
+document.getElementById('smMap').addEventListener('click', e => { const b = e.target.closest('.smFlag'); if (b) storyCardOpen(b.dataset.id); });
+document.getElementById('smCardWrap').addEventListener('click', e => {
+  if (e.target.id === 'smCardWrap' || e.target.closest('.smX')) { storyCardClose(true); return; } // 카드 밖(어두운 막)·✕ = 닫기
+  if (e.target.closest('.smGo')) storyGo(document.getElementById('smCard').dataset.id);
+});
+document.getElementById('smFoot').addEventListener('click', e => { const b = e.target.closest('.smComic'); if (b && typeof openComic === 'function') openComic(b.dataset.comic); });
+document.getElementById('smScroll').addEventListener('wheel', e => { // PC 마우스 휠 = 지도 가로로 (가로 휠·터치패드는 그대로)
+  if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+  const sc = e.currentTarget; if (sc.scrollWidth <= sc.clientWidth) return;
+  sc.scrollLeft += e.deltaY; e.preventDefault();
+}, { passive: false });
 function hideStartScreen() {
   document.getElementById('startOverlay').style.display = 'none';
   document.body.classList.remove('at-title');
@@ -20418,7 +20768,8 @@ window.addEventListener('keydown', e => {
   e.stopImmediatePropagation();
   if (e.key === 'Escape' && !document.getElementById('titleHelp').open) {
     const scr = document.getElementById('startOverlay').dataset.screen;
-    showTitleScreen('title', scr === 'coop' ? 'btnCoop' : scr === 'tut' ? 'btnTut' : 'btnSolo');
+    if (scr === 'story' && storyCardClose(true)) return; // 📖 여정 지도: 스테이지 카드가 열려 있으면 카드부터 (10-19 M3)
+    showTitleScreen('title', scr === 'coop' ? 'btnCoop' : scr === 'tut' ? 'btnTut' : scr === 'story' ? 'btnStory' : 'btnSolo');
   }
 }, true);
 document.getElementById('btnMapTest').onclick = () => { initAudio(); startMapTest(4); };
@@ -22714,7 +23065,7 @@ if (WORLD_MOTION_V2) (() => {
 (() => {
   'use strict';
   const leafArt = '<svg viewBox="0 0 96 66" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 52C34 33 52 24 82 17" stroke="#6c4b27" stroke-width="5" stroke-linecap="round"/><path d="M30 41C14 37 11 23 15 13c17 0 25 10 24 20L30 41Z" fill="#5f8c40" stroke="#354f2d" stroke-width="2"/><path d="M49 29C36 20 40 7 50 3c12 8 13 19 6 25L49 29Z" fill="#83a74d" stroke="#456331" stroke-width="2"/><path d="M62 23C70 9 84 7 93 11c-5 13-15 20-29 18L62 23Z" fill="#5f8b42" stroke="#354f2d" stroke-width="2"/><path d="M26 45C34 60 50 63 61 53c-8-12-20-14-32-10L26 45Z" fill="#759949" stroke="#405d31" stroke-width="2"/><path d="m18 20 13 19m19-29 1 17m17-2 17-9M35 47l18 7" stroke="#c5d682" stroke-width="2" stroke-linecap="round"/><circle cx="57" cy="34" r="5" fill="#cb8743" stroke="#744d28" stroke-width="2"/><circle cx="65" cy="36" r="4" fill="#e4ad50" stroke="#744d28" stroke-width="2"/></svg>';
-  for (const id of ['diffRow','coopRow','tutRow','titleHelp']) {
+  for (const id of ['diffRow','coopRow','tutRow','storyRow','titleHelp']) { // storyRow = 📖 여정 지도 (10-19 M3)
     const panel = document.getElementById(id);
     if (!panel || panel.querySelector('.woodland-leaves')) continue;
     const leaves = document.createElement('span');
