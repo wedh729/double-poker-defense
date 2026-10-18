@@ -8189,7 +8189,7 @@ function markHidden(id) {
       d[id] = 1; localStorage.setItem('dpd_hidden', JSON.stringify(d));
       markAchv('h_' + id);
       if (HIDDEN_DEX.every(h => hiddenSeen(h.id))) markAchv('hidden_all');
-    }
+    } else if (!(S && S.story)) { markAchv('h_' + id); if (HIDDEN_DEX.every(h => d[h.id])) markAchv('hidden_all'); } // 10-19 M3: 스토리에서 먼저 발견(업적은 막힘)한 히든 — 챌린지에서 다시 만들면 업적만 따로 (이미 받았으면 markAchv가 아무것도 안 함)
   } catch (e) {}
 }
 // 🏆 업적 도감 발견 기록: 라운드 재시작해도 유지
@@ -8220,9 +8220,11 @@ function markMon(i) {
       if (MATERIALS.slice(0, MAT_BASE_N).every((_, k) => monSeen(k))) markAchv('mondex'); // '몬스터 도감 14종 완성' = 기본 14종 고정(변종은 도감 칸만 늘고 업적과 무관 — 10-15 Q13)
       return true;
     }
+    if (!monAchvChk && !(S && S.story)) { monAchvChk = true; if (MATERIALS.slice(0, MAT_BASE_N).every((_, k) => d[k])) markAchv('mondex'); } // 10-19 M3: 14번째 몹을 스토리에서 처음 봐 업적이 막혔으면 — 챌린지에서 '이미 본 몹'을 처음 잡을 때 업적만 따로 (잡을 때마다 부르는 함수라 판마다 한 번만 확인)
   } catch (e) {}
   return false;
 }
+let monAchvChk = false; window.addEventListener('dpd:resetui', () => { monAchvChk = false; }); // ↑ 판(reset)마다 다시 한 번
 // ==================== 우측 상단 광석 방 (정원제: 1명 시작, 10라운드마다 +1) ====================
 const OREPOS = { x: ROOM.cx + ROOM.w/2 - 22, y: ROOM.cy }; // 광석을 방 최우측에 고정 (유닛에 안 가려지게)
 const ORE_LINE = OREPOS.x - 34; // 유닛 접근 한계선 — 이 선을 넘으면 광석이 가려지므로 통행 금지
