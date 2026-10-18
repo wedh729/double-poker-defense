@@ -3396,6 +3396,9 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
 #smScroll {height:var(--smH);overflow-x:auto;overflow-y:hidden;border-radius:14px;background:#f2deae;box-shadow:inset 0 0 0 2px #c79f63,inset 0 0 26px #8a5a2a40;
   scrollbar-width:thin;scrollbar-color:#b88a4f transparent;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x;}
 #smMap {position:relative;height:100%;width:calc(var(--smH) * 7.9333);} /* 2380 ÷ 300 */
+#smScroll.smMoreR {-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 44px),#0000);mask-image:linear-gradient(90deg,#000 calc(100% - 44px),#0000);} /* 옆으로 더 있음 = 그쪽 가장자리 흐림 (smEdge) */
+#smScroll.smMoreL {-webkit-mask-image:linear-gradient(90deg,#0000,#000 44px);mask-image:linear-gradient(90deg,#0000,#000 44px);}
+#smScroll.smMoreL.smMoreR {-webkit-mask-image:linear-gradient(90deg,#0000,#000 44px,#000 calc(100% - 44px),#0000);mask-image:linear-gradient(90deg,#0000,#000 44px,#000 calc(100% - 44px),#0000);}
 #smMap > svg {position:absolute;inset:0;width:100%;height:100%;display:block;}
 .smFlag {position:absolute;height:21%;aspect-ratio:1;width:auto;padding:0;margin:0;border:0;border-radius:8px;background:none;color:#c8432f;cursor:pointer;transform:translate(-21%,-90%);isolation:isolate;-webkit-tap-highlight-color:transparent;}
 .smFlag.is-boss {height:25%;}
@@ -20663,7 +20666,8 @@ function storyFootRender() { // 아래 줄: 본 만화 [다시 보기] — 아�
   el.innerHTML = ids.length ? `<span class="smFootT">${dpdIconSVG('book', 'smFootIc')}만화 다시 보기</span>` + ids.map(k => `<button type="button" class="title-link smComic" data-comic="${k}">${STORY_COMIC_NAMES[k]}</button>`).join('')
     : `<span class="smFootT">${dpdIconSVG('flag', 'smFootIc', { fill: true })}깃발을 눌러 갈 곳을 골라요</span>`;
 }
-function storyMapScrollTo(el) { const sc = document.getElementById('smScroll'); if (!el || !sc) return; sc.scrollLeft = el.offsetLeft < sc.clientWidth * 0.8 ? 0 : el.offsetLeft - sc.clientWidth * 0.42; } // 첫 화면 안이면 성부터 보이게 (맨 왼쪽)
+function storyMapScrollTo(el) { const sc = document.getElementById('smScroll'); if (!el || !sc) return; sc.scrollLeft = el.offsetLeft < sc.clientWidth * 0.8 ? 0 : el.offsetLeft - sc.clientWidth * 0.42; smEdge(); } // 첫 화면 안이면 성부터 보이게 (맨 왼쪽)
+function smEdge() { const sc = document.getElementById('smScroll'); if (!sc) return; sc.classList.toggle('smMoreR', sc.scrollLeft + sc.clientWidth < sc.scrollWidth - 4); sc.classList.toggle('smMoreL', sc.scrollLeft > 4); } // 지도가 옆으로 더 있으면 그쪽 가장자리를 흐리게
 function storyMapShow(focusId) { // 여정 지도 열기 (타이틀 화면 안 'story') — 미뤄 둔 월드 끝 만화가 있으면 그 위에 연다
   storyCardClose(false);
   storyMapRender();
@@ -20740,6 +20744,8 @@ document.getElementById('smCardWrap').addEventListener('click', e => {
   if (e.target.closest('.smGo')) storyGo(document.getElementById('smCard').dataset.id);
 });
 document.getElementById('smFoot').addEventListener('click', e => { const b = e.target.closest('.smComic'); if (b && typeof openComic === 'function') openComic(b.dataset.comic); });
+document.getElementById('smScroll').addEventListener('scroll', smEdge, { passive: true });
+window.addEventListener('resize', () => { if (document.getElementById('startOverlay').dataset.screen === 'story') smEdge(); });
 document.getElementById('smScroll').addEventListener('wheel', e => { // PC 마우스 휠 = 지도 가로로 (가로 휠·터치패드는 그대로)
   if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
   const sc = e.currentTarget; if (sc.scrollWidth <= sc.clientWidth) return;
