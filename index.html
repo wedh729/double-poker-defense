@@ -20926,6 +20926,7 @@ function storyTrayTap(c) { // 대기석 칸 누름 — ◀▶ = 넘겨 보기 ·
   S.units.forEach(v => v.selected = false); m.sel = u; hideObjInfo();
 }
 window.addEventListener('keydown', e => { if (e.key === 'Escape' && S && S.story && S.story.m2 && S.story.m2.pick) storyPickCancel(); }); // Esc = 합치기 고르기 취소
+window.addEventListener('mousemove', e => { if (e.target !== cv && drag && drag.tray && S && S.story) { const p = mpos(e); pressMove(p.x, p.y); } }); // PC: 끄는 중 커서가 캔버스 위 단추([출발!]·시계·정보창)를 지나가도 따라가게 (놓기 = window mouseup)
 // ---- 그리기 (draw 끝 — 화면 UI라 모든 것 위) ----
 function storyDrawMini(u, cx, cy, k) { ctx.save(); ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-cx, -cy); drawUnit(u, 0); ctx.restore(); } // 게임 그림 함수(drawUnit)를 줄여서
 function storyDrawParked(u) { storyDrawMini(u, u.x, u.y, 0.7); } // 포털·제단에 넣어 둔 유닛 = 작게
