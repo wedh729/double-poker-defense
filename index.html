@@ -20282,8 +20282,15 @@ const STORY_UI = {   // 논리 좌표 [x0, y0, x1, y1] — t1014s_zones.js 실�
 };
 const STORY_KEY = 'dpd_story'; // { v: 1, clear: { '1-1': true }, stars: { '1-1': 1~3 }, seen: { prologue: true, w1end: true } } — 10-19 M3: 클리어·별(더 좋은 기록만)·본 만화. 읽기는 storyDataGet(메모리 사본) 한 곳
 function storyLoad() { let d = null; try { d = JSON.parse(localStorage.getItem(STORY_KEY) || 'null'); } catch (e) {} const o = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
-  return d && d.v === 1 ? { v: 1, clear: o(d.clear), stars: o(d.stars), seen: o(d.seen) } : { v: 1, clear: {}, stars: {}, seen: {} }; }
-function storySave(d) { try { localStorage.setItem(STORY_KEY, JSON.stringify(d)); } catch (e) {} } // 저장이 막혀도(사생활 보호 모드 등) 메모리 사본으로 그 세션은 그대로 진행
+  if (!(d && d.v === 1)) return { v: 1, clear: {}, stars: {}, seen: {} };
+  const stars = {}; for (const [k, n] of Object.entries(o(d.stars))) if (Number.isInteger(n) && n >= 0 && n <= 3) stars[k] = n; // 10-19 크로스체크 P2-8: 별 = 0~3 정수만 (깨진 저장의 다른 값은 버림)
+  return { v: 1, clear: o(d.clear), stars, seen: o(d.seen) }; }
+function storySave(d) { // 저장이 막혀도(사생활 보호 모드 등) 메모리 사본으로 그 세션은 그대로 진행
+  const L = storyLoad(); // 10-19 크로스체크 P1-1: 다른 탭(PWA + 브라우저 탭)이 그 사이 저장했을 수 있다 → 저장 직전 다시 읽어 합침(깸·본 만화 = 둘 중 하나라도 · 별 = 큰 값) — 합친 값이 메모리 사본(d)에도 남는다
+  for (const k in L.clear) if (L.clear[k]) d.clear[k] = true;
+  for (const k in L.seen) if (L.seen[k]) d.seen[k] = true;
+  for (const k in L.stars) if (!(d.stars[k] >= L.stars[k])) d.stars[k] = L.stars[k];
+  try { localStorage.setItem(STORY_KEY, JSON.stringify(d)); } catch (e) {} }
 const STORY_BLD0 = { // ⚠️ 로드 때 한 번 찍은 원본 — 복원은 언제나 이것으로 (스토리 안 '다시하기'가 storyStart를 거듭 불러도 덮인 값이 원본으로 저장되지 않게)
   house: { x: HOUSE.x, y: HOUSE.y }, portal: { x: PORTAL.x, y: PORTAL.y }, portalOut: { x: PORTAL_OUT.x, y: PORTAL_OUT.y },
   altar: { x: ALTAR.x, y: ALTAR.y }, altarOut: { x: ALTAR_OUT.x, y: ALTAR_OUT.y } };
@@ -20705,7 +20712,8 @@ function storyStart(id, gesture) { // gesture = 클릭으로 불렸나 (다시�
 function storyBoot() { let q = null; try { q = new URLSearchParams(location.search).get('story'); } catch (e) {} if (q) storyStart(q, false); } // 하네스가 '?t=…&pf=…'를 붙여 열어도 됨 · 없는 이름이면 그냥 타이틀
 function storyExit(ask) { // 나가기·끝 창 [지도로] = 여정 지도 (10-19 M3 — 예전엔 타이틀) · 실제로 나갔을 때만(확인 창 취소면 그대로) 난이도 이름 되돌림 — tutExit 선례 (storyLeave 안에선 안 됨: 새 판 시작 함수가 reset 전에 정한 이름을 덮는다)
   const id = S.story && S.story.id;
-  exitToTitle(ask);
+  if (ask && !confirm('지도로 나갈까요? 이 스테이지는 처음부터 다시 해야 해요.')) return; // 10-19 크로스체크 P2-1: 확인 글도 '지도로' (exitToTitle의 '타이틀로 나갈까요?' 대신)
+  exitToTitle(false);
   if (S.story) return;
   DIFF_MUL = 1; DIFF_NAME = '초원';
   storyMapShow(id);
@@ -21037,6 +21045,7 @@ function storyDragMove(dr, x, y) { // 대기석 유닛을 끌기 시작·계속 
   g.tgt = storyDropAt(g.px, g.py, g.u);
 }
 function storyRelease(dr) { // pressEnd 맨 앞 — 처리했으면 true (대기석 누름·끌어 놓기·고르는 중 누름)
+  if (dr.block) return true; // 끄는 중 창이 떠서 취소된 끌기(storyDragCancel) — 손을 떼도 아무 일 없음
   const m = storyM2(), g = dr.tray;
   if (g) {
     if (g.go) { g.u.grabbed = false; if (m.tray.includes(g.u)) storyDrop(g.u, g.px, g.py); return true; } // 못 놓는 곳 = 대기석으로 돌아감 (아무 일 없음)
@@ -21072,8 +21081,14 @@ function storyDrawRoadInRange(x, y, R) { // 끄는 동안 사거리 안에 드�
   ctx.restore();
 }
 function storyBadge(x, y, n) { ctx.fillStyle = '#ffd54f'; ctx.strokeStyle = '#6d4c00'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 7, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#4e3500'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(String(n), x, y + 3.5); ctx.textAlign = 'left'; } // 합치기 ①② 표시
+function storyDragCancel() { // 10-19 크로스체크(위험 ①): 대기석 유닛을 끄는 중 창이 뜨면(부활 창 등 정지 · 클리어/실패 창) 끌기 취소 — 그 유닛은 대기석 그대로 (창 밑에서 손을 떼 놓이던 것)
+  const g = drag && drag.tray; if (!g) return;
+  if (g.u) g.u.grabbed = false;
+  drag.tray = null; drag.block = true; needRedraw = true;
+}
 function storyDrawUI() {
   const m = S.story.m2; if (!m) return;
+  if (drag && drag.tray && (S.paused || S.phase === 'gameover')) storyDragCancel(); // 창이 뜬 그 프레임에 (정지 중에도 창 열림이 다시 그리기를 부른다)
   const now = performance.now(), T = STORY_M2.TRAY, g = drag && drag.tray && drag.tray.go ? drag.tray : null, pick = m.pick, pul = 0.5 + 0.5 * Math.sin(S.time * 7 + now * 0.004);
   const cand = pick ? storyFuseCands(pick.key) : null;
   ctx.save();
@@ -21199,7 +21214,7 @@ function storyReviveYes() { // [부활] (광고 확인 뒤 — rvYes): 목숨을
   for (const m of S.monsters) if (m.boss && !back.includes(m)) back.push(m);
   for (const m of back) storyBossBack(m);
   st.bossIn = false; st.bossArr = null;
-  if (S.waveT >= STORY.CAP) S.waveT = STORY.CAP / 2;
+  S.waveT = Math.min(S.waveT, STORY.CAP / 2); // 10-19 크로스체크 P2-5: 부활하면 언제나 안전 상한까지 150게임초 여유 (290초대에 부활하면 몇 초 뒤 상한에 걸려 곧바로 지던 것)
   closeRevive();
   addFloat(HOUSE.x, HOUSE.y - 70, '부활!', '#43a047', 2.5); sfx('hero');
   logMsg('<b>부활!</b> 목숨을 되찾고 이 전투를 이어 간다 (스테이지마다 한 번)', true);
@@ -21301,10 +21316,11 @@ function storyComicPending() { // 그 월드 마지막 스테이지를 깼는데
 }
 function storyGo(id) { // 스테이지 카드 [출발] — 소리 잠금 풀기·전체 화면은 지금(클릭 제스처 안): 만화 onDone은 페이드 끝이라 제스처 밖일 수 있다
   if (!storyOpen(id)) return;
-  initAudio(); if (IS_MOBILE) { lockLandscape(); iosPwaHint(); }
+  const pro = STORY_MAPS[id].world === 1 && STORY_MAPS[id].idx === 1 && !storyDataGet().seen.prologue && typeof openComic === 'function';
+  initAudio(); if (IS_MOBILE) { lockLandscape(); if (!pro) iosPwaHint(); } // 10-19 크로스체크 P2-2: 프롤로그면 '홈 화면에 추가' 안내는 만화가 끝난 뒤(만화 밑에 깔려 14초 뒤 사라지던 것)
   storyCardClose(false);
-  if (STORY_MAPS[id].world === 1 && STORY_MAPS[id].idx === 1 && !storyDataGet().seen.prologue && typeof openComic === 'function') { // 1-1 처음 = 프롤로그 만화 → 시작
-    let done = false; const go = () => { if (done) return; done = true; storySeen('prologue'); storyStart(id, false); }; // 없는 만화면 openComic이 false + onDone 예약 → 두 번 안 돌게
+  if (pro) { // 1-1 처음 = 프롤로그 만화 → 시작
+    let done = false; const go = () => { if (done) return; done = true; storySeen('prologue'); storyStart(id, false); if (IS_MOBILE) iosPwaHint(); }; // 없는 만화면 openComic이 false + onDone 예약 → 두 번 안 돌게
     if (!openComic('prologue', go)) go();
     return;
   }
@@ -21388,6 +21404,7 @@ window.addEventListener('keydown', e => {
   if (!document.body.classList.contains('at-title')) return;
   // Pre-game keys must not also trigger unit controls behind the title.
   e.stopImmediatePropagation();
+  if (e.repeat && (e.key === 'Enter' || e.key === ' ') && document.getElementById('startOverlay').dataset.screen === 'story') { e.preventDefault(); return; } // 📖 10-19 크로스체크 P2-7: 깃발에서 Enter를 꾹 누르면 카드가 열리자마자 초점이 간 [출발]까지 눌리던 것 — 지도에선 키 반복 무시
   if (e.key === 'Escape' && !document.getElementById('titleHelp').open) {
     const scr = document.getElementById('startOverlay').dataset.screen;
     if (scr === 'story' && storyCardClose(true)) return; // 📖 여정 지도: 스테이지 카드가 열려 있으면 카드부터 (10-19 M3)
