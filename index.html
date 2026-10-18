@@ -9771,6 +9771,7 @@ function drawHellscape() {
   if (hk > 0.5) drawAshFall(Math.round(12 * (hk - 0.4)), 1); // 불씨와 반대 방향 — 대비
 }
 function drawBackdrop() {
+  if (S.story && storyBgDraw()) return; // 📖 스토리 맵 그림이 왔으면 그림이 지면 전체 (10-19 M4)
   const ph = skyPhase(), t = SKY_TINT[ph];
   // ☁️ 변형 배경의 하늘 모퉁이는 각 함수 '안'(태양 그리기 직전)에서 그린다 — 여기서 뒤에 그리면 태양·일식을 덮는다 (크로스체크)
   if (ph === 5) { drawHellscape(); return; }        // 💀 지옥: 아포칼립스 (이미 지옥이라 생지옥화 오버레이 불필요)
@@ -19894,14 +19895,14 @@ const STORY_MAPS = {
     bld: { castle: [150, 425], portal: [235, 275], altar: [480, 330], mine: true, room: true },
     spawn: [480, 190], tray: null },
   // 월드 1 = 스토리_2026-10-14\world1_maps_v2.json 정본 (10-19 M4 통합: 10-15 v3 길 + 1-1~1-5 GPT 그림에 맞춘 길·교차·noBuild 띠 — 1-3·1-4 10-16 · 1-5 10-18 그림 맞춤) — curve: true면 pts = 조절점(길이 모두 지남, storyCurve) · 길 폭 34
-  //   bg = 그림 연결 전(null = 낮 배경 + 코드 흙길) · 1-2만 건물 자리 다름(그림 네모 자리). 모양·공략·명당(shape·strategy·spots)·교차점(cross)·언덕 단(terrain)·맞춤 메모(_fit)·띠 조절점(band.ctrl)은 JSON에만 (엔진은 안 읽음) · castleArt = 성 그림 자리(castle 우리 성 / camp 진지 — 엔진은 아직 안 읽음)
-  '1-1': { name: '동산', world: 1, idx: 1, bg: null, skyCut: true, lives: 20, rounds: 6, req: [1, 4], bossR: [],
+  //   bg = 그 맵 GPT 그림(1880×1000 webp, 스테이지 들어갈 때만 받음 — storyBgLoad) · 1-2만 건물 자리 다름(그림 네모 자리). 모양·공략·명당(shape·strategy·spots)·교차점(cross)·언덕 단(terrain)·맞춤 메모(_fit)·띠 조절점(band.ctrl)은 JSON에만 (엔진은 안 읽음) · castleArt = 성 그림 자리(castle 우리 성 / camp 진지 — 엔진은 아직 안 읽음)
+  '1-1': { name: '동산', world: 1, idx: 1, bg: 'assets/story/w1_1-1.webp?v=1', skyCut: true, lives: 20, rounds: 6, req: [1, 4], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 135], [896, 135], [877, 139], [861, 150], [850, 166], [846, 185], [846, 262], [846, 340], [830, 377], [793, 393], [756, 377], [740, 340], [740, 261], [740, 182], [724, 145], [687, 129], [650, 145], [634, 182], [634, 259], [634, 336], [618, 374], [580, 390], [542, 374], [526, 336], [526, 255], [526, 180], [519, 154], [500, 135], [474, 128], [428, 128], [380, 128], [352, 135], [332, 156], [325, 183], [325, 250], [323, 312], [304, 362], [252, 391], [165, 398]] }],
     forks: [], cover: [], sky: [], noBuild: [], bld: W1B, spawn: [410, 330], tray: null, castleArt: 'castle' },
-  '1-2': { name: '초원 입구', world: 1, idx: 2, bg: null, skyCut: true, lives: 20, rounds: 8, req: [3, 7], bossR: [],
+  '1-2': { name: '초원 입구', world: 1, idx: 2, bg: 'assets/story/w1_1-2.webp?v=1', skyCut: true, lives: 20, rounds: 8, req: [3, 7], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 385], [868, 385], [826, 385], [801, 378], [783, 360], [776, 335], [776, 260], [776, 174], [760, 135], [721, 119], [682, 135], [666, 174], [666, 260], [666, 300], [658, 330], [636, 352], [606, 360], [560, 377], [528, 377], [497, 369], [478, 346], [470, 314], [451, 267], [404, 248], [357, 267], [338, 314], [332, 346], [308, 378], [250, 395], [165, 414]] }],
     forks: [], cover: [], sky: [], noBuild: [], bld: { castle: [81, 444], portal: [78, 263], altar: [211, 216], mine: false, room: false }, spawn: [550, 190], tray: null, castleArt: 'camp' },
-  '1-3': { name: '초원 한가운데', world: 1, idx: 3, bg: null, skyCut: true, lives: 20, rounds: 10, req: [6, 10], bossR: [],
+  '1-3': { name: '초원 한가운데', world: 1, idx: 3, bg: 'assets/story/w1_1-3.webp?v=1', skyCut: true, lives: 20, rounds: 10, req: [6, 10], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 396], [850, 388], [800, 388], [746, 396], [685, 381], [657, 361], [650, 334], [665, 299], [685, 287], [719, 286], [820, 280], [865, 273], [901, 237], [898, 200], [875, 173], [841, 161], [792, 162], [772, 162], [682, 152], [620, 138], [558, 128], [496, 136], [478, 146], [434, 201], [392, 237], [360, 290], [325, 306], [306, 327], [281, 368], [266, 382], [200, 399], [165, 398]] }],
     forks: [], cover: [], sky: [],
     noBuild: [
@@ -19910,7 +19911,7 @@ const STORY_MAPS = {
       { kind: 'rock', band: { w: 24, pts: [[412, 282], [418, 282], [424, 282], [430, 282], [436, 284], [441, 286], [447, 288], [452, 291], [456, 293]] } },
     ],
     bld: W1B, spawn: [540, 340], tray: null, castleArt: 'camp' },
-  '1-4': { name: '개울 건너', world: 1, idx: 4, bg: null, skyCut: true, lives: 20, rounds: 10, req: [8, 12], bossR: [],
+  '1-4': { name: '개울 건너', world: 1, idx: 4, bg: 'assets/story/w1_1-4.webp?v=1', skyCut: true, lives: 20, rounds: 10, req: [8, 12], bossR: [],
     paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 262], [884, 254], [852, 254], [794, 254], [768, 282], [756, 332], [740, 364], [712, 378], [669, 382], [616, 362], [600, 327], [600, 262], [604, 221], [596, 182], [558, 154], [489, 162], [472, 188], [466, 224], [481, 299], [474, 330], [446, 362], [392, 376], [371, 372], [323, 374], [288, 402], [285, 407], [250, 433], [201, 429], [172, 412]] }],
     forks: [], cover: [], sky: [],
     noBuild: [
@@ -19921,7 +19922,7 @@ const STORY_MAPS = {
       { kind: 'rock', circle: [704, 165, 16] },
     ],
     bld: W1B, spawn: [360, 200], tray: null, castleArt: 'camp' },
-  '1-5': { name: '초원 끝 언덕', world: 1, idx: 5, bg: null, skyCut: true, lives: 20, rounds: 12, req: [10, 14], bossR: [12],
+  '1-5': { name: '초원 끝 언덕', world: 1, idx: 5, bg: 'assets/story/w1_1-5.webp?v=1', skyCut: true, lives: 20, rounds: 12, req: [10, 14], bossR: [12],
     paths: [{ id: 'a', w: 34, door: true, curve: true, pts: [[905, 145], [879, 145], [839, 156], [806, 194], [807, 237], [808, 281], [800, 320], [760, 359], [690, 368], [642, 367], [590, 358], [564, 330], [560, 270], [560, 196], [580, 164], [610, 151], [658, 150], [692, 163], [710, 202], [694, 237], [647, 256], [618, 256], [565, 256], [533, 254], [467, 241], [437, 221], [381, 220], [340, 251], [321, 322], [281, 370], [254, 384], [211, 396], [165, 398]] }],
     forks: [], cover: [], sky: [],
     noBuild: [
@@ -20222,8 +20223,47 @@ function storyGravity(b) { // 목성 중력 = 같은 길, 보스 앞뒤 GRAV_S �
   if (WEAK.SHAPES[b.shape]) b.weakT = WEAK.T; // bossGravity와 같은 줄 (목성은 해당 없음)
 }
 // ---- 그리기 (설계 §12) ----
-function storyDrawRoad() { // 그림 없는 맵(bg null) = 코드 흙길 한 장 베이크 — RS·스테이지가 바뀌면 다시 굽는다 (rsMaybe는 이 베이크를 모름)
-  if (S.story.map.bg) return; // M4: 맵 그림이 길을 대신
+// ---- M4 맵 그림 (10-19) — bg = GPT 그림 1880×1000 webp. 스테이지에 들어갈 때만 받는다(첫 화면·챌린지 다운로드 0) · 한 장만 쥠 · 받는 중·실패 = 낮 배경 + 코드 흙길 ----
+let storyBg = null; // { src, img, bake, failed, q } — 마지막으로 들어간 그림 맵 하나 (다시하기·같은 맵 재진입은 그대로 씀)
+function storyBgLoad(map) { // storyApply에서 — 같은 그림이면 그대로, 다른 그림이면 바꿔 받음 (옛 것은 놓아 줌)
+  if (!map.bg || (storyBg && storyBg.src === map.bg && !storyBg.failed)) return;
+  const b = storyBg = { src: map.bg, img: null, bake: null, failed: false, q: false }, im = new Image();
+  im.onload = () => { if (storyBg !== b) return; b.img = im; needRedraw = true; storyBgQueue(b); };
+  im.onerror = () => { if (storyBg === b) b.failed = true; }; // 실패 = 이 판은 대체 바탕 (다시 들어오면 다시 받음)
+  im.src = map.bg;
+}
+function storyBgQueue(b) { if (b.q) return; b.q = true; setTimeout(() => { b.q = false; if (storyBg === b) try { storyBgBaked(b); } catch (e) {} needRedraw = true; }, 0); } // 굽기는 프레임 밖에서 (bgFullLoad와 같은 방식)
+function storyBgBaked(b) { // RS 크기로 굽고 언샤프 — bgFullBaked와 같은 식을 복사(챌린지 함수는 안 건드림) · RS가 바뀌면 다시 (rsMaybe는 이 베이크를 모름)
+  if (b.bake && b.bake._rs === RS) return b.bake;
+  const W = Math.round(VW * RS), H = Math.round(VH * RS); // RS 2 = 원본 1880×1000과 1:1
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(b.img, 0, 0, W, H);
+  const id = g.getImageData(0, 0, W, H), s = id.data, out = g.createImageData(W, H), o = out.data;
+  const A = RS >= 1.75 ? 0.30 : 0.42, C0 = 1 + 4 * A;
+  for (let y = 0; y < H; y++) {
+    const up = y ? -W * 4 : 0, dn = y < H - 1 ? W * 4 : 0;
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4, lf = x ? -4 : 0, rt = x < W - 1 ? 4 : 0;
+      for (let ch = 0; ch < 3; ch++) { const v = s[i + ch] * C0 - (s[i + up + ch] + s[i + dn + ch] + s[i + lf + ch] + s[i + rt + ch]) * A; o[i + ch] = v < 0 ? 0 : v > 255 ? 255 : v; }
+      o[i + 3] = 255;
+    }
+  }
+  g.putImageData(out, 0, 0);
+  c._rs = RS; b.bake = c;
+  return c;
+}
+function storyBgReady() { const b = storyBg; return S.story && b && b.img && b.src === S.story.map.bg ? b : null; } // 이 맵 그림이 다 왔나
+function storyBgDraw() { // drawBackdrop 맨 앞 — 그림이 왔으면 지면 전체를 그림으로 (true): 하늘·폭포·해·풀꽃·시간대 틴트는 그림에 있음
+  const b = storyBgReady(); if (!b) return false;
+  if (b.bake && b.bake._rs === RS) ctx.drawImage(b.bake, 0, 0, VW, VH); // 목적지 논리 크기 — RS 변환이 디바이스 1:1로 환산
+  else { ctx.drawImage(b.img, 0, 0, VW, VH); storyBgQueue(b); } // 굽기 전·RS 바뀐 직후 = 원본 축소로 잠깐
+  bgFullKeyDrawn = null; // 챌린지 풀맵 아님 — 폭포 이스터에그(updateStoneDip)·풀맵 하늘 앵커 꺼짐
+  return true;
+}
+function storyDrawRoad() { // 그림 없는 맵(bg null)·그림 받는 중·실패 = 코드 흙길 한 장 베이크 — RS·스테이지가 바뀌면 다시 굽는다 (rsMaybe는 이 베이크를 모름)
+  if (storyBgReady()) return; // M4: 맵 그림이 길을 대신 (길 판정·몹 이동은 그대로)
   if (!storyRoadBake || storyRoadBake._rs !== RS || storyRoadBake._id !== S.story.id) storyRoadBake = storyBakeRoad();
   ctx.drawImage(storyRoadBake, 0, 0, VW, VH); // 목적지 논리 크기 명시 (10-08 교훈 ⑤)
 }
@@ -20327,12 +20367,14 @@ function storyApply(map) { // 건물 좌표 덮기 (const 객체라 속성 대�
   PORTAL.x = b.portal[0]; PORTAL.y = b.portal[1]; PORTAL_OUT.x = PORTAL.x + 58; PORTAL_OUT.y = PORTAL.y + 18;
   ALTAR.x = b.altar[0]; ALTAR.y = b.altar[1]; ALTAR_OUT.x = ALTAR.x + 62; ALTAR_OUT.y = ALTAR.y - 40;
   storyApplied = true; storyBakesReset(); document.body.classList.add('storyMode'); document.body.classList.toggle('storyNoMine', !b.mine);
+  storyBgLoad(map); // M4 맵 그림 — 여기서만 받는다 (10-19)
 }
 function storyLeave() { // 'dpd:resetui' (resetTransientUI 끝 — 새 S를 만들기 전) — 나가기·다시하기·새 판·튜토리얼·멀티·맵 미리보기 전부 reset()을 지난다
   if (!storyApplied) return; // 챌린지 경로는 여기서 끝 (베이크를 건드리지 않는다)
   Object.assign(HOUSE, STORY_BLD0.house); Object.assign(PORTAL, STORY_BLD0.portal); Object.assign(PORTAL_OUT, STORY_BLD0.portalOut);
   Object.assign(ALTAR, STORY_BLD0.altar); Object.assign(ALTAR_OUT, STORY_BLD0.altarOut);
   storyApplied = false; storyBakesReset(); document.body.classList.remove('storyMode', 'storyNoMine');
+  if (storyBg) setTimeout(() => { if (!S.story) storyBg = null; }, 0); // 맵 그림 놓아 주기 (10-19) — 다시하기·다음 스테이지는 같은 호출 안에서 S.story가 다시 서므로 그대로
 }
 function storyBakesReset() { bldgLayers.clear(); sbWorldBake = null; storyRoadBake = null; } // 성·광부 길('mroad|g' 폭 = 광산 − HOUSE.x)·초원 꽃(제단·포털 회피)·대체 지면 베이크 — 다음 프레임에 다시 굽는다
 window.addEventListener('dpd:resetui', storyLeave); // mpLeave와 같은 방식 (resetTransientUI 본문은 안 고침)
