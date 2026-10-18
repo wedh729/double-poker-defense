@@ -3687,7 +3687,7 @@ const FUSE_N = 3;        // 10-18 유저: 같은 유닛 3마리 → 영웅 · �
 const FUSE_POPUP = true; // 10-18 유저: 포털 '작은 창'([합치기]·['?']·[그대로 두기]) — false면 옛 동작(슬롯머신·시간술사·일반 합성 전부 자동)
 const HERO_DMG = 3;   // 영웅 공격력 = 기본 유닛 × 3 (10-18 유저: 재료 1마리당 힘 그대로 — 옛 5기 ×5)
 const SUPER_DMG = 2.4; // 슈퍼영웅 추가 공격 배수 (10-18 유저: 옛 영웅 5기 ×4 → 3기 ×2.4 — 재료 1마리당 그대로. 공속 0.6·카드 가중 1.5·사거리 +25 등 다른 특전은 그대로)
-const NUKE_MUL = 5;   // 핵폭탄: 영웅 데미지에 추가로 ×5 (즉 기본 대비 ×25)
+const NUKE_MUL = 5;   // 핵폭탄: 영웅 데미지에 추가로 ×5 (즉 기본 대비 ×HERO_DMG×5 = ×15 — 10-18 3마리 합성 전엔 ×25)
 // 사거리·스플래시는 소환장 2배 확장에 맞춰 전부 ×2 (저격총만 맵 크기 고려 470 캡)
 const WEAPONS = [
   // 0 하이카드 — 새총
@@ -5560,16 +5560,16 @@ function makeChrono(used) { // ⏳ 시간술사 (스트레이트 3) — 자동 �
 //   '?' = 그 3마리가 히든 재료일 때만 (같은 숫자 트리플 = 슬롯머신 · 스트레이트 = 시간술사, 그 히든이 아직 없을 때). 이름 없는 반짝이 — 도감에서 찾은 히든이면 이름
 //   그대로 두기 = u.fuseHold (수집 반경 밖으로 나가면 풀림) · Esc·바깥 누르기도 그대로 두기
 //   혼자하기 = 고를 때까지 정지(syncGamePause) · 같이하기 = 안 멈추고 8초 뒤 자동 [합치기] · 튜토리얼 = 창 없이 바로 (updatePortal)
-let fuseAsk = null; // { units, kind: 'hero'|'super'|'slot'|'chrono', at: 연 시각(ms), auto: 같이하기 자동 합치기 시각(ms, 혼자하기 0) }
-const FUSE_AUTO_MS = 8000, FUSE_LOCK_MS = 350; // 같이하기 자동 [합치기] · 예고 없이 뜨는 창이라 열린 직후 누르던 입력(Enter·탭)에 바로 골라지지 않게 잠금
+let fuseAsk = null; // { units, kind: 'hero'|'super'|'slot'|'chrono', at: 연 시각(ms — 잠금용), autoT: 같이하기 자동 선택 시각(게임 시간 S.time, 혼자하기 0) }
+const FUSE_AUTO_SEC = 8, FUSE_LOCK_MS = 350; // 같이하기 자동 선택 = 게임 시간 8초(정지 중엔 안 흐름 — 10-19 크로스체크 P2-2) · 예고 없이 뜨는 창이라 열린 직후 누르던 입력(Enter·탭)에 바로 골라지지 않게 잠금
 function fuseModalBlocks() { return !!fuseAsk && !S.multi; } // 혼자하기만 막는 창 (정지·키보드·바깥 누르기) — 같이하기는 맵 조작 그대로
 function fuseAskBusy() { // 다른 창·뽑기 연출 중엔 겹쳐 열지 않는다 (다음 프레임에 다시 본다)
-  return ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal'].some(gameDialogVisible) || !!gbOv || !!document.querySelector('#cvWrap .gbxStage.ovl');
+  return ['startOverlay', 'winOverlay', 'hellOverlay', 'shopOverlay', 'chipModal', 'duelConfirm', 'crownModal', 'reviveModal', 'optModal', 'comicView'].some(gameDialogVisible) || !!gbOv || !!document.querySelector('#cvWrap .gbxStage.ovl'); // comicView = 스토리 병합 대비 (이 브랜치엔 없음 — 10-19 크로스체크 P1-2)
 }
 function fuseAskOpen(units, kind) {
   if (S.phase === 'gameover' || fuseAskBusy()) return;
   const u = units.find(v => v.keyLabel !== 'B') || units[0], w = WEAPONS[u.tier], now = performance.now(), hid = kind === 'slot' || kind === 'chrono'; // 이름 줄 대표 = 빽스트레이트가 아닌 유닛 (셋 다 빽이면 '빽스트레이트')
-  fuseAsk = { units, kind, at: now, auto: S.multi ? now + FUSE_AUTO_MS : 0 };
+  fuseAsk = { units, kind, at: now, autoT: S.multi ? S.time + FUSE_AUTO_SEC : 0 };
   const m = document.getElementById('fuseModal'), hb = document.getElementById('fuseHid');
   m.querySelector('.dcTitle').textContent = `같은 유닛 ${units.length}마리`;
   document.getElementById('fuseName').textContent = `${u.hero ? w.hero.name : w.name}(${unitShortName(u).name}) ×${units.length}`; // 정보창 이름 체계 — '활(원페어) ×3'
@@ -5587,21 +5587,23 @@ function fuseAskOpen(units, kind) {
   syncGamePause();
 }
 function fuseAskOk(a) { const G = PORTAL.r + 30; return a.units.every(u => S.units.includes(u) && !u.grabbed && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) < G); } // 아직 맵에 있고 수집 반경 안·안 집힘
-function fuseAskTick() { // 창이 열린 동안 updatePortal이 부른다 (혼자하기는 정지라 같이하기만 실제로 돈다) — 남은 시간 막대 · 8초 뒤 자동 [합치기]
+function fuseAskTick() { // 창이 열린 동안 updatePortal이 부른다 (혼자하기는 정지라 같이하기만 실제로 돈다) — 남은 시간 막대 · 게임 시간 8초 뒤 자동 선택
   if (!fuseAskOk(fuseAsk)) { fuseAskClose(); return; } // 같이하기: 그 사이 옮기거나 집은 유닛 → 창 닫기 (다시 멈춰 서면 다시 묻는다)
-  if (!fuseAsk.auto) return;
-  const left = fuseAsk.auto - performance.now();
+  if (!fuseAsk.autoT) return;
+  const left = fuseAsk.autoT - S.time; // 게임 시간 — 상점·설정 정지·탭 숨김 동안엔 update가 안 돌아 안 흐른다
   if (left <= 0) fusePick('auto');
-  else document.getElementById('fuseBar').style.width = (100 * left / FUSE_AUTO_MS).toFixed(1) + '%';
+  else document.getElementById('fuseBar').style.width = (100 * left / FUSE_AUTO_SEC).toFixed(1) + '%';
 }
+function fuseAskYield() { if (fuseAsk) fuseAskClose(); } // 같이하기 창이 열린 채 큰 히든 레시피가 완성되면 레시피가 먼저 — 창은 닫는다 (10-19 크로스체크 P2-3 · 창이 없으면 아무것도 안 함)
 function fuseAskClose() { fuseAsk = null; document.getElementById('fuseModal').style.display = 'none'; syncGamePause(); }
 function fuseAskClear() { fuseAsk = null; const m = document.getElementById('fuseModal'); if (m) m.style.display = 'none'; } // 판 리셋(resetTransientUI)·게임 오버 — 정지는 새 S·오버레이가 정한다
 function fusePick(ch) { // 'go' = [합치기] · 'hid' = ['?'] · 'hold' = [그대로 두기](Esc·바깥 누르기) · 'auto' = 같이하기 8초
   const a = fuseAsk; if (!a) return;
-  if (ch !== 'auto' && performance.now() - a.at < FUSE_LOCK_MS) return;
+  if (ch === 'auto') ch = a.kind === 'slot' || a.kind === 'chrono' ? 'hold' : 'go'; // '?' 창의 자동 선택 = 그대로 두기 — 히든 기회를 멋대로 버리지 않게 (10-19 크로스체크 P2-1)
+  else if (performance.now() - a.at < FUSE_LOCK_MS) return;
   fuseAskClose();
   if (!fuseAskOk(a)) return; // 고른 순간 다시 확인 — 아니면 그냥 닫기
-  if (ch === 'hold') { for (const u of a.units) u.fuseHold = true; return; }
+  if (ch === 'hold') { fuseHoldAll(a); return; }
   if (ch === 'hid') {
     if (a.kind === 'slot' && !S.units.some(u => u.slot)) makeSlot(a.units);
     else if (a.kind === 'chrono' && !S.units.some(u => u.chrono)) makeChrono(a.units);
@@ -5609,21 +5611,29 @@ function fusePick(ch) { // 'go' = [합치기] · 'hid' = ['?'] · 'hold' = [그�
   }
   fuseGroup(a.units);
 }
-document.addEventListener('pointerdown', e => { // 🌀 창 바깥 누르기 = 그대로 두기 (혼자하기만 — 같이하기 창은 맵 조작을 막지 않는다)
-  if (fuseModalBlocks() && !(e.target && e.target.closest && e.target.closest('#fuseModal'))) fusePick('hold');
+function fuseHoldAll(a) { // 그대로 두기 = 그때 포털 안에 멈춰 선 같은 키 유닛 전부 (슬롯 창이면 같은 숫자만) — 같은 유닛 4~6마리면 곧바로 또 묻던 것 (10-19 크로스체크 P2-4)
+  const k = fuseKey(a.units[0]), kr = a.kind === 'slot' ? a.units[0].keyRank : null, G = PORTAL.r + 30;
+  for (const u of a.units) u.fuseHold = true;
+  for (const u of S.units) if (!u.grabbed && !u.moving && fuseKey(u) === k && (kr == null || u.keyRank === kr) && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) < G) u.fuseHold = true;
+}
+document.addEventListener('click', e => { // 🌀 창 바깥 누르기 = 그대로 두기 (혼자하기만 — 같이하기 창은 맵 조작을 막지 않는다)
+  if (!fuseModalBlocks() || (e.target && e.target.closest && e.target.closest('#fuseModal'))) return;
+  e.stopPropagation(); e.preventDefault(); // click 캡처에서 닫기만 — 밑에 있던 단추(스킬 바·포커장 이동·결투 기권 등)가 같이 눌리지 않게 (10-19 크로스체크 P2-8)
+  fusePick('hold');
 }, true);
 // 강화 포털: 같은 유닛 FUSE_N기(10-18 유저: 5 → 3)가 포털 안에 모이면 영웅/슈퍼영웅으로 합성
 //   FUSE_POPUP(튜토리얼 제외) = 슬롯머신·시간술사·일반 합성은 '멈춰 선 3마리(그대로 두기 제외)'로 작은 창 · 큰 레시피(길로틴·갬블러·고물상·쇼군·콰르텟·조커)는 지금처럼 자동(그대로 두기 유닛도 재료)
 function updatePortal() {
   // 수집 반경은 시각 포털보다 넉넉하게 (길로틴 등 10기 레시피가 유닛 분리 때문에 안 들어가는 문제 방지)
   const GATHER = PORTAL.r + 30;
-  const pop = FUSE_POPUP && !S.tutMode; // 🌀 작은 창을 쓰는 판 (튜토리얼은 창 없이 바로)
+  const pop = FUSE_POPUP && !S.tutMode && !S.story; // 🌀 작은 창을 쓰는 판 (튜토리얼은 창 없이 바로 · 스토리는 옛 자동 3합성 — 스토리 포털 '히든 전용'은 M2, 10-19 크로스체크 P1-2)
+  let open = false; // 같이하기 창이 열린 채 도는 프레임 — 큰 히든 레시피만 판정 (창을 띄우는 판정은 건너뜀)
   if (pop) {
-    for (const u of S.units) if (u.fuseHold && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) >= GATHER) delete u.fuseHold; // 수집 반경 밖으로 나가면 '그대로 두기' 풀림 → 다시 들어오면 다시 묻는다
-    if (fuseAsk) { fuseAskTick(); return; } // 창이 열려 있는 동안엔 판정하지 않는다
+    for (const u of S.units) if (u.fuseHold && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) >= GATHER + 16) delete u.fuseHold; // 수집 반경 밖으로 나가면 '그대로 두기' 풀림 → 다시 들어오면 다시 묻는다 · 해제는 반경 +16 여유 (밀려서 가장자리를 넘나드는 깜빡임 방지 — 10-19 크로스체크 P2-5)
+    if (fuseAsk) { fuseAskTick(); if (!fuseAsk) return; open = true; } // 혼자하기는 정지라 여기 안 옴 · 같이하기: 창이 열린 동안에도 큰 레시피가 완성되면 그쪽이 먼저 (창은 닫힘 — 10-19 크로스체크 P2-3)
   }
   const inP = S.units.filter(u => fuseKey(u) && !u.grabbed && Math.hypot(u.x - PORTAL.x, u.y - PORTAL.y) < GATHER); // 집힌 채 지나가는 유닛은 재료가 아니다 (놓으면 다음 프레임 정상 합성)
-  const ask = u => !u.fuseHold && !u.moving; // 🌀 창을 띄우는 재료 = 멈춰 선 유닛만 (그대로 두기·걷는 유닛 제외) — 자동 히든 판정은 inP 전부
+  const ask = u => !u.fuseHold && !u.moving; // 🌀 일반 합성 창의 재료 = 멈춰 선 유닛만 (그대로 두기·걷는 유닛 제외) — 자동 히든 판정은 inP 전부 · 슬롯·시간술사는 아래 따로(찾기 = 그대로 두기만 뺀 전부, 창 = 멈춘 셋)
   if (!S.tutMode) { // [튜토리얼 10-14] 튜토리얼 판은 히든 조합 판정을 건너뛴다 (표준 합성만)
   // 히든 조합 먼저 체크: 일반 원페어 ×1 + 투페어 ×2 + 트리플 ×3
   const normals = inP.filter(u => !u.hero && !u.hidden);
@@ -5633,6 +5643,7 @@ function updatePortal() {
   if (!S.units.some(u => u.execute) &&
       (byT[1] || []).length >= 1 && (byT[2] || []).length >= 2 && (byT[3] || []).length >= 3 && (byT[7] || []).length >= 4) {
     const used = [byT[1][0], byT[2][0], byT[2][1], byT[3][0], byT[3][1], byT[3][2], byT[7][0], byT[7][1], byT[7][2], byT[7][3]];
+    fuseAskYield();
     S.units = S.units.filter(u => !used.includes(u));
     spawnGuillotine(PORTAL_OUT.x, PORTAL_OUT.y);
     S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 70, t: 0.5 });
@@ -5642,19 +5653,22 @@ function updatePortal() {
   }
   // 🎰 슬롯머신 (같은 숫자 트리플×3). 갬블러(원1투2트3)보다 먼저 체크 — 의도적으로 모은 동일 숫자 트리플 3개가
   // 갬블러 레시피에 뺏기지 않도록. 1기 제한. · 🌀 10-18: 작은 창 = 멈춰 선 같은 숫자 트리플 3 → '?' 카드 (그대로 두기면 아래 갬블러 등 재료로 남음)
+  //   10-19 크로스체크 P1-1: 찾기는 아래 자동 판정과 같은 유닛(걷는 유닛 포함 — 그대로 두기만 뺌) · 창은 셋이 멈췄을 때 · 걷는 동안엔 아래(갬블러·콰르텟)를 미룸 = 옛 '슬롯 먼저'
   if (!S.units.some(u => u.slot)) {
     const byRank = {};
-    (byT[3] || []).forEach(u => { if (!pop || ask(u)) (byRank[u.keyRank] = byRank[u.keyRank] || []).push(u); });
+    (byT[3] || []).forEach(u => { if (!pop || !u.fuseHold) (byRank[u.keyRank] = byRank[u.keyRank] || []).push(u); });
     const slotKey = Object.keys(byRank).find(k => byRank[k].length >= 3);
     if (slotKey) {
-      const used = byRank[slotKey].slice(0, 3);
-      if (pop) fuseAskOpen(used, 'slot'); else makeSlot(used);
+      if (!pop) { makeSlot(byRank[slotKey].slice(0, 3)); return; }
+      const st = byRank[slotKey].filter(u => !u.moving);
+      if (st.length >= 3 && !open) fuseAskOpen(st.slice(0, 3), 'slot');
       return;
     }
   }
   if (!S.units.some(u => u.gamble) &&
       (byT[1] || []).length >= 1 && (byT[2] || []).length >= 2 && (byT[3] || []).length >= 3) {
     const used = [byT[1][0], byT[2][0], byT[2][1], byT[3][0], byT[3][1], byT[3][2]];
+    fuseAskYield();
     S.units = S.units.filter(u => !used.includes(u));
     spawnGambler(PORTAL_OUT.x, PORTAL_OUT.y);
     S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 60, t: 0.5 });
@@ -5665,6 +5679,7 @@ function updatePortal() {
   // 💰 고물상 (하이카드×3 + 원페어×3 + 투페어×3 = 9기, 상향). 1기 제한.
   if (!S.units.some(u => u.junk) && (byT[0] || []).length >= 3 && (byT[1] || []).length >= 3 && (byT[2] || []).length >= 3) {
     const used = [byT[0][0], byT[0][1], byT[0][2], byT[1][0], byT[1][1], byT[1][2], byT[2][0], byT[2][1], byT[2][2]];
+    fuseAskYield();
     S.units = S.units.filter(u => !used.includes(u));
     spawnJunk(PORTAL_OUT.x, PORTAL_OUT.y);
     S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 55, t: 0.5 });
@@ -5675,6 +5690,7 @@ function updatePortal() {
   // 🔥 쇼군 (풀하우스×3 + 플러쉬×3 = 6기, 상향). 1기 제한.
   if (!S.units.some(u => u.shogun) && (byT[6] || []).length >= 3 && (byT[5] || []).length >= 3) {
     const used = [byT[6][0], byT[6][1], byT[6][2], byT[5][0], byT[5][1], byT[5][2]];
+    fuseAskYield();
     S.units = S.units.filter(u => !used.includes(u));
     spawnShogun(PORTAL_OUT.x, PORTAL_OUT.y);
     S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 60, t: 0.5 });
@@ -5686,6 +5702,7 @@ function updatePortal() {
   if (!S.units.some(u => u.quartet) &&
       (byT[1] || []).length >= 2 && (byT[2] || []).length >= 2 && (byT[3] || []).length >= 2 && (byT[4] || []).length >= 2) {
     const used = [byT[1][0], byT[1][1], byT[2][0], byT[2][1], byT[3][0], byT[3][1], byT[4][0], byT[4][1]];
+    fuseAskYield();
     S.units = S.units.filter(u => !used.includes(u));
     spawnQuartet(PORTAL_OUT.x, PORTAL_OUT.y);
     S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 50, t: 0.4 });
@@ -5693,12 +5710,13 @@ function updatePortal() {
     updateInfoPanel();
     return;
   }
-  // ⏳ 시간술사 (스트레이트×3). 1기 제한. · 🌀 10-18: 작은 창 = 멈춰 선 스트레이트 3 → '?' 카드
+  // ⏳ 시간술사 (스트레이트×3). 1기 제한. · 🌀 10-18: 작은 창 = 멈춰 선 스트레이트 3 → '?' 카드 · 10-19: 찾기·미룸은 슬롯과 같은 규칙
   if (!S.units.some(u => u.chrono)) {
-    const st = (byT[4] || []).filter(u => !pop || ask(u));
-    if (st.length >= 3) {
-      const used = [st[0], st[1], st[2]];
-      if (pop) fuseAskOpen(used, 'chrono'); else makeChrono(used);
+    const s4 = (byT[4] || []).filter(u => !pop || !u.fuseHold);
+    if (s4.length >= 3) {
+      if (!pop) { makeChrono([s4[0], s4[1], s4[2]]); return; }
+      const st = s4.filter(u => !u.moving);
+      if (st.length >= 3 && !open) fuseAskOpen(st.slice(0, 3), 'chrono');
       return;
     }
   }
@@ -5709,6 +5727,7 @@ function updatePortal() {
     const h0 = hs(1), h1 = hs(2), h2 = hs(3);
     if (h0.length >= JOKER_HN && h1.length >= JOKER_HN && h2.length >= JOKER_HN) {
       const used = [...h0, ...h1, ...h2];
+      fuseAskYield();
       S.units = S.units.filter(u => !used.includes(u));
       spawnJoker(PORTAL_OUT.x, PORTAL_OUT.y);
       S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 65, t: 0.5 });
@@ -5718,6 +5737,7 @@ function updatePortal() {
     }
   }
   } // [튜토리얼 10-14] 히든 판정 블록 끝
+  if (open) return; // 같이하기 창이 열린 채 — 창을 띄우는 일반 판정은 없음
   const groups = {};
   inP.forEach(u => { if (pop && !ask(u)) return; const k = fuseKey(u); (groups[k] = groups[k] || []).push(u); }); // 🌀 작은 창 = 멈춰 선 유닛끼리만 센다
   for (const k in groups) {
@@ -7346,7 +7366,7 @@ const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단
   joker: [ // 공속은 실제 발사 간격(effCd — 히든 페널티 반영) 기준. 정보창 표기와 일치시킨다
     // 2026-08-08 유저: 재료를 "아무 영웅"에서 레시피 계열(원페어→투페어 영웅)로 구체화
     { needs: [{ tier: 1, hero: true, n: 2 }], mat: '영웅 원페어 2기', desc: '공속 2.8회/초 · 사거리 138 · 견인 최대 140마리' },
-    { needs: [{ tier: 1, hero: true, n: 2 }, { tier: 2, hero: true, n: 2 }], mat: '영웅 원페어·투페어 각 2기', desc: '공속 2.9회/초 · 사거리 165 · 견인 280마리 + 견인 강화' }, // 10-18 유저: 4.4 → 3.2 (판정이 사거리 부채꼴이 된 뒤 승급2 조커가 승급2 쇼군의 1.25배 → 쇼군이 1.08배 위로) → 2.9 (공격력 23 뒤 쇼군 1.05배 위 — doAscend cd 0.245)
+    { needs: [{ tier: 1, hero: true, n: 2 }, { tier: 2, hero: true, n: 2 }], mat: '영웅 원페어·투페어 각 2기', desc: '공속 2.8회/초 · 사거리 165 · 견인 280마리 + 견인 강화' }, // 10-18 유저: 4.4 → 3.2 (판정이 사거리 부채꼴이 된 뒤 승급2 조커가 승급2 쇼군의 1.25배 → 쇼군이 1.08배 위로) → 2.8 (공격력 23 뒤 쇼군 ≥ 조커 — doAscend cd 0.25, 10-19 크로스체크 P2-9)
   ],
   catapult: [
     { needs: [{ tier: 0, n: 10 }], mat: '하이카드 10기', desc: '착탄 시 파편 4방 폭발' },
@@ -7381,7 +7401,7 @@ function doAscend(u) {
   u.ascend = lv + 1;
   // 스탯 직접 반영형 효과 (고유 능력 — 공격력은 건드리지 않는다)
   if (key === 'joker' && u.ascend === 1) { u.cd = 0.25; u.range = 138; } // 공속 4회/초 (베이스 0.4에서 ×0.625 유지, 사거리 +10% 반영)
-  if (key === 'joker' && u.ascend === 2) { u.cd = 0.245; u.range = 165; } // 실공속 2.9회/초 (cd × 1.4286 히든 페널티) — 10-18 유저: 0.16(4.4회/초) → 0.22(3.2) → 0.245(2.86 — 공격력 19→23 뒤 같은 승급끼리 쇼군 ≥ 조커 유지: 승급2 쇼군 1.05배 위, 0.242 이하는 1.0 아래). 판정 = 사거리 부채꼴이라 사거리 165가 판정도 키운다
+  if (key === 'joker' && u.ascend === 2) { u.cd = 0.25; u.range = 165; } // 실공속 2.8회/초 (cd × 1.4286 히든 페널티) — 10-18 유저: 0.16(4.4회/초) → 0.22(3.2) → 0.25(2.8 — 공격력 19→23 뒤 같은 승급끼리 쇼군 ≥ 조커 유지). 10-19 크로스체크 P2-9: 실플레이 간격(배속 1.3 × 60·90·100·120·144·165·240Hz)에서 승급2 쇼군 ÷ 조커 1.022~1.051 (0.245는 100Hz 1.001·144Hz 1.007). 승급1과 같은 공속 — 승급2 이득은 사거리 165(판정 부채꼴)·견인. 판정 = 사거리 부채꼴이라 사거리 165가 판정도 키운다
   if (key === 'quartet' && u.ascend === 1) u.range = 190;                // 오라 반경 (버프 강도는 update에서 ascend 참조)
   for (const g of gone) { for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 80 + Math.random()*140; S.parts.push({ x: g.x, y: g.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 1.8 + Math.random()*2.4, c: '#c62828' }); } }
   addFloat(u.x, u.y - 32, `승급! Lv.${u.ascend} — ${def.desc}`, '#ff6b9d', 2.4);
@@ -14169,6 +14189,7 @@ function copyUnit(u) {
   const c = Object.assign({}, u);
   c.x = c.tx = u.x + 26; c.y = c.ty = u.y; c.selected = false; c.kills = 0; c.duelOk = false; // 결투 동의는 본체 전용 (복사되면 팝업을 영영 못 봄)
   c.grabbed = false; c.grabOx = c.grabOy = 0; c.dropT = 0; // 🖐️ 집힌 채 복사해도 사본은 지상에 (drag.grab에 없어 놓아줄 손이 없다)
+  delete c.fuseHold; // 🌀 포털 '그대로 두기'는 본체만 — 사본은 포털 옆에 생겨도 다시 묻는다 (10-19 크로스체크 P2-6)
   c.jx = (Math.random() - 0.5) * 48; c.jy = (Math.random() - 0.5) * 48;
   c.cool = 0; c.forceTarget = null; c.attackMine = false; c.amove = false; c.moving = false;
   S.units.push(c);
