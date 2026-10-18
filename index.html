@@ -2373,6 +2373,8 @@ body.mobile #storyGo {font-size:16px;border-radius:11px;}
 @keyframes storyGoGlow {0%,100%{filter:none;}50%{filter:brightness(1.13);}}
 @media (prefers-reduced-motion: reduce) {#storyGo.show {animation:none;}}
 body.storyW1 #stCasino {display:none !important;}
+body.storyW1:not(.mobile) #dpsRank {top:calc(50% + 74px);} /* 자금 운영이 빠지면 딜 순위가 왼쪽으로 붙어 1-2 포털 (78,263)을 덮는다 → 포털 아래(논리 y ≈ 300)로 */
+body.mobile.storyW1[data-tab="battle"] #dpsRank {left:4px;top:60%;}
 body.storyMode #wrap > h1 small {font-size:0;} /* 스토리: 우클릭 이동이 없어 제목 줄 안내를 바꿈 (글자 0 + ::after) */
 body.storyMode #wrap > h1 small::after {content:'대기석에서 끌어 놓기 · 유닛 누르고 합치기 · A + 클릭: 공격 지정';font-size:11px;}
 /* 🏳️ 결투 기권 (10-13 유저 #4): 도전자만 남으면 #goPoker와 같은 자리(소환장 가운데 — 전투 중엔 비어 있다). 보조 버튼 톤(#duelConfirm '그만둔다')이라 빨간 주 행동(#goPoker)과 구분 */
