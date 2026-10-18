@@ -3385,8 +3385,9 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
 <style id="dpd-story-m3">
 /* 📖 스토리 M3 (10-19) — 여정 지도 #storyRow(나무 틀·양피지 = woodland 선택 창과 같은 재료) · 스테이지 카드(= 부활 창 재료) · 끝 창 별. --smH = 지도 높이(화면마다), 지도 폭 = 높이 × 2380/300 */
 #startOverlay[data-screen="story"]::after {background:rgba(216,239,247,.72);backdrop-filter:blur(8px);}
-#storyRow {--smH:clamp(190px,calc(100dvh - 236px),360px);position:relative;width:min(1120px,100%);color:#432a1c;border:10px solid #88522b;border-radius:25px;padding:0 22px 16px;gap:14px;
+#storyRow {--smH:clamp(190px,calc(100vh - 236px),360px);position:relative;width:min(1120px,100%);color:#432a1c;border:10px solid #88522b;border-radius:25px;padding:0 22px 16px;gap:14px;
   background:linear-gradient(115deg,#f5e2b4 0%,#efd59e 60%,#e8c78c 100%);box-shadow:inset 0 0 0 2px #ffe9b4,inset 0 0 18px #b07a3730,0 0 0 2px #60371d,0 5px 0 2px #573b24,0 23px 65px #24312766;isolation:isolate;}
+@supports (height:1dvh) {#storyRow {--smH:clamp(190px,calc(100dvh - 236px),360px);}} /* dvh 모르는 브라우저(iOS 15.4 전)는 vh 그대로 — 사용자 정의 속성은 무효 값이면 통째로 auto가 돼 지도가 무너진다 */
 #storyRow .adventure-top {margin:0 -22px;padding:13px 20px 14px;min-height:64px;border-radius:14px 14px 0 0;border-bottom:3px solid #7f4c27;color:#ffedc0;
   background:linear-gradient(#9d673ab8,#714b2be6),var(--dpd-file-art-1) center 40%/400px;box-shadow:inset 0 2px #dfb86c,inset 0 -1px #c39052;}
 #storyRow .adventure-label {color:#ffedc0;font-size:12px;letter-spacing:1.2px;text-shadow:0 2px #5c371e;padding-left:5px;}
@@ -3455,13 +3456,15 @@ body.mobile #overlay .soStar {width:36px;height:36px;}
 .title-actions {width:min(100%,640px);} /* 타이틀 아래 줄 단추 5개(스토리 +1)가 PC에서 한 줄에 들도록 (예전 520) */
 @media (max-width:650px) {
   .title-secondary::before {content:'';order:1;flex-basis:100%;height:0;} .title-secondary > button:not(#btnStory) {order:2;} /* 세로 폰: 스토리 단추 한 줄 따로 → 나머지 넷은 예전처럼 한 줄 */
-  #storyRow {--smH:clamp(200px,34dvh,270px);border-width:8px;border-radius:21px;padding:0 12px 14px;gap:12px;}
+  #storyRow {--smH:clamp(200px,34vh,270px);border-width:8px;border-radius:21px;padding:0 12px 14px;gap:12px;}
+  @supports (height:1dvh) {#storyRow {--smH:clamp(200px,34dvh,270px);}}
   #storyRow .adventure-top {margin:0 -12px;padding:10px 10px 12px;min-height:56px;border-radius:11px 11px 0 0;gap:6px;}
   #storyRow .adventure-label {font-size:10px;letter-spacing:.4px;padding-left:4px;}
   #storyRow .title-back {padding:7px 9px;font-size:11px;min-height:35px;white-space:nowrap;}
 }
 @media (max-height:560px) and (min-width:651px) {
-  #storyRow {--smH:calc(100dvh - 146px);border-width:7px;border-radius:20px;padding:0 16px 8px;gap:8px;}
+  #storyRow {--smH:calc(100vh - 146px);border-width:7px;border-radius:20px;padding:0 16px 8px;gap:8px;}
+  @supports (height:1dvh) {#storyRow {--smH:calc(100dvh - 146px);}}
   #storyRow .adventure-top {margin:0 -16px;min-height:42px;padding:5px 14px 6px;border-radius:11px 11px 0 0;}
   #storyRow .title-back {min-height:30px;padding:5px 10px;}
   .smFoot {min-height:32px;gap:6px;}
