@@ -3886,7 +3886,7 @@ const COMIC = { // 대본 §9 JSON의 comics.<id>.pages 그대로 (id·note·whe
       ]}
     ]}
   ],
-  w1end: [ // 스토리 1-5(달 보스) 클리어 뒤
+  w1end: [ // 스토리 1-5(달 보스) 클리어 뒤 · 10-18 유저: 가운데 쪽 e2 = 셋이 합쳐 영웅(영웅 첫 등장)
     { "id": "e1", "note": "낮달이 물러나고 환호", "rows": [
       { "h": 0.55, "panels": [
         { "id": "e1a", "note": "금 간 달이 데굴데굴 물러남",
@@ -3923,9 +3923,46 @@ const COMIC = { // 대본 §9 JSON의 comics.<id>.pages 그대로 (id·note·whe
         }
       ]}
     ]},
-    { "id": "e2", "note": "노을 끝으로 — 다음 길 예고 (넘김 칸 = e2b)", "rows": [
+    { "id": "e2", "note": "셋이 모이면 — 영웅 첫 등장 (10-18 유저) (넘김 칸 = e2b)", "rows": [
       { "h": 0.5, "panels": [
-        { "id": "e2a", "note": "노을, 지평선에 반쯤 잠긴 해님, 소문 새",
+        { "id": "e2a", "note": "하트 궁수 셋이 둥글게 모여 활을 맞댐, 가운데로 금빛",
+          "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.3, 0.3, 0.8, 0.6], "top": 0.42}},
+          "layers": [
+            {"draw": "fx", "kind": "gold", "x": 0.5, "y": 0.62, "size": 0.55},
+            {"draw": "unit", "rank": 1, "x": 0.26, "y": 0.86, "size": 0.32, "pose": "cheer"},
+            {"draw": "unit", "rank": 1, "x": 0.5, "y": 0.8, "size": 0.32, "pose": "cheer"},
+            {"draw": "unit", "rank": 1, "x": 0.74, "y": 0.86, "size": 0.32, "pose": "cheer"}
+          ],
+          "bubbles": [
+            {"who": "archer", "text": "우리 셋, 힘을 모으자!", "x": 0.5, "y": 0.16, "tail": [0.5, 0.52]}
+          ],
+          "sfx": [
+            {"text": "반짝", "x": 0.86, "y": 0.3, "rot": 8}
+          ]
+        }
+      ]},
+      { "h": 0.5, "panels": [
+        { "id": "e2b", "note": "번쩍! 영웅 궁수 등장, 양옆 병사들이 올려다봄",
+          "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.3, 0.3, 0.8, 0.6], "top": 0.42}},
+          "layers": [
+            {"draw": "fx", "kind": "sparkle", "x": 0.5, "y": 0.58, "size": 0.85},
+            {"draw": "unit", "rank": 1, "hero": true, "x": 0.5, "y": 0.88, "size": 0.48, "pose": "cheer"},
+            {"draw": "unit", "rank": 0, "x": 0.15, "y": 0.9, "size": 0.24, "pose": "idle"},
+            {"draw": "unit", "rank": 2, "x": 0.85, "y": 0.9, "size": 0.24, "pose": "idle"}
+          ],
+          "caption": {"text": "셋이 모이면 영웅이 된다.", "pos": "top"},
+          "bubbles": [
+            {"who": "all", "text": "영웅이다!", "x": 0.2, "y": 0.42, "tail": null, "shape": "shout"}
+          ],
+          "sfx": [
+            {"text": "번쩍!", "x": 0.84, "y": 0.34, "rot": -8}
+          ]
+        }
+      ]}
+    ]},
+    { "id": "e3", "note": "노을 끝으로 — 다음 길 예고 (넘김 칸 = e3b)", "rows": [
+      { "h": 0.5, "panels": [
+        { "id": "e3a", "note": "노을, 지평선에 반쯤 잠긴 해님, 소문 새",
           "bg": {"sky": "dusk", "ground": {"img": "bg_normal", "crop": [0.2, 0.5, 1.0, 1.0], "top": 0.62, "tint": "dusk"}},
           "layers": [
             {"draw": "boss", "shape": 27, "x": 0.86, "y": 0.62, "size": 0.22, "sink": true},
@@ -3938,11 +3975,11 @@ const COMIC = { // 대본 §9 JSON의 comics.<id>.pages 그대로 (id·note·whe
         }
       ]},
       { "h": 0.5, "panels": [
-        { "id": "e2b", "note": "오른쪽을 바라보는 기사·궁수(옆모습), 먼 곳의 축구공 그림자, 제목 띠",
+        { "id": "e3b", "note": "오른쪽을 바라보는 기사·영웅 궁수(옆모습), 먼 곳의 축구공 그림자, 제목 띠",
           "bg": {"sky": "dusk", "ground": {"img": "bg_normal", "crop": [0.2, 0.55, 1.0, 1.0], "top": 0.5, "tint": "dusk"}},
           "layers": [
             {"draw": "unit", "rank": 3, "x": 0.16, "y": 0.86, "size": 0.26, "pose": "idle"},
-            {"draw": "unit", "rank": 1, "x": 0.3, "y": 0.88, "size": 0.24, "pose": "idle"},
+            {"draw": "unit", "rank": 1, "hero": true, "x": 0.3, "y": 0.88, "size": 0.24, "pose": "idle"},
             {"draw": "mob", "mat": 2, "n": 3, "x": 0.8, "y": 0.6, "spread": [0.16, 0.06], "size": 0.07, "dim": 0.6, "motion": "roll"}
           ],
           "title": {"text": "다음 길, 저무는 길", "x": 0.62, "y": 0.4},
