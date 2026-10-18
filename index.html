@@ -2373,6 +2373,8 @@ body.mobile #storyGo {font-size:16px;border-radius:11px;}
 @keyframes storyGoGlow {0%,100%{filter:none;}50%{filter:brightness(1.13);}}
 @media (prefers-reduced-motion: reduce) {#storyGo.show {animation:none;}}
 body.storyW1 #stCasino {display:none !important;}
+body.storyMode #wrap > h1 small {font-size:0;} /* 스토리: 우클릭 이동이 없어 제목 줄 안내를 바꿈 (글자 0 + ::after) */
+body.storyMode #wrap > h1 small::after {content:'대기석에서 끌어 놓기 · 유닛 누르고 합치기 · A + 클릭: 공격 지정';font-size:11px;}
 /* 🏳️ 결투 기권 (10-13 유저 #4): 도전자만 남으면 #goPoker와 같은 자리(소환장 가운데 — 전투 중엔 비어 있다). 보조 버튼 톤(#duelConfirm '그만둔다')이라 빨간 주 행동(#goPoker)과 구분 */
 #duelForfeit {position:absolute;left:46.81%;top:50%;transform:translate(-50%,-50%);z-index:8;display:none;align-items:center;gap:6px;min-height:43px;padding:9px 20px;border:1px solid #b18951;border-radius:15px;background:linear-gradient(#efd29e,#dbb67b);color:#654625;font-size:15px;font-weight:800;box-shadow:0 0 0 2px #fff3cfcc,inset 0 1px 0 #fff0c5,0 4px 0 #a27b44,0 8px 18px #0006;cursor:pointer;white-space:nowrap;font-family:inherit;}
 #duelForfeit.show {display:flex;}
@@ -14964,7 +14966,7 @@ function showObjInfo(k) {
   if (duelFleeActive()) return; // 🏃 도망 게이지 5초 동안은 우하단 패널이 버튼을 가리므로 열지 않는다 (크로스체크 P1)
   S.selMon = null; // 건물 정보 표시 중엔 몬스터 실시간 갱신 안 함
   S.selObj = k;    // 광석 HP바 실시간 갱신용 (updateHUD)
-  const o = OBJ_INFO[k], el = document.getElementById('objInfo');
+  const o = (S.story && STORY_OBJ_INFO[k]) || OBJ_INFO[k], el = document.getElementById('objInfo'); // 📖 M2: 스토리 포털·제단 설명 (레시피 단서 없음)
   const d = k === 'room' ? o.d + oreCap() + o.d2 : o.d;
   // 💎 광석 방: 몬스터 정보처럼 현재 광석의 HP바를 함께 (2026-08-08 유저)
   let bar = '';
@@ -20638,6 +20640,10 @@ const STORY_M2 = {
   K: 0.95,         // 대기석 칸 유닛 그림 배율 (맵 위와 거의 같은 크기)
   FLY: 380,        // 대기석으로 날아드는 빛 (ms)
 };
+const STORY_OBJ_INFO = { // 건물 설명 스토리판 (showObjInfo) — 포털 = 히든 전용·못 꺼냄 · 제단 = 끌어 올리기 · 레시피 단서는 여전히 없음
+  portal: { t: '강화 포털', d: '대기석에서 끌어 넣은 유닛은 포털 안에 머뭅니다 — 다시 꺼낼 수 없어요.<br>영웅은 같은 유닛 셋을 눌러 <b>합치기</b>로 만들어요.', tip: OBJ_INFO.portal.tip },
+  altar: { t: '제물대', d: '대기석에서 끌어 올린 유닛은 <b>제물</b>로 바쳐집니다.<br>아이템은 대기석에서 누르면 바로 써요.', tip: OBJ_INFO.altar.tip },
+};
 function storyM2() { const st = S.story; return st.m2 || (st.m2 = { tray: [], page: 0, prep: false, sel: null, pick: null, hint: false, placed: new WeakSet(), portal: new WeakSet(), altar: new WeakSet(), fx: [] }); }
 function storyOnMap(u) { const m = S.story.m2; return !!m && (m.placed.has(u) || m.portal.has(u) || m.altar.has(u)); }
 function storyParked(u) { const m = S.story.m2; return !!m && (m.portal.has(u) || m.altar.has(u)); } // 포털·제단에 넣어 둔 유닛 — 싸우지 않음·스킬 없음 (스토리만)
@@ -20688,7 +20694,7 @@ function storyTrayTarget(u) { // 대기석에서 이 유닛이 보이는 자리 
 }
 function storyTrayPt() { // 소환 자리 = 다음 빈 칸 바로 밑 — spawnUnit의 이름 글자(addFloat)가 대기석 밑에 뜨게 (유닛은 곧 storyTraySweep이 대기석으로)
   const m = storyM2(), n = m.tray.length + S.units.filter(u => !u.clone && !u.miner && !storyOnMap(u)).length, r = storyCellRect(Math.min(STORY_M2.N - 1, n));
-  return { x: (r[0] + r[2]) / 2, y: STORY_M2.TRAY[3] + 26 };
+  return { x: Math.min(830, (r[0] + r[2]) / 2), y: STORY_M2.TRAY[3] + 26 }; // 글자가 화면 오른쪽 끝에서 잘리지 않게 x ≤ 830
 }
 // ---- 놓을 수 있는 곳 (설계 §4 — 순수 판정: 하네스가 10px 격자로 훑어 '놓을 수 있는 칸 %') ----
 function storyPtInPoly(x, y, P) { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const xi = P[i][0], yi = P[i][1], xj = P[j][0], yj = P[j][1]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; }
