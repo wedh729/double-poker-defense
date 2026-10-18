@@ -6164,7 +6164,7 @@ function update(dt) {
           }
           const r2 = p.splash * p.splash;
           const lava = p.boulder && p.owner && p.owner.stone === 'lava'; // 🥚 용암 묻은 돌 — 착탄 화상 도트 (쇼군 화상 재사용)
-          for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y + (m.lift || 0) - gcy; if (ddx*ddx + ddy*ddy <= r2) { dealDamage(m, p.dmg, p.owner); if (lava && !airborne(m)) { const bd = p.dmg * 0.2; if (!(m.burnT > 0) || bd >= (m.burnDmg || 0)) m.burnBy = p.owner; m.burnT = Math.max(m.burnT || 0, 2.5); m.burnDmg = Math.max(m.burnDmg || 0, bd); } } } // 거리 = 땅 지점끼리 (지상 몹 lift 0 = 무변경) · burnBy = 화상 딜 기록 주인 (더 센 화상을 건 쪽)
+          for (const m of S.monsters) { const ddx = m.x - p.ex, ddy = m.y + (m.lift || 0) - gcy; if (ddx*ddx + ddy*ddy <= r2) { dealDamage(m, p.dmg, p.owner); if (lava && !airborne(m)) { const bd = p.dmg * 0.2, on = m.burnT > 0; if (!on || bd >= (m.burnDmg || 0)) m.burnBy = p.owner; m.burnT = Math.max(on ? m.burnT : 0, 2.5); m.burnDmg = on ? Math.max(m.burnDmg || 0, bd) : bd; } } } // 거리 = 땅 지점끼리 (지상 몹 lift 0 = 무변경) · burnBy = 화상 딜 기록 주인 (더 센 화상을 건 쪽) · 10-18 크로스체크: 이미 꺼진 화상의 burnDmg(예: 쇼군 승급 화상)를 이어받아 용암 화상이 부풀던 것 → 꺼져 있으면 새 값
         }
         return false;
       }
@@ -6481,11 +6481,11 @@ function areaHit(u, x, y, dmg, gy) {
     S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.9, a: ang0 + 0.55, t: 0.34, dur: 0.34, fire: true });
     for (let i = 0; i < 10; i++) { const v = 90 + Math.random()*160, aa = ang0 + (Math.random()-0.5)*1.8;
       S.parts.push({ x: u.x, y: u.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v - 30, g: true, t: 0.4, r: 1.5 + Math.random()*2.2, c: i%3 ? '#ff8a3d' : '#ffd54f' }); }
-    for (const m of S.monsters) { const dx2 = m.x - u.x, dy2 = m.y + (m.lift || 0) - u.y; // 거리 = 땅 지점 (10-12 결정 1)
+    for (const m of S.monsters) { if (m.lane && m.lane.occl) continue; const dx2 = m.x - u.x, dy2 = m.y + (m.lift || 0) - u.y; // 거리 = 땅 지점 (10-12 결정 1) · 🤖 다리 밑(가림) 레인 개체 ✕ (10-18 — 사거리 140으로 닿게 됨)
       if (dx2*dx2 + dy2*dy2 <= R2) { dealDamage(m, dmg, u); if (!airborne(m)) { m.burnT = burnT; m.burnDmg = dmg * (asc >= 1 ? 0.4 : 0.2); m.burnBy = u; } } } // 공중: 떠 있는 몹엔 화상도 안 붙음 (쇼군 ✕)
     if (asc >= 2) { // 🗡️ 승급2 이단 베기: 우로 벤 칼이 좌로 되돌아온다 — 2타는 공격력 50%
       S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.96, a: ang0 + 0.25, t: 0.30 + 0.16, dur: 0.30, fire: true, rev: true }); // 0.16초 늦게 시작(t>dur 동안 대기), 반대 스윕
-      for (const m of S.monsters) { const dx2 = m.x - u.x, dy2 = m.y + (m.lift || 0) - u.y;
+      for (const m of S.monsters) { if (m.lane && m.lane.occl) continue; const dx2 = m.x - u.x, dy2 = m.y + (m.lift || 0) - u.y;
         if (dx2*dx2 + dy2*dy2 <= R2) dealDamage(m, dmg * 0.5, u); }
     }
     return;
@@ -6515,10 +6515,12 @@ function areaHit(u, x, y, dmg, gy) {
     //   전엔 그림은 조커 둘레를 사거리까지 크게(≈212°) 쓸었는데 실제 피해는 겨냥한 몹(대개 소환장 가장자리) 둘레 반경 28 원 안만 — 그 절반은 소환장 밖 빈 땅이라
     //   같은 자리 실측(몹 200·80, 60초) 플러쉬 2기의 0.54·0.62배 · 단련 14 조커 ≈ 포카드 91.4였다. 부채꼴 ±60° + 공격력 16→19 = 1.28·1.38배 (견인 15초 쓰면 1.63·1.82배)
     const R = effRange(u), R2 = R * R, ang0 = Math.atan2(gy - u.y, x - u.x); // 판정 = 땅 지점 (10-12 결정 1)
-    S.effects.push({ type:'slash', x: u.x, y: u.y, r: R, a: ang0 + 0.3, sw: JOKER_SW, t: 0.45, dur: 0.45, joker: true }); // 초승달(회전 기준 −0.95~0.35)이 a ± sw로 쓸고 지나간 자리 = ang0 ± JOKER_ARC (그림 = 판정)
-    S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.88, a: ang0 + 0.3, sw: JOKER_SW, t: 0.55, dur: 0.55, joker: true }); // 뒤따르는 보라 잔상 (같은 부채꼴 안)
+    const cut = { ca: ang0, cr: R, carc: JOKER_ARC }; // 그림을 판정 부채꼴로 자른다 (draw slash 분기)
+    S.effects.push({ type:'slash', x: u.x, y: u.y, r: R / 1.1, a: ang0 + 0.3, sw: JOKER_SW, t: 0.45, dur: 0.45, joker: true, ...cut }); // 초승달(회전 기준 −0.95~0.35)이 a ± sw로 쓸고 지나간 자리 = ang0 ± JOKER_ARC · 띠가 rr~1.1rr이라 r = R/1.1 → 바깥 끝 = 판정 반지름 R (그림 = 판정)
+    S.effects.push({ type:'slash', x: u.x, y: u.y, r: R * 0.8, a: ang0 + 0.3, sw: JOKER_SW, t: 0.55, dur: 0.55, joker: true, ...cut }); // 뒤따르는 보라 잔상 (같은 부채꼴 안, 띠 0.8R~0.88R)
     for (let i = 0; i < 9; i++) { const v = 60 + Math.random()*110, aa = ang0 + (Math.random()-0.5)*1.5; S.parts.push({ x: u.x, y: u.y, vx: Math.cos(aa)*v, vy: Math.sin(aa)*v, t: 0.3, r: 1.3 + Math.random()*2.2, c: '#8c5bff' }); }
     for (const m of S.monsters) {
+      if (m.lane && m.lane.occl) continue; // 🤖 멀티: 다리 밑(가림) 레인 개체는 못 벤다 (조준 mpNoAim과 같은 규칙 — 10-18 크로스체크)
       const dx = m.x - u.x, dy = m.y + (m.lift || 0) - u.y; // 거리·방향 = 땅 지점 (공중 몹은 dealDamage가 거른다 — 조커 낫 ✕)
       if (dx * dx + dy * dy > R2) continue;
       let da = Math.atan2(dy, dx) - ang0; da -= Math.round(da / (2 * Math.PI)) * 2 * Math.PI; // −π~π
@@ -7217,7 +7219,7 @@ const ASCEND_DEFS = { // 🩸 승급 = 고유 능력 성장 (공격력은 ⭐단
   joker: [ // 공속은 실제 발사 간격(effCd — 히든 페널티 반영) 기준. 정보창 표기와 일치시킨다
     // 2026-08-08 유저: 재료를 "아무 영웅"에서 레시피 계열(원페어→투페어 영웅)로 구체화
     { needs: [{ tier: 1, hero: true, n: 1 }], mat: '영웅 원페어 1기', desc: '공속 2.8회/초 · 사거리 138 · 견인 최대 140마리' },
-    { needs: [{ tier: 1, hero: true, n: 1 }, { tier: 2, hero: true, n: 1 }], mat: '영웅 원페어·투페어 각 1기', desc: '공속 4.4회/초 · 사거리 165 · 견인 280마리 + 견인 강화' },
+    { needs: [{ tier: 1, hero: true, n: 1 }, { tier: 2, hero: true, n: 1 }], mat: '영웅 원페어·투페어 각 1기', desc: '공속 3.2회/초 · 사거리 165 · 견인 280마리 + 견인 강화' }, // 10-18 유저: 4.4 → 3.2 (판정이 사거리 부채꼴이 된 뒤 승급2 조커가 승급2 쇼군의 1.25배 → 쇼군이 1.08배 위로)
   ],
   catapult: [
     { needs: [{ tier: 0, n: 10 }], mat: '하이카드 10기', desc: '착탄 시 파편 4방 폭발' },
@@ -7252,7 +7254,7 @@ function doAscend(u) {
   u.ascend = lv + 1;
   // 스탯 직접 반영형 효과 (고유 능력 — 공격력은 건드리지 않는다)
   if (key === 'joker' && u.ascend === 1) { u.cd = 0.25; u.range = 138; } // 공속 4회/초 (베이스 0.4에서 ×0.625 유지, 사거리 +10% 반영)
-  if (key === 'joker' && u.ascend === 2) { u.cd = 0.16; u.range = 165; } // 공속 6.25회/초
+  if (key === 'joker' && u.ascend === 2) { u.cd = 0.22; u.range = 165; } // 실공속 3.2회/초 (cd × 1.4286 히든 페널티) — 10-18 유저: 0.16(4.4회/초) → 0.22. 판정 = 사거리 부채꼴이라 사거리 165가 판정도 키운다
   if (key === 'quartet' && u.ascend === 1) u.range = 190;                // 오라 반경 (버프 강도는 update에서 ascend 참조)
   for (const g of gone) { for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 80 + Math.random()*140; S.parts.push({ x: g.x, y: g.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 1.8 + Math.random()*2.4, c: '#c62828' }); } }
   addFloat(u.x, u.y - 32, `승급! Lv.${u.ascend} — ${def.desc}`, '#ff6b9d', 2.4);
@@ -8875,9 +8877,11 @@ function draw() {
       const pr = e.dur ? 1 - e.t / e.dur : 0.5;
       const sw = e.sw || 1.2, sweep = (e.rev ? sw - pr * 2 * sw : -sw + pr * 2 * sw); // rev = 반대 방향으로 되돌아오는 베기 · sw = 쓰는 진폭 (기본 ±1.2 · 🃏 조커는 판정 부채꼴에 맞춰 JOKER_SW)
       const al = Math.min(1, e.t * 5);
-      ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.a + sweep);
+      ctx.save(); ctx.translate(e.x, e.y);
+      if (e.cr) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, e.cr, e.ca - e.carc, e.ca + e.carc); ctx.closePath(); ctx.clip(); } // 🃏 조커: 판정 부채꼴(반지름 cr·겨냥 ca ± carc) 밖으로 그림이 안 나가게 — 뒤 겹(ko −0.3·−0.6)이 시작 쪽 경계를 넘었다 (10-18 크로스체크)
+      ctx.rotate(e.a + sweep);
       for (let k = 0; k < 3; k++) {
-        const rr = e.r * (1 - k * 0.16), ka = al * (0.6 - k * 0.17), ko = -k * 0.3; // 바깥 겹 = 정확히 e.r (= 실제 타격 반경)
+        const rr = e.r * (1 - k * 0.16), ka = al * (0.6 - k * 0.17), ko = -k * 0.3; // 각 겹 = 반지름 rr ~ 1.1·rr 의 얇은 초승달 띠 (안쪽 호가 바깥 호보다 살짝 밖이라 띠는 rr 바깥쪽 — 10-18 계산)
         ctx.fillStyle = e.fire
           ? (k === 0 ? `rgba(255,205,120,${ka})` : `rgba(255,110,30,${ka})`) // 🔥 쇼군: 주황/빨강 화염 참격
           : e.joker
@@ -13793,7 +13797,7 @@ function updateInfoPanel() {
   el.innerHTML =
     `<div class="ui-head"><b class="ui-name">${nm.name}</b>${nm.sub ? ` <span class="ui-sub">(${nm.sub})</span>` : ''}${badges.length ? ' <span class="ui-badges">' + badges.join('') + '</span>' : ''}</div>` +
     raceLine +
-    `<div class="ui-stat ui-atk">공격력 <b class="ui-num">${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? ` <span class="ui-crown">${dpdIconSVG('crown')}×${S.crownMul.toFixed(2)}</span>` : ''}${isHiddenCombo(u) ? '' : ` <small class="ui-atk-base">(기본 ${(+u.dmg).toFixed(1)} +${upFlat})</small>`}</div>` +
+    `<div class="ui-stat ui-atk">공격력 <b class="ui-num">${effDmg(u).toFixed(1)}</b>${(!isHiddenCombo(u) && S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? ` <span class="ui-crown">${dpdIconSVG('crown')}×${S.crownMul.toFixed(2)}</span>` : ''}${(!isHiddenCombo(u) && (TIER_ATK_MUL[u.tier] || 1) !== 1) ? ` <span class="ui-crown">×${TIER_ATK_MUL[u.tier]}</span>` : ''}${isHiddenCombo(u) ? '' : ` <small class="ui-atk-base">(기본 ${(+u.dmg).toFixed(1)} +${upFlat})</small>`}</div>` + // 💥 10-18: 포카드·SF·로얄 ×1.5 칩 (왕관 칩처럼 — 없으면 '기본+업글'과 합이 안 맞아 보였다, 크로스체크 P2)
     // 공속: 콰르텟 버프·히든 페널티 반영된 실제 값
     `<div class="ui-stat ui-spd">공속 <b${(u.spdBuff || 1) < 1 ? ' class="ui-spd-up"' : ''}>${(1/effCd(u)).toFixed(1)}/초</b>${(u.spdBuff || 1) < 1 ? ' <span class="ui-buff">합주 +20%</span>' : ''} · ${dpdIconSVG('skull')} <b id="ipKills">${u.kills || 0}</b>킬${trH}</div>` +
     (u.miner ? '' : priorityRow(u.priority || 'near', airPriOk(u) && !S.multi)) + // 멀티 = 공중 없음 → '공중' 버튼 없음
