@@ -2375,6 +2375,11 @@ body.mobile #storyGo {font-size:16px;border-radius:11px;}
 body.storyW1 #stCasino {display:none !important;}
 body.storyW1:not(.mobile) #dpsRank {top:calc(50% + 74px);} /* 자금 운영이 빠지면 딜 순위가 왼쪽으로 붙어 1-2 포털 (78,263)을 덮는다 → 포털 아래(논리 y ≈ 300)로 */
 body.mobile.storyW1[data-tab="battle"] #dpsRank {left:4px;top:60%;}
+@media (orientation: portrait) { /* 📖 10-20 유저 '세로 화면': 캔버스가 207px(390 폭)라 css px 상자가 논리 2.4배로 커져 딜 순위(논리 19,250~175,351)가 1-2 포털을 덮었다 → 맵 밖 = 툴바(캔버스 밑 +12~+64) 아래 빈 자리로 (#chipBar를 캔버스 밑변에 붙이고 translateY 해제) */
+  body.mobile.storyW1[data-tab="battle"] #chipBar {top:100%;transform:none;transition:none;}
+  body.mobile.storyW1[data-tab="battle"] #dpsRank {left:4px;top:72px;}
+}
+html body.storyMode #unitInfo.ui-panel button + .ui-race {margin-top:6px;} /* 10-20: [합치기]·[복사권]을 제목 줄 밑으로 올린 뒤(storyInfoExtra) 종족 줄이 단추 그림자에 붙지 않게 */
 body.storyMode #wrap > h1 small {font-size:0;} /* 스토리: 우클릭 이동이 없어 제목 줄 안내를 바꿈 (글자 0 + ::after) */
 body.storyMode #wrap > h1 small::after {content:'대기석에서 끌어 놓기 · 유닛 누르고 합치기 · A + 클릭: 공격 지정';font-size:11px;}
 /* 🏳️ 결투 기권 (10-13 유저 #4): 도전자만 남으면 #goPoker와 같은 자리(소환장 가운데 — 전투 중엔 비어 있다). 보조 버튼 톤(#duelConfirm '그만둔다')이라 빨간 주 행동(#goPoker)과 구분 */
@@ -21034,15 +21039,19 @@ function storySel() { // 스토리 선택 = 맵에서 고른 유닛들 · 없으
   return m.sel ? [m.sel] : [];
 }
 function storyDeselect() { const m = S.story.m2; if (m) { m.sel = null; m.pick = null; } }
-function storyInfoExtra(el, u) { // 정보창 덧붙임: [합치기] (같은 유닛이 맵+대기석에 FUSE_N 이상) · 대기석·포털·제단 유닛은 스킬 단추 없음 (싸우지 않는 자리)
+function storyInfoExtra(el, u) { // 정보창 덧붙임: [합치기] (같은 유닛이 맵+포털+대기석에 FUSE_N 이상) · 대기석·포털·제단 유닛은 스킬 단추 없음 (싸우지 않는 자리)
   const m = storyM2();
   if (m.tray.includes(u) || storyParked(u)) el.querySelectorAll('#skillBtn,#chronoBtn,#jokerBtn,#slotSkillBtn').forEach(b => b.remove());
+  // 10-20 유저 '세로 화면': [합치기]·[복사권]은 제목 줄 바로 밑 — 세로(390×844)는 캔버스가 207px라 정보창이 176px로 눌려 맨 아래 두 단추가 스크롤 밖으로 밀렸다 (가로 폰도 둘 다 있으면 [복사권]이 반쯤 잘림)
+  const head = el.querySelector('.ui-head'), cp = el.querySelector('#copyBtn');
+  if (m.infoU !== u) { m.infoU = u; el.scrollTop = 0; } // 다른 유닛을 고르면 맨 위부터 (같은 유닛 다시 그리기 — 우선순위 단추 등 — 는 스크롤 그대로)
+  if (cp && head) head.after(cp);
   if (!storyCanFuse(u)) return;
   const b = document.createElement('button'); b.type = 'button'; b.id = 'storyFuseBtn'; b.className = 'shopBtn ui-skill'; b.dataset.skill = 'fuse';
   b.dataset.state = m.pick ? 'active' : 'ready'; b.disabled = !!m.pick;
   b.textContent = m.pick ? '고르는 중… 반짝이는 같은 유닛을 누르세요' : '합치기';
   b.onclick = () => storyPickStart(u);
-  el.insertBefore(b, el.querySelector('#deselBtn'));
+  if (head) head.after(b); else el.insertBefore(b, el.querySelector('#deselBtn')); // 순서 = 제목 → [합치기] → [복사권] → 종족·공격력…
 }
 function storyFusableHint() { // 주황 오라(합칠 수 있음) = 맵에 놓인 것 + 포털 안(10-20) + 대기석의 같은 키 FUSE_N 이상 (updateFusableHint 뒤 덮어씀) · 제단 유닛은 아님
   const m = S.story.m2; if (!m) return;
