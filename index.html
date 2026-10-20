@@ -20793,6 +20793,7 @@ const STORY_M2 = {
   LIFT: 44,        // 손가락으로 끌 때 놓일 자리 = 손가락 위 44 (손가락에 안 가리게 — 마우스는 커서 자리)
   K: 0.95,         // 대기석 칸 유닛 그림 배율 (맵 위와 거의 같은 크기)
   FLY: 380,        // 대기석으로 날아드는 빛 (ms)
+  GO_LOCK: 500,    // 소환 직후 소환 단추('출발!'로 바뀜) 누름을 무시하는 시간 (ms, 실시간) — 10-20 Enter 꾹·더블클릭으로 배치 없이 출발하던 것 (윈도 기본 더블클릭 간격 500ms)
 };
 const STORY_OBJ_INFO = { // 건물 설명 스토리판 (showObjInfo) — 포털 = 히든 전용·못 꺼냄 · 제단 = 끌어 올리기 · 레시피 단서는 여전히 없음
   portal: { t: '강화 포털', d: '대기석에서 끌어 넣은 유닛은 포털 안에 머뭅니다 — 다시 꺼낼 수 없어요.<br>영웅은 같은 유닛 셋을 눌러 <b>합치기</b>로 만들어요 (포털 안 유닛도 재료가 돼요).', tip: OBJ_INFO.portal.tip }, // 10-20: 포털 안 유닛도 합치기 재료
@@ -21011,7 +21012,7 @@ function storyFuse(list) { // 합성 식 = 챌린지 포털 합성과 같은 함
 }
 // ---- 배치 준비 · [출발!] (설계 §1) — 소환 → 대기석 → 놓기 → [출발!](또는 포커 시계 끝) → 몹 출발 · S.phase는 'poker' 그대로 (m2.prep) ----
 function storyPrepStart() { // confirmHand 끝 (startWave 대신)
-  const m = storyM2(); m.prep = true;
+  const m = storyM2(); m.prep = true; m.prepT = performance.now(); // prepT = 소환 단추 잠금 기준 (STORY_M2.GO_LOCK)
   storyTraySweep();
   if (IS_MOBILE) setMobTab('battle'); else { pokerPeek = true; syncPokerPanel(); } // 대기석·맵·[출발!]이 보이게 (PC 포커판이 y 137~500을 덮는다)
   renderPoker(); updateGoPoker();
@@ -21105,6 +21106,11 @@ function storyTrayTap(c) { // 대기석 칸 누름 — ◀▶ = 넘겨 보기 ·
   S.units.forEach(v => v.selected = false); m.sel = u; hideObjInfo();
 }
 window.addEventListener('keydown', e => { if (e.key === 'Escape' && S && S.story && S.story.m2 && S.story.m2.pick) storyPickCancel(); }); // Esc = 합치기 고르기 취소
+// 10-20 유저 'Enter 꾹': 소환 단추에 초점을 둔 채 Enter를 꾹 누르면 소환 → 키 반복이 같은 단추('출발!')를 또 눌러 배치 없이 출발하던 것 (70 병합 보고 걱정 4 · 51 크로스체크 P2-8 PC 더블클릭도 같은 뿌리)
+//   ① 스토리 판 소환 단추의 키 반복(e.repeat) = 무시 ② 소환 직후 GO_LOCK 동안 소환 단추 누름 = 무시 → [출발!]은 새로 누를 때만
+//   단추 입력에만 건다 — 포커 시계 끝 자동 소환·출발(한 프레임에 confirmHand 두 번)·[출발!](#storyGo)·하네스 storyDepart는 그대로
+window.addEventListener('keydown', e => { if (e.repeat && (e.key === 'Enter' || e.key === ' ') && S && S.story && e.target && e.target.id === 'summonBtn') e.preventDefault(); }, true);
+document.addEventListener('click', e => { const m = S && S.story && S.story.m2; if (m && m.prep && e.target && e.target.closest && e.target.closest('#summonBtn') && performance.now() - (m.prepT || 0) < STORY_M2.GO_LOCK) { e.stopPropagation(); e.preventDefault(); } }, true);
 window.addEventListener('mousemove', e => { if (e.target !== cv && drag && drag.tray && S && S.story) { const p = mpos(e); pressMove(p.x, p.y); } }); // PC: 끄는 중 커서가 캔버스 위 단추([출발!]·시계·정보창)를 지나가도 따라가게 (놓기 = window mouseup)
 // ---- 그리기 (draw 끝 — 화면 UI라 모든 것 위) ----
 function storyDrawMini(u, cx, cy, k) { ctx.save(); ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-cx, -cy); drawUnit(u, 0); ctx.restore(); } // 게임 그림 함수(drawUnit)를 줄여서
