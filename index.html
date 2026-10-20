@@ -20747,14 +20747,17 @@ function storyApply(map) { // 건물 좌표 덮기 (const 객체라 속성 대�
   ALTAR.x = b.altar[0]; ALTAR.y = b.altar[1]; ALTAR_OUT.x = ALTAR.x + 62; ALTAR_OUT.y = ALTAR.y - 40;
   storyApplied = true; storyBakesReset(); document.body.classList.add('storyMode'); document.body.classList.toggle('storyNoMine', !b.mine);
   document.body.classList.toggle('storyW1', map.world === 1); // 10-19 M2: 월드 1 = 자금 운영 단추 숨김 (20 §2-3·§10-6 경제 단계 — 광부·칩은 월드 2부터)
+  document.getElementById('btnExit').title = '지도로 나가기'; // 10-20: 스토리 [나가기] = 여정 지도 (툴팁·폰 아이콘 단추 이름) — storyLeave가 되돌림
   storyBgLoad(map); // M4 맵 그림 — 여기서만 받는다 (10-19)
 }
+const STORY_EXIT_T0 = document.getElementById('btnExit').title; // [나가기] 원래 툴팁 ('타이틀로 나가기')
 function storyLeave() { // 'dpd:resetui' (resetTransientUI 끝 — 새 S를 만들기 전) — 나가기·다시하기·새 판·튜토리얼·멀티·맵 미리보기 전부 reset()을 지난다
   storyUiRestore(); // 끝 창·부활 창 글을 빌려 썼으면 원래대로 (10-19 M3 — 안 빌렸으면 아무 일 없음)
   if (!storyApplied) return; // 챌린지 경로는 여기서 끝 (베이크를 건드리지 않는다)
   Object.assign(HOUSE, STORY_BLD0.house); Object.assign(PORTAL, STORY_BLD0.portal); Object.assign(PORTAL_OUT, STORY_BLD0.portalOut);
   Object.assign(ALTAR, STORY_BLD0.altar); Object.assign(ALTAR_OUT, STORY_BLD0.altarOut);
   storyApplied = false; storyBakesReset(); document.body.classList.remove('storyMode', 'storyNoMine', 'storyW1');
+  document.getElementById('btnExit').title = STORY_EXIT_T0; // 10-20: [나가기] 툴팁 '타이틀로' 되돌림
   if (storyBg) setTimeout(() => { if (!S.story) storyBg = null; }, 0); // 맵 그림 놓아 주기 (10-19) — 다시하기·다음 스테이지는 같은 호출 안에서 S.story가 다시 서므로 그대로
 }
 function storyBakesReset() { bldgLayers.clear(); sbWorldBake = null; storyRoadBake = null; } // 성·광부 길('mroad|g' 폭 = 광산 − HOUSE.x)·초원 꽃(제단·포털 회피)·대체 지면 베이크 — 다음 프레임에 다시 굽는다
