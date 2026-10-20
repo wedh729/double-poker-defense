@@ -20245,7 +20245,10 @@ const STORY = {      // 노브 한 곳 (화면에 안 나옴)
   LIVES: 20,
 };
 // 10-20 M5 맵 노브 (맵 데이터 = 정본 JSON과 같은 값 · 없으면 1): hpK 몹 HP · nK 마릿수 · gapK 무리 간격 · vK 걸음 · bossK 보스 HP — storyStartWave·storyGroupsM1·storyMobV·storyInitMob이 읽음
-function storyK(k) { const v = S && S.story && S.story.map[k]; return v > 0 ? v : 1; }
+//   숫자 = 스테이지 내내 같은 배수 · [처음, 끝] = 스테이지 안 라운드(1 → rounds)를 따라 곧게 바뀌는 배수 (새 판이라 앞 라운드는 가볍게, 뒤로 갈수록 무겁게)
+function storyK(k) { const M = S && S.story && S.story.map, v = M && M[k];
+  if (Array.isArray(v)) { const t = Math.min(1, Math.max(0, (S.storyR - 1) / Math.max(1, M.rounds - 1))); return v[0] + (v[1] - v[0]) * t; }
+  return v > 0 ? v : 1; }
 // 맵: 논리 940×500 좌표 · 몹은 오른쪽 끝 입구(door 길 첫 점)에서 나와 왼쪽 아래 성(길 끝)으로 온다 · 이름은 22_스토리_여정설계
 const W1B = { castle: [96, 428], portal: [84, 224], altar: [240, 190], mine: false, room: false }; // 월드 1 공통 건물 (챌린지 자리)
 const STORY_MAPS = {
