@@ -20934,8 +20934,9 @@ function storyPlaceAt(u, x, y, quiet) { // 맵에 놓기 = 그 스테이지 끝�
 function storyPortalOk(u) { return !u.item && !!fuseKey(u); } // 포털이 받나 = 챌린지 포털 재료 규칙(fuseKey) — 슈퍼·히든·아이템·광부·분신은 안 받음 (넣으면 영영 못 꺼내니)
 function storyPortalIn(u) { // 포털에 넣기 = 고정 (못 꺼냄 · 싸우지 않음) — 히든 레시피가 다 모이면 updatePortal이 히든을 만들고, 히든은 대기석으로
   const m = storyM2(); storyTrayTake(u);
-  const n = S.units.filter(v => m.portal.has(v)).length, ring = (n >> 3) & 1, a = (n % 8) * Math.PI / 4 + (ring ? Math.PI / 8 : 0), r = ring ? 40 : 24;
-  u.x = u.tx = PORTAL.x + Math.cos(a) * r; u.y = u.ty = PORTAL.y + Math.sin(a) * r * 0.7; // 포털 둘레에 작게 모임 (수집 반경 안)
+  const ps = S.units.filter(v => m.portal.has(v)), at = n => { const ring = (n >> 3) & 1, a = (n % 8) * Math.PI / 4 + (ring ? Math.PI / 8 : 0), r = ring ? 40 : 24; return { x: PORTAL.x + Math.cos(a) * r, y: PORTAL.y + Math.sin(a) * r * 0.7 }; };
+  let n = 0; while (n < 64 && ps.some(v => { const p = at(n); return Math.abs(v.x - p.x) < 1 && Math.abs(v.y - p.y) < 1; })) n++; // 10-20: 비어 있는 고리 자리 먼저 — 눌러 합치기로 포털 유닛이 빠지면 '지금 수' 자리가 남은 유닛과 겹쳐 밑 유닛을 못 누르던 것 (51 크로스체크 P2-8 · 빠진 게 없으면 예전과 같은 자리)
+  const p0 = at(n); u.x = u.tx = p0.x; u.y = u.ty = p0.y; // 포털 둘레에 작게 모임 (수집 반경 안)
   u.moving = false; u.grabbed = false; u.selected = false; u.cool = 0; u.forceTarget = null;
   m.portal.add(u); S.units.push(u);
   S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 26, t: 0.3 }); sfx('pick');
