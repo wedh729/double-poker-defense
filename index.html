@@ -15423,7 +15423,7 @@ function placeInfoPanel() { // 선택한 유닛이 정보카드에 가려지지 
   const cardW = (W + shift) / (sx || 1);
   const ax = S.multi ? mpScreenX(avg) : avg; // 🤖 멀티: 카메라 반영 화면 x
   const nearLeft = ax < cardW + 40 && !duelFleeActive();         // 카드(좌측)와 겹칠 만큼 왼쪽에 있나 (도망 게이지 중엔 우측 카드가 버튼을 가리므로 금지 — 크로스체크 P1)
-  const wantRight = nearLeft;
+  const wantRight = (S.story && S.story.m2 && S.story.m2.pick) ? storyPickRight(nearLeft, cardW, (top - cv.getBoundingClientRect().top) / (sx || 1)) : nearLeft; // 📖 10-20: 합치기 고르는 중 = 반짝이는 재료를 덜 가리는 쪽
   if (wantRight) { el.style.left = 'auto'; el.style.right = '10px'; }
   else { el.style.right = 'auto'; el.style.left = (10 + shift) + 'px'; }
   fitInfoRoom(el, f);
@@ -20976,6 +20976,12 @@ function storyFuseCands(key) { const m = storyM2(); return S.units.filter(v => s
 function storyCanFuse(u) { const k = fuseKey(u); if (!k) return false; const c = storyFuseCands(k); return c.includes(u) && c.length >= FUSE_N; }
 function storyPickStart(u) { if (!storyCanFuse(u)) return; storyM2().pick = { key: fuseKey(u), list: [u] }; sfx('pick'); updateInfoPanel(); }
 function storyPickCancel() { const m = S && S.story && S.story.m2; if (m && m.pick) { m.pick = null; updateInfoPanel(); } }
+function storyPickRight(def, cardW, yTop) { // placeInfoPanel 스토리판 (10-20) — 합치기 고르는 중이면 아직 안 고른 반짝이는 맵·포털 유닛을 덜 가리는 쪽 (true = 오른쪽) · 같으면 원래 규칙(def) · 고를 때마다 다시 정함
+  // 세로 화면은 정보창이 맵 왼쪽 44%·거의 전체 높이를 덮어, 대기석 유닛(오른쪽 위)으로 고르기를 시작하면 왼쪽 포털 안 재료를 못 눌렀다 (가로 폰 1-2도 포털 아래쪽 고리가 가림) · 정보창 높이 밖(위쪽) 유닛은 안 셈
+  const m = S.story.m2, rest = storyFuseCands(m.pick.key).filter(v => S.units.includes(v) && !m.pick.list.includes(v) && v.y > yTop - 24);
+  const L = rest.filter(v => v.x < cardW + 40).length, R = rest.filter(v => v.x > VW - cardW - 40).length;
+  return L === R ? def : L > R;
+}
 function storyUnitAt(x, y) { // unitAt 스토리판 (10-20) — HIT_R 안 '가장 가까운' 전투 유닛, 없으면 광부 · 예전 = 배열에서 먼저 나온 유닛이라 포털 고리(유닛 사이 ≈14~17px < HIT_R 22·폰 40)에서 트리플을 눌러도 먼저 넣은 에이스가 선택돼 [합치기]가 안 떴다 (놓인 유닛 20px 간격도 같은 문제 — 51 크로스체크 P1-1의 넓은 고침)
   let best = null, bd = HIT_R;
   for (const u of S.units) { if (u.miner) continue; const d = Math.hypot(u.x - x, u.y - y); if (d < bd) { bd = d; best = u; } }
