@@ -14990,6 +14990,7 @@ const HIT_R = IS_MOBILE ? 40 : 22;
 function hitR(u) { return u.exc ? Math.max(HIT_R, 40) : HIT_R; } // 🚜 굴착기는 몸(78×68)이 커서 운전석·버킷·궤도 끝을 눌러도 잡히게 — PC 22→40 (모바일 40과 같게. 캐는 자리(EXC_DIG_SPOTS)는 광산 가운데에서 75px 이상이라 광산 가운데 클릭은 안 가로챈다 · 버킷 끝·파기 때 팔 꼭대기는 판정 밖)
 // 클릭·더블클릭 공용 유닛 판정 — 전투 유닛 우선, 없으면 광부 (유령 통과로 겹쳤을 때 광부·굴착기가 클릭을 가로채지 않게)
 function unitAt(x, y) {
+  if (S.story) return storyUnitAt(x, y); // 📖 10-20: 스토리 = 가장 가까운 유닛 (포털 고리·20px 간격 고정 배치)
   for (const u of S.units) if (!u.miner && Math.hypot(u.x - x, u.y - y) < HIT_R) return u;
   for (const u of S.units) if (u.miner && Math.hypot(u.x - x, u.y - y) < hitR(u)) return u;
   return null;
@@ -20789,7 +20790,7 @@ const STORY_M2 = {
   FLY: 380,        // 대기석으로 날아드는 빛 (ms)
 };
 const STORY_OBJ_INFO = { // 건물 설명 스토리판 (showObjInfo) — 포털 = 히든 전용·못 꺼냄 · 제단 = 끌어 올리기 · 레시피 단서는 여전히 없음
-  portal: { t: '강화 포털', d: '대기석에서 끌어 넣은 유닛은 포털 안에 머뭅니다 — 다시 꺼낼 수 없어요.<br>영웅은 같은 유닛 셋을 눌러 <b>합치기</b>로 만들어요.', tip: OBJ_INFO.portal.tip },
+  portal: { t: '강화 포털', d: '대기석에서 끌어 넣은 유닛은 포털 안에 머뭅니다 — 다시 꺼낼 수 없어요.<br>영웅은 같은 유닛 셋을 눌러 <b>합치기</b>로 만들어요 (포털 안 유닛도 재료가 돼요).', tip: OBJ_INFO.portal.tip }, // 10-20: 포털 안 유닛도 합치기 재료
   altar: { t: '제물대', d: '대기석에서 끌어 올린 유닛은 <b>제물</b>로 바쳐집니다.<br>아이템은 대기석에서 누르면 바로 써요.', tip: OBJ_INFO.altar.tip },
 };
 function storyM2() { const st = S.story; return st.m2 || (st.m2 = { tray: [], page: 0, prep: false, sel: null, pick: null, hint: false, placed: new WeakSet(), portal: new WeakSet(), altar: new WeakSet(), fx: [] }); }
@@ -20959,10 +20960,18 @@ function storyUseItem(u) { // 대기석 아이템 = 누르면 사용 (스토리 
   updateInfoPanel();
 }
 // ---- 눌러 합치기 (설계 §5) — 유닛 누름 → [합치기] → 반짝이는 같은 유닛 2마리 더 누름 → 영웅·슈퍼는 대기석으로 ----
-function storyFuseCands(key) { const m = storyM2(); return S.units.filter(v => m.placed.has(v) && fuseKey(v) === key).concat(m.tray.filter(v => fuseKey(v) === key)); } // 재료 = 맵에 놓인 것 + 대기석 (포털·제단·분신·아이템·히든·슈퍼는 아님)
+function storyFuseSrc(m, v) { return m.placed.has(v) || m.portal.has(v); } // 맵 쪽 재료 = 놓인 것 + 포털 안 (10-20 유저 '포털 함정': 포털에 넣은 유닛은 못 꺼내도 눌러 합치기 재료는 됨 — 슬롯머신·시간술사가 이미 있으면 같은 재료가, 에이스는 늘 갇히던 것) · 제단 위 승급 제물은 아님
+function storyFuseCands(key) { const m = storyM2(); return S.units.filter(v => storyFuseSrc(m, v) && fuseKey(v) === key).concat(m.tray.filter(v => fuseKey(v) === key)); } // 재료 = 맵에 놓인 것 + 포털 안 + 대기석 (제단·분신·아이템·히든·슈퍼는 아님) — 반짝임(storyDrawUI)·고르기(storyPickAt)·주황 오라(storyFusableHint)가 모두 이 규칙
 function storyCanFuse(u) { const k = fuseKey(u); if (!k) return false; const c = storyFuseCands(k); return c.includes(u) && c.length >= FUSE_N; }
 function storyPickStart(u) { if (!storyCanFuse(u)) return; storyM2().pick = { key: fuseKey(u), list: [u] }; sfx('pick'); updateInfoPanel(); }
 function storyPickCancel() { const m = S && S.story && S.story.m2; if (m && m.pick) { m.pick = null; updateInfoPanel(); } }
+function storyUnitAt(x, y) { // unitAt 스토리판 (10-20) — HIT_R 안 '가장 가까운' 전투 유닛, 없으면 광부 · 예전 = 배열에서 먼저 나온 유닛이라 포털 고리(유닛 사이 ≈14~17px < HIT_R 22·폰 40)에서 트리플을 눌러도 먼저 넣은 에이스가 선택돼 [합치기]가 안 떴다 (놓인 유닛 20px 간격도 같은 문제 — 51 크로스체크 P1-1의 넓은 고침)
+  let best = null, bd = HIT_R;
+  for (const u of S.units) { if (u.miner) continue; const d = Math.hypot(u.x - x, u.y - y); if (d < bd) { bd = d; best = u; } }
+  if (best) return best;
+  for (const u of S.units) if (u.miner && Math.hypot(u.x - x, u.y - y) < hitR(u)) return u;
+  return null;
+}
 function storyPickTap(v) { // 고르는 중 누른 유닛 — 반짝이는(같은 키) 유닛이면 고름 → FUSE_N번째에 합성 (true) · 아니면 false (부르는 쪽이 취소하고 원래 누름으로)
   const p = storyM2().pick; if (!p) return false;
   if (p.list.includes(v)) return true; // 이미 고른 유닛 = 그대로
@@ -20973,7 +20982,7 @@ function storyPickTap(v) { // 고르는 중 누른 유닛 — 반짝이는(같�
 }
 function storyPickAt(x, y) { // 고르는 중 맵 누름 판정 — 반짝이는(같은 키·맵에 놓인) 유닛 가운데 HIT_R 안 가장 가까운 것 먼저 · 없으면 unitAt 그대로 (10-19 51 크로스체크 P1-1: 폰 HIT_R 40 > 놓기 간격 20이라 배열에서 먼저 나온 옆 유닛이 잡혀 취소되던 것) · 대기석 유닛은 x·y가 칸 자리라 안 봄
   const m = storyM2(); let best = null, bd = HIT_R;
-  for (const v of S.units) { if (!m.placed.has(v) || fuseKey(v) !== m.pick.key) continue; const d = Math.hypot(v.x - x, v.y - y); if (d < bd) { bd = d; best = v; } }
+  for (const v of S.units) { if (!storyFuseSrc(m, v) || fuseKey(v) !== m.pick.key) continue; const d = Math.hypot(v.x - x, v.y - y); if (d < bd) { bd = d; best = v; } } // 10-20: 포털 안 같은 유닛도 (storyFuseCands와 같은 규칙)
   return best || unitAt(x, y);
 }
 function storyFuse(list) { // 합성 식 = 챌린지 포털 합성과 같은 함수 fuseGroup (에이스·슈퍼에이스·카드 가중 평균·로그·업적) — '재료를 고른다'만 다름
@@ -21035,12 +21044,12 @@ function storyInfoExtra(el, u) { // 정보창 덧붙임: [합치기] (같은 유
   b.onclick = () => storyPickStart(u);
   el.insertBefore(b, el.querySelector('#deselBtn'));
 }
-function storyFusableHint() { // 주황 오라(합칠 수 있음) = 맵에 놓인 것 + 대기석의 같은 키 FUSE_N 이상 (updateFusableHint 뒤 덮어씀) · 포털·제단 유닛은 아님
+function storyFusableHint() { // 주황 오라(합칠 수 있음) = 맵에 놓인 것 + 포털 안(10-20) + 대기석의 같은 키 FUSE_N 이상 (updateFusableHint 뒤 덮어씀) · 제단 유닛은 아님
   const m = S.story.m2; if (!m) return;
   const cnt = {}, add = u => { const k = fuseKey(u); if (k) cnt[k] = (cnt[k] || 0) + 1; };
-  for (const u of S.units) if (m.placed.has(u)) add(u);
+  for (const u of S.units) if (storyFuseSrc(m, u)) add(u);
   for (const u of m.tray) add(u);
-  for (const u of S.units) { const k = m.placed.has(u) && fuseKey(u); u.fusable = !!k && cnt[k] >= FUSE_N; }
+  for (const u of S.units) { const k = storyFuseSrc(m, u) && fuseKey(u); u.fusable = !!k && cnt[k] >= FUSE_N; }
   for (const u of m.tray) { const k = fuseKey(u); u.fusable = !!k && cnt[k] >= FUSE_N; }
 }
 function storySepFixed(a, b, dx, dy) { // 유닛 분리(MINSEP)에서 놓은·넣어 둔 유닛은 안 밀림 (설계 20 §2-1) — 둘 다 고정이면 그대로, 하나만이면 다른 쪽이 다 비킴 · true = 처리함
@@ -21114,9 +21123,9 @@ function storyDrawUI() {
   const now = performance.now(), T = STORY_M2.TRAY, g = drag && drag.tray && drag.tray.go ? drag.tray : null, pick = m.pick, pul = 0.5 + 0.5 * Math.sin(S.time * 7 + now * 0.004);
   const cand = pick ? storyFuseCands(pick.key) : null;
   ctx.save();
-  if (cand) for (const u of cand) { if (!S.units.includes(u)) continue; // 합치기 고르는 중: 맵 위 같은 유닛 반짝 · 고른 유닛 ①②
-    const i = pick.list.indexOf(u); ctx.strokeStyle = i >= 0 ? '#ffd54f' : `rgba(255,213,79,${(0.35 + 0.55 * pul).toFixed(2)})`; ctx.lineWidth = i >= 0 ? 3 : 2.5;
-    ctx.beginPath(); ctx.arc(u.x, u.y, 21 + (i >= 0 ? 0 : 2 * pul), 0, 6.283); ctx.stroke(); if (i >= 0) storyBadge(u.x + 15, u.y - 25, i + 1); }
+  if (cand) for (const u of cand) { if (!S.units.includes(u)) continue; // 합치기 고르는 중: 맵 위 같은 유닛 반짝 · 고른 유닛 ①② · 10-20: 포털 안 유닛은 작게 그려져(0.7배) 고리도 0.7배 (이웃 고리와 덜 겹치게)
+    const i = pick.list.indexOf(u), k = storyParked(u) ? 0.7 : 1; ctx.strokeStyle = i >= 0 ? '#ffd54f' : `rgba(255,213,79,${(0.35 + 0.55 * pul).toFixed(2)})`; ctx.lineWidth = i >= 0 ? 3 : 2.5;
+    ctx.beginPath(); ctx.arc(u.x, u.y, (21 + (i >= 0 ? 0 : 2 * pul)) * k, 0, 6.283); ctx.stroke(); if (i >= 0) storyBadge(u.x + 15 * k, u.y - 25 * k, i + 1); }
   // 대기석 띠 (그림의 덤불·바위 자리 위 — 유닛이 묻히지 않게 반투명 남색 판)
   ctx.fillStyle = 'rgba(26,20,48,0.66)'; roundRect(T[0] + 2, T[1] + 1, T[2] - T[0] - 4, T[3] - T[1] - 2, 12); ctx.fill();
   ctx.strokeStyle = 'rgba(255,236,190,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
