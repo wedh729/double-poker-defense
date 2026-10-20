@@ -15491,6 +15491,7 @@ function unitTraits(u) {
 function updateInfoPanel() {
   const el = document.getElementById('unitInfo');
   const sel = S.story ? storySel() : S.units.filter(u => u.selected); // 📖 M2: 맵 선택 없으면 대기석에서 누른 유닛
+  if (S.story && S.story.m2 && sel.length !== 1) S.story.m2.infoU = null; // 📖 10-20: 정보창을 닫거나 부대 창이 되면 다음 한 유닛 창은 맨 위부터 (storyInfoExtra — 크롬은 숨겼다 다시 보여도 스크롤 자리를 기억한다)
   if (sel.length === 0) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   // 🎨 10-04 GPT 인디고 상태창(dpd_unitinfo_1003): 구조·class·data-*만 요청서 7장 계약으로 — 문구·이모지·숫자·조건은 그대로, 색은 CSS가 담당
