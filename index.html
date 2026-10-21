@@ -12576,6 +12576,7 @@ function drawMonster(m) {
     ctx.fillStyle = `rgba(255,110,20,${(0.4 + 0.3 * Math.sin(S.time * 22 + m.phase)).toFixed(2)})`;
     ctx.beginPath(); ctx.arc(m.x + Math.sin(S.time * 14 + m.phase) * sz * 0.25, m.y - sz * 0.3, sz * 0.22, 0, Math.PI*2); ctx.fill();
   }
+  if (m.heat > 0) storyHeatDraw(m, sz); // 📖 10-21 스토리 화염 모으기: 달아오름·불씨 (챌린지 몹엔 heat 없음)
   // 💥 분열 몹: 균열 표시
   if (m.split) {
     ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.2;
@@ -20597,6 +20598,17 @@ function storyHeatSpread(dt) { // update 몹 루프 뒤 (스토리만) — SPR_D
       b.heat = Math.min(lim, (b.heat || 0) + H.SPR_V * T); b.heatT = S.time;
     }
   }
+}
+function storyHeatDraw(m, sz) { // drawMonster — 열기만큼 붉게 달아오름 + 작은 불씨 1~2개 (숫자 없음 · 난수 없음 · 그라디언트는 glowSprite 캐시)
+  const k = Math.min(1, m.heat / STORY_HEAT.MAX), gr = sz * 1.35, ga = ctx.globalAlpha;
+  ctx.globalAlpha = ga * (0.2 + 0.65 * k);
+  ctx.drawImage(glowSprite('heat', 'rgba(255,72,16,0.9)', 'rgba(255,40,0,0)'), m.x - gr, m.y - gr, gr * 2, gr * 2);
+  for (let i = 0, n = k > 0.6 ? 2 : 1; i < n; i++) { // 불씨: 몸 위로 피어올라 사라짐
+    const p = ((S.time * 1.4 + m.phase * 0.37 + i * 0.5) % 1 + 1) % 1;
+    ctx.globalAlpha = ga * (1 - p) * (0.5 + 0.5 * k); ctx.fillStyle = i ? '#ffd54f' : '#ff8a3d';
+    ctx.beginPath(); ctx.arc(m.x + Math.sin(m.phase * 3.1 + i * 2.4 + S.time * 2.2) * sz * 0.45, m.y - sz * (0.35 + 0.9 * p), Math.max(0.8, sz * 0.09 * (1 - 0.5 * p)), 0, 6.283); ctx.fill();
+  }
+  ctx.globalAlpha = ga;
 }
 function storyPenShot(p, u, target) { p.ex = target.x; p.ey = target.y; p.R = effRange(u) * STORY.PEN_RK; p.ox = u.x; p.oy = u.y; } // 탱크·핵·투석기: 착탄 = 고른 표적 · 타격 = 쏜 자리 기준 사거리 × PEN_RK 안
 function storyPenHit(p, lava) { // '사거리 안 길 위 전부' — 거리 = 쏜 유닛 ↔ 몹 땅 지점 · 다리 밑 몹도 맞음 (폭발) · 용암 돌이면 지상 몹 화상
