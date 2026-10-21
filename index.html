@@ -5947,6 +5947,7 @@ function swapCard(h, i) {
   hand.swapped[i] = true;
   hand.cards[i] = (S.tutMode && tutPick(h, i, hand)) || hand.deck.pop(); // [튜토리얼 10-14] 목표 족보로 가는 카드 고르기 (일반 판 = 덱 꼬리 그대로)
   if (S.tutStep === 1) { S.tutStep = 2; S.tutHold = false; tutMark('t2'); } // 🧭 T1 끝 — 포커 시계 재개, 배너는 T2('마음에 들면 소환!')
+  if (S.story) storyT1Done(); // 📖 10-21 스토리: 카드를 한 번 바꾸면 1-1 안내 끝 (dpd_story seen.t1)
   if (S.round === 2 && S.r1High && tutNew('t4')) tutMark('t4'); // 🧭 T4는 실제로 카드를 만진 뒤에 '봤다'로 친다 (판 내림 상태 자동 소환 때 안 보고 소진되지 않게)
   renderPoker({ h, i }); // 해당 카드에 회전 이펙트
   pokerRankFlash(h, before);
@@ -16890,6 +16891,7 @@ function renderPoker(spin) {
         swapCard(h, i);
       };
       if (S.tutStep === 1 && !hand.swapped[i] && !madeIdx.includes(i)) el.classList.add('tutWiggle'); // 🧭 T1: 금테 없는 카드가 살랑
+      if (S.story && storyT1On() && !hand.swapped[i] && !madeIdx.includes(i)) el.classList.add('tutWiggle'); // 📖 10-21 스토리 1-1 카드 바꾸기 안내도 같은 살랑
       if (S.tutMode) tutDecorateCard(el, h, i, madeIdx, hand); // [튜토리얼 10-14] 단계가 짚는 카드 살랑
       const rb = el.querySelector('.reswap');
       if (rb) rb.onclick = (e) => { e.stopPropagation(); ticketReswap(h, i); };
@@ -16936,14 +16938,15 @@ function tutOff() {
 }
 const TUT_OFF_LINK = ' <button type="button" class="tutOffLink" onclick="tutOff()">안내 끄기</button>';
 // 포커 배너 첫 줄 (renderPoker가 부른다). T1 = 첫 포커, T2 = 첫 교환 뒤, T4 = 첫 소환이 하이카드였을 때만 R2에서
+function tutT1Text(ranks) { return madeCardIdx(S.poker.hands[0].cards, ranks[0]).length ? '같은 숫자끼리 모으면 강해져요. 금테 없는 카드를 눌러 바꿔보세요.' : '같은 숫자 두 장이 생기면 금테가 둘러져요. 카드를 눌러 바꿔보세요.'; } // T1 문구 — 챌린지 첫 판 · 📖 스토리 1-1(10-21)이 같이 씀
 function tutPokerLine(ranks) {
   if (S.poker.hands.length !== 1) return '';
+  if (S.story) return storyT1Line(ranks); // 📖 10-21 스토리 = 1-1 카드 바꾸기 안내만 (tutOn()은 스토리에서 그대로 false — dpd_tut 안 씀)
   if (S.round === 1 && !S.tutStep && tutNew('t1')) { // 보여 주는 순간 기록 — 나가기·다시하기로 정지를 다시 걸 수 없다 (평생 1회)
     tutMark('t1'); S.tutStep = 1;
     if (!tut.replay) { S.tutHold = true; S.tutHoldT = S.time + 25; } // '처음 안내 다시 보기'면 문구만, 시계는 흐른다
   }
-  if (S.round === 1 && S.tutStep === 1 && tutOn()) return (madeCardIdx(S.poker.hands[0].cards, ranks[0]).length ? '같은 숫자끼리 모으면 강해져요. 금테 없는 카드를 눌러 바꿔보세요.'
-      : '같은 숫자 두 장이 생기면 금테가 둘러져요. 카드를 눌러 바꿔보세요.') + TUT_OFF_LINK;
+  if (S.round === 1 && S.tutStep === 1 && tutOn()) return tutT1Text(ranks) + TUT_OFF_LINK;
   if (S.round === 1 && S.tutStep === 2 && tutOn()) { document.getElementById('summonBtn').classList.add('tutPulse'); return '마음에 들면 소환!' + TUT_OFF_LINK; }
   if (S.round === 2 && S.r1High && tutNew('t4')) return '하이카드는 가장 약한 패예요. 같은 숫자를 노려보세요.' + TUT_OFF_LINK;
   return '';
@@ -21222,6 +21225,17 @@ let storyData = null; // dpd_story 메모리 사본 = 정본 (저장이 막혀�
 function storyDataGet() { return storyData || (storyData = storyLoad()); }
 function storyIsEmpty() { const d = storyDataGet(); return !Object.keys(d.clear).length && !Object.keys(d.seen).length; }
 function storySeen(id) { const d = storyDataGet(); if (d.seen[id]) return; d.seen[id] = true; storySave(d); }
+// ---- 1-1 카드 바꾸기 안내 (10-21 유저 결정: 스토리로 처음 온 사람도 카드 바꾸는 법을 배우게) ----
+//   챌린지 첫 판 안내 T1과 같은 문구·모양 = 포커 배너 첫 줄(tutT1Text) + 금테 없는 카드 살랑 + 1라운드엔 첫 카드를 누를 때까지 포커 시계 정지(25게임초 상한 — T1과 같음, 스테이지 판마다 한 번)
+//   뜨는 곳 = 1-1의 한 패 포커뿐 · 카드를 한 번 바꾸면 seen.t1 → 다시 안 뜸 · 1-2부터는 안 뜸(1-1을 건너뛸 수 없으니 배웠다고 봄)
+//   챌린지 첫 판 안내 저장(dpd_tut)은 안 건드림 → '안내 끄기'(tutOff = dpd_tut)·T2·T4 없음
+function storyT1On() { const st = S && S.story; return !!st && st.map.world === 1 && st.map.idx === 1 && S.phase === 'poker' && !!S.poker && S.poker.hands.length === 1 && !(st.m2 && st.m2.prep) && !storyDataGet().seen.t1; }
+function storyT1Line(ranks) { // tutPokerLine(renderPoker) — 스토리 판만
+  if (!storyT1On()) return '';
+  if (S.storyR === 1 && !S.story.t1Hold) { S.story.t1Hold = true; S.tutHold = true; S.tutHoldT = S.time + 25; } // 풀림 = 카드 누름(storyT1Done)·소환(confirmHand)·25게임초
+  return tutT1Text(ranks);
+}
+function storyT1Done() { if (storyDataGet().seen.t1) return; S.tutHold = false; storySeen('t1'); } // swapCard — 처음 바꾼 카드에서 기록 (renderPoker가 곧바로 안내 없는 배너로)
 function storyStages(w) { return Object.keys(STORY_MAPS).filter(id => STORY_MAPS[id].world === w).sort((a, b) => STORY_MAPS[a].idx - STORY_MAPS[b].idx); } // 시험 길(world 0)은 지도에 없음
 function storyOpen(id) { // 해금 — 월드 1 첫 스테이지는 언제나 · 같은 월드 앞 스테이지를 깼거나 · 월드 첫 스테이지면 앞 월드 마지막(보스) 스테이지를 깼거나
   const M = Object.prototype.hasOwnProperty.call(STORY_MAPS, id) ? STORY_MAPS[id] : null; if (!M || !M.world) return false;
