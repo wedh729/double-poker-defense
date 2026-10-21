@@ -20601,17 +20601,18 @@ function storyHeatSpread(dt) { // update 몹 루프 뒤 (스토리만) — SPR_D
     }
   }
 }
-function storyHeatDraw(m, sz) { // drawMonster — 열기만큼 주황으로 달아오름(가득에 가까우면 노란 속) + 작은 불씨 1~2개 (숫자 없음 · 난수 없음 · 몹마다 원 2~4개, 그라디언트·이미지 없음)
-  const k = Math.min(1, m.heat / STORY_HEAT.MAX), ga = ctx.globalAlpha;
-  ctx.globalAlpha = ga * (0.16 + 0.5 * k); ctx.fillStyle = '#ff6a1a';
-  ctx.beginPath(); ctx.arc(m.x, m.y, sz * 0.94, 0, 6.283); ctx.fill(); // 몸 = 주황 (열기 비례)
-  if (k > 0.5) { ctx.globalAlpha = ga * (k - 0.5) * 1.1; ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(m.x, m.y + sz * 0.08, sz * 0.46, 0, 6.283); ctx.fill(); } // 뜨거운 속
+function storyHeatDraw(m, sz) { // drawMonster — 테두리부터 주황으로 달아오름(열기 비례 두께) → 열기가 차면 몸도 주황·노란 속 + 작은 불씨 1~2개 (숫자 없음 · 난수 없음 · 몹마다 원 2~5개, 그라디언트·이미지 없음)
+  const k = Math.min(1, m.heat / STORY_HEAT.MAX), ga = ctx.globalAlpha, lw = ctx.lineWidth;
+  ctx.globalAlpha = ga * (0.55 + 0.45 * k); ctx.strokeStyle = '#ff7a1a'; ctx.lineWidth = Math.max(1.2, sz * (0.1 + 0.16 * k));
+  ctx.beginPath(); ctx.arc(m.x, m.y, sz * 0.88, 0, 6.283); ctx.stroke(); // 달아오른 테 (조금만 쬐어도 보이게 — 파란 몸에 옅은 주황을 덮으면 회색으로 보였다)
+  if (k > 0.3) { ctx.globalAlpha = ga * (k - 0.3) * 0.85; ctx.fillStyle = '#ff6a1a'; ctx.beginPath(); ctx.arc(m.x, m.y, sz * 0.9, 0, 6.283); ctx.fill(); } // 몸 = 주황
+  if (k > 0.6) { ctx.globalAlpha = ga * (k - 0.6) * 1.6; ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(m.x, m.y + sz * 0.08, sz * 0.44, 0, 6.283); ctx.fill(); } // 뜨거운 속
   for (let i = 0, n = k > 0.6 ? 2 : 1; i < n; i++) { // 불씨: 몸 위로 피어올라 사라짐
     const p = ((S.time * 1.4 + m.phase * 0.37 + i * 0.5) % 1 + 1) % 1;
     ctx.globalAlpha = ga * (1 - p) * (0.55 + 0.45 * k); ctx.fillStyle = i ? '#ffd54f' : '#ff8a3d';
     ctx.beginPath(); ctx.arc(m.x + Math.sin(m.phase * 3.1 + i * 2.4 + S.time * 2.2) * sz * 0.5, m.y - sz * (0.5 + 0.9 * p), Math.max(1, sz * 0.13 * (1 - 0.5 * p)), 0, 6.283); ctx.fill();
   }
-  ctx.globalAlpha = ga;
+  ctx.globalAlpha = ga; ctx.lineWidth = lw;
 }
 function storyPenShot(p, u, target) { p.ex = target.x; p.ey = target.y; p.R = effRange(u) * STORY.PEN_RK; p.ox = u.x; p.oy = u.y; } // 탱크·핵·투석기: 착탄 = 고른 표적 · 타격 = 쏜 자리 기준 사거리 × PEN_RK 안
 function storyPenHit(p, lava) { // '사거리 안 길 위 전부' — 거리 = 쏜 유닛 ↔ 몹 땅 지점 · 다리 밑 몹도 맞음 (폭발) · 용암 돌이면 지상 몹 화상
