@@ -21117,6 +21117,7 @@ function storyInfoExtra(el, u) { // 정보창 덧붙임: [합치기] (같은 유
   const head = el.querySelector('.ui-head'), cp = el.querySelector('#copyBtn');
   if (m.infoU !== u) { m.infoU = u; el.scrollTop = 0; } // 다른 유닛을 고르면 맨 위부터 (같은 유닛 다시 그리기 — 우선순위 단추 등 — 는 스크롤 그대로)
   if (cp && head) head.after(cp);
+  if (u.vis === 'flame' && !isHiddenCombo(u)) { const sp = el.querySelector('.ui-spd'), h = document.createElement('div'); h.className = 'ui-help ui-heat'; h.textContent = '불을 오래 쬘수록 더 뜨거워져요'; if (sp) sp.after(h); } // 🔥 10-21 화염 모으기 특성 한 줄 (스토리만 — 숫자·컨셉명 없이 · 챌린지 '화염' 칩은 그대로) · [합치기] 갈래보다 앞 (합칠 게 없어도 뜸)
   if (!storyCanFuse(u)) return;
   const b = document.createElement('button'); b.type = 'button'; b.id = 'storyFuseBtn'; b.className = 'shopBtn ui-skill'; b.dataset.skill = 'fuse';
   b.dataset.state = m.pick ? 'active' : 'ready'; b.disabled = !!m.pick;
