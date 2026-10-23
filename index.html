@@ -20570,8 +20570,11 @@ function storyGameOver() { // endWave 게임오버 = 실패 화면 (10-19 M3: �
 //   DMG_K = 공격력 배수 (effDmgBase — 정보창 공격력 숫자 = 실제 피해 · 정보창에 ×DMG_K 칩) · 화상 = 불줄기 띠에 맞을 때마다 기존 화상 장치(m.burnT·burnDmg·burnBy — update 몹 루프가 깎고 딜 기록, drawMonster 아른거림)
 //     합치기 = 용암 돌 규칙(storyPenHit): 센 화상(초당 피해)이 세기·주인을 가져가고 시간은 BURN_T초로 새로 (쇼군의 무조건 덮어쓰기는 안 따름) · 초당 화상 = 맞힌 유닛 초당 공격력(공격력 ÷ 공격 간격) × BURN_K
 //     공중·강림 몹 ✕ · 난수 없음 · 새 그림 없음 · 화상이 붙으면 이끼 공 재생이 멈춤(varTick MOSS 대기 조건이 burnT를 봄 — 불이니 자연스러움)
-//   값 근거 (배치 봇 — 유닛 하나씩·900판): 측정 뒤 채움
-const STORY_FLAME = { DMG_K: 4, BURN_K: 0.3, BURN_T: 3 };
+//   값(10-24 측정 — 배치 봇 유닛 하나씩: 그 라운드 무리를 혼자 맞을 때 실제로 깎은 체력, 일반 플러쉬 1-3 R8 / 1-5 R10 / 1-5 R12 · 무리 시드 3 평균):
+//     전(배수·화상 없음) 10 / 8 / 5% (9위) → DMG_K 3 · BURN_K 0.2 · BURN_T 3 = 46 / 38 / 27% (5 / 4 / 4위 — 기관총·단검 옆, 포카드 56 / 47 / 31 아래) · 화상 몫 34~39%
+//     공격력만 ×3이면 31 / 23 / 16% — 불줄기 띠(사거리 96)를 벗어난 뒤 남는 화상 시간이 몫을 만든다 (95 §7) · 0.25·3초 = 50 / 42 / 29 (1-5 R12 포카드 턱밑) · 0.15·4초 = 44 / 36 / 25 (6위)
+//     잠재력(몹이 안 죽는 장면의 넣은 딜 합): 영웅·슈퍼·에이스 플러쉬 ×4.6~5.1 → 4~5위, 같은 종류 포카드·SF·로얄 아래 (보고 99 §4)
+const STORY_FLAME = { DMG_K: 3, BURN_K: 0.2, BURN_T: 3 };
 function storyFlameBurn(m, u, dmg) { // areaHit 화염 띠 — dealDamage 바로 뒤 (S.story만 · 공중·강림 몹은 부르는 쪽이 뺌). dmg = 공격력(×DMG_K 뒤, 구슬 변종 불 약점 전 — 약점은 화상 틱 varBurn이 한 번)
   const F = STORY_FLAME, bd = F.BURN_K * dmg / Math.max(0.02, effCd(u)), on = m.burnT > 0;
   if (!on || bd >= (m.burnDmg || 0)) m.burnBy = u; // 딜 기록 주인 = 더 센 화상을 건 쪽
