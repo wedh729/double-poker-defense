@@ -3762,356 +3762,333 @@ body.mobile #overlay .soStar {width:36px;height:36px;}
 (() => {
   'use strict';
 const COMIC = { // 대본 §9 JSON의 comics.<id>.pages 그대로 (id·note·when = 데이터용, 화면에 안 나옴)
-  prologue: [ // 스토리 1-1 시작 전
-    { "id": "p1", "note": "카드 왕국의 평화 + 패에서 병사가 나온다", "rows": [
+  prologue: [ // 스토리 1-1 시작 전 · 10-24 유저: 줄거리 = 후보 5(새총 꼬마의 일기 — 꼬마의 새총알에 맞은 해님이 범인을 찾으러 옴) · 만화 제목은 「해님이 찾아왔어요」 그대로(후보 이름은 화면에 안 나옴)
+    { "id": "p1", "note": "꼬마의 일기 — 새총을 쏘다가 해님을 맞힘", "rows": [
       { "h": 0.58, "panels": [
-        { "id": "p1a", "note": "맑은 낮의 카드 왕국",
+        { "id": "p1a", "note": "맑은 하늘 + 땅, 우리 성 앞에서 새총 꼬마가 오른쪽 위 하늘(얼굴 없는 해 쪽)을 겨눔",
           "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.25, 0.5, 0.95, 1.0], "top": 0.48}},
           "layers": [
             {"draw": "sunPlain", "x": 0.86, "y": 0.16, "size": 0.16},
             {"draw": "castle", "x": 0.2, "y": 0.68, "size": 0.5},
-            {"draw": "unit", "rank": 0, "x": 0.46, "y": 0.84, "size": 0.2, "pose": "hop"},
-            {"draw": "unit", "rank": 1, "x": 0.64, "y": 0.84, "size": 0.2, "pose": "idle"},
-            {"draw": "unit", "rank": 2, "x": 0.8, "y": 0.86, "size": 0.2, "pose": "idle", "flip": true}
+            {"draw": "unit", "rank": 0, "x": 0.5, "y": 0.84, "size": 0.2, "pose": "idle", "aim": [0.84, 0.2]}
           ],
-          "caption": {"text": "카드 왕국은 오늘도 맑음.", "pos": "top"},
+          "caption": {"text": "꼬마의 일기. 오늘은 맑음.", "pos": "top"},
           "bubbles": [
-            {"who": "archer", "text": "날씨 좋다~", "x": 0.66, "y": 0.52, "tail": [0.64, 0.73]}
+            {"who": "sling", "text": "높이높이 날아라!", "x": 0.4, "y": 0.3, "tail": [0.48, 0.71]}
+          ],
+          "sfx": [
+            {"text": "피융!", "x": 0.74, "y": 0.42, "rot": -18}
           ]
         }
       ]},
       { "h": 0.42, "panels": [
-        { "id": "p1b", "note": "원페어 패에서 궁수가 튀어나옴",
-          "bg": {"sky": "table"},
+        { "id": "p1b", "note": "하늘, 얼굴 없는 해에 작은 새총알이 딱 맞음, 해가 부르르 — 새총알 = 맞은 자리(해 왼쪽 아래 가장자리)의 작은 반짝(sparkle), '딱!'도 그 옆",
+          "bg": {"sky": "day"},
           "layers": [
-            {"draw": "cards", "cards": ["K♥", "K♠", "A♦", "Q♣", "J♠"], "gold": [0, 1], "x": 0.5, "y": 0.74, "size": 0.42},
-            {"draw": "fx", "kind": "sparkle", "x": 0.28, "y": 0.45, "size": 0.4},
-            {"draw": "unit", "rank": 1, "key": "K", "x": 0.28, "y": 0.45, "size": 0.3, "pose": "pop"}
+            {"draw": "sunPlain", "x": 0.62, "y": 0.5, "size": 0.5, "motion": "shake"},
+            {"draw": "fx", "kind": "shake", "x": 0.62, "y": 0.5, "size": 0.7},
+            {"draw": "fx", "kind": "sparkle", "x": 0.57, "y": 0.58, "size": 0.28}
           ],
-          "caption": {"text": "패를 맞추면, 카드에서 병사가!", "pos": "top"},
+          "caption": {"text": "그런데 그게 해님한테…", "pos": "top"},
           "sfx": [
-            {"text": "펑!", "x": 0.76, "y": 0.3, "rot": -10}
+            {"text": "딱!", "x": 0.38, "y": 0.72, "rot": -12}
           ]
         }
       ]}
     ]},
-    { "id": "p2", "note": "해님이 깨어나 굴러감 (넘김 칸 = p2c)", "rows": [
-      { "h": 0.26, "panels": [
-        { "id": "p2a", "note": "얼굴 없는 해가 부르르",
-          "bg": {"sky": "day"},
+    { "id": "p2", "note": "해님이 범인을 찾으려 굴러감 (넘김 칸 = p2c)", "rows": [
+      { "h": 0.3, "panels": [
+        { "id": "p2a", "note": "달아오른 하늘, 해님(화난 얼굴)이 성 바로 위까지 내려옴",
+          "bg": {"sky": "hot", "ground": {"img": "bg_easy", "crop": [0.3, 0.55, 0.9, 1.0], "top": 0.78}},
           "layers": [
-            {"draw": "sunPlain", "x": 0.5, "y": 0.56, "size": 0.62, "motion": "shake"},
-            {"draw": "fx", "kind": "shake", "x": 0.5, "y": 0.56, "size": 0.8}
+            {"draw": "boss", "shape": 27, "x": 0.7, "y": 0.4, "size": 0.7},
+            {"draw": "castle", "x": 0.12, "y": 0.74, "size": 0.5}
           ],
-          "caption": {"text": "그런데 그날, 해님이…", "pos": "top"},
+          "bubbles": [
+            {"who": "sun", "text": "누구야! 날 맞힌 게!", "x": 0.29, "y": 0.3, "tail": [0.6, 0.42], "shape": "shout"}
+          ],
           "sfx": [
-            {"text": "부르르…", "x": 0.8, "y": 0.3, "rot": 6}
+            {"text": "번쩍!", "x": 0.92, "y": 0.12, "rot": 8}
           ]
         }
       ]},
-      { "h": 0.38, "panels": [
-        { "id": "p2b", "note": "보스 태양(얼굴) 등장 = 악당으로 깨어남",
-          "bg": {"sky": "hot"},
+      { "h": 0.34, "panels": [
+        { "id": "p2b", "note": "성 앞에 궁수·총잡이가 나란히 서 있고, 꼬마는 성 뒤에 숨어 떨림 선 — 성 왼쪽 뒤(해님 반대쪽)에서 몸 반쯤만 보이게(성보다 먼저 그려 가림), '부들부들'은 꼬마 왼쪽 위 하늘(성·꼬마를 안 가림)",
+          "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.25, 0.5, 0.95, 1.0], "top": 0.66}},
           "layers": [
-            {"draw": "boss", "shape": 27, "x": 0.3, "y": 0.56, "size": 0.74}
+            {"draw": "unit", "rank": 0, "x": 0.325, "y": 0.84, "size": 0.22, "pose": "tilt"},
+            {"draw": "fx", "kind": "shake", "x": 0.325, "y": 0.8, "size": 0.3},
+            {"draw": "castle", "x": 0.43, "y": 0.72, "size": 0.6},
+            {"draw": "unit", "rank": 1, "x": 0.62, "y": 0.84, "size": 0.22, "pose": "idle"},
+            {"draw": "unit", "rank": 2, "x": 0.77, "y": 0.84, "size": 0.22, "pose": "idle"}
           ],
+          "caption": {"text": "나는 성 뒤에 숨었다.", "pos": "top"},
           "bubbles": [
-            {"who": "sun", "text": "네모난 것들, 거슬려!", "x": 0.72, "y": 0.28, "tail": [0.5, 0.42], "shape": "shout"},
-            {"who": "sun", "text": "세상은 동글동글해야지!", "x": 0.7, "y": 0.74, "tail": [0.52, 0.62]}
+            {"who": "archer", "text": "저희 아닌데요?", "x": 0.76, "y": 0.3, "tail": [0.62, 0.68]}
           ],
           "sfx": [
-            {"text": "번쩍!", "x": 0.12, "y": 0.14, "rot": -8}
+            {"text": "부들부들", "x": 0.17, "y": 0.5, "rot": -6}
           ]
         }
       ]},
       { "h": 0.36, "panels": [
-        { "id": "p2c", "note": "해님이 둥근 것들에게 명령하며 오른쪽 땅끝으로 굴러감",
+        { "id": "p2c", "note": "해님이 땅끝으로 굴러가며 외침, 땅끝에 적 포탈이 열림",
           "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.2, 0.55, 1.0, 1.0], "top": 0.5}},
           "layers": [
-            {"draw": "castle", "x": 0.08, "y": 0.8, "size": 0.32},
-            {"draw": "fx", "kind": "speed", "x": 0.62, "y": 0.62, "size": 0.24},
-            {"draw": "mob", "mat": 0, "n": 3, "x": 0.62, "y": 0.78, "spread": [0.16, 0.04], "size": 0.1, "motion": "bounce"},
-            {"draw": "boss", "shape": 27, "x": 0.84, "y": 0.64, "size": 0.34, "motion": "roll"}
+            {"draw": "castle", "x": 0.07, "y": 0.8, "size": 0.3},
+            {"draw": "fx", "kind": "speed", "x": 0.68, "y": 0.62, "size": 0.22},
+            {"draw": "boss", "shape": 27, "x": 0.82, "y": 0.62, "size": 0.28, "motion": "roll"},
+            {"draw": "enemyPortal", "x": 0.95, "y": 0.58, "size": 0.34}
           ],
-          "caption": {"text": "해님은 오른쪽 땅끝으로 굴러갔다.", "pos": "top"},
           "bubbles": [
-            {"who": "sun", "text": "다 굴려 버려!", "x": 0.6, "y": 0.38, "tail": [0.8, 0.5], "shape": "shout"}
+            {"who": "sun", "text": "범인 찾기 전엔 안 떠!", "x": 0.36, "y": 0.16, "tail": [0.74, 0.5]},
+            {"who": "sun", "text": "다 굴려 버려!", "x": 0.58, "y": 0.46, "tail": [0.8, 0.52], "shape": "shout"}
           ],
           "sfx": [
-            {"text": "데굴데굴~", "x": 0.33, "y": 0.92, "rot": -4}
+            {"text": "데굴데굴~", "x": 0.33, "y": 0.9, "rot": -4}
           ]
         }
       ]}
     ]},
     { "id": "p3", "note": "물풍선 습격", "rows": [
-      { "h": 0.52, "panels": [
-        { "id": "p3a", "note": "적 포탈에서 물풍선 떼가 흙길로",
+      { "h": 0.56, "panels": [
+        { "id": "p3a", "note": "오른쪽 끝 적 포탈에서 물풍선 떼가 흙길 따라 왼쪽 성으로 — 추가: 성 앞 총잡이(말풍선 주인)가 뒤로 기움",
           "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.2, 0.6, 1.0, 1.0], "top": 0.26}},
           "layers": [
             {"draw": "castle", "x": 0.06, "y": 0.72, "size": 0.44},
             {"draw": "enemyPortal", "x": 0.9, "y": 0.62, "size": 0.32},
-            {"draw": "mob", "mat": 0, "n": 9, "x": 0.56, "y": 0.72, "spread": [0.56, 0.22], "size": 0.1, "motion": "bounce"}
+            {"draw": "mob", "mat": 0, "n": 9, "x": 0.6, "y": 0.72, "spread": [0.5, 0.22], "size": 0.1, "motion": "bounce"},
+            {"draw": "unit", "rank": 2, "x": 0.27, "y": 0.82, "size": 0.26, "pose": "tilt"}
           ],
-          "caption": {"text": "해님이 간 쪽에서 둥근 것들이 왔다.", "pos": "top"},
+          "caption": {"text": "둥근 것들이 몰려왔다.", "pos": "top"},
+          "bubbles": [
+            {"who": "gunner", "text": "흠, 범인을 찾는군.", "x": 0.34, "y": 0.4, "tail": [0.27, 0.58]}
+          ],
           "sfx": [
-            {"text": "뽀글뽀글", "x": 0.86, "y": 0.36, "rot": 8},
-            {"text": "통통통", "x": 0.5, "y": 0.5, "rot": -6}
+            {"text": "통통통", "x": 0.62, "y": 0.6, "rot": -6}
           ]
         }
       ]},
-      { "h": 0.48, "panels": [
-        { "id": "p3b", "w": 0.5, "note": "총잡이 놀람",
-          "bg": {"ground": {"img": "bg_easy", "crop": [0.4, 0.3, 0.6, 0.5], "top": 0}},
+      { "h": 0.44, "panels": [
+        { "id": "p3b", "note": "풀밭 가까이: 새총 꼬마 머리 위에서 물풍선이 터짐",
+          "bg": {"ground": {"img": "bg_easy", "crop": [0.45, 0.3, 0.65, 0.5], "top": 0.0}},
           "layers": [
-            {"draw": "unit", "rank": 2, "x": 0.46, "y": 0.74, "size": 0.5, "pose": "tilt"}
+            {"draw": "unit", "rank": 0, "x": 0.42, "y": 0.76, "size": 0.5, "pose": "tilt"},
+            {"draw": "mob", "mat": 0, "x": 0.46, "y": 0.28, "size": 0.24},
+            {"draw": "fx", "kind": "splash", "color": "#3fa9e8", "x": 0.45, "y": 0.36, "size": 0.55}
           ],
           "bubbles": [
-            {"who": "gunner", "text": "물풍선 떼다!", "x": 0.5, "y": 0.2, "tail": [0.46, 0.46], "shape": "shout"}
-          ]
-        },
-        { "id": "p3c", "w": 0.5, "note": "새총 꼬마 머리 위에서 물풍선이 터짐",
-          "bg": {"ground": {"img": "bg_easy", "crop": [0.45, 0.3, 0.65, 0.5], "top": 0}},
-          "layers": [
-            {"draw": "unit", "rank": 0, "x": 0.5, "y": 0.76, "size": 0.48, "pose": "tilt"},
-            {"draw": "mob", "mat": 0, "x": 0.58, "y": 0.28, "size": 0.24},
-            {"draw": "fx", "kind": "splash", "color": "#3fa9e8", "x": 0.56, "y": 0.36, "size": 0.5}
-          ],
-          "bubbles": [
-            {"who": "sling", "text": "으악, 차가워!", "x": 0.32, "y": 0.13, "tail": [0.4, 0.42]}
+            {"who": "sling", "text": "히익, 차가워!", "x": 0.2, "y": 0.2, "tail": [0.36, 0.47]}
           ],
           "sfx": [
-            {"text": "첨벙!", "x": 0.8, "y": 0.6, "rot": 12}
+            {"text": "첨벙!", "x": 0.72, "y": 0.6, "rot": 12}
           ]
         }
       ]}
     ]},
-    { "id": "p4", "note": "소문 새 (넘김 칸 = p4c)", "rows": [
-      { "h": 0.3, "panels": [
-        { "id": "p4a", "note": "소문 새가 날아옴 — 궁수가 폴짝 뛰어 잡으려 하자 허둥지둥 (게임: 새를 눌러 잡아야 소문이 떨어짐)",
-          "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.3, 0.6, 0.9, 0.9], "top": 0.7}},
+    { "id": "p4", "note": "꼬마가 사과하러 가기로 함 (넘김 칸 = p4b)", "rows": [
+      { "h": 0.5, "panels": [
+        { "id": "p4a", "note": "성 옆, 꼬마 혼자 떨림 선 — 대체: 성 뒤 그늘·웅크림 = 성 옆에 작게 선 채 떨림 선",
+          "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.3, 0.6, 0.9, 0.9], "top": 0.6}},
           "layers": [
-            {"draw": "bird", "dir": -1, "x": 0.84, "y": 0.3, "size": 0.36, "motion": "shake"},
-            {"draw": "unit", "rank": 1, "x": 0.86, "y": 0.86, "size": 0.32, "pose": "jump"}
+            {"draw": "castle", "x": 0.2, "y": 0.64, "size": 0.8},
+            {"draw": "unit", "rank": 0, "x": 0.44, "y": 0.8, "size": 0.26, "pose": "idle"},
+            {"draw": "fx", "kind": "shake", "x": 0.44, "y": 0.76, "size": 0.34}
           ],
-          "caption": {"text": "소문 새가 날아왔다.", "pos": "top"},
+          "caption": {"text": "사실 범인은 나다.", "pos": "top"},
           "bubbles": [
-            {"who": "bird", "text": "잡지 마! 소문 줄게!", "x": 0.38, "y": 0.62, "tail": [0.76, 0.34], "shape": "shout"}
-          ],
-          "sfx": [
-            {"text": "짹짹!", "x": 0.64, "y": 0.18, "rot": 10}
+            {"who": "sling", "text": "내가 사과할래…", "x": 0.7, "y": 0.4, "tail": [0.54, 0.66]}
           ]
         }
       ]},
-      { "h": 0.42, "panels": [
-        { "id": "p4b", "note": "소문 속 그림: 해님과 둘레를 도는 행성들",
-          "bg": {"sky": "rumor"},
+      { "h": 0.5, "panels": [
+        { "id": "p4b", "note": "궁수·총잡이가 꼬마 양옆에 와서 섬",
+          "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.3, 0.6, 0.9, 0.9], "top": 0.6}},
           "layers": [
-            {"draw": "boss", "shape": 27, "x": 0.5, "y": 0.48, "size": 0.32},
-            {"draw": "boss", "shape": 20, "x": 0.16, "y": 0.42, "size": 0.1},
-            {"draw": "boss", "shape": 21, "x": 0.26, "y": 0.22, "size": 0.09},
-            {"draw": "boss", "shape": 22, "x": 0.74, "y": 0.22, "size": 0.1},
-            {"draw": "boss", "shape": 23, "x": 0.84, "y": 0.42, "size": 0.11},
-            {"draw": "boss", "shape": 24, "x": 0.84, "y": 0.62, "size": 0.1},
-            {"draw": "boss", "shape": 25, "x": 0.22, "y": 0.68, "size": 0.13},
-            {"draw": "boss", "shape": 26, "x": 0.64, "y": 0.64, "size": 0.12},
-            {"draw": "mob", "mat": 0, "x": 0.37, "y": 0.38, "size": 0.09, "motion": "bounce"},
-            {"draw": "mob", "mat": 1, "x": 0.63, "y": 0.38, "size": 0.09, "motion": "bounce"},
-            {"draw": "mob", "mat": 2, "x": 0.36, "y": 0.62, "size": 0.09, "motion": "bounce"},
-            {"draw": "mob", "mat": 3, "x": 0.73, "y": 0.5, "size": 0.09, "motion": "bounce"}
+            {"draw": "unit", "rank": 1, "x": 0.3, "y": 0.84, "size": 0.24, "pose": "idle"},
+            {"draw": "unit", "rank": 0, "x": 0.5, "y": 0.83, "size": 0.24, "pose": "idle"},
+            {"draw": "unit", "rank": 2, "x": 0.7, "y": 0.82, "size": 0.24, "pose": "idle"}
           ],
           "bubbles": [
-            {"who": "bird", "text": "소문에 의하면…", "x": 0.5, "y": 0.07, "tail": null, "shape": "whisper"},
-            {"who": "bird", "text": "해님이 둥근 것들 대장이래.", "x": 0.5, "y": 0.93, "tail": null}
-          ]
-        }
-      ]},
-      { "h": 0.28, "panels": [
-        { "id": "p4c", "note": "아침이 안 온다는 소식에 깜짝",
-          "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.3, 0.6, 0.9, 0.9], "top": 0.55}},
-          "layers": [
-            {"draw": "bird", "dir": -1, "x": 0.86, "y": 0.68, "size": 0.3},
-            {"draw": "unit", "rank": 0, "x": 0.18, "y": 0.8, "size": 0.32, "pose": "jump"},
-            {"draw": "unit", "rank": 2, "x": 0.38, "y": 0.82, "size": 0.32, "pose": "jump"}
-          ],
-          "bubbles": [
-            {"who": "bird", "text": "해가 다 지면 영영 밤이래!", "x": 0.42, "y": 0.2, "tail": [0.8, 0.62], "shape": "shout"}
-          ],
-          "sfx": [
-            {"text": "헉!", "x": 0.56, "y": 0.62, "rot": -12}
+            {"who": "archer", "text": "좋아, 같이 가자!", "x": 0.27, "y": 0.28, "tail": [0.3, 0.66]},
+            {"who": "gunner", "text": "혼자 보낼 순 없지.", "x": 0.73, "y": 0.28, "tail": [0.7, 0.56]}
           ]
         }
       ]}
     ]},
-    { "id": "p5", "note": "지휘관님의 패 → 군단 출동", "rows": [
-      { "h": 0.42, "panels": [
-        { "id": "p5a", "note": "트리플 패를 탁 내려놓음",
+    { "id": "p5", "note": "지휘관님의 패 → 기사", "rows": [
+      { "h": 0.38, "panels": [
+        { "id": "p5a", "note": "지휘관님의 트리플 패를 탁 내려놓음",
           "bg": {"sky": "table"},
           "layers": [
-            {"draw": "cards", "cards": ["Q♥", "Q♠", "Q♦", "A♣", "K♠"], "gold": [0, 1, 2], "slam": true, "x": 0.5, "y": 0.58, "size": 0.6}
+            {"draw": "cards", "cards": ["Q♥", "Q♠", "Q♦", "A♣", "K♠"], "gold": [0, 1, 2], "slam": true, "x": 0.5, "y": 0.6, "size": 0.6}
           ],
-          "caption": {"text": "그때, 지휘관님이 패를 내려놓았다.", "pos": "top"},
+          "caption": {"text": "지휘관님이 패를 냈다.", "pos": "top"},
           "sfx": [
-            {"text": "착!", "x": 0.84, "y": 0.28, "rot": -14}
+            {"text": "착!", "x": 0.86, "y": 0.3, "rot": -14}
           ]
         }
       ]},
-      { "h": 0.58, "panels": [
-        { "id": "p5b", "note": "트리플 패 = 기사 하나가 펑! 솟음 (기사 첫 등장). 먼저 있던 셋이 폴짝 반김",
+      { "h": 0.62, "panels": [
+        { "id": "p5b", "note": "기사(가슴 Q)가 펑! 솟음, 꼬마가 폴짝",
           "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.2, 0.5, 0.9, 1.0], "top": 0.45}},
           "layers": [
             {"draw": "castle", "x": 0.13, "y": 0.66, "size": 0.48},
             {"draw": "fx", "kind": "sparkle", "x": 0.56, "y": 0.6, "size": 0.32},
-            {"draw": "unit", "rank": 0, "x": 0.34, "y": 0.86, "size": 0.18, "pose": "cheer"},
-            {"draw": "unit", "rank": 1, "x": 0.43, "y": 0.86, "size": 0.2, "pose": "cheer"},
-            {"draw": "unit", "rank": 3, "key": "Q", "x": 0.6, "y": 0.8, "size": 0.28, "pose": "pop"},
-            {"draw": "unit", "rank": 2, "x": 0.8, "y": 0.86, "size": 0.22, "pose": "cheer", "flip": true}
+            {"draw": "unit", "rank": 0, "x": 0.38, "y": 0.86, "size": 0.2, "pose": "cheer"},
+            {"draw": "unit", "rank": 3, "key": "Q", "x": 0.6, "y": 0.8, "size": 0.28, "pose": "pop"}
           ],
           "bubbles": [
-            {"who": "knight", "text": "지휘관님, 명령을!", "x": 0.66, "y": 0.2, "tail": [0.6, 0.6]}
+            {"who": "knight", "text": "지휘관님, 명령을!", "x": 0.72, "y": 0.2, "tail": [0.6, 0.55]},
+            {"who": "sling", "text": "우와, 기사님이다!", "x": 0.34, "y": 0.38, "tail": [0.38, 0.72]}
           ],
           "sfx": [
-            {"text": "펑!", "x": 0.4, "y": 0.4, "rot": -8}
+            {"text": "펑!", "x": 0.9, "y": 0.5, "rot": -8}
           ]
         }
       ]}
     ]},
-    { "id": "p6", "note": "출발 — 제목 띠 '첫 걸음, 동산'", "rows": [
+    { "id": "p6", "note": "출발 — 제목 띠 첫 걸음, 동산", "rows": [
       { "h": 0.55, "panels": [
-        { "id": "p6a", "note": "오른쪽으로 행진, 땅끝에 살짝 걸린 해님 (조금 잠김 → e2a 반쯤 → 월드 2 끝 다 짐)",
+        { "id": "p6a", "note": "꼬마가 맨 앞에서 오른쪽으로 행진, 땅끝에 해님이 땅선에 살짝 걸림",
           "bg": {"sky": "warm", "ground": {"img": "bg_easy", "crop": [0.2, 0.55, 1.0, 1.0], "top": 0.5}},
           "layers": [
             {"draw": "castle", "x": 0.09, "y": 0.68, "size": 0.4},
             {"draw": "boss", "shape": 27, "x": 0.92, "y": 0.47, "size": 0.14, "sink": true},
             {"draw": "unit", "rank": 3, "x": 0.3, "y": 0.84, "size": 0.2, "pose": "march"},
-            {"draw": "unit", "rank": 1, "x": 0.45, "y": 0.86, "size": 0.2, "pose": "march"},
-            {"draw": "unit", "rank": 0, "x": 0.58, "y": 0.85, "size": 0.18, "pose": "march"},
-            {"draw": "unit", "rank": 2, "x": 0.71, "y": 0.86, "size": 0.2, "pose": "march"}
+            {"draw": "unit", "rank": 2, "x": 0.44, "y": 0.86, "size": 0.2, "pose": "march"},
+            {"draw": "unit", "rank": 1, "x": 0.58, "y": 0.86, "size": 0.2, "pose": "march"},
+            {"draw": "unit", "rank": 0, "x": 0.74, "y": 0.85, "size": 0.18, "pose": "march"}
           ],
+          "caption": {"text": "우리는 해님을 찾아 떠났다.", "pos": "top"},
           "bubbles": [
-            {"who": "archer", "text": "해님 데려오자!", "x": 0.34, "y": 0.24, "tail": [0.45, 0.72]},
-            {"who": "gunner", "text": "해 지기 전에!", "x": 0.7, "y": 0.3, "tail": [0.71, 0.72]}
+            {"who": "sling", "text": "해님, 기다려요!", "x": 0.66, "y": 0.3, "tail": [0.74, 0.68]}
           ]
         }
       ]},
       { "h": 0.45, "panels": [
-        { "id": "p6b", "note": "마무리 칸: 제목 띠",
+        { "id": "p6b", "note": "마무리: 제목 띠, 아래 작게 걸어가는 병사들, 먼 입구에서 물풍선 몇 개",
           "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.2, 0.6, 1.0, 1.0], "top": 0.58}},
           "layers": [
             {"draw": "unit", "rank": 3, "x": 0.4, "y": 0.86, "size": 0.16, "pose": "march"},
             {"draw": "unit", "rank": 1, "x": 0.5, "y": 0.87, "size": 0.16, "pose": "march"},
-            {"draw": "unit", "rank": 0, "x": 0.6, "y": 0.86, "size": 0.15, "pose": "march"}
+            {"draw": "unit", "rank": 0, "x": 0.6, "y": 0.86, "size": 0.15, "pose": "march"},
+            {"draw": "mob", "mat": 0, "n": 3, "x": 0.88, "y": 0.7, "spread": [0.1, 0.04], "size": 0.06, "motion": "bounce"}
           ],
-          "title": {"text": "첫 걸음, 동산", "x": 0.5, "y": 0.36},
+          "title": {"text": "첫 걸음, 동산", "x": 0.5, "y": 0.28},
           "bubbles": [
-            {"who": "all", "text": "출발!", "x": 0.22, "y": 0.66, "tail": [0.38, 0.8], "shape": "shout"}
+            {"who": "knight", "text": "지휘관님, 패를!", "x": 0.22, "y": 0.55, "tail": [0.4, 0.74]}
           ],
           "sfx": [
-            {"text": "와아!", "x": 0.8, "y": 0.68, "rot": 8}
+            {"text": "통통통", "x": 0.78, "y": 0.84, "rot": 6}
           ]
         }
       ]}
     ]}
   ],
-  w1end: [ // 스토리 1-5(달 보스) 클리어 뒤 · 10-18 유저: 가운데 쪽 e2 = 셋이 합쳐 영웅(영웅 첫 등장)
+  w1end: [ // 스토리 1-5(달 보스) 클리어 뒤 · 10-18 유저: 가운데 쪽 e2 = 셋이 합쳐 영웅(영웅 첫 등장) · 10-24 후보 5: 꼬마 셋 → 영웅 꼬마
     { "id": "e1", "note": "낮달이 물러나고 환호", "rows": [
       { "h": 0.55, "panels": [
         { "id": "e1a", "note": "금 간 달이 데굴데굴 물러남",
           "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.6, 0.25, 1.0, 0.75], "top": 0.62}},
           "layers": [
-            {"draw": "boss", "shape": 20, "crack": true, "x": 0.64, "y": 0.42, "size": 0.42, "motion": "roll"},
-            {"draw": "fx", "kind": "dust", "x": 0.42, "y": 0.66, "size": 0.2}
+            {"draw": "boss", "shape": 20, "crack": true, "x": 0.66, "y": 0.44, "size": 0.4, "motion": "roll"},
+            {"draw": "fx", "kind": "dust", "x": 0.44, "y": 0.66, "size": 0.2}
           ],
           "bubbles": [
-            {"who": "moon", "text": "오늘 근무는… 여기까지.", "x": 0.3, "y": 0.18, "tail": [0.52, 0.34]}
+            {"who": "moon", "text": "해님이 단단히 화났어요.", "x": 0.28, "y": 0.15, "tail": [0.56, 0.32]},
+            {"who": "moon", "text": "오늘 근무는 여기까지.", "x": 0.26, "y": 0.44, "tail": [0.6, 0.48]}
           ],
           "sfx": [
-            {"text": "쩌억", "x": 0.84, "y": 0.16, "rot": 10},
-            {"text": "데구르르", "x": 0.76, "y": 0.84, "rot": -6}
+            {"text": "데구르르", "x": 0.78, "y": 0.86, "rot": -6}
           ]
         }
       ]},
       { "h": 0.45, "panels": [
-        { "id": "e1b", "note": "병사들 환호",
+        { "id": "e1b", "note": "병사들 환호 (꼬마 셋 포함)",
           "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.3, 0.3, 0.8, 0.6], "top": 0.3}},
           "layers": [
             {"draw": "fx", "kind": "gold", "x": 0.5, "y": 0.5, "size": 0.8},
-            {"draw": "unit", "rank": 0, "x": 0.2, "y": 0.78, "size": 0.3, "pose": "cheer"},
-            {"draw": "unit", "rank": 1, "x": 0.4, "y": 0.76, "size": 0.3, "pose": "cheer"},
-            {"draw": "unit", "rank": 2, "x": 0.6, "y": 0.78, "size": 0.3, "pose": "cheer"},
-            {"draw": "unit", "rank": 3, "x": 0.8, "y": 0.76, "size": 0.3, "pose": "cheer"}
+            {"draw": "unit", "rank": 0, "x": 0.1, "y": 0.76, "size": 0.28, "pose": "cheer"},
+            {"draw": "unit", "rank": 1, "x": 0.26, "y": 0.76, "size": 0.28, "pose": "cheer"},
+            {"draw": "unit", "rank": 0, "x": 0.42, "y": 0.78, "size": 0.28, "pose": "cheer"},
+            {"draw": "unit", "rank": 2, "x": 0.58, "y": 0.76, "size": 0.28, "pose": "cheer"},
+            {"draw": "unit", "rank": 0, "x": 0.74, "y": 0.78, "size": 0.28, "pose": "cheer"},
+            {"draw": "unit", "rank": 3, "x": 0.9, "y": 0.76, "size": 0.28, "pose": "cheer"}
           ],
+          "caption": {"text": "달님도 우리를 못 막았다.", "pos": "top"},
           "bubbles": [
-            {"who": "all", "text": "이겼다!", "x": 0.5, "y": 0.22, "tail": null, "shape": "shout"}
+            {"who": "all", "text": "이겼다!", "x": 0.62, "y": 0.3, "tail": null, "shape": "shout"}
           ],
           "sfx": [
-            {"text": "와아!", "x": 0.86, "y": 0.3, "rot": 10}
+            {"text": "와아!", "x": 0.9, "y": 0.3, "rot": 10}
           ]
         }
       ]}
     ]},
-    { "id": "e2", "note": "셋이 모이면 — 영웅 첫 등장 (10-18 유저) (넘김 칸 = e2b)", "rows": [
+    { "id": "e2", "note": "셋이 모이면 영웅 (넘김 칸 = e2b)", "rows": [
       { "h": 0.5, "panels": [
-        { "id": "e2a", "note": "하트 궁수 셋이 둥글게 모여 활을 맞댐, 가운데로 금빛",
+        { "id": "e2a", "note": "꼬마 셋이 모여 새총을 맞댐, 가운데로 금빛",
           "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.3, 0.3, 0.8, 0.6], "top": 0.42}},
           "layers": [
             {"draw": "fx", "kind": "gold", "x": 0.5, "y": 0.62, "size": 0.55},
-            {"draw": "unit", "rank": 1, "x": 0.26, "y": 0.86, "size": 0.32, "pose": "cheer"},
-            {"draw": "unit", "rank": 1, "x": 0.5, "y": 0.8, "size": 0.32, "pose": "cheer"},
-            {"draw": "unit", "rank": 1, "x": 0.74, "y": 0.86, "size": 0.32, "pose": "cheer"}
+            {"draw": "unit", "rank": 0, "x": 0.26, "y": 0.86, "size": 0.32, "pose": "cheer"},
+            {"draw": "unit", "rank": 0, "x": 0.5, "y": 0.8, "size": 0.32, "pose": "cheer"},
+            {"draw": "unit", "rank": 0, "x": 0.74, "y": 0.86, "size": 0.32, "pose": "cheer"}
           ],
+          "caption": {"text": "나 같은 꼬마가 셋 모였다.", "pos": "top"},
           "bubbles": [
-            {"who": "archer", "text": "우리 셋, 힘을 모으자!", "x": 0.5, "y": 0.16, "tail": [0.5, 0.52]}
+            {"who": "sling", "text": "우리 셋, 합쳐 주세요!", "x": 0.62, "y": 0.36, "tail": [0.5, 0.6]}
           ],
           "sfx": [
-            {"text": "반짝", "x": 0.86, "y": 0.3, "rot": 8}
+            {"text": "반짝", "x": 0.9, "y": 0.14, "rot": 8}
           ]
         }
       ]},
       { "h": 0.5, "panels": [
-        { "id": "e2b", "note": "번쩍! 영웅 궁수 등장, 양옆 병사들이 올려다봄",
+        { "id": "e2b", "note": "번쩍! 영웅 꼬마(고글 비행모) 등장, 궁수·총잡이가 올려다봄",
           "bg": {"sky": "day", "ground": {"img": "bg_easy", "crop": [0.3, 0.3, 0.8, 0.6], "top": 0.42}},
           "layers": [
             {"draw": "fx", "kind": "sparkle", "x": 0.5, "y": 0.58, "size": 0.85},
-            {"draw": "unit", "rank": 1, "hero": true, "x": 0.5, "y": 0.88, "size": 0.48, "pose": "cheer"},
-            {"draw": "unit", "rank": 0, "x": 0.15, "y": 0.9, "size": 0.24, "pose": "idle"},
+            {"draw": "unit", "rank": 0, "hero": true, "x": 0.5, "y": 0.88, "size": 0.48, "pose": "cheer"},
+            {"draw": "unit", "rank": 1, "x": 0.15, "y": 0.9, "size": 0.24, "pose": "idle"},
             {"draw": "unit", "rank": 2, "x": 0.85, "y": 0.9, "size": 0.24, "pose": "idle"}
           ],
-          "caption": {"text": "셋이 모이면 영웅이 된다.", "pos": "top"},
+          "caption": {"text": "나는 영웅이 됐다!", "pos": "top"},
           "bubbles": [
-            {"who": "all", "text": "영웅이다!", "x": 0.2, "y": 0.42, "tail": null, "shape": "shout"}
+            {"who": "sling", "text": "이젠 안 무서워!", "x": 0.78, "y": 0.26, "tail": [0.58, 0.42]}
           ],
           "sfx": [
-            {"text": "번쩍!", "x": 0.84, "y": 0.34, "rot": -8}
+            {"text": "번쩍!", "x": 0.9, "y": 0.5, "rot": -8}
           ]
         }
       ]}
     ]},
     { "id": "e3", "note": "노을 끝으로 — 다음 길 예고 (넘김 칸 = e3b)", "rows": [
       { "h": 0.5, "panels": [
-        { "id": "e3a", "note": "노을, 지평선에 반쯤 잠긴 해님, 소문 새",
+        { "id": "e3a", "note": "노을, 지평선에 반쯤 잠긴 해님, 소문 새 — 추가: 영웅 꼬마(말풍선 주인)",
           "bg": {"sky": "dusk", "ground": {"img": "bg_normal", "crop": [0.2, 0.5, 1.0, 1.0], "top": 0.62, "tint": "dusk"}},
           "layers": [
             {"draw": "boss", "shape": 27, "x": 0.86, "y": 0.62, "size": 0.22, "sink": true},
-            {"draw": "bird", "dir": 1, "x": 0.22, "y": 0.4, "size": 0.18}
+            {"draw": "bird", "dir": 1, "x": 0.22, "y": 0.4, "size": 0.18},
+            {"draw": "unit", "rank": 0, "hero": true, "x": 0.52, "y": 0.84, "size": 0.24, "pose": "idle"}
           ],
           "bubbles": [
-            {"who": "bird", "text": "소문에 의하면…", "x": 0.24, "y": 0.13, "tail": [0.23, 0.32], "shape": "whisper"},
-            {"who": "bird", "text": "해님은 숲 너머에 있대.", "x": 0.56, "y": 0.3, "tail": [0.3, 0.38]}
+            {"who": "bird", "text": "해님, 아직 화났대!", "x": 0.3, "y": 0.14, "tail": [0.24, 0.33]},
+            {"who": "sling", "text": "그래도 갈 거야.", "x": 0.64, "y": 0.3, "tail": [0.54, 0.52]}
           ]
         }
       ]},
       { "h": 0.5, "panels": [
-        { "id": "e3b", "note": "오른쪽을 바라보는 기사·영웅 궁수(옆모습), 먼 곳의 축구공 그림자, 제목 띠",
+        { "id": "e3b", "note": "영웅 꼬마·기사가 오른쪽을 바라봄(옆모습), 먼 곳의 밤송이 그림자, 제목 띠, 일기 캡션",
           "bg": {"sky": "dusk", "ground": {"img": "bg_normal", "crop": [0.2, 0.55, 1.0, 1.0], "top": 0.5, "tint": "dusk"}},
           "layers": [
             {"draw": "unit", "rank": 3, "x": 0.16, "y": 0.86, "size": 0.26, "pose": "idle"},
-            {"draw": "unit", "rank": 1, "hero": true, "x": 0.3, "y": 0.88, "size": 0.24, "pose": "idle"},
-            {"draw": "mob", "mat": 2, "n": 3, "x": 0.8, "y": 0.6, "spread": [0.16, 0.06], "size": 0.07, "dim": 0.6, "motion": "roll"}
+            {"draw": "unit", "rank": 0, "hero": true, "x": 0.3, "y": 0.88, "size": 0.24, "pose": "idle"},
+            {"draw": "mob", "mat": 15, "n": 3, "x": 0.8, "y": 0.6, "spread": [0.16, 0.06], "size": 0.07, "dim": 0.6, "motion": "roll"}
           ],
-          "title": {"text": "다음 길, 저무는 길", "x": 0.62, "y": 0.4},
-          "bubbles": [
-            {"who": "knight", "text": "해 지기 전에 서두르자!", "x": 0.3, "y": 0.18, "tail": [0.17, 0.62]}
-          ]
+          "caption": {"text": "내일 일기는 숲에서.", "pos": "bottom"},
+          "title": {"text": "다음 길, 숲 가장자리", "x": 0.5, "y": 0.22}
         }
       ]}
     ]}
