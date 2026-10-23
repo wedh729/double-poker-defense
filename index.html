@@ -21087,10 +21087,10 @@ function storyInfoExtra(el, u) { // 정보창 덧붙임: [합치기] (같은 유
   const head = el.querySelector('.ui-head'), cp = el.querySelector('#copyBtn');
   if (m.infoU !== u) { m.infoU = u; el.scrollTop = 0; } // 다른 유닛을 고르면 맨 위부터 (같은 유닛 다시 그리기 — 우선순위 단추 등 — 는 스크롤 그대로)
   if (cp && head) head.after(cp);
-  if (u.vis === 'flame' && !isHiddenCombo(u)) { // 🔥 10-24 스토리 플러쉬 계열 (STORY_FLAME): 공격력 ×DMG_K 칩 (포카드·SF·로얄 ×1.5 칩과 같은 꼴 — 없으면 '기본 + 업글'과 합이 안 맞아 보임) · 화상 한 줄 (숫자 없이 · 챌린지 '화염' 칩은 그대로)
-    const ab = el.querySelector('.ui-atk-base'), sp = el.querySelector('.ui-spd');
+  if (u.vis === 'flame' && !isHiddenCombo(u)) { // 🔥 10-24 스토리 플러쉬 계열 (STORY_FLAME): 공격력 ×DMG_K 칩 (포카드·SF·로얄 ×1.5 칩과 같은 꼴 — 없으면 '기본 + 업글'과 합이 안 맞아 보임) · 화상 안내 (숫자 없이 · 챌린지 '화염' 칩은 그대로)
+    const ab = el.querySelector('.ui-atk-base'), tr = el.querySelector('.ui-spd .ui-traits');
     if (ab && STORY_FLAME.DMG_K !== 1) { const c = document.createElement('span'); c.className = 'ui-crown'; c.textContent = '×' + STORY_FLAME.DMG_K; ab.before(c, ' '); }
-    if (sp) { const h = document.createElement('div'); h.className = 'ui-help ui-burn'; h.textContent = '맞은 적은 잠시 불에 타요'; sp.after(h); }
+    if (tr) { const h = document.createElement('span'); h.className = 'ui-trait ui-burn'; h.textContent = '맞은 적은 잠시 불에 타요'; tr.append(h); } // 공속 줄 끝 특성 칩 자리 (10-06 선례 — 따로 한 줄을 두면 폰에서 [합치기]·[복사권]이 있을 때 높이 상한 176을 넘어 스크롤이 생겼다)
   }
   if (!storyCanFuse(u)) return;
   const b = document.createElement('button'); b.type = 'button'; b.id = 'storyFuseBtn'; b.className = 'shopBtn ui-skill'; b.dataset.skill = 'fuse';
