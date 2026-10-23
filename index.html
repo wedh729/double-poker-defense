@@ -6305,8 +6305,9 @@ function effDmgBase(u, splashPer) {
   if (isHiddenCombo(u)) return u.dmg * heroUp; // 히든 영웅은 종족이 없다 — 종족 업글 미적용, 단련(+제물 승급)으로만 성장 (08-13 유저: 투석기 ♦ 다이아 중복 특례 제거 — 단련으로 통일. 👑 왕관도 미적용 — 조커 t1·투석기 t7 공유 함정)
   const crown = (S.crownRace >= 0 && crownRaceOf(u) === S.crownRace) ? S.crownMul : 1; // 👑 왕관 종족 강화 (최종 배수 — 10-11부터 대관식 때 정해진 S.crownMul). ⚠️ ♦ 다이아 = race 0도 유효 선택이라 가드는 >= 0 (광부 race null은 불일치)
   const per = (splashPer ? 0.55 * u.cd : upgPer(u)) * fuseCount(u), tm = TIER_ATK_MUL[u.tier] || 1;
-  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return (u.dmg + per * (upgEff(s[0]) + upgEff(s[1]) + (u.superAce ? upgEff(s[2]) : 0))) * crown * tm; } // 에이스: 상위 2종족 합산 (가속 반영) · 슈퍼에이스: 3종족 전부 (10-11 유저 — 압도적 버프)
-  return (u.dmg + per * upgEff(S.upg[u.race])) * crown * tm;
+  const sk = (S.story && u.vis === 'flame') ? STORY_FLAME.DMG_K : 1; // 📖 10-24 스토리 플러쉬 계열(일반·영웅·슈퍼·에이스·복사본 — 쇼군은 위 히든 갈래) 공격력 배수 = 정보창 숫자 = 실제 피해 · 챌린지·멀티·튜토리얼 = 1 (STORY_FLAME도 안 읽음)
+  if (u.hidden || u.ace) { const s = [...S.upg].sort((a, b) => b - a); return (u.dmg + per * (upgEff(s[0]) + upgEff(s[1]) + (u.superAce ? upgEff(s[2]) : 0))) * crown * tm * sk; } // 에이스: 상위 2종족 합산 (가속 반영) · 슈퍼에이스: 3종족 전부 (10-11 유저 — 압도적 버프)
+  return (u.dmg + per * upgEff(S.upg[u.race])) * crown * tm * sk;
 }
 // 📯 콰르텟 공속 오라 적용된 실제 쿨다운 (spdBuff는 update()에서 매 프레임 갱신)
 function isHiddenCombo(u) { return !!(u.gamble || u.junk || u.quartet || u.execute || u.shogun || u.chrono || u.slot || u.joker || u.catapult); } // 히든 조합 유닛 판별
@@ -8231,7 +8232,7 @@ function areaHit(u, x, y, dmg, gy) {
       const t2 = px * nx + py * ny;                    // 스트림 축 방향 투영
       if (t2 < -6 || t2 > L + 14) continue;
       const d = Math.abs(px * ny - py * nx);           // 축에서의 수직 거리
-      if (d <= u.splash + monSize(m) * 0.5) dealDamage(m, dmg, u, 'fire'); // 화염 띠 = 불 (10-15 변종 속성 — 플러쉬·영웅·에이스·슈퍼·분신 공통 길)
+      if (d <= u.splash + monSize(m) * 0.5) { dealDamage(m, dmg, u, 'fire'); if (S.story && !m.entering && !airborne(m)) storyFlameBurn(m, u, dmg); } // 화염 띠 = 불 (10-15 변종 속성 — 플러쉬·영웅·에이스·슈퍼·분신 공통 길) · 📖 10-24 스토리만 화상 (STORY_FLAME — dealDamage가 거르는 공중·강림 몹은 뺌)
     }
     return;
   }
@@ -20564,6 +20565,18 @@ function storyGameOver() { // endWave 게임오버 = 실패 화면 (10-19 M3: �
   document.getElementById('overlay').style.display = 'flex'; syncGamePause();
 }
 // ---- 전투 규칙 (설계 §8 — 스토리만) ----
+// 🔥 10-24 유저: "플러쉬는 스토리모드에서 공격력 조정으로 하자, 화상도트뎀 추가하고. 밸런스 맞춰줘" (10-21 '화염 모으기'를 대신함 — 보고_2026-10-18\99_플러쉬_공격력화상.md)
+//   받는 것 = 플러쉬 계열(일반·영웅·슈퍼·에이스·슈퍼에이스 · 복사권 복사본 = vis 'flame') · 쇼군(히든)은 effDmgBase 히든 갈래·areaHit 쇼군 갈래라 안 받음
+//   DMG_K = 공격력 배수 (effDmgBase — 정보창 공격력 숫자 = 실제 피해 · 정보창에 ×DMG_K 칩) · 화상 = 불줄기 띠에 맞을 때마다 기존 화상 장치(m.burnT·burnDmg·burnBy — update 몹 루프가 깎고 딜 기록, drawMonster 아른거림)
+//     합치기 = 용암 돌 규칙(storyPenHit): 센 화상(초당 피해)이 세기·주인을 가져가고 시간은 BURN_T초로 새로 (쇼군의 무조건 덮어쓰기는 안 따름) · 초당 화상 = 맞힌 유닛 초당 공격력(공격력 ÷ 공격 간격) × BURN_K
+//     공중·강림 몹 ✕ · 난수 없음 · 새 그림 없음 · 화상이 붙으면 이끼 공 재생이 멈춤(varTick MOSS 대기 조건이 burnT를 봄 — 불이니 자연스러움)
+//   값 근거 (배치 봇 — 유닛 하나씩·900판): 측정 뒤 채움
+const STORY_FLAME = { DMG_K: 4, BURN_K: 0.3, BURN_T: 3 };
+function storyFlameBurn(m, u, dmg) { // areaHit 화염 띠 — dealDamage 바로 뒤 (S.story만 · 공중·강림 몹은 부르는 쪽이 뺌). dmg = 공격력(×DMG_K 뒤, 구슬 변종 불 약점 전 — 약점은 화상 틱 varBurn이 한 번)
+  const F = STORY_FLAME, bd = F.BURN_K * dmg / Math.max(0.02, effCd(u)), on = m.burnT > 0;
+  if (!on || bd >= (m.burnDmg || 0)) m.burnBy = u; // 딜 기록 주인 = 더 센 화상을 건 쪽
+  m.burnT = Math.max(on ? m.burnT : 0, F.BURN_T); m.burnDmg = on ? Math.max(m.burnDmg || 0, bd) : bd; // 꺼진 화상의 세기는 이어받지 않음 (용암 돌과 같게)
+}
 function storyPenShot(p, u, target) { p.ex = target.x; p.ey = target.y; p.R = effRange(u) * STORY.PEN_RK; p.ox = u.x; p.oy = u.y; } // 탱크·핵·투석기: 착탄 = 고른 표적 · 타격 = 쏜 자리 기준 사거리 × PEN_RK 안
 function storyPenHit(p, lava) { // '사거리 안 길 위 전부' — 거리 = 쏜 유닛 ↔ 몹 땅 지점 · 다리 밑 몹도 맞음 (폭발) · 용암 돌이면 지상 몹 화상
   const r2 = p.R * p.R;
@@ -21071,6 +21084,11 @@ function storyInfoExtra(el, u) { // 정보창 덧붙임: [합치기] (같은 유
   const head = el.querySelector('.ui-head'), cp = el.querySelector('#copyBtn');
   if (m.infoU !== u) { m.infoU = u; el.scrollTop = 0; } // 다른 유닛을 고르면 맨 위부터 (같은 유닛 다시 그리기 — 우선순위 단추 등 — 는 스크롤 그대로)
   if (cp && head) head.after(cp);
+  if (u.vis === 'flame' && !isHiddenCombo(u)) { // 🔥 10-24 스토리 플러쉬 계열 (STORY_FLAME): 공격력 ×DMG_K 칩 (포카드·SF·로얄 ×1.5 칩과 같은 꼴 — 없으면 '기본 + 업글'과 합이 안 맞아 보임) · 화상 한 줄 (숫자 없이 · 챌린지 '화염' 칩은 그대로)
+    const ab = el.querySelector('.ui-atk-base'), sp = el.querySelector('.ui-spd');
+    if (ab && STORY_FLAME.DMG_K !== 1) { const c = document.createElement('span'); c.className = 'ui-crown'; c.textContent = '×' + STORY_FLAME.DMG_K; ab.before(c, ' '); }
+    if (sp) { const h = document.createElement('div'); h.className = 'ui-help ui-burn'; h.textContent = '맞은 적은 잠시 불에 타요'; sp.after(h); }
+  }
   if (!storyCanFuse(u)) return;
   const b = document.createElement('button'); b.type = 'button'; b.id = 'storyFuseBtn'; b.className = 'shopBtn ui-skill'; b.dataset.skill = 'fuse';
   b.dataset.state = m.pick ? 'active' : 'ready'; b.disabled = !!m.pick;
