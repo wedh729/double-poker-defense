@@ -12549,7 +12549,8 @@ function drawMonster(m) {
   }
   if (squish) ctx.restore(); // 스쿼시 변환 해제
   // 🔥 쇼군 화상 도트: 작은 불꽃 아른거림 (저렴하게 — shadowBlur 없이 원 하나)
-  if (m.burnT > 0) {
+  if (m.burnT > 0 && S.story) storyBurnFx(m, sz); // 📖 10-24 유저: "스토리에서만 크게 바꿔줘" — 폰에서 원이 안 보여 불꽃 모양으로 (챌린지·멀티 = 아래 원 그대로)
+  else if (m.burnT > 0) {
     ctx.fillStyle = `rgba(255,110,20,${(0.4 + 0.3 * Math.sin(S.time * 22 + m.phase)).toFixed(2)})`;
     ctx.beginPath(); ctx.arc(m.x + Math.sin(S.time * 14 + m.phase) * sz * 0.25, m.y - sz * 0.3, sz * 0.22, 0, Math.PI*2); ctx.fill();
   }
@@ -20546,7 +20547,7 @@ function storyGameOver() { // endWave 게임오버 = 실패 화면 (10-19 M3: �
 //   받는 것 = 플러쉬 계열(일반·영웅·슈퍼·에이스·슈퍼에이스 · 복사권 복사본 = vis 'flame') · 쇼군(히든)은 effDmgBase 히든 갈래·areaHit 쇼군 갈래라 안 받음
 //   DMG_K = 공격력 배수 (effDmgBase — 정보창 공격력 숫자 = 실제 피해 · 정보창에 ×DMG_K 칩) · 화상 = 불줄기 띠에 맞을 때마다 기존 화상 장치(m.burnT·burnDmg·burnBy — update 몹 루프가 깎고 딜 기록, drawMonster 아른거림)
 //     합치기 = 용암 돌 규칙(storyPenHit): 센 화상(초당 피해)이 세기·주인을 가져가고 시간은 BURN_T초로 새로 (쇼군의 무조건 덮어쓰기는 안 따름) · 초당 화상 = 맞힌 유닛 초당 공격력(공격력 ÷ 공격 간격) × BURN_K
-//     공중·강림 몹 ✕ · 난수 없음 · 새 그림 없음 · 화상이 붙으면 이끼 공 재생이 멈춤(varTick MOSS 대기 조건이 burnT를 봄 — 불이니 자연스러움)
+//     공중·강림 몹 ✕ · 난수 없음 · 타는 표시 = 아래 storyBurnFx (10-24 — 스토리만 불꽃 모양) · 화상이 붙으면 이끼 공 재생이 멈춤(varTick MOSS 대기 조건이 burnT를 봄 — 불이니 자연스러움)
 //   값(10-24 측정 — 배치 봇 유닛 하나씩: 그 라운드 무리를 혼자 맞을 때 실제로 깎은 체력, 일반 플러쉬 1-3 R8 / 1-5 R10 / 1-5 R12 · 무리 시드 3 평균):
 //     전(배수·화상 없음) 10 / 8 / 5% (9위) → DMG_K 3 · BURN_K 0.2 · BURN_T 3 = 46 / 38 / 27% (5 / 4 / 4위 — 기관총·단검 옆, 포카드 56 / 47 / 31 아래) · 화상 몫 34~39%
 //     공격력만 ×3이면 31 / 23 / 16% — 불줄기 띠(사거리 96)를 벗어난 뒤 남는 화상 시간이 몫을 만든다 (95 §7) · 0.25·3초 = 50 / 42 / 29 (1-5 R12 포카드 턱밑) · 0.15·4초 = 44 / 36 / 25 (6위)
@@ -20556,6 +20557,25 @@ function storyFlameBurn(m, u, dmg) { // areaHit 화염 띠 — dealDamage 바로
   const F = STORY_FLAME, bd = F.BURN_K * dmg / Math.max(0.02, effCd(u)), on = m.burnT > 0;
   if (!on || bd >= (m.burnDmg || 0)) m.burnBy = u; // 딜 기록 주인 = 더 센 화상을 건 쪽
   m.burnT = Math.max(on ? m.burnT : 0, F.BURN_T); m.burnDmg = on ? Math.max(m.burnDmg || 0, bd) : bd; // 꺼진 화상의 세기는 이어받지 않음 (용암 돌과 같게)
+}
+// 📖 10-24 유저: "응 스토리에서만 크게 바꿔줘" — 타는 표시(drawMonster의 작은 주황 원)가 폰에서 안 보여서, 스토리만 몹 윗몸에서 솟는 불꽃 모양으로 (챌린지·멀티 = 원 그대로)
+//   플러쉬·쇼군·용암 돌 화상 모두 같은 표시 · 몹 = 윗몸에서 불꽃 하나(크기 = 몹 크기 — 옛 원의 약 6배 넓이) · 보스 = 머리 둘레에 불꽃 셋(보스 크기 비례 — 얼굴은 안 덮게, 옛 원도 크기 비례였음)
+//   일렁임 = 높이·꼭대기 흔들림(S.time + m.phase) · 그라디언트·그림자·난수·arc 없음 (불꽃 하나 = 채우기 2번)
+function storyBurnFx(m, sz) {
+  const t = S.time + m.phase;
+  if (!m.boss) return storyFlame(m.x, m.y - sz * 0.45, sz, t);
+  for (let i = -1; i <= 1; i++) storyFlame(m.x + i * sz * 0.5, m.y - sz * (i ? 0.62 : 0.78), sz * 0.3, t + i * 1.7);
+}
+function storyFlame(x, y, f, t) { // 밑동 (x, y) · 크기 f
+  const h = f * (1.5 + 0.18 * Math.sin(t * 17)), w = f * 0.62, sw = Math.sin(t * 11) * f * 0.22;
+  ctx.fillStyle = 'rgba(236,64,12,0.92)'; storyFlamePath(x, y, w, h, sw); ctx.fill(); // 겉불 (빨강 주황 — 주황 길 위에서도 갈리게)
+  ctx.fillStyle = 'rgba(255,212,70,0.95)'; storyFlamePath(x, y + f * 0.05, w * 0.52, h * 0.58, sw * 0.6); ctx.fill(); // 속불 (노랑)
+}
+function storyFlamePath(x, y, w, h, sw) { // 아래가 둥근 물방울 꼴 · 꼭대기 = (x + sw, y − h)
+  ctx.beginPath(); ctx.moveTo(x + sw, y - h);
+  ctx.bezierCurveTo(x + w * 0.2 + sw * 0.5, y - h * 0.62, x + w, y - h * 0.5, x + w * 0.7, y - h * 0.08);
+  ctx.quadraticCurveTo(x, y + h * 0.16, x - w * 0.7, y - h * 0.08);
+  ctx.bezierCurveTo(x - w, y - h * 0.5, x - w * 0.2 + sw * 0.5, y - h * 0.62, x + sw, y - h);
 }
 function storyPenShot(p, u, target) { p.ex = target.x; p.ey = target.y; p.R = effRange(u) * STORY.PEN_RK; p.ox = u.x; p.oy = u.y; } // 탱크·핵·투석기: 착탄 = 고른 표적 · 타격 = 쏜 자리 기준 사거리 × PEN_RK 안
 function storyPenHit(p, lava) { // '사거리 안 길 위 전부' — 거리 = 쏜 유닛 ↔ 몹 땅 지점 · 다리 밑 몹도 맞음 (폭발) · 용암 돌이면 지상 몹 화상
