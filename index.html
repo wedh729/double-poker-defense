@@ -2375,7 +2375,8 @@ body.mobile #storyGo {font-size:16px;border-radius:11px;}
 body.storyW1 #stCasino {display:none !important;}
 body.storyW1 #topbar .tbMiner, body.storyW1 #topbar .tbChips {display:none;} /* 📖 10-26 검토: 월드 1은 광산·자금 운영(칩 쓰는 곳)이 없다 → 상단 띠 광부·칩 숫자도 숨김 */
 body.storyW1:not(.mobile) #dpsRank {top:calc(50% + 74px);} /* 자금 운영이 빠지면 딜 순위가 왼쪽으로 붙어 1-2 포털 (78,263)을 덮는다 → 포털 아래(논리 y ≈ 300)로 */
-body.mobile.storyW1[data-tab="battle"] #dpsRank {left:4px;top:60%;}
+body.mobile.storyW1[data-tab="battle"] #dpsRank {left:4px;top:4px;} /* 10-26 검토: 가로 폰 60%(논리 y ≈300~460)는 월드 1 다섯 판 모두 성(96,428)·길 끝(≈165,400)을 덮었다(09-30 유저 '성을 가렸다'와 같은 문제) → 왼쪽 위 하늘·절벽(다섯 판 모두 길에서 142px+ · 제단·포털 밖) */
+@media (orientation: landscape) {body.mobile.storyW1[data-tab="battle"] #cvWrap:has(#goPoker.show) #dpsRank {display:none;}} /* 스토리 '포커장으로 이동'(#goPoker)도 왼쪽 위 — 떠 있는 동안(포커 중 전투 탭)만 딜 순위를 숨김 */
 @media (orientation: portrait) { /* 📖 10-20 유저 '세로 화면': 캔버스가 207px(390 폭)라 css px 상자가 논리 2.4배로 커져 딜 순위(논리 19,250~175,351)가 1-2 포털을 덮었다 → 맵 밖 = 툴바(캔버스 밑 +12~+64) 아래 빈 자리로 (#chipBar를 캔버스 밑변에 붙이고 translateY 해제) */
   body.mobile.storyW1[data-tab="battle"] #chipBar {top:100%;transform:none;transition:none;}
   body.mobile.storyW1[data-tab="battle"] #dpsRank {left:4px;top:72px;}
