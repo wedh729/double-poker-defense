@@ -20673,7 +20673,7 @@ function storyBgDraw() { // drawBackdrop 맨 앞 — 그림이 왔으면 지면 
   return true;
 }
 function storyDrawRoad() { // 그림 없는 맵(bg null)·그림 받는 중·실패 = 코드 흙길 한 장 베이크 — RS·스테이지가 바뀌면 다시 굽는다 (rsMaybe는 이 베이크를 모름)
-  if (storyBgReady()) return; // M4: 맵 그림이 길을 대신 (길 판정·몹 이동은 그대로)
+  if (storyBgReady()) { storyRoadBake = null; return; } // M4: 맵 그림이 길을 대신 (길 판정·몹 이동은 그대로) · 10-26 검토: 그림이 오기 전 첫 프레임에 구운 대체 흙길(RS 2 = 7MB)을 판 끝까지 쥐던 것 놓아 줌
   if (!storyRoadBake || storyRoadBake._rs !== RS || storyRoadBake._id !== S.story.id) storyRoadBake = storyBakeRoad();
   ctx.drawImage(storyRoadBake, 0, 0, VW, VH); // 목적지 논리 크기 명시 (10-08 교훈 ⑤)
 }
