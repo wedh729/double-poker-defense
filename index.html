@@ -21187,7 +21187,7 @@ function storyDrawRoadInRange(x, y, R) { // 끄는 동안 사거리 안에 드�
   }
   ctx.restore();
 }
-function storyBadge(x, y, n) { ctx.fillStyle = '#ffd54f'; ctx.strokeStyle = '#6d4c00'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 7, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#4e3500'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(String(n), x, y + 3.5); ctx.textAlign = 'left'; } // 합치기 ①② 표시
+function storyBadge(x, y, n) { const r = IS_MOBILE ? 10 : 7; ctx.fillStyle = '#ffd54f'; ctx.strokeStyle = '#6d4c00'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#4e3500'; ctx.font = `bold ${IS_MOBILE ? 14 : 10}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(String(n), x, y + r / 2); ctx.textAlign = 'left'; } // 합치기 ①② 표시 · 10-26 검토: 폰은 크게 (740에서 지름 ≈9.5px·숫자 ≈7px라 거의 안 읽혔다)
 function storyDragCancel() { // 10-19 크로스체크(위험 ①): 대기석 유닛을 끄는 중 창이 뜨면(부활 창 등 정지 · 클리어/실패 창) 끌기 취소 — 그 유닛은 대기석 그대로 (창 밑에서 손을 떼 놓이던 것)
   const g = drag && drag.tray; if (!g) return;
   if (g.u) g.u.grabbed = false;
