@@ -15864,6 +15864,7 @@ let bookTab = 'hand'; // 족보 도감 카테고리 탭 (10-07) — 판 안에�
 window.addEventListener('dpd:resetui', () => { bookTab = 'hand'; }); // 새 판(다시하기·나가기)이면 처음 탭으로 — resetTransientUI 끝의 이벤트 (위에서 직접 대입하면 선언 전 실행 위험)
 const HIDDEN_FLAG = { gambler: 'gamble', junk: 'junk', quartet: 'quartet', guillotine: 'execute', shogun: 'shogun', chrono: 'chrono', slot: 'slot', joker: 'joker', catapult: 'catapult' };
 function heroPool() { return S.story && S.story.m2 ? S.units.concat(S.story.m2.tray) : S.units; } // 📖 10-26 검토: 스토리 히든은 대기석에도 있다 (updatePortal 1기 제한 has와 같게) — 성 히든 탭 목록·보유 표시가 대기석 히든을 '미보유'로 보이던 것
+function storyTrayHero(h) { return !!(S && S.story && S.story.m2 && S.story.m2.tray.includes(h)); } // 📖 10-26 검토(재검토 확인): 대기석 히든 — 단련은 되지만 승급 제물은 제단이 '맵에 놓인 히든' 몫만 받는다(storyAltarOk) → 승급 줄 대신 '맵에 놓으면'
 function hiddenDexDesc(hd) { return S && S.story && hd.id === 'catapult' ? '거대한 돌덩이로 길 위 몬스터 포격 (이동 불가)' : hd.desc; } // 📖 10-26 검토: 스토리 투석기 = 사거리 안 길 위 (storyPenHit · 완성 기록 6922와 같게)
 function shopHeroes() { return heroPool().filter(u => isHiddenCombo(u) && !u.clone); } // 단련 대상 = 히든 영웅만 (종족 없음 → 별도 성장)
 function heroSectionHTML() {
@@ -15881,7 +15882,8 @@ function heroSectionHTML() {
     </div>`;
     // 🩸 제물 승급 (쇼군·조커·갬블러) — 제단 위 재료를 바쳐 강화
     const ak = ascendKey(h);
-    if (ak) {
+    if (ak && (h.ascend || 0) < 2 && storyTrayHero(h)) html += `<div class="rpgItem" style="border-left:5px solid #ff6b9d"><div class="rpgIcon"></div><div class="rpgInfo"><b>${h.weapon}</b> <span class="lv">승급 Lv.${h.ascend || 0}</span><br><span class="desc">맵에 놓으면 승급할 수 있어요</span></div></div>`; // 📖 대기석 히든
+    else if (ak) {
       const alv = h.ascend || 0;
       if (alv >= 2) html += `<div class="rpgItem" style="border-left:5px solid #ff6b9d"><div class="rpgIcon"></div>
         <div class="rpgInfo"><b>${h.weapon}</b> <span class="lv">승급 Lv.2/2</span><br><span class="desc">승급 완료</span></div></div>`;
@@ -23667,12 +23669,13 @@ if (WORLD_MOTION_V2) (() => {
   function ascension(hero,index) {
     const key=ascendKey(hero); if (!key) return '';
     const lv=hero.ascend||0, done=lv>=2;
+    if (!done && storyTrayHero(hero)) return `<article class="rpgItem roster-ascension"><div class="roster-ascend-head">${icon('altar')}<h4>제물 승급</h4>${dots(lv,2)}<span>Lv.${lv}/2</span></div><p class="roster-ascend-done">맵에 놓으면 승급할 수 있어요.</p></article>`; // 📖 10-26 검토: 대기석 히든 — 제단은 맵에 놓인 히든 몫 제물만 받는다
     const def=done?null:ASCEND_DEFS[key][lv], status=done?null:ascendStatus(def);
     return `<article class="rpgItem roster-ascension ${done?'is-complete':''}"><div class="roster-ascend-head">${icon('altar')}<h4>제물 승급</h4>${dots(lv,2)}<span>Lv.${lv}/2</span></div>${done?`<p class="roster-ascend-done">${icon('check')}고유 능력의 힘을 모두 깨웠어요.</p>`:`<div class="roster-ascend-effect"><span>다음 능력</span><b>${esc(def.desc)}</b></div><div class="roster-ascend-bottom"><div><span class="roster-kicker">필요한 제물</span><b>${esc(def.mat)}</b><small class="${status.ok?'is-ready':''}">제단 위 ${esc(status.txt)} · ${status.ok?'승급 준비 완료':'제물을 제단으로 옮겨주세요'}</small></div><button class="rpgBuy roster-ascend-buy" data-asc="${index}" ${status.ok?'':'disabled'}>능력 승급${icon('arrow')}</button></div>`}</article>`;
   }
   function training(hero,index) {
     const lv=hero.heroUpLv||0, done=lv>=HERO_UP_MAX, cost=heroUpCost(hero), can=S.gold>=cost;
-    return `<div class="roster-hero-group"><article class="rpgItem roster-train ${done?'is-complete':''}"><div class="roster-train-head">${tile(heroId(hero),'is-hero')}<div class="rpgInfo"><span class="roster-kicker">함께 싸우는 히든 영웅</span><h3>${esc(hero.weapon)}</h3></div><span class="roster-owned">출전 중</span></div><div class="roster-training-meter"><span>단련 <b>Lv.${lv}</b> <small>/ ${HERO_UP_MAX}</small></span><span>${done?'단련 완료':'공격력 성장'}</span><i><b style="width:${Math.min(100,lv/HERO_UP_MAX*100)}%"></b></i></div><div class="roster-power"><span>총 공격력</span><b>×${(1+.15*lv).toFixed(2)}</b>${done?`<span class="roster-finished">${icon('check')}최대 성장</span>`:`${icon('arrow')}<strong>×${(1+.15*(lv+1)).toFixed(2)}</strong><small>다음 단련</small>`}</div>${done?'':`<div class="roster-train-actions"><span class="roster-price">단련 비용<b>${num(cost)}<small>G</small></b></span><button class="rpgBuy roster-buy" data-ht="${index}" ${can?'':'disabled'}><span>+1 단련</span><small>${can?'확정 성장':short(cost)}</small></button><button class="rpgBuy roster-gamble" data-htg="${index}" ${can?'':'disabled'} title="같은 비용으로 최대 3레벨. 실패 시 골드 소모."><span>+3 도전</span><small>${can?'타이밍 도전':short(cost)}</small></button></div>`}</article>${ascension(hero,index)}</div>`;
+    return `<div class="roster-hero-group"><article class="rpgItem roster-train ${done?'is-complete':''}"><div class="roster-train-head">${tile(heroId(hero),'is-hero')}<div class="rpgInfo"><span class="roster-kicker">${storyTrayHero(hero)?'대기석에서 기다리는 히든 영웅':'함께 싸우는 히든 영웅'}</span><h3>${esc(hero.weapon)}</h3></div><span class="roster-owned">${storyTrayHero(hero)?'대기석':'출전 중'}</span></div><div class="roster-training-meter"><span>단련 <b>Lv.${lv}</b> <small>/ ${HERO_UP_MAX}</small></span><span>${done?'단련 완료':'공격력 성장'}</span><i><b style="width:${Math.min(100,lv/HERO_UP_MAX*100)}%"></b></i></div><div class="roster-power"><span>총 공격력</span><b>×${(1+.15*lv).toFixed(2)}</b>${done?`<span class="roster-finished">${icon('check')}최대 성장</span>`:`${icon('arrow')}<strong>×${(1+.15*(lv+1)).toFixed(2)}</strong><small>다음 단련</small>`}</div>${done?'':`<div class="roster-train-actions"><span class="roster-price">단련 비용<b>${num(cost)}<small>G</small></b></span><button class="rpgBuy roster-buy" data-ht="${index}" ${can?'':'disabled'}><span>+1 단련</span><small>${can?'확정 성장':short(cost)}</small></button><button class="rpgBuy roster-gamble" data-htg="${index}" ${can?'':'disabled'} title="같은 비용으로 최대 3레벨. 실패 시 골드 소모."><span>+3 도전</span><small>${can?'타이밍 도전':short(cost)}</small></button></div>`}</article>${ascension(hero,index)}</div>`;
   }
   heroSectionHTML = function () {
     const heroes=shopHeroes(), seen=HIDDEN_DEX.filter(hd=>hiddenSeen(hd.id)).length;
