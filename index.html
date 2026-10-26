@@ -2373,6 +2373,7 @@ body.mobile #storyGo {font-size:16px;border-radius:11px;}
 @keyframes storyGoGlow {0%,100%{filter:none;}50%{filter:brightness(1.13);}}
 @media (prefers-reduced-motion: reduce) {#storyGo.show {animation:none;}}
 body.storyW1 #stCasino {display:none !important;}
+body.storyW1 #topbar .tbMiner, body.storyW1 #topbar .tbChips {display:none;} /* 📖 10-26 검토: 월드 1은 광산·자금 운영(칩 쓰는 곳)이 없다 → 상단 띠 광부·칩 숫자도 숨김 */
 body.storyW1:not(.mobile) #dpsRank {top:calc(50% + 74px);} /* 자금 운영이 빠지면 딜 순위가 왼쪽으로 붙어 1-2 포털 (78,263)을 덮는다 → 포털 아래(논리 y ≈ 300)로 */
 body.mobile.storyW1[data-tab="battle"] #dpsRank {left:4px;top:60%;}
 @media (orientation: portrait) { /* 📖 10-20 유저 '세로 화면': 캔버스가 207px(390 폭)라 css px 상자가 논리 2.4배로 커져 딜 순위(논리 19,250~175,351)가 1-2 포털을 덮었다 → 맵 밖 = 툴바(캔버스 밑 +12~+64) 아래 빈 자리로 (#chipBar를 캔버스 밑변에 붙이고 translateY 해제) */
@@ -3534,10 +3535,10 @@ body.mobile #overlay .soStar {width:36px;height:36px;}
   <div id="topbar">
     <span><i class="dpdIc" data-icon="heart"></i> <b id="tLife"></b></span>
     <span><i class="dpdIc" data-icon="coin"></i> <b id="tGold"></b></span>
-    <span><i class="dpdIc" data-icon="pick"></i> <b id="tMiner"></b></span>
-    <span title="칩 — 보스 처치·결투장 승리로 획득. 좌측 자금 운영에서 뽑기·광부 고용에 사용"><i class="dpdIc" data-icon="chip"></i> <b id="tChips" style="color:#c9a227">0</b></span>
+    <span class="tbMiner"><i class="dpdIc" data-icon="pick"></i> <b id="tMiner"></b></span>
+    <span class="tbChips" title="칩 — 보스 처치·결투장 승리로 획득. 좌측 자금 운영에서 뽑기·광부 고용에 사용"><i class="dpdIc" data-icon="chip"></i> <b id="tChips" style="color:#c9a227">0</b></span>
     <span title="재변경권 — 교환을 마친 카드를 한 번 더 교환"><i class="dpdIc" data-icon="ticket"></i> <b id="tTickets" style="color:#e0525e">0</b></span>
-    <span>스테이지 <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
+    <span><span id="tRoundL">스테이지</span> <b id="tRound"></b> <span id="tStage" style="color:#888;font-size:12px"></span></span>
     <div id="bigTimer"><div class="p" id="tPhase"></div></div>
   </div>
   <div id="cvWrap">
@@ -6613,7 +6614,7 @@ function grantClearBonus() { // ✅ 클리어 보너스 + ⏱️ 스피드 보�
     addFloat(CX, CY - 26, `스피드 +${tb}G!`, '#ffd54f', 2.2);
     rewardToast('clock', `스피드 +${tb}G · 클리어 +${bonus}G`, '#c9971a', `${Math.ceil(S.timer)}초 남기고 전멸!`); // 짜잔 결산 — 포커로 넘어가도 보인다
   } else {
-    logMsg(`스테이지 클리어! 보너스 +${bonus + nb}G`);
+    logMsg(`${S.story ? '라운드' : '스테이지'} 클리어! 보너스 +${bonus + nb}G`); // 📖 10-26 검토: 스토리 '스테이지' = 맵 하나 (토스트와 같게 '라운드')
     addFloat(CX, CY, `클리어 +${bonus + nb}G`, '#43a047', 2);
     rewardToast('check', `클리어 +${bonus + nb}G`, '#2e7d32', S.story ? (nb ? '한 마리도 안 놓쳤어요' : '라운드 클리어') : '스테이지 클리어');
   }
@@ -15493,7 +15494,7 @@ function updateInfoPanel() {
     const st6 = skillAllLabel(skUnits);
     const skHTML = skUnits.length === 0 ? '' :
       `<button type="button" id="skillAllBtn" class="shopBtn ui-skill" data-skill="fullhouse" ${skillAttrs(st6.state, !st6.allReady)}>${st6.label}</button>`;
-    el.innerHTML = `<div class="ui-head"><b class="ui-name">부대 선택: ${sel.length}기</b></div><div class="ui-comp">${compStr}</div><div class="ui-help">${S.story ? (IS_MOBILE ? '빈 땅 탭 = 선택 해제 · 몹을 길게 눌러 공격 지정' : 'A키+몹 클릭 = 공격 지정') : IS_MOBILE ? '유닛을 끌어 옮기기 · 빈 땅 탭 = 선택 해제 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}</div>` +
+    el.innerHTML = `<div class="ui-head"><b class="ui-name">부대 선택: ${sel.length}기</b></div><div class="ui-comp">${compStr}</div><div class="ui-help">${S.story ? (IS_MOBILE ? '빈 땅 탭 = 선택 해제 · 몬스터를 길게 눌러 공격 지정' : 'A키+몬스터 클릭 = 공격 지정') : IS_MOBILE ? '유닛을 끌어 옮기기 · 빈 땅 탭 = 선택 해제 · 길게 눌러 공격' : '우클릭 이동 · A키+클릭 공격 지정'}</div>` +
       (sel.some(u => !u.miner) ? priorityRow(commonPri, airSel.length > 0 && !S.multi) : '') + // 멀티 = 공중 몹 없음(결정 3) → '공중' 버튼 없음
       skHTML +
       (canFuse ? `<div class="ui-fuse">같은 유닛 ${FUSE_N}기! 좌측 포털로 이동시키면 강화!</div>` : '') +
@@ -16803,7 +16804,7 @@ function renderPoker(spin) {
   const btn = document.getElementById('summonBtn');
   const bar = document.getElementById('pokerTimerBar');
   if (S.phase !== 'poker') {
-    banner.textContent = '전투 중... 몬스터를 시간 내에 섬멸하세요!';
+    banner.textContent = S.story ? '전투 중... 몬스터가 성에 닿기 전에 막아요!' : '전투 중... 몬스터를 시간 내에 섬멸하세요!'; // 📖 10-26 검토: 스토리엔 전투 시계가 없다
     cardsEl.innerHTML = '';
     btn.style.display = 'none';
     bar.style.display = 'none';
@@ -16827,7 +16828,7 @@ function renderPoker(spin) {
   if (double) {
     banner.innerHTML = `<span class="hidden-chance">★ 히든 찬스! 두 패를 비교하며 교환 — 원페어 이상 족보가 같으면 ♠ 에이스! 높은 족보 일치일수록 훨씬 강력! ★</span>`;
   } else {
-    banner.textContent = S.story ? `${S.story.map.name} — 카드 클릭으로 교환 (각 1회)` : `스테이지 ${S.round} 준비 — 카드 클릭으로 교환 (각 1회)`;
+    banner.textContent = S.story ? `${S.story.map.name} — 카드를 눌러 교환 (각 1회)` : `스테이지 ${S.round} 준비 — 카드 클릭으로 교환 (각 1회)`;
   }
   const tutLine = tutPokerLine(ranks); // 🧭 첫 판 안내: 배너 첫 줄을 한 줄 안내로 (보스·이벤트 줄은 그대로 뒤에 붙는다)
   if (tutLine) banner.innerHTML = tutLine;
@@ -17943,7 +17944,8 @@ function updateHUD() {
   // 좌측 카지노 스테이션: 칩 있으면 활성 + 빛남
   // 칩이 없어도 비상 물자(골드)는 살 수 있으므로 카지노는 항상 열린다. 정수 칩이 있을 때만 발광
   document.querySelectorAll('.chipStation').forEach(b => { b.disabled = false; b.classList.toggle('ready', S.chips >= 1); });
-  hudSet('tRound', '' + (S.story ? S.storyR : S.round)); // 📖 스토리 = 스테이지 안 번호
+  hudSet('tRoundL', S.story ? '라운드' : '스테이지'); // 📖 10-26 검토: 스토리에서 '스테이지' = 맵 하나(1-1) — 그 안 번호는 '라운드'
+  hudSet('tRound', '' + (S.story ? (S.story.map.rounds ? S.storyR + '/' + S.story.map.rounds : S.storyR) : S.round)); // 📖 스토리 = 스테이지 안 번호 · 10-26: 42라운드 판이라 전체 수도 (시험 길 = 끝없음이라 번호만)
 
   hudSet('tStage', S.story ? S.story.map.name : stageInfo(S.round).name + (DIFF_NAME === '초원' ? '' : ` · ${diffLabel(DIFF_NAME)}`)); // 재질명 옆에 난이도 상시 표시 · 📖 스토리 = 스테이지 이름
   // 원형 시계: 시간이 흐를수록 빨강(전투)/보라(포커)가 시계방향으로 채워진다
@@ -17966,7 +17968,7 @@ function updateHUD() {
   document.body.classList.toggle('dpd-modal', CM.style.display === 'flex' || document.getElementById('shopOverlay').style.display === 'flex'); // 🔋 창 열림 표시 (CSS :has 대체)
   // 모바일 탭 배지: 지금 안 보고 있는 탭에서 페이즈가 진행 중이면 깜빡임
   if (IS_MOBILE) {
-    document.getElementById('mtPoker').classList.toggle('alert', S.phase === 'poker' && mobTab === 'battle');
+    document.getElementById('mtPoker').classList.toggle('alert', S.phase === 'poker' && mobTab === 'battle' && !(S.story && S.story.m2 && S.story.m2.prep)); // 📖 10-26 검토: 스토리 배치 준비(소환 뒤 [출발!] 전)엔 포커 탭에 할 일이 없다
     document.getElementById('mtBattle').classList.toggle('alert', S.phase === 'wave' && mobTab === 'poker');
   }
   // 상점 버튼 활성화 + 골드 표시 갱신 (열려있을 때만, 🎰 타이밍바 진행 중엔 잠금 유지)
@@ -20526,7 +20528,8 @@ function storyStartWave() { // startWave의 공통 줄(페이즈·배속·waveT�
   S.air = nFly ? { on: true, up: true, t: 0, k: 0, upT: pat.upT, downT: pat.downT } : null;
   if (IS_MOBILE) setMobTab('battle');
   renderPoker();
-  logMsg(`${S.story.map.name} — 몹이 길을 따라 온다${boss ? ' · 보스!' : ''}`, true);
+  const last = S.story.map.rounds && S.storyR === S.story.map.rounds; // 📖 10-26 검토: 폰 위 토스트(5초)는 보스·마지막 라운드만 — 42라운드 판에서 매 전투 같은 글이 맵 위를 덮던 것
+  logMsg(`${S.story.map.name} — ${last ? '마지막 라운드! ' : ''}몬스터가 길을 따라 와요${boss ? ' · 보스!' : ''}`, !!(boss || last));
 }
 function storyBombReady(q) { return q.bossLeft === 0 && q.count - q.left >= Math.min(q.count, STORY.BOMB_N); } // 예약 긴급 폭격 발동 시점 (update 사망 필터 뒤 — 맵 위 몹 있음은 호출처가 본다)
 function storyWaveDone(q) { return S.life <= 0 || S.story.bossIn || S.waveT >= STORY.CAP || (q.left === 0 && q.bossLeft === 0 && S.monsters.length === 0); } // 전투 끝: 목숨 0 · 보스 도착 · 안전 상한 · 스폰 끝 + 0마리
@@ -20535,7 +20538,7 @@ function storyWaveEnd(bossAlive, leak) { // endWave 분기 — 목숨은 도착 
   if (S.waveT >= STORY.CAP && leak > 0) { // 안전 상한: 남은 몹 = 도착으로 침 (보스가 남았으면 패배)
     if (bossAlive) st.bossIn = true; else { const k = S.monsters.filter(m => !m.boss).length; S.life -= k; st.leakR += k; }
   }
-  if (st.bossIn) { S.lifeLog.push({ r: S.storyR, d: Math.max(0, S.life), why: '보스 도착', k: 'boss' }); S.life = 0; addFloat(HOUSE.x, HOUSE.y - 70, '보스가 성에 닿았다!', '#e53935', 2.5); logMsg('보스가 성에 닿았다!', true); sfx('leak'); }
+  if (st.bossIn) { S.lifeLog.push({ r: S.storyR, d: Math.max(0, S.life), why: '보스 도착', k: 'boss' }); S.life = 0; addFloat(HOUSE.x, HOUSE.y - 70, '보스가 성에 닿았어요!', '#e53935', 2.5); logMsg('보스가 성에 닿았어요!', true); sfx('leak'); }
   else if (st.leakR > 0) S.lifeLog.push({ r: S.storyR, d: st.leakR, why: '성 도착' });
   st.leakAll += st.leakR; // 스테이지 전체 놓친 몹 (안전 상한 보정 뒤 — 별 ★★★ 판정, 10-19 M3)
   if (S.life > 0 && !(st.map.rounds && S.storyR >= st.map.rounds)) grantClearBonus(); // 스피드 보너스 0 (시계 없음) · 마지막 라운드는 클리어 창이 대신 (10-19 M3)
@@ -20750,6 +20753,7 @@ function storyStart(id, gesture) { // gesture = 클릭으로 불렸나 (다시�
   dailySeed = null; DIFF_MUL = 1; DIFF_NAME = '스토리';
   document.body.classList.add('at-title');
   reset();                                         // → resetTransientUI → 'dpd:resetui' → storyLeave (앞 스토리 건물 좌표 복원)
+  document.getElementById('log').innerHTML = '';   // 10-26 검토: reset이 쓴 챌린지 조작 안내(끌어 옮기기·우클릭 이동)는 스토리에선 틀린 말
   casTimers.forEach(clearTimeout); casTimers = []; // reset 안 첫 포커의 딜 소리 예약 — 아래 startPoker가 다시 건다
   S.story = storyNewState(id, map);
   S.storyR = 1; S.round = storyEqRound(1); S.life = map.lives || STORY.LIVES;
@@ -20830,8 +20834,8 @@ const STORY_M2 = {
   GO_LOCK: 500,    // 소환 직후 소환 단추('출발!'로 바뀜) 누름을 무시하는 시간 (ms, 실시간) — 10-20 Enter 꾹·더블클릭으로 배치 없이 출발하던 것 (윈도 기본 더블클릭 간격 500ms)
 };
 const STORY_OBJ_INFO = { // 건물 설명 스토리판 (showObjInfo) — 포털 = 히든 전용·못 꺼냄 · 제단 = 끌어 올리기 · 레시피 단서는 여전히 없음
-  portal: { t: '강화 포털', d: '대기석에서 끌어 넣은 유닛은 포털 안에 머뭅니다 — 다시 꺼낼 수 없어요.<br>영웅은 같은 유닛 셋을 눌러 <b>합치기</b>로 만들어요 (포털 안 유닛도 재료가 돼요).', tip: OBJ_INFO.portal.tip }, // 10-20: 포털 안 유닛도 합치기 재료
-  altar: { t: '제물대', d: '대기석에서 끌어 올린 유닛은 <b>제물</b>로 바쳐집니다.<br>아이템은 대기석에서 누르면 바로 써요.', tip: OBJ_INFO.altar.tip },
+  portal: { t: '강화 포털', d: '대기석에서 끌어 넣은 유닛은 포털 안에 머물러요 — 다시 꺼낼 수 없어요.<br>영웅은 같은 유닛 셋을 눌러 <b>합치기</b>로 만들어요 (포털 안 유닛도 재료가 돼요).', tip: OBJ_INFO.portal.tip }, // 10-20: 포털 안 유닛도 합치기 재료
+  altar: { t: '제물대', d: '대기석에서 끌어 올린 유닛은 <b>제물</b>로 바쳐져요.<br>아이템은 대기석에서 누르면 바로 써요.', tip: OBJ_INFO.altar.tip },
 };
 function storyM2() { const st = S.story; return st.m2 || (st.m2 = { tray: [], page: 0, prep: false, sel: null, pick: null, hint: false, placed: new WeakSet(), portal: new WeakSet(), altar: new WeakSet(), fx: [] }); }
 function storyOnMap(u) { const m = S.story.m2; return !!m && (m.placed.has(u) || m.portal.has(u) || m.altar.has(u)); }
@@ -21057,7 +21061,7 @@ function storyPrepStart() { // confirmHand 끝 (startWave 대신)
   storyTraySweep();
   if (IS_MOBILE) setMobTab('battle'); else { pokerPeek = true; syncPokerPanel(); } // 대기석·맵·[출발!]이 보이게 (PC 포커판이 y 137~500을 덮는다)
   renderPoker(); updateGoPoker();
-  if (!m.hint) { m.hint = true; logMsg('대기석 유닛을 끌어 맵에 놓고 <b>출발!</b>을 누르세요 — 한 번 놓은 자리는 스테이지 끝까지 그대로 (대기석 유닛은 전투 중에도 놓을 수 있어요)'); }
+  if (!m.hint) { m.hint = true; logMsg('대기석 유닛을 끌어 맵에 놓고 <b>출발!</b>을 눌러요 — 한 번 놓은 자리는 스테이지 끝까지 그대로예요', true); } // 10-26 검토: 폰은 전투 탭에서 #log가 숨어 이 안내가 한 번도 안 보였다 → 위 토스트로도 (판마다 첫 소환 한 번)
 }
 function storyDepart() { // [출발!] · 포커 시계 끝 (confirmHand 두 번째) — 배치 준비 끝 → startWave → storyStartWave (하네스도 이걸 부름)
   if (!S || !S.story || S.phase !== 'poker') return false;
@@ -21069,7 +21073,7 @@ function storyDepart() { // [출발!] · 포커 시계 끝 (confirmHand 두 번�
 let storyGoEl = null; // #storyGo — 스토리 판에서 처음 필요할 때 만든다 (챌린지 DOM 무변경)
 function storyGoSync() { // updateGoPoker(20Hz)가 부름 — 배치 준비 동안만 보임
   const on = !!(S && S.story && S.phase === 'poker' && !S.mapTest && S.story.m2 && S.story.m2.prep);
-  if (!storyGoEl) { if (!on) return; storyGoEl = document.createElement('button'); storyGoEl.type = 'button'; storyGoEl.id = 'storyGo'; storyGoEl.textContent = '출발!'; storyGoEl.title = '몹 출발 — 대기석 유닛은 전투 중에도 놓을 수 있어요'; storyGoEl.onclick = () => storyDepart(); document.getElementById('cvWrap').appendChild(storyGoEl); }
+  if (!storyGoEl) { if (!on) return; storyGoEl = document.createElement('button'); storyGoEl.type = 'button'; storyGoEl.id = 'storyGo'; storyGoEl.textContent = '출발!'; storyGoEl.title = '몬스터 출발 — 대기석 유닛은 전투 중에도 놓을 수 있어요'; storyGoEl.onclick = () => storyDepart(); document.getElementById('cvWrap').appendChild(storyGoEl); }
   if (storyGoEl.classList.contains('show') !== on) storyGoEl.classList.toggle('show', on);
 }
 // ---- 정보창·선택 ----
@@ -21295,7 +21299,7 @@ function storyReviveOffer() { // reviveOffer 스토리 갈래: 질 때(목숨 0 
   const yes = document.getElementById('rvYes'), no = document.getElementById('rvNo');
   yes.textContent = ADS_READY ? '광고 보고 부활' : '부활'; yes.disabled = no.disabled = false;
   storyRvOn = true;
-  document.querySelector('#reviveModal .dcBody').innerHTML = '이 스테이지에서 한 번, 다시 일어설 수 있다.<br>목숨을 되찾고 이 전투를 이어 간다.' + (st.bossIn || boss ? '<br>보스는 입구로 돌아간다.' : '');
+  document.querySelector('#reviveModal .dcBody').innerHTML = '이 스테이지에서 한 번, 다시 일어설 수 있어요.<br>목숨을 되찾고 이 전투를 이어 가요.' + (st.bossIn || boss ? '<br>보스는 입구로 돌아가요.' : ''); // 10-26 검토: 스토리 글은 해요체
   document.getElementById('reviveModal').style.display = 'block';
   tutTipHide(); syncGamePause(); sfx('leak');
   return true;
@@ -21320,7 +21324,7 @@ function storyReviveYes() { // [부활] (광고 확인 뒤 — rvYes): 목숨을
   S.waveT = Math.min(S.waveT, STORY.CAP / 2); // 10-19 크로스체크 P2-5: 부활하면 언제나 안전 상한까지 150게임초 여유 (290초대에 부활하면 몇 초 뒤 상한에 걸려 곧바로 지던 것)
   closeRevive();
   addFloat(HOUSE.x, HOUSE.y - 70, '부활!', '#43a047', 2.5); sfx('hero');
-  logMsg('<b>부활!</b> 목숨을 되찾고 이 전투를 이어 간다 (스테이지마다 한 번)', true);
+  logMsg('<b>부활!</b> 목숨을 되찾고 이 전투를 이어 가요 (스테이지마다 한 번)', true);
 }
 // ---- 스테이지 클리어 (storyNextRound — 마지막 라운드를 목숨 남기고 끝냄) ----
 function storyStageClear() { // 별 · 저장(더 좋은 별만) · 클리어 창 — 판은 게임오버와 같은 '끝난 판'(S.phase 'gameover': update·창 함수들의 gameover 가드 그대로, 배경은 계속 흐름)
@@ -21330,8 +21334,8 @@ function storyStageClear() { // 별 · 저장(더 좋은 별만) · 클리어 �
   const nx = storyNextId(st.id), nxOn = !!nx && storyOpen(nx);
   storyOverlayMode('clear', nxOn);
   const msg = stars >= 3 ? '한 마리도 안 놓쳤어요!' : stars === 2 ? (S.revived ? '다시 일어나 끝까지 지켜 냈어요' : '성을 튼튼하게 지켜 냈어요') : '아슬아슬하게 지켜 냈어요';
-  const tip = stars >= 3 ? '' : S.revived ? '쓰러지지 않고 지키면 별을 더 받아요' : stars === 2 ? '한 마리도 안 놓치면 별이 가득 차요' : '목숨을 더 지키면 별이 늘어요';
   const nn = nxOn ? STORY_MAPS[nx].name : '', news = first && nxOn ? `「${nn}」${storyJosa(nn, '이', '가')} 열렸어요` : !first && stars > best0 ? '별이 늘었어요' : '';
+  const tip = news || stars >= 3 ? '' : S.revived ? '쓰러지지 않고 지키면 별을 더 받아요' : stars === 2 ? '한 마리도 안 놓치면 별이 가득 차요' : '목숨을 더 지키면 별이 늘어요'; // 10-26 검토: 소식 줄이 있으면 팁은 뺌 (740×360에서 5줄이면 [지도로]가 화면 밖으로)
   const fs = document.getElementById('finalScore');
   fs.innerHTML = `<b>${st.map.name}</b><br><span class="soStars" role="img" aria-label="${['', '별 하나', '별 둘', '별 셋'][stars]}">${storyStarsHTML(stars, 'soStar')}</span><br><span class="soMsg">${msg}</span>`
     + (news ? `<br><span class="soNews">${news}</span>` : '') + (tip ? `<br><span class="soLine">${tip}</span>` : '');
@@ -21377,7 +21381,7 @@ function smSvg(reach) { // reach = 갈색(지나온) 길 조각 수 · 잠긴 �
       s += `<rect x="${rx(w)}" y="0" width="${WW}" height="${H}" fill="#efe1bf" opacity=".5"/>`; }
     const tw = nm.length * 21 + 8;
     s += `<text x="${cx + (on ? 0 : 14)}" y="38" text-anchor="middle" font-size="21" font-weight="800" fill="${on ? '#4c3a1c' : '#8a7a62'}" stroke="#f6e8c6" stroke-width="5" paint-order="stroke" stroke-linejoin="round">${nm}</text>`;
-    if (!on) s += ico('lock', cx - tw / 2 - 12, 18, 24, '#8a7a62', false) + `<text x="${cx + 14}" y="60" text-anchor="middle" font-size="14" font-weight="700" fill="#8a7a62" stroke="#f6e8c6" stroke-width="4" paint-order="stroke">곧 열려요</text>`;
+    if (!on) s += ico('lock', cx - tw / 2 - 12, 18, 24, '#6b5a44', false) + `<text x="${cx + 14}" y="60" text-anchor="middle" font-size="14" font-weight="700" fill="#6b5a44" stroke="#f6e8c6" stroke-width="4" paint-order="stroke">곧 열려요</text>`;
   }
   return s + '</svg>';
 }
@@ -21454,7 +21458,7 @@ function storyCardOpen(id) {
   card.innerHTML = `<button type="button" class="smX" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>`
     + `<div class="smCW">${w ? w.name : ''}</div><h3 id="smCardName">${M.name}</h3>`
     + `<div class="smCStars" role="img" aria-label="${['아직 별 없음', '별 하나', '별 둘', '별 셋'][n]}">${storyStarsHTML(n, 'smCS')}</div>`
-    + `<div class="smSee"><span class="smSeeT">이 맵에 나오는 것</span><div class="smSeeArt"></div></div>`
+    + `<div class="smSee"><span class="smSeeT">이 스테이지에 나오는 것</span><div class="smSeeArt"></div></div>`
     + (op ? `<button type="button" class="title-primary smGo">출발 <span class="title-arrow" aria-hidden="true">→</span></button>` : `<p class="smLockMsg">${dpdIconSVG('lock', 'smLockIc', { sw: 2.2 })}앞 스테이지를 깨면 열려요</p>`);
   const art = card.querySelector('.smSeeArt');
   for (const v of th.mats) art.appendChild(storyThingArt('mat', v, 46));
