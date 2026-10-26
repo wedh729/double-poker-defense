@@ -15862,7 +15862,9 @@ let castleTab = 'upg';
 let bookTab = 'hand'; // 족보 도감 카테고리 탭 (10-07) — 판 안에서 마지막 탭 기억
 window.addEventListener('dpd:resetui', () => { bookTab = 'hand'; }); // 새 판(다시하기·나가기)이면 처음 탭으로 — resetTransientUI 끝의 이벤트 (위에서 직접 대입하면 선언 전 실행 위험)
 const HIDDEN_FLAG = { gambler: 'gamble', junk: 'junk', quartet: 'quartet', guillotine: 'execute', shogun: 'shogun', chrono: 'chrono', slot: 'slot', joker: 'joker', catapult: 'catapult' };
-function shopHeroes() { return S.units.filter(u => isHiddenCombo(u) && !u.clone); } // 단련 대상 = 히든 영웅만 (종족 없음 → 별도 성장)
+function heroPool() { return S.story && S.story.m2 ? S.units.concat(S.story.m2.tray) : S.units; } // 📖 10-26 검토: 스토리 히든은 대기석에도 있다 (updatePortal 1기 제한 has와 같게) — 성 히든 탭 목록·보유 표시가 대기석 히든을 '미보유'로 보이던 것
+function hiddenDexDesc(hd) { return S && S.story && hd.id === 'catapult' ? '거대한 돌덩이로 길 위 몬스터 포격 (이동 불가)' : hd.desc; } // 📖 10-26 검토: 스토리 투석기 = 사거리 안 길 위 (storyPenHit · 완성 기록 6922와 같게)
+function shopHeroes() { return heroPool().filter(u => isHiddenCombo(u) && !u.clone); } // 단련 대상 = 히든 영웅만 (종족 없음 → 별도 성장)
 function heroSectionHTML() {
   const heroes = shopHeroes();
   let html = '<div class="castleColT">히든 영웅 단련</div>';
@@ -15893,7 +15895,7 @@ function heroSectionHTML() {
   });
   html += '<div class="castleColT" style="margin-top:14px">히든 영웅</div>' +
     HIDDEN_DEX.map(hd => {
-      const owned = S.units.some(u => u[HIDDEN_FLAG[hd.id]]);
+      const owned = heroPool().some(u => u[HIDDEN_FLAG[hd.id]]);
       if (!hiddenSeen(hd.id)) // 미발견: ??? + 정체를 암시하는 대사만
         return `<div class="rpgItem" style="border-left:5px solid #666"><div class="rpgIcon" style="color:#888"></div>
           <div class="rpgInfo"><b style="color:#888">???</b><br><span class="desc" style="font-style:italic;color:#8a7f68">“${hd.voice}”</span></div></div>`;
@@ -15901,7 +15903,7 @@ function heroSectionHTML() {
         <div class="rpgIcon">${dpdIconSVG(hd.icon)}</div>
         <div class="rpgInfo"><b>${hd.name}</b>${owned ? '' : ' <span style="font-size:10px;color:#777">(미보유 — 다시 조합하면 등장)</span>'}<br>
           <span class="desc" style="font-style:italic;color:#8a7f68">“${hd.voice}”</span><br>
-          <span class="desc">조합법: <b>${hd.recipe}</b><br>${hd.desc}</span></div></div>`;
+          <span class="desc">조합법: <b>${hd.recipe}</b><br>${hiddenDexDesc(hd)}</span></div></div>`;
     }).join('');
   return html;
 }
@@ -20989,8 +20991,10 @@ function storyAltarOk(u) { // 제단이 받나: 아이템(= 사용) · 하이카
 function storyAltarIn(u) { // 제단에 올리기 — 하이카드 제물은 곧바로(updateAltar) · 승급 제물은 승급 단추가 쓸 때까지 제단 위에서 기다림 (못 꺼냄 · 싸우지 않음)
   if (u.item) { storyUseItem(u); return; }
   const m = storyM2(); storyTrayTake(u);
-  const n = S.units.filter(v => m.altar.has(v)).length;
-  u.x = u.tx = ALTAR.x + ((n % 3) - 1) * 16; u.y = u.ty = ALTAR.y + ((((n / 3) | 0) % 3) - 1) * 18; // 제단 위 (onAltar 안)
+  const al = S.units.filter(v => m.altar.has(v)), at = n => ({ x: ALTAR.x + (n % 4) * 14 - 21, y: ALTAR.y + ((n >> 2) % 5) * 14 - 28 }); // 10-26 검토: 4×5 = 20자리(투석기 승급2 = 하이카드 20기) · 빈자리 먼저 — 예전 3×3(9자리)은 '지금 수'로 자리를 정해 10번째부터·일부 소모 뒤에 남은 유닛과 겹쳤다 (포털 7e35336과 같은 고침)
+  let n = 0; while (n < 20 && al.some(v => { const p = at(n); return Math.abs(v.x - p.x) < 1 && Math.abs(v.y - p.y) < 1; })) n++;
+  if (n >= 20) n = al.length % 20;
+  const p0 = at(n); u.x = u.tx = p0.x; u.y = u.ty = p0.y; // 제단 위 (onAltar 안 — x ±21·y ±28 < 42·49)
   u.moving = false; u.grabbed = false; u.selected = false; u.cool = 0; u.forceTarget = null;
   m.altar.add(u); S.units.push(u);
   sfx('pick');
@@ -23674,8 +23678,8 @@ if (WORLD_MOTION_V2) (() => {
     const boosted=S.units.some(u=>u.gamble);
     return `<section class="roster-heroes"><div class="roster-hero-banner">${tile('crown','is-hero')}<div><span class="roster-kicker">조합으로 만나는 특별한 동료</span><h3>히든 영웅의 전당</h3><p>발견의 설렘, 함께하는 성장.</p></div><span class="roster-discovered"><b>${seen}<small>/${HIDDEN_DEX.length}</small></b>발견</span></div><div class="roster-section-head"><h3>우리 영웅 단련</h3><span>보유 ${heroes.length}기</span></div>${heroes.length?heroes.map(training).join(''):`<div class="roster-empty">${tile('star','is-empty')}<h4>아직 빈 영웅의 자리</h4><p>아래 도감의 이야기를 따라 조합을 발견해봐.<br>영웅을 만나면 이곳에서 단련할 수 있어.</p></div>`}${heroes.some(h=>(h.heroUpLv||0)<HERO_UP_MAX)?`<div class="roster-chance">${icon('star')}<span><b>+3 도전</b> 타이밍 중앙을 노려요${boosted?' · 갬블러의 가호가 함께한다':''}<br>같은 단련 비용을 사용해요. 실패해도 골드는 소모돼요.</span></div>`:''}<div class="roster-section-head roster-dex-heading"><h3>${icon('book')}발견 도감</h3><span>아홉 영웅의 이야기</span></div><div class="roster-dex-grid">${HIDDEN_DEX.map((hd,index)=>{
       if(!hiddenSeen(hd.id)) return `<article class="roster-dex-card is-locked"><div class="roster-dex-top">${tile('lock')}<span class="roster-dex-no">${String(index+1).padStart(2,'0')}</span></div><h4>아직 만나지 못한 영웅</h4><span class="roster-dex-state">미발견</span><p class="roster-riddle">“${esc(hd.voice)}”</p></article>`;
-      const owned=S.units.some(u=>u[HIDDEN_FLAG[hd.id]]);
-      return `<article class="roster-dex-card ${owned?'is-owned':'is-found'}"><div class="roster-dex-top">${tile(hd.id,'is-hero')}<span class="roster-dex-no">${String(index+1).padStart(2,'0')}</span></div><h4>${esc(hd.name)}</h4><span class="roster-dex-state">${owned?'함께하는 중':'발견 완료 · 현재 미보유'}</span><p class="roster-ability">${esc(hd.desc)}</p><div class="roster-recipe"><span>조합법</span><b>${esc(hd.recipe)}</b></div></article>`;
+      const owned=heroPool().some(u=>u[HIDDEN_FLAG[hd.id]]);
+      return `<article class="roster-dex-card ${owned?'is-owned':'is-found'}"><div class="roster-dex-top">${tile(hd.id,'is-hero')}<span class="roster-dex-no">${String(index+1).padStart(2,'0')}</span></div><h4>${esc(hd.name)}</h4><span class="roster-dex-state">${owned?'함께하는 중':'발견 완료 · 현재 미보유'}</span><p class="roster-ability">${esc(hiddenDexDesc(hd))}</p><div class="roster-recipe"><span>조합법</span><b>${esc(hd.recipe)}</b></div></article>`;
     }).join('')}</div></section>`;
   };
   // Miner purchases recreate the body; retain keyboard focus when the same
