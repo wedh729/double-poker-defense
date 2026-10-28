@@ -3488,9 +3488,9 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
 .smSeeArt {display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;min-height:46px;}
 .smThing {display:block;width:46px;height:46px;background:none;border-radius:0;box-shadow:none;cursor:inherit;} /* 전역 canvas 규칙(흰 바탕·둥근 모서리·조준 커서) 덮기 */
 .smThing.boss {width:58px;height:58px;}
-#smCard .smGo {min-width:200px;min-height:50px;gap:22px;font-size:17px;border:2px solid #405b2f;border-radius:13px;color:#fff5d3;background:linear-gradient(#7c9550,#567b3d 55%,#466637);
+#smCard .smGo, #smCard .smCont {min-width:200px;min-height:50px;gap:22px;font-size:17px;border:2px solid #405b2f;border-radius:13px;color:#fff5d3;background:linear-gradient(#7c9550,#567b3d 55%,#466637);
   box-shadow:inset 0 0 0 1px #bcc484,0 4px 0 #33472a;text-shadow:0 2px #2f4e2d;}
-#smCard .smGo:hover {background:linear-gradient(#8ea95f,#658d49 55%,#52773e);}
+#smCard .smGo:hover, #smCard .smCont:hover {background:linear-gradient(#8ea95f,#658d49 55%,#52773e);}
 .smLockMsg {display:flex;align-items:center;justify-content:center;gap:6px;margin:0;font-size:13px;font-weight:800;color:#7a5a32;}
 .smLockMsg .smLockIc {width:18px;height:18px;}
 #overlay .soStars {display:inline-flex;gap:8px;margin:6px 0 2px;}
@@ -3524,7 +3524,8 @@ body.mobile #overlay .soStar {width:36px;height:36px;}
   .smSee {padding:6px 8px;margin-bottom:8px;gap:4px;}
   .smSeeArt {min-height:38px;}
   .smThing {width:38px;height:38px;} .smThing.boss {width:46px;height:46px;}
-  #smCard .smGo {min-height:42px;}
+  #smCard .smGo, #smCard .smCont {min-height:42px;}
+  #smCard .smNew {margin-top:6px;} /* 10-28 */
 }
 </style>
 </head>
@@ -20776,6 +20777,7 @@ function storyStart(id, gesture) { // gesture = 클릭으로 불렸나 (다시�
   hideStartScreen();
   document.getElementById('bSandbox').style.display = 'none';
   S.paused = false;
+  storyCkTok = storyCkNewTok(); storyCkForce = true; storyCkGone = false; // 📖 10-28 체크포인트: 새 판 = 새 토큰 · 첫 패 저장이 칸을 덮어씀(처음부터)
   startPoker();                                    // 스토리 라운드로 다시 딜
   logMsg(`스토리 — ${map.name}`);
   return true;
@@ -20829,6 +20831,7 @@ document.getElementById('overlay').addEventListener('click', e => {
   if (!oc.includes('reset')) { storyExit(false); return; }
   if (S.story.end !== 'clear') { storyStart(S.story.id, true); return; }
   const nx = storyNextId(S.story.id);
+  if (nx && storyOpen(nx) && storyCkGet(nx)) { storyExit(false); storyCardOpen(nx); return; } // 📖 10-28 검토: 다음 스테이지에 이어 하던 판이 있으면 묻지 않고 덮지 않게 — 지도 카드에서 [이어 하기]/[처음부터]
   if (nx && storyOpen(nx)) storyStart(nx, true); else storyExit(false); // 다음 스테이지가 없거나 잠겼으면(단추는 숨겨 둠 — 방어) 지도로
 }, true);
 // ==================== 📖 스토리 M2 — 대기석 · 끌어 놓기(고정) · [출발!] · 눌러 합치기 · 포털에 넣기 · 아이템 누르면 사용 (10-19, 설계 = 스토리_2026-10-14\50_M2_구현설계.md) ====================
@@ -21290,6 +21293,8 @@ function storySeen(id) { const d = storyDataGet(); if (d.seen[id]) return; d.see
 const STORY_CK_KEY = 'dpd_story_ck', STORY_CK_V = 1;
 const STORY_CK_SKIP = new Set(['units', 'monsters', 'effects', 'floats', 'parts', 'projs', 'story', 'spawnQueue', 'air', 'bird', 'slotBombs', 'acidPools', 'hitstop', 'shake', 'slowT', 'goldFlash', 'goldWhy', 'goldWhyT', 'paused']); // 전투 중에만 뜻 있는 것·화면 효과 (콤보는 라운드를 넘어 이어져 처치 골드에 들어가니 저장 — 10-28 결정성 검사)
 let storyCkMute = false, storyCkIds = new WeakMap(); // 되살리는 동안 저장 끔 / 마지막 저장의 유닛 번호 (전투 중 단련 덧쓰기)
+let storyCkTok = '', storyCkForce = false, storyCkGone = false, storyCkSeq = 0; // 10-28 검토: 판 토큰(이 창이 그 칸의 주인) / 다음 저장은 덮어씀(새 판·이어 하기) / 다른 창이 이어 받아 이 창은 저장 안 함
+function storyCkNewTok() { let r = ''; try { r = crypto.getRandomValues(new Uint32Array(1))[0].toString(36); } catch (e) {} return Date.now().toString(36) + '.' + r + '.' + (++storyCkSeq); } // Math.random 안 씀 (게임 난수 흐름 그대로)
 function storyCkEnc(v, U, d) { // 값 → JSON 꼴: 유닛 = { $u: 번호 } · Infinity·NaN = { $n } · 몹(hp·max + mat·boss·shape)·캔버스·Set·함수 = 뺌
   if (v === null || typeof v === 'string' || typeof v === 'boolean') return v;
   if (typeof v === 'number') return Number.isFinite(v) ? v : { $n: String(v) };
@@ -21303,10 +21308,10 @@ function storyCkEnc(v, U, d) { // 값 → JSON 꼴: 유닛 = { $u: 번호 } · I
 function storyCkDec(v, A) { if (v === null || typeof v !== 'object') return v; if (Array.isArray(v)) return v.map(x => storyCkDec(x, A));
   const ks = Object.keys(v); if (ks.length === 1 && ks[0] === '$u') return A[v.$u] || null; if (ks.length === 1 && ks[0] === '$n') return Number(v.$n);
   const o = {}; for (const k of ks) o[k] = storyCkDec(v[k], A); return o; }
-function storyCkOn() { return !!(S && S.story && S.story.map.world && !S.story.end && !storyCkMute && !S.tutMode); }
+function storyCkOn() { return !!(S && S.story && S.story.map.world && !S.story.end && !storyCkMute && !storyCkGone && !S.tutMode); }
 function storyCkAll() { let d = null; try { d = JSON.parse(localStorage.getItem(STORY_CK_KEY)); } catch (e) {} return d && d.v === STORY_CK_V && d.runs && typeof d.runs === 'object' ? d : { v: STORY_CK_V, runs: {} }; }
 function storyCkGet(id) { const c = storyCkAll().runs[id]; return c && c.v === STORY_CK_V && c.id === id && Array.isArray(c.units) && c.S && typeof c.S === 'object' && Number.isFinite(c.R) ? c : null; } // 깨진 칸 = 없음
-function storyCkPut(id, ck) { const d = storyCkAll(); if (ck) d.runs[id] = ck; else delete d.runs[id]; try { localStorage.setItem(STORY_CK_KEY, JSON.stringify(d)); } catch (e) {} } // 저장이 막혀도(사생활 모드 등) 판은 그대로
+function storyCkPut(id, ck) { const d = storyCkAll(), cur = d.runs[id]; if (!ck && cur && cur.tok && cur.tok !== storyCkTok) return false; d.runs[id] = ck || { v: STORY_CK_V, id, tok: storyCkTok, dead: 1 }; try { localStorage.setItem(STORY_CK_KEY, JSON.stringify(d)); return true; } catch (e) { return false; } } // 쓰기 성공 = true (10-28 재검토: 용량이 차서 실패했는데 주인이 된 것으로 치면 혼자 하는 창이 쫓겨났음) · 끝남 표시는 내 칸에만 (다른 창이 이어 받은 판을 옛 창이 지우지 않게) // 저장이 막혀도(사생활 모드 등) 판은 그대로 // 10-28 검토: 끝난 판 = 빈 칸 대신 '끝남' 표시(이 창 토큰) — 옛 창이 진 판을 다시 살려 저장하지 못하게
 function storyCkSnap() {
   const st = S.story, m = storyM2(), all = S.units.concat(m.tray), U = new Map(all.map((u, i) => [u, i]));
   const s = {}; for (const k of Object.keys(S)) { if (STORY_CK_SKIP.has(k)) continue; const e = storyCkEnc(S[k], U, 0); if (e !== undefined) s[k] = e; }
@@ -21318,13 +21323,18 @@ function storyCkSnap() {
 }
 function storyCkSave() { // 포커·배치 준비(몹 없음)만 통째로 — 전투 중엔 storyCkUpg가 [출발!] 저장에 덧씀
   if (!storyCkOn() || S.phase !== 'poker') return;
-  try { storyCkPut(S.story.id, storyCkSnap()); } catch (e) { console.warn('story ck save', e); }
+  try { const id = S.story.id, cur = storyCkAll().runs[id];
+    if (!storyCkForce && cur && cur.tok && cur.tok !== storyCkTok) { storyCkLost(); return; } // 다른 창이 이 스테이지 판을 이어 받음 (10-28 검토: 두 창으로 도전 다시 굴리기·진행 되감기)
+    const ck = storyCkSnap(); ck.tok = storyCkTok; if (storyCkPut(id, ck)) storyCkForce = false; // 써졌을 때만 이 창이 주인
+  } catch (e) { console.warn('story ck save', e); }
 }
 function storyCkUpg(spent, u) { // 강화·단련·도전·승급 직후 (유저 10-28: 강화하면 그 순간 저장) — 포커·배치 준비 = 통째로 · 전투 중 = [출발!] 저장에 종족 레벨·든 골드·그 유닛 단련 레벨만
   if (!storyCkOn()) return;
   if (S.phase === 'poker') { storyCkSave(); return; }
   const ck = storyCkGet(S.story.id); if (!ck) return;
-  ck.S.upg = S.upg.slice(); ck.S.upgCost = S.upgCost.slice(); ck.S.gold = Math.max(0, (+ck.S.gold || 0) - (spent || 0)); // 전투 중 번 골드로 샀으면 0까지만 (그 전투 처치 골드만큼 — 작음)
+  if (storyCkForce) return; // 이 판 저장이 아직 한 번도 안 써짐(용량 등) — 남의 칸을 덧쓰지도 쫓아내지도 않음
+  if (ck.tok && ck.tok !== storyCkTok) { storyCkLost(); return; }
+  ck.S.upg = S.upg.slice(); ck.S.upgCost = S.upgCost.slice(); ck.S.gold = (+ck.S.gold || 0) - (spent || 0); // 10-28 검토: 0에서 자르지 않음 — 전투에서 번 골드로 샀으면 빚(음수)으로 남고 다시 하는 전투 처치 골드로 갚음 (자르면 진 도전이 공짜가 돼 다시 굴리기가 됨)
   const i = u ? storyCkIds.get(u) : undefined; if (i != null && ck.units[i]) ck.units[i].heroUpLv = u.heroUpLv || 0; // 전투 중 새로 생긴 유닛이면 레벨은 못 남기고 골드만 (다시 굴리기 이득 없음)
   storyCkPut(S.story.id, ck);
 }
@@ -21344,18 +21354,25 @@ function storyCkResume(id) { // 지도 카드 [이어 하기] — 새 판을 세
     m.page = ck.page || 0; m.prep = !!ck.prep; m.hint = !!ck.hint; m.sel = null; m.pick = null; m.fx = []; m.prepT = 0;
     const st = S.story, cs = ck.st || {}; st.leakAll = cs.leakAll || 0; st.t1Hold = !!cs.t1Hold; if (cs.gateA != null) st.gateA = cs.gateA;
     S.phase = 'poker'; S.paused = false; S.monsters = []; S.spawnQueue = null; S.effects = []; S.floats = []; S.parts = []; S.projs = [];
+    storyCkForce = true; // 이 창이 이어 받음 = 다음 저장(아래)이 칸을 덮어씀 (토큰은 storyStart가 새로)
   } catch (e) { storyCkMute = false; console.warn('story ck resume', e); storyCkPut(id, null); storyStart(id, false); return true; } // 깨진 칸 = 지우고 처음부터
   storyCkMute = false;
   const prep = !!storyM2().prep;
-  updateHUD(); renderPoker(); updateGoPoker(); updateInfoPanel(); updateDpsRank();
+  updateHUD(); renderPoker(); updateGoPoker(); updateInfoPanel(); updateDpsRank(); syncSpeedUI(); // 배속 단추 = 되살린 S.speed (10-28 검토)
   if (IS_MOBILE) setMobTab(prep ? 'battle' : 'poker'); else { pokerPeek = prep; syncPokerPanel(); }
   needRedraw = true;
   logMsg(`이어 하기 — 라운드 ${S.storyR}${prep ? ' · 출발! 직전' : ''}`, true);
   storyCkSave();
   return true;
 }
-window.addEventListener('pagehide', () => { if (S && S.story && S.phase === 'poker') storyCkSave(); }); // 탭이 내려갈 때 (전투 중은 [출발!] 저장 그대로)
-document.addEventListener('visibilitychange', () => { if (document.hidden && S && S.story && S.phase === 'poker') storyCkSave(); });
+function storyCkHide() { if (!S || !S.story) return; if (typeof gbOv !== 'undefined' && gbOv && gbOv._settle) gbOv._settle(); if (S.phase === 'poker') storyCkSave(); } // 탭이 내려갈 때: 도전 막대를 멈춘 뒤 정산(650ms) 전이면 먼저 정산(10-28 검토 — 빗나감을 새로고침으로 무르기 막기) · 전투 중은 [출발!] 저장 그대로
+function storyCkLost() { // 다른 창이 이 스테이지 판을 이어 받음 — 이 창은 저장을 멈추고 지도로 (10-28 검토)
+  if (!S || !S.story || S.story.end || storyCkGone) return; storyCkGone = true;
+  setTimeout(() => { try { alert('다른 창에서 이 스테이지를 이어 하고 있어요. 이 창은 지도로 나가요.'); } catch (e) {} storyExit(false); }, 0); // 부른 함수(놓기·카드 교체 등)가 끝난 뒤에 나감
+}
+window.addEventListener('pagehide', storyCkHide);
+document.addEventListener('visibilitychange', () => { if (document.hidden) storyCkHide(); });
+window.addEventListener('storage', e => { if (e.key !== STORY_CK_KEY || !storyCkOn()) return; const c = storyCkAll().runs[S.story.id]; if (c && c.tok && c.tok !== storyCkTok) storyCkLost(); }); // 다른 창의 저장 = 곧바로 알아챔
 function storyT1On() { const st = S && S.story; return !!st && st.map.world === 1 && st.map.idx === 1 && S.phase === 'poker' && !!S.poker && S.poker.hands.length === 1 && !(st.m2 && st.m2.prep) && !storyDataGet().seen.t1; }
 function storyT1Line(ranks) { // tutPokerLine(renderPoker) — 스토리 판만
   if (!storyT1On()) return '';
