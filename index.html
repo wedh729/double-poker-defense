@@ -5210,6 +5210,20 @@ const DUEL_EVERY = 7;    // 도전자 주기 (보스 라운드와 겹치면 그 
 //   → 노브 DUEL_FUSE3: 예전 곡선의 딱 맞는 앵커(R28·R49)를 그대로 두고 R28 1.0 → R49 0.6 기하 보간, R49부터 0.6 (불연속·역행 없음)
 //   검산: R35 32,824 (저격영웅 24.8초 · 소총영웅 L13 469 = 70초 '느림' 그대로) · R49 54,564 (저격영웅 37.7초 = 예전과 같음) · R63 127,501 (쌍단검영웅 27.7초 = 예전과 같음)
 const DUEL_FUSE3 = { R0: 28, R1: 49, K: 0.6 };
+// 🌀 10-28b 유저('결투체력을 맞춰서 다시 맞춰줘' — 보고 103 §6-3): 챌린지 슈퍼 = 영웅 5기(SUPER_FUSE_N)라 R21 결투엔 슈퍼가 거의 없다 (봇 첫 슈퍼 중앙 R22 → R33 · R20까지 슈퍼 0%)
+//   흔한 덱 측정(t1028_s5_duel2 — 같이하기 봇 100시드 × 게임 그대로·바로 합침, 결투 DPS = fireAtDuel 규칙(보스 판정 ×2는 저격·단검 계열만), 앵커 레벨·봇 레벨 둘 다):
+//   덱에서 가장 센 1기 처치 초의 기하평균, 라이브(ffb66b6) 대비 R14 ×1.15 · R21 ×1.40 · R28 ×0.97 (게임 그대로 ×1.08~1.12 · 바로 합침 ×0.85~0.87)
+//   → [라운드, 배수] 점 사이 기하 보간 · 첫 점 앞 = 첫 값 · 끝 점 뒤 = 끝 값 · 챌린지만 (스토리 = 결투 없음 · 튜토리얼 = 위 duelHp로 먼저 return) · 결투는 7의 배수라 R14~28 사이엔 R21만 걸림
+//   R21 ×0.72 → 16,459 → 11,850 (R14 10,640 위 그대로) = 라이브 대비 ×1.005~1.013 · R14(앵커 = 기본 단검 L5, 이번 변경과 무관)·R28(합쳐서 ×0.97)은 1
+//   한계: R21 신속(45초 안) 비율은 94% → 67~71%로 남는다 — 슈퍼 없는 덱이 둘로 갈려(센 영웅 ↔ 일반 유닛) 느린 쪽(90초 안팎)은 R14 아래로 내려야 닿음
+const DUEL_SUPER5 = [[14, 1], [21, 0.72], [28, 1]];
+function duelSuper5(n) {
+  if (S && (S.story || S.tutMode)) return 1;
+  const P = DUEL_SUPER5;
+  if (n <= P[0][0]) return P[0][1];
+  for (let i = 1; i < P.length; i++) if (n <= P[i][0]) { const [a, ka] = P[i - 1], [b, kb] = P[i]; return ka * Math.pow(kb / ka, (n - a) / (b - a)); }
+  return P[P.length - 1][1];
+}
 function duelHP(n) {
   if (S && S.tutMode && tutWave().duelHp) return tutWave().duelHp; // [튜토리얼 10-14]
   let hp = 6080 * Math.pow(1.0525, Math.min(n, 7));        // ~R7: 기본 유닛 초창기
@@ -5217,6 +5231,7 @@ function duelHP(n) {
   if (n > 14) hp *= Math.pow(1.0643, Math.min(n, 28) - 14); // R14~28: 저티어 영웅 진입기
   if (n > 28) hp *= Math.pow(1.0625, n - 28);               // R28+: 진짜 영웅 시대 — 여기부터 "확" 뛴다
   if (n > DUEL_FUSE3.R0) hp *= Math.pow(DUEL_FUSE3.K, (Math.min(n, DUEL_FUSE3.R1) - DUEL_FUSE3.R0) / (DUEL_FUSE3.R1 - DUEL_FUSE3.R0)); // 🌀 3마리 합성 노브 (10-18 유저 — 위 주석)
+  hp *= duelSuper5(n); // 🌀 영웅 5기 슈퍼 노브 (10-28b 유저 — 위 DUEL_SUPER5)
   return Math.floor(hp);
 }
 // 🏛️ 결투 라운드 판정: 7의 배수·보스 주 휴장·태양 강림(R190+ 미클리어) 휴장 — startWave가 태양에서 조기 return해
