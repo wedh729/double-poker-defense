@@ -3689,7 +3689,7 @@ function superFuseN() { return S && (S.story || S.tutMode) ? FUSE_N : SUPER_FUSE
 function fuseNeed(hero) { return hero ? superFuseN() : FUSE_N; } // 합성 재료 수: 일반 → 영웅 FUSE_N · 영웅 → 슈퍼 superFuseN()
 const FUSE_POPUP = true; // 10-18 유저: 포털 '작은 창'([합치기]·['?']·[그대로 두기]) — false면 옛 동작(슬롯머신·시간술사·일반 합성 전부 자동)
 const HERO_DMG = 3;   // 영웅 공격력 = 기본 유닛 × 3 (10-18 유저: 재료 1마리당 힘 그대로 — 옛 5기 ×5)
-const SUPER_DMG = 2.4; // 슈퍼영웅 추가 공격 배수 (10-18 유저: 옛 영웅 5기 ×4 → 3기 ×2.4 — 재료 1마리당 그대로. 공속(SUPER_CD)·카드 가중 1.5·사거리 +25 등 다른 특전은 그대로)
+const SUPER_DMG = 4; // 슈퍼영웅 추가 공격 배수 — 챌린지 (10-18 유저: 옛 영웅 5기 ×4 → 3기 ×2.4 · 10-28 유저: 다시 영웅 5기 → ×4 = 2.4 × 5/3 — 재료 1마리당 그대로. 공속(SUPER_CD)·카드 가중 1.5·사거리 +25 등 다른 특전은 그대로 · 스토리·튜토리얼은 superDmgMul() 2.4)
 const SUPER_CD = 0.78; // 🌀 슈퍼영웅 공격 간격 배수 — 10-19 C맞춤(유저가 고르면 병합): 0.6 → 0.78. 3마리 합성 뒤 중·후반 화력 되돌림, 몹 체력 노브 FUSE_HP_KNOB와 한 쌍 (30_3마리합성_결과 10·12절)
 function superCdMul() { return S && (S.story || S.tutMode) ? 0.6 : SUPER_CD; } // spawnHero·mpHeroObj 공용 — 챌린지(혼자하기·같이하기 봇)만 SUPER_CD, 스토리(📖 M5에서 따로)·튜토리얼은 옛 0.6
 function superDmgMul() { return S && (S.story || S.tutMode) ? 2.4 : SUPER_DMG; } // spawnHero·mpHeroObj 공용 — 챌린지만 SUPER_DMG, 스토리·튜토리얼(영웅 3기 슈퍼)은 10-18 값 2.4 그대로
@@ -4257,7 +4257,9 @@ const CROWN_HP_COMP = 1.08;
 //   띠 중심(R18·R33·R45.5)에 측정 값 · R10까지 1(측정 때 R11부터 걸었음) · 마지막 점 뒤 = 마지막 값 (R51+·헬·태양도 ×1.337 — 50R 시뮬 밖이라 가정)
 //   걸리는 곳 = monsterHP를 쓰는 전부(일반 몹·보스·공중·방패병·태양·샌드박스·같이하기 소환장·레인 보스·봇 웨이브) = 측정 때 바꿔 끼운 자리. 결투(duelHP)는 따로라 안 걸림
 //   챌린지만: 스토리(S.story — M5에서 따로)·튜토리얼(S.tutMode — monsterHP 첫 줄에서 먼저 return)은 1. 되돌리려면 표를 [[1, 1]] 로
-const FUSE_HP_KNOB = [[10, 1], [18, 1.09], [33, 1.275], [45.5, 1.337]];
+//   🌀 10-28 유저 '영웅 5기 → 슈퍼'(SUPER_FUSE_N): 슈퍼가 늦게 와서(봇 첫 슈퍼 중앙 R22 → R33) 위 보정이 앞쪽에서 남음 → 봇 50R 시뮬로 다시 맞춤(t1028_s5_bot · 30시드 + 다른 100시드 확인)
+//     R18 1.09 → 1 (R18까지 노브 없음) · R33 1.275 → 1.1 · R45.5 1.337 → 1.3 (R46+·헬·태양 = 1.3) — 띠 누수·클리어가 10-19 라이브에 가장 가까움 (옛 값 = [[10, 1], [18, 1.09], [33, 1.275], [45.5, 1.337]])
+const FUSE_HP_KNOB = [[10, 1], [18, 1], [33, 1.1], [45.5, 1.3]];
 function fuseHpKnob(n) {
   if (S && (S.story || S.tutMode)) return 1;
   const P = FUSE_HP_KNOB;
@@ -4745,7 +4747,7 @@ function spawnHero(tier, race, x, y, keyBonus, sup) {
     keyRank: 14, keyLabel: '★', kills: 0,
     jx: (Math.random() - 0.5) * 48, jy: (Math.random() - 0.5) * 48,
     forceTarget: null, attackMine: false, amove: false, priority: 'near',
-    // 영웅 공격력 = 기본 × HERO_DMG(3) × 카드 가중치 / 슈퍼는 추가 ×SUPER_DMG(2.4) + 공속 향상
+    // 영웅 공격력 = 기본 × HERO_DMG(3) × 카드 가중치 / 슈퍼는 추가 ×superDmgMul()(챌린지 4 · 스토리·튜토리얼 2.4) + 공속 향상
     dmg: w.dmg * HERO_DMG * (h.dmgMul || 1) * kb * superDmg,
     cd: (h.cd !== undefined ? h.cd : w.cd * (h.cdMul || 1)) * superCd,
     range: pick('range', w.range) + (sup ? 25 : 0),
