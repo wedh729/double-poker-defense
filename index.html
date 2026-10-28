@@ -3693,6 +3693,9 @@ const SUPER_DMG = 4; // 슈퍼영웅 추가 공격 배수 — 챌린지 (10-18 �
 const SUPER_CD = 0.78; // 🌀 슈퍼영웅 공격 간격 배수 — 10-19 C맞춤(유저가 고르면 병합): 0.6 → 0.78. 3마리 합성 뒤 중·후반 화력 되돌림, 몹 체력 노브 FUSE_HP_KNOB와 한 쌍 (30_3마리합성_결과 10·12절)
 function superCdMul() { return S && (S.story || S.tutMode) ? 0.6 : SUPER_CD; } // spawnHero·mpHeroObj 공용 — 챌린지(혼자하기·같이하기 봇)만 SUPER_CD, 스토리(📖 M5에서 따로)·튜토리얼은 옛 0.6
 function superDmgMul() { return S && (S.story || S.tutMode) ? 2.4 : SUPER_DMG; } // spawnHero·mpHeroObj 공용 — 챌린지만 SUPER_DMG, 스토리·튜토리얼(영웅 3기 슈퍼)은 10-18 값 2.4 그대로
+//   ⚠️ 10-28 (유저 결정 대기): 합성이 아닌 슈퍼도 같은 배수·계수를 받는다 — 미스릴 '슈퍼영웅 뽑기권'(useGachaSuperHero) · '슈퍼에이스 영웅 뽑기권'(useGachaSuper: 카지노 칩 20·광부 특별 발굴) · 같이하기 봇 상자 gachaSuper(mpBotBox) · 복사기 사본(copyUnit, 슈퍼 성공률 20%) · 샌드박스 sh
+//     → 챌린지에서 라이브(×2.4 · fuseCount 9) 대비 기본 공격·레벨당 상승 둘 다 ×5/3 (+67% · 10-18 이전 ×4 · 25 대비 −40% = 영웅 뽑기권과 같은 비율). 가격·확률은 그대로
+//     봇 50R 시뮬에 든 건 봇 상자 0.5%뿐 — 혼자하기 미스릴·칩 20·광부·복사는 안 쟀다. 라이브 힘을 원하면 뽑기권 경로만 생길 때 재료 수(3)를 유닛에 들고 다니게(spawnHero·mpHeroObj·fuseCount), 합성 슈퍼(fuseGroup·mpBotFuse)는 그대로
 const NUKE_MUL = 5;   // 핵폭탄: 영웅 데미지에 추가로 ×5 (즉 기본 대비 ×HERO_DMG×5 = ×15 — 10-18 3마리 합성 전엔 ×25)
 // 사거리·스플래시는 소환장 2배 확장에 맞춰 전부 ×2 (저격총만 맵 크기 고려 470 캡)
 const WEAPONS = [
@@ -4873,7 +4876,7 @@ function upgPer(u) {
 }
 // 합성 재료 수 = 업글 계수 (재료 수만큼 업글 보정도 커야 "합치면 손해" 역전이 없다)
 function fuseCount(u) {
-  if (u.super) return FUSE_N * superFuseN(); // 슈퍼영웅 = 기본 15기분 (10-28 유저: 챌린지 영웅 5기 = 3×5 · 스토리·튜토리얼 3×3 = 9 — 옛 25)
+  if (u.super) return FUSE_N * superFuseN(); // 슈퍼영웅 = 기본 15기분 (10-28 유저: 챌린지 영웅 5기 = 3×5 · 스토리·튜토리얼 3×3 = 9 — 옛 25) · 뽑기권·봇 상자·복사 슈퍼도 15 (superDmgMul 아래 ⚠️ 10-28)
   if (u.execute) return 10;    // 길로틴 = 10기
   if (u.junk) return 9;        // 고물상 = 9기 (상향 레시피)
   if (u.gamble) return 6;      // 갬블러 = 6기
