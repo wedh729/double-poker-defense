@@ -3477,6 +3477,7 @@ html body #objInfo #oreObjFill[data-stage="1"] { background-color: #7a7a7a !impo
   background:linear-gradient(125deg,#fff1c150,transparent 38%,#bf893212),linear-gradient(#f1d6a0,#e8c68b);box-shadow:inset 0 0 0 1px #fff0c2,0 0 0 2px #674023,0 7px 0 #57371f88,0 18px 50px #17251666;}
 #smCard .smX {position:absolute;top:8px;right:8px;width:34px;height:34px;display:grid;place-items:center;padding:0;border:1px solid #b18951;border-radius:10px;background:#f3d9a6;color:#654625;cursor:pointer;}
 #smCard .smX svg {width:16px;height:16px;}
+#smCard .smNew {display:block;margin:10px auto 0;min-height:36px;padding:6px 16px;border:1px solid #b18951;border-radius:10px;background:#f3d9a6;color:#654625;font-size:13px;font-weight:700;cursor:pointer;} /* 📖 10-28 체크포인트: 이어 하기가 있을 때 [처음부터] */
 #smCard .smCW {font-size:11px;font-weight:800;letter-spacing:.6px;color:#7a5a32;}
 #smCard h3 {margin:2px 0 6px;font-size:26px;font-weight:900;letter-spacing:-1px;color:#482e1c;text-shadow:0 1px #fff2d2;}
 .smCStars {display:flex;justify-content:center;gap:6px;margin-bottom:10px;}
@@ -5893,6 +5894,7 @@ function startPoker(fromWave) {
   renderPoker();
   if (IS_MOBILE && !fromWave) setMobTab('poker');
   updateGoPoker();
+  if (S.story) storyCkSave(); // 📖 10-28 체크포인트: 새 패를 덱 순서째 저장 — 다시 열어도 같은 패
   // 🃏 셔플+딜 소리 (10-04 유저) — 0.4초 뒤: endWave의 clear/leak과 안 겹치게. 실행 시점에 다시 확인 (타이틀 더미 판·맵 미리보기·정지 중·이미 다음 페이즈면 무음)
   const dealRound = S.round;
   casTimeout(() => { if (S.phase === 'poker' && S.round === dealRound && !S.paused && !S.mapTest && !document.body.classList.contains('at-title')) sfx('deal'); }, 400);
@@ -5929,6 +5931,7 @@ function swapCard(h, i) {
   if (S.story) storyT1Done(); // 📖 10-21 스토리: 카드를 한 번 바꾸면 1-1 안내 끝 (dpd_story seen.t1)
   if (S.round === 2 && S.r1High && tutNew('t4')) tutMark('t4'); // 🧭 T4는 실제로 카드를 만진 뒤에 '봤다'로 친다 (판 내림 상태 자동 소환 때 안 보고 소진되지 않게)
   renderPoker({ h, i }); // 해당 카드에 회전 이펙트
+  if (S.story) storyCkSave(); // 📖 10-28 체크포인트: 바꾼 카드 그대로 (다시 열어 다른 카드 뽑기 안 됨)
   pokerRankFlash(h, before);
 }
 function ticketReswap(h, i) {
@@ -5939,6 +5942,7 @@ function ticketReswap(h, i) {
   hand.cards[i] = (S.tutMode && tutPick(h, i, hand)) || hand.deck.pop(); // [튜토리얼 10-14]
   logMsg(`재변경권으로 ${i + 1}번 카드만 다시 교환! (남은 ${S.items.reroll})`);
   renderPoker({ h, i }); // 해당 카드 회전 이펙트
+  if (S.story) storyCkSave(); // 📖 10-28 체크포인트
   pokerRankFlash(h, before);
 }
 // 교환으로 족보가 올라갔을 때만 라벨이 잠깐 반짝 (10-01 튜토리얼 제안 — 상시)
@@ -8929,6 +8933,7 @@ function doAscend(u) {
   for (const g of gone) { for (let i = 0; i < 10; i++) { const a = Math.random()*6.28, v = 80 + Math.random()*140; S.parts.push({ x: g.x, y: g.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, t: 0.5, r: 1.8 + Math.random()*2.4, c: '#c62828' }); } }
   addFloat(u.x, u.y - 32, `승급! Lv.${u.ascend} — ${def.desc}`, '#ff6b9d', 2.4);
   logMsg(`<b>${u.weapon}</b> 제물 승급 Lv.${u.ascend}! (${def.mat} 소모) — ${def.desc}`);
+  if (S.story) storyCkUpg(0); // 📖 10-28 체크포인트 (전투 중 승급은 저장에 안 남음 — 난수 없음, 그 전투를 다시 하면 제물도 그대로)
   sfx('hero');
   updateInfoPanel();
 }
@@ -15614,6 +15619,7 @@ function heroTrain(u, gamble, perfect, skipRefresh) {
       addFloat(u.x, u.y - 28, '실패…', '#8d8d8d', 1.2); sfx('leak');
     }
   }
+  if (S.story) storyCkUpg(cost, u); // 📖 10-28 체크포인트: 단련·도전 단련 결과 그 순간 저장
   if (!skipRefresh) updateInfoPanel(); // 결과창을 띄우는 경로에서는 호출부가 확인 버튼에서 갱신한다 (여기서 갱신하면 결과창이 사라짐)
 }
 // 🩸 히든 영웅 제물 승급 줄 (쇼군·조커·갬블러)
@@ -15973,9 +15979,10 @@ function wireUpg(el) {
   el.querySelectorAll('[data-upg]').forEach(b => b.onclick = () => {
     const i = +b.dataset.upg;
     if (S.gold < S.upgCost[i]) return;
-    S.gold -= S.upgCost[i]; S.upg[i]++;
+    const c0 = S.upgCost[i]; S.gold -= c0; S.upg[i]++;
     S.upgCost[i] = Math.floor(S.upgCost[i] * 1.45); // 후반 벽 완화 (1.5 → 1.45)
     logMsg(`${RACES[i].name} 공격력 Lv.${S.upg[i]}`);
+    if (S.story) storyCkUpg(c0); // 📖 10-28 체크포인트: 강화하면 그 순간 저장
     renderShop(); updateInfoPanel();
   });
   el.querySelectorAll('[data-gupg]').forEach(b => b.onclick = () => { // 🎰 도박 업그레이드: 타이밍바 → 중앙 명중 시 50%, 아니면 25% (+갬블러 10%p)
@@ -15985,7 +15992,7 @@ function wireUpg(el) {
     el.querySelectorAll('button').forEach(x => x.disabled = true); // 진행 중 다른 버튼 잠금
     runGambleBar(host, perfect => {
       if (S.gold < S.upgCost[i]) { gambleOverlayClose(); renderShop(); return; } // 골드 부족(차감 전) = 창만 닫음 — 멈춘 뒤엔 ✕가 숨겨져 결과 없이 갇히지 않게
-      S.gold -= S.upgCost[i];
+      const c0 = S.upgCost[i]; S.gold -= c0;
       const p = (perfect ? 0.35 : 0.2) + (S.units.some(u => u.gamble) ? 0.10 : 0);
       const win = Math.random() < p || !!S.tutMode; // [튜토리얼 10-14] 튜토리얼은 꼭 성공 (난수는 그대로 뽑음)
       if (win) {
@@ -15996,6 +16003,7 @@ function wireUpg(el) {
       } else { logMsg(`도전 실패… (${Math.round(p * 100)}%의 벽)`); sfx('leak'); }
       showGambleResult(host, perfect, win, win ? `${RACES[i].name} 공격력 +3 → Lv.${S.upg[i]}` : '');
       updateInfoPanel();
+      if (S.story) storyCkUpg(c0); // 📖 10-28 체크포인트: 도전(3배) 결과 그 순간 저장 — 껐다 켜서 다시 굴리기 막기
     });
   });
 }
@@ -20550,7 +20558,7 @@ function storyWaveEnd(bossAlive, leak) { // endWave 분기 — 목숨은 도착 
   if (S.life > 0 && !(st.map.rounds && S.storyR >= st.map.rounds)) grantClearBonus(); // 스피드 보너스 0 (시계 없음) · 마지막 라운드는 클리어 창이 대신 (10-19 M3)
 }
 function storyGameOver() { // endWave 게임오버 = 실패 화면 (10-19 M3: 숫자 없는 글 · [다시하기] = 이 스테이지 처음부터 · [지도로]) — 기록·오늘의 시드·최고 기록 없음
-  const M = S.story.map; S.story.end = 'fail';
+  const M = S.story.map; S.story.end = 'fail'; storyCkPut(S.story.id, null); // 📖 10-28 체크포인트: 진 판은 지움
   storyOverlayMode('fail', null);
   document.getElementById('finalScore').innerHTML = `<b>${M.name}</b>에서 성이 무너졌어요<br><span class="soLine">이 스테이지를 처음부터 다시 할 수 있어요</span>`;
   document.getElementById('overlay').style.display = 'flex'; syncGamePause();
@@ -20775,7 +20783,7 @@ function storyStart(id, gesture) { // gesture = 클릭으로 불렸나 (다시�
 function storyBoot() { let q = null; try { q = new URLSearchParams(location.search).get('story'); } catch (e) {} if (q) storyStart(q, false); } // 하네스가 '?t=…&pf=…'를 붙여 열어도 됨 · 없는 이름이면 그냥 타이틀
 function storyExit(ask) { // 나가기·끝 창 [지도로] = 여정 지도 (10-19 M3 — 예전엔 타이틀) · 실제로 나갔을 때만(확인 창 취소면 그대로) 난이도 이름 되돌림 — tutExit 선례 (storyLeave 안에선 안 됨: 새 판 시작 함수가 reset 전에 정한 이름을 덮는다)
   const id = S.story && S.story.id;
-  if (ask && !confirm('지도로 나갈까요? 이 스테이지는 처음부터 다시 해야 해요.')) return; // 10-19 크로스체크 P2-1: 확인 글도 '지도로' (exitToTitle의 '타이틀로 나갈까요?' 대신)
+  if (ask && !confirm(S.story && S.story.map.world ? '지도로 나갈까요? 지도에서 [이어 하기]로 이 라운드부터 다시 할 수 있어요.' : '지도로 나갈까요? 이 스테이지는 처음부터 다시 해야 해요.')) return; // 10-28 체크포인트 // 10-19 크로스체크 P2-1: 확인 글도 '지도로' (exitToTitle의 '타이틀로 나갈까요?' 대신)
   exitToTitle(false);
   if (S.story) return;
   DIFF_MUL = 1; DIFF_NAME = '초원';
@@ -20966,6 +20974,7 @@ function storyPlaceAt(u, x, y, quiet) { // 맵에 놓기 = 그 스테이지 끝�
   if (!S.units.includes(u)) S.units.push(u);
   m.placed.add(u);
   u.x = u.tx = x; u.y = u.ty = y; u.moving = false; u.grabbed = false; u.selected = false; u.cool = 0; u.forceTarget = null; u.amove = false;
+  storyCkSave(); // 📖 10-28 체크포인트 (배치 준비 중만 — 전투 중엔 [출발!] 저장)
   if (quiet) return u;
   u.dropT = 0.3;
   for (let k = 0; k < 5; k++) { const a2 = Math.random() * 6.28, v = 30 + Math.random() * 50; S.parts.push({ x, y: y + 12, vx: Math.cos(a2) * v, vy: -Math.abs(Math.sin(a2)) * v * 0.5, t: 0.3, r: 1.5 + Math.random() * 1.5, c: '#c8b48a' }); } // 착지 흙먼지 (dropGrab과 같은 그림)
@@ -20981,6 +20990,7 @@ function storyPortalIn(u) { // 포털에 넣기 = 고정 (못 꺼냄 · 싸우�
   u.moving = false; u.grabbed = false; u.selected = false; u.cool = 0; u.forceTarget = null;
   m.portal.add(u); S.units.push(u);
   S.effects.push({ type: 'boom', x: PORTAL.x, y: PORTAL.y, r: 26, t: 0.3 }); sfx('pick');
+  storyCkSave(); // 📖 10-28 체크포인트
 }
 function storyAscendFits(v, nd) { return !v.miner && !v.item && !v.clone && !isHiddenCombo(v) && (nd.hero ? (v.hero && !v.super && !v.ace && (nd.tier == null || v.tier === nd.tier)) : (v.tier === nd.tier && !v.hero && !v.hidden)); } // ascendPool과 같은 제물 조건 (제단 자리만 뺌)
 function storyAltarOk(u) { // 제단이 받나: 아이템(= 사용) · 하이카드(투석기가 아직 없으면 제물) · 맵에 놓인 히든 영웅의 다음 승급 제물
@@ -21003,6 +21013,7 @@ function storyAltarIn(u) { // 제단에 올리기 — 하이카드 제물은 곧
   sfx('pick');
   updateAltar();
   updateInfoPanel();
+  storyCkSave(); // 📖 10-28 체크포인트
 }
 function storyUseItem(u) { // 대기석 아이템 = 누르면 사용 (스토리 예외 — 챌린지는 제물대로 옮겨야 함) · 발동 표는 updateAltar 그대로 (제단 자리에 올려 바로 판정)
   const m = storyM2(); storyTrayTake(u);
@@ -21011,6 +21022,7 @@ function storyUseItem(u) { // 대기석 아이템 = 누르면 사용 (스토리 
   updateAltar();
   const i = S.units.indexOf(u); if (i >= 0) { S.units.splice(i, 1); m.altar.delete(u); storyTrayAdd(u, true); } // 안전망: 소모 안 됐으면 그대로 대기석
   updateInfoPanel();
+  storyCkSave(); // 📖 10-28 체크포인트: 아이템(뽑기권 등) 결과 그 순간
 }
 // ---- 눌러 합치기 (설계 §5) — 유닛 누름 → [합치기] → 반짝이는 같은 유닛 2마리 더 누름 → 영웅·슈퍼는 대기석으로 ----
 function storyFuseSrc(m, v) { return m.placed.has(v) || m.portal.has(v); } // 맵 쪽 재료 = 놓인 것 + 포털 안 (10-20 유저 '포털 함정': 포털에 넣은 유닛은 못 꺼내도 눌러 합치기 재료는 됨 — 슬롯머신·시간술사가 이미 있으면 같은 재료가, 에이스는 늘 갇히던 것) · 제단 위 승급 제물은 아님
@@ -21066,6 +21078,7 @@ function storyFuse(list) { // 합성 식 = 챌린지 포털 합성과 같은 함
   for (let i = f0; i < S.floats.length; i++) { S.floats[i].x = to.x; S.floats[i].y = STORY_M2.TRAY[3] + 22; } // '영웅 탄생!' 글자도 대기석 밑에
   for (const p of from) m.fx.push({ x0: p.x, y0: p.y, u: born, t0: performance.now() });
   updateInfoPanel();
+  storyCkSave(); // 📖 10-28 체크포인트
   return born;
 }
 // ---- 배치 준비 · [출발!] (설계 §1) — 소환 → 대기석 → 놓기 → [출발!](또는 포커 시계 끝) → 몹 출발 · S.phase는 'poker' 그대로 (m2.prep) ----
@@ -21074,11 +21087,13 @@ function storyPrepStart() { // confirmHand 끝 (startWave 대신)
   storyTraySweep();
   if (IS_MOBILE) setMobTab('battle'); else { pokerPeek = true; syncPokerPanel(); } // 대기석·맵·[출발!]이 보이게 (PC 포커판이 y 137~500을 덮는다)
   renderPoker(); updateGoPoker();
+  storyCkSave(); // 📖 10-28 체크포인트: 소환한 유닛(대기석) 그대로
   if (!m.hint) { m.hint = true; logMsg('대기석 유닛을 끌어 맵에 놓고 <b>출발!</b>을 눌러요 — 한 번 놓은 자리는 스테이지 끝까지 그대로예요', true); } // 10-26 검토: 폰은 전투 탭에서 #log가 숨어 이 안내가 한 번도 안 보였다 → 위 토스트로도 (판마다 첫 소환 한 번)
 }
 function storyDepart() { // [출발!] · 포커 시계 끝 (confirmHand 두 번째) — 배치 준비 끝 → startWave → storyStartWave (하네스도 이걸 부름)
   if (!S || !S.story || S.phase !== 'poker') return false;
   const m = storyM2(); if (!m.prep) return false;
+  storyCkSave(); // 📖 10-28 체크포인트: [출발!] 직전 = 전투 중 끊기면 여기부터 (유저 '그 전투를 처음부터 다시')
   m.prep = false; storyPickCancel();
   startWave();
   return true;
@@ -21268,6 +21283,79 @@ function storySeen(id) { const d = storyDataGet(); if (d.seen[id]) return; d.see
 //   챌린지 첫 판 안내 T1과 같은 문구·모양 = 포커 배너 첫 줄(tutT1Text) + 금테 없는 카드 살랑 + 1라운드엔 첫 카드를 누를 때까지 포커 시계 정지(25게임초 상한 — T1과 같음, 스테이지 판마다 한 번)
 //   뜨는 곳 = 1-1의 한 패 포커뿐 · 카드를 한 번 바꾸면 seen.t1 → 다시 안 뜸 · 1-2부터는 안 뜸(1-1을 건너뛸 수 없으니 배웠다고 봄)
 //   챌린지 첫 판 안내 저장(dpd_tut)은 안 건드림 → '안내 끄기'(tutOff = dpd_tut)·T2·T4 없음
+// ---- 📖 체크포인트 (10-28 유저: "스토리 모드에선 체크포인트 만드는거로 하자 대신 3배강화 어뷰징을 못하게 강화하면 그순간 저장된다거나 하는식으로 조치는 해야될것같아" · 전투 중 끊기면 = "그 전투를 처음부터 다시") ----
+//   dpd_story_ck = { v, runs: { 스테이지 id: 판 } } — 스테이지마다 한 칸. 저장은 늘 '포커·배치 준비'(몹 없음) 상태를 통째로: 패 받음 · 카드 교체(덱 순서째 → 다시 열어도 같은 패·바꾸면 같은 카드) · 소환 · 놓기 · 포털 · 제단 · 합치기 · 아이템 · [출발!] 직전 · 탭이 숨을 때
+//   전투 중에 끊기면 [출발!] 직전으로(그 전투를 처음부터) · 전투 중 강화·단련·도전(3배)은 그 순간 그 저장에 덧씀(레벨 + 든 골드) → 껐다 켜서 도전 강화를 다시 굴릴 수 없음
+//   깸·짐 = 지움 · [나가기] = 남김(지도 카드 [이어 하기]) · 처음부터 = 첫 패에서 새로 덮어씀 · 시험 길(월드 없음)은 안 함 · 유닛 = 자기 값 그대로(서로 가리키면 번호, 몹을 가리키면 null)
+const STORY_CK_KEY = 'dpd_story_ck', STORY_CK_V = 1;
+const STORY_CK_SKIP = new Set(['units', 'monsters', 'effects', 'floats', 'parts', 'projs', 'story', 'spawnQueue', 'air', 'bird', 'slotBombs', 'acidPools', 'hitstop', 'shake', 'slowT', 'goldFlash', 'goldWhy', 'goldWhyT', 'paused']); // 전투 중에만 뜻 있는 것·화면 효과 (콤보는 라운드를 넘어 이어져 처치 골드에 들어가니 저장 — 10-28 결정성 검사)
+let storyCkMute = false, storyCkIds = new WeakMap(); // 되살리는 동안 저장 끔 / 마지막 저장의 유닛 번호 (전투 중 단련 덧쓰기)
+function storyCkEnc(v, U, d) { // 값 → JSON 꼴: 유닛 = { $u: 번호 } · Infinity·NaN = { $n } · 몹(hp·max + mat·boss·shape)·캔버스·Set·함수 = 뺌
+  if (v === null || typeof v === 'string' || typeof v === 'boolean') return v;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : { $n: String(v) };
+  if (typeof v !== 'object' || d > 6) return undefined;
+  if (U.has(v)) return { $u: U.get(v) };
+  if (Array.isArray(v)) return v.map(x => { const e = storyCkEnc(x, U, d + 1); return e === undefined ? null : e; });
+  const pr = Object.getPrototypeOf(v); if (pr !== Object.prototype && pr !== null) return undefined;
+  if ('hp' in v && 'max' in v && ('mat' in v || 'boss' in v || 'shape' in v)) return null; // 몹 참조(forceTarget 등) — S.hunt(사냥 표적: stage·hp·max)는 몹이 아님
+  const o = {}; for (const k of Object.keys(v)) { const e = storyCkEnc(v[k], U, d + 1); if (e !== undefined) o[k] = e; } return o;
+}
+function storyCkDec(v, A) { if (v === null || typeof v !== 'object') return v; if (Array.isArray(v)) return v.map(x => storyCkDec(x, A));
+  const ks = Object.keys(v); if (ks.length === 1 && ks[0] === '$u') return A[v.$u] || null; if (ks.length === 1 && ks[0] === '$n') return Number(v.$n);
+  const o = {}; for (const k of ks) o[k] = storyCkDec(v[k], A); return o; }
+function storyCkOn() { return !!(S && S.story && S.story.map.world && !S.story.end && !storyCkMute && !S.tutMode); }
+function storyCkAll() { let d = null; try { d = JSON.parse(localStorage.getItem(STORY_CK_KEY)); } catch (e) {} return d && d.v === STORY_CK_V && d.runs && typeof d.runs === 'object' ? d : { v: STORY_CK_V, runs: {} }; }
+function storyCkGet(id) { const c = storyCkAll().runs[id]; return c && c.v === STORY_CK_V && c.id === id && Array.isArray(c.units) && c.S && typeof c.S === 'object' && Number.isFinite(c.R) ? c : null; } // 깨진 칸 = 없음
+function storyCkPut(id, ck) { const d = storyCkAll(); if (ck) d.runs[id] = ck; else delete d.runs[id]; try { localStorage.setItem(STORY_CK_KEY, JSON.stringify(d)); } catch (e) {} } // 저장이 막혀도(사생활 모드 등) 판은 그대로
+function storyCkSnap() {
+  const st = S.story, m = storyM2(), all = S.units.concat(m.tray), U = new Map(all.map((u, i) => [u, i]));
+  const s = {}; for (const k of Object.keys(S)) { if (STORY_CK_SKIP.has(k)) continue; const e = storyCkEnc(S[k], U, 0); if (e !== undefined) s[k] = e; }
+  storyCkIds = new WeakMap(all.map((u, i) => [u, i]));
+  return { v: STORY_CK_V, id: st.id, R: S.storyR, at: Date.now(), S: s,
+    units: all.map(u => { const o = {}; for (const k of Object.keys(u)) { if (k[0] === '_') continue; const e = storyCkEnc(u[k], U, 1); if (e !== undefined) o[k] = e; } return o; }), // '_' = 그림 캐시(_us 스프라이트·_bs 몸 모양) — 다시 그릴 때 새로 만듦 (캔버스만 빠진 캐시가 남으면 drawImage 오류)
+    where: all.map(u => m.tray.includes(u) ? 't' : m.portal.has(u) ? 'p' : m.altar.has(u) ? 'a' : m.placed.has(u) ? 'm' : 'u'),
+    tray: m.tray.map(u => U.get(u)), page: m.page || 0, prep: !!m.prep, hint: !!m.hint, st: { leakAll: st.leakAll || 0, gateA: st.gateA, t1Hold: !!st.t1Hold } };
+}
+function storyCkSave() { // 포커·배치 준비(몹 없음)만 통째로 — 전투 중엔 storyCkUpg가 [출발!] 저장에 덧씀
+  if (!storyCkOn() || S.phase !== 'poker') return;
+  try { storyCkPut(S.story.id, storyCkSnap()); } catch (e) { console.warn('story ck save', e); }
+}
+function storyCkUpg(spent, u) { // 강화·단련·도전·승급 직후 (유저 10-28: 강화하면 그 순간 저장) — 포커·배치 준비 = 통째로 · 전투 중 = [출발!] 저장에 종족 레벨·든 골드·그 유닛 단련 레벨만
+  if (!storyCkOn()) return;
+  if (S.phase === 'poker') { storyCkSave(); return; }
+  const ck = storyCkGet(S.story.id); if (!ck) return;
+  ck.S.upg = S.upg.slice(); ck.S.upgCost = S.upgCost.slice(); ck.S.gold = Math.max(0, (+ck.S.gold || 0) - (spent || 0)); // 전투 중 번 골드로 샀으면 0까지만 (그 전투 처치 골드만큼 — 작음)
+  const i = u ? storyCkIds.get(u) : undefined; if (i != null && ck.units[i]) ck.units[i].heroUpLv = u.heroUpLv || 0; // 전투 중 새로 생긴 유닛이면 레벨은 못 남기고 골드만 (다시 굴리기 이득 없음)
+  storyCkPut(S.story.id, ck);
+}
+function storyCkResume(id) { // 지도 카드 [이어 하기] — 새 판을 세운 뒤 저장한 상태로 덮음 (배치 준비 저장 = [출발!] 직전)
+  const ck = storyCkGet(id); if (!ck) return false;
+  storyCkMute = true;
+  try {
+    if (!storyStart(id, false)) { storyCkMute = false; return false; }
+    casTimers.forEach(clearTimeout); casTimers = []; // storyStart 첫 딜 소리 예약
+    const A = ck.units.map(() => ({})), W = ck.where || [];
+    ck.units.forEach((o, i) => Object.assign(A[i], storyCkDec(o, A)));
+    for (const k of Object.keys(ck.S)) S[k] = storyCkDec(ck.S[k], A);
+    const m = storyM2();
+    S.units = A.filter((u, i) => W[i] !== 't'); m.tray = (ck.tray || []).map(i => A[i]).filter(Boolean);
+    A.forEach((u, i) => { if (W[i] === 'm') m.placed.add(u); else if (W[i] === 'p') m.portal.add(u); else if (W[i] === 'a') m.altar.add(u);
+      u.selected = false; u.grabbed = false; u.moving = false; u.forceTarget = null; u.assassinTgt = null; });
+    m.page = ck.page || 0; m.prep = !!ck.prep; m.hint = !!ck.hint; m.sel = null; m.pick = null; m.fx = []; m.prepT = 0;
+    const st = S.story, cs = ck.st || {}; st.leakAll = cs.leakAll || 0; st.t1Hold = !!cs.t1Hold; if (cs.gateA != null) st.gateA = cs.gateA;
+    S.phase = 'poker'; S.paused = false; S.monsters = []; S.spawnQueue = null; S.effects = []; S.floats = []; S.parts = []; S.projs = [];
+  } catch (e) { storyCkMute = false; console.warn('story ck resume', e); storyCkPut(id, null); storyStart(id, false); return true; } // 깨진 칸 = 지우고 처음부터
+  storyCkMute = false;
+  const prep = !!storyM2().prep;
+  updateHUD(); renderPoker(); updateGoPoker(); updateInfoPanel(); updateDpsRank();
+  if (IS_MOBILE) setMobTab(prep ? 'battle' : 'poker'); else { pokerPeek = prep; syncPokerPanel(); }
+  needRedraw = true;
+  logMsg(`이어 하기 — 라운드 ${S.storyR}${prep ? ' · 출발! 직전' : ''}`, true);
+  storyCkSave();
+  return true;
+}
+window.addEventListener('pagehide', () => { if (S && S.story && S.phase === 'poker') storyCkSave(); }); // 탭이 내려갈 때 (전투 중은 [출발!] 저장 그대로)
+document.addEventListener('visibilitychange', () => { if (document.hidden && S && S.story && S.phase === 'poker') storyCkSave(); });
 function storyT1On() { const st = S && S.story; return !!st && st.map.world === 1 && st.map.idx === 1 && S.phase === 'poker' && !!S.poker && S.poker.hands.length === 1 && !(st.m2 && st.m2.prep) && !storyDataGet().seen.t1; }
 function storyT1Line(ranks) { // tutPokerLine(renderPoker) — 스토리 판만
   if (!storyT1On()) return '';
@@ -21342,7 +21430,7 @@ function storyReviveYes() { // [부활] (광고 확인 뒤 — rvYes): 목숨을
 // ---- 스테이지 클리어 (storyNextRound — 마지막 라운드를 목숨 남기고 끝냄) ----
 function storyStageClear() { // 별 · 저장(더 좋은 별만) · 클리어 창 — 판은 게임오버와 같은 '끝난 판'(S.phase 'gameover': update·창 함수들의 gameover 가드 그대로, 배경은 계속 흐름)
   const st = S.story, stars = storyStarsNow(), d = storyDataGet(), first = !d.clear[st.id], best0 = d.stars[st.id] || 0;
-  d.clear[st.id] = true; if (stars > best0) d.stars[st.id] = stars; storySave(d);
+  d.clear[st.id] = true; if (stars > best0) d.stars[st.id] = stars; storySave(d); storyCkPut(st.id, null); // 📖 10-28 체크포인트: 깬 판은 지움
   S.phase = 'gameover'; st.end = 'clear'; st.stars = stars;
   const nx = storyNextId(st.id), nxOn = !!nx && storyOpen(nx);
   storyOverlayMode('clear', nxOn);
@@ -21434,9 +21522,9 @@ function storyComicPending() { // 그 월드 마지막 스테이지를 깼는데
   for (const [w, cid] of Object.entries(STORY_END_COMIC)) { const L = storyStages(+w);
     if (L.length && d.clear[L[L.length - 1]] && !d.seen[cid]) { openComic(cid, () => { storySeen(cid); if (document.getElementById('startOverlay').dataset.screen === 'story') storyFootRender(); }); return; } }
 }
-function storyGo(id) { // 스테이지 카드 [출발] — 소리 잠금 풀기·전체 화면은 지금(클릭 제스처 안): 만화 onDone은 페이드 끝이라 제스처 밖일 수 있다
+function storyGo(id, cont) { // 스테이지 카드 [출발] · cont = [이어 하기] (10-28) — 소리 잠금 풀기·전체 화면은 지금(클릭 제스처 안): 만화 onDone은 페이드 끝이라 제스처 밖일 수 있다
   if (!storyOpen(id)) return;
-  const pro = STORY_MAPS[id].world === 1 && STORY_MAPS[id].idx === 1 && !storyDataGet().seen.prologue && typeof openComic === 'function';
+  const pro = !cont && STORY_MAPS[id].world === 1 && STORY_MAPS[id].idx === 1 && !storyDataGet().seen.prologue && typeof openComic === 'function';
   initAudio(); if (IS_MOBILE) { lockLandscape(); if (!pro) iosPwaHint(); } // 10-19 크로스체크 P2-2: 프롤로그면 '홈 화면에 추가' 안내는 만화가 끝난 뒤(만화 밑에 깔려 14초 뒤 사라지던 것)
   storyCardClose(false);
   if (pro) { // 1-1 처음 = 프롤로그 만화 → 시작
@@ -21444,6 +21532,7 @@ function storyGo(id) { // 스테이지 카드 [출발] — 소리 잠금 풀기�
     if (!openComic('prologue', go)) go();
     return;
   }
+  if (cont && storyCkResume(id)) return;
   storyStart(id, false);
 }
 // ---- 스테이지 카드 (이름 · 받은 별 · '이 맵에 나오는 것' 그림만 · [출발]) ----
@@ -21467,18 +21556,18 @@ function storyThingArt(kind, v, px) { // 카드 그림 한 칸 — 게임 그림
 let smCardFor = null; // 카드가 열린 깃발 (닫으면 그 깃발로 초점)
 function storyCardOpen(id) {
   const M = STORY_MAPS[id]; if (!M) return;
-  const op = storyOpen(id), n = storyDataGet().stars[id] || 0, w = STORY_WORLDS[M.world - 1], card = document.getElementById('smCard'), th = storyMapThings(M);
+  const op = storyOpen(id), ck = storyCkGet(id), n = storyDataGet().stars[id] || 0, w = STORY_WORLDS[M.world - 1], card = document.getElementById('smCard'), th = storyMapThings(M);
   card.innerHTML = `<button type="button" class="smX" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>`
     + `<div class="smCW">${w ? w.name : ''}</div><h3 id="smCardName">${M.name}</h3>`
     + `<div class="smCStars" role="img" aria-label="${['아직 별 없음', '별 하나', '별 둘', '별 셋'][n]}">${storyStarsHTML(n, 'smCS')}</div>`
     + `<div class="smSee"><span class="smSeeT">이 스테이지에 나오는 것</span><div class="smSeeArt"></div></div>`
-    + (op ? `<button type="button" class="title-primary smGo">출발 <span class="title-arrow" aria-hidden="true">→</span></button>` : `<p class="smLockMsg">${dpdIconSVG('lock', 'smLockIc', { sw: 2.2 })}앞 스테이지를 깨면 열려요</p>`);
+    + (op && ck ? `<button type="button" class="title-primary smCont">이어 하기 · 라운드 ${ck.R} <span class="title-arrow" aria-hidden="true">→</span></button><button type="button" class="smNew">처음부터</button>` : op ? `<button type="button" class="title-primary smGo">출발 <span class="title-arrow" aria-hidden="true">→</span></button>` : `<p class="smLockMsg">${dpdIconSVG('lock', 'smLockIc', { sw: 2.2 })}앞 스테이지를 깨면 열려요</p>`);
   const art = card.querySelector('.smSeeArt');
   for (const v of th.mats) art.appendChild(storyThingArt('mat', v, 46));
   for (const v of th.bosses) art.appendChild(storyThingArt('boss', v, 58));
   card.dataset.id = id; smCardFor = id;
   document.getElementById('smCardWrap').hidden = false; smCardBack(true); // 카드 = 모달: 뒤 지도·위 줄·아래 줄은 inert (Tab이 카드 밖으로 안 새게)
-  try { card.querySelector(op ? '.smGo' : '.smX').focus({ preventScroll: true }); } catch (e) {}
+  try { card.querySelector(op ? (ck ? '.smCont' : '.smGo') : '.smX').focus({ preventScroll: true }); } catch (e) {}
 }
 function smCardBack(on) { for (const el of [document.getElementById('smScroll'), document.getElementById('smFoot'), document.querySelector('#storyRow .adventure-top')]) if (el) el.inert = on; }
 function storyCardClose(back) { // 열려 있었으면 닫고 true (back = 그 깃발로 초점)
@@ -21493,7 +21582,10 @@ document.getElementById('btnStoryBack').onclick = () => { storyCardClose(false);
 document.getElementById('smMap').addEventListener('click', e => { const b = e.target.closest('.smFlag'); if (b) storyCardOpen(b.dataset.id); });
 document.getElementById('smCardWrap').addEventListener('click', e => {
   if (e.target.id === 'smCardWrap' || e.target.closest('.smX')) { storyCardClose(true); return; } // 카드 밖(어두운 막)·✕ = 닫기
-  if (e.target.closest('.smGo')) storyGo(document.getElementById('smCard').dataset.id);
+  const id = document.getElementById('smCard').dataset.id;
+  if (e.target.closest('.smGo')) storyGo(id);
+  else if (e.target.closest('.smCont')) storyGo(id, true); // 📖 10-28 체크포인트 [이어 하기]
+  else if (e.target.closest('.smNew')) { const ck = storyCkGet(id); if (!ck || confirm(`이어 하던 판(라운드 ${ck.R})이 지워져요. 처음부터 할까요?`)) storyGo(id); }
 });
 document.getElementById('smFoot').addEventListener('click', e => { const b = e.target.closest('.smComic'); if (b && typeof openComic === 'function') openComic(b.dataset.comic); });
 document.getElementById('smScroll').addEventListener('scroll', smEdge, { passive: true });
